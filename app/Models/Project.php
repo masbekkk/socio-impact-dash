@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read int|null $pic_id
  * @property-read ProjectStatus $status
  * @property-read string|null $sow
+ * @property-read string $project_type
  * @property-read string|null $budget_total
  * @property-read CarbonInterface $created_at
  * @property-read CarbonInterface $updated_at
@@ -40,7 +41,7 @@ final class Project extends Model
     protected $fillable = [
         'code', 'name', 'client', 'description',
         'user_id', 'division_id', 'account_manager_id', 'head_id', 'pic_id',
-        'status', 'sow', 'budget_total',
+        'status', 'project_type', 'sow', 'budget_total',
     ];
 
     public function casts(): array
@@ -97,5 +98,10 @@ final class Project extends Model
     public function issues(): HasMany
     {
         return $this->hasMany(ProjectIssue::class);
+    }
+
+    public function locations(): HasMany
+    {
+        return $this->hasMany(ProjectLocation::class);
     }
 }

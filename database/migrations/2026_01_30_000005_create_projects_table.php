@@ -23,6 +23,7 @@ return new class extends Migration
             $table->foreignId('head_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('pic_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('status')->default(ProjectStatus::Draft->value)->index();
+            $table->string('project_type');
             $table->longText('sow')->nullable();
             $table->decimal('budget_total', 15, 2)->nullable();
             $table->timestamps();

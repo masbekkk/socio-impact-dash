@@ -93,4 +93,14 @@ final class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Presence::class, 'user_id');
     }
+
+    public function createdNotifications(): HasMany
+    {
+        return $this->hasMany(Notification::class, 'created_by');
+    }
+
+    public function notificationRecipients(): HasMany
+    {
+        return $this->hasMany(NotificationRecipient::class, 'user_id');
+    }
 }
