@@ -15,13 +15,17 @@ final class Leave extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['code', 'user_id', 'type', 'status', 'start_date', 'end_date', 'reason', 'attachment_path'];
+    protected $fillable = [
+        'code', 'user_id', 'replacement_pic_id', 'lokasi',
+        'type', 'status', 'start_date', 'end_date', 'reason', 'attachment_path',
+    ];
 
     public function casts(): array
     {
         return [
             'id' => 'integer',
             'user_id' => 'integer',
+            'replacement_pic_id' => 'integer',
             'type' => LeaveType::class,
             'status' => LeaveStatus::class,
             'start_date' => 'date',
@@ -34,6 +38,11 @@ final class Leave extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function replacementPic(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'replacement_pic_id');
     }
 
     public function approvals(): HasMany

@@ -4,27 +4,127 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\DocumentType;
+use App\Enums\IssueSeverity;
+use App\Enums\IssueStatus;
+use App\Enums\MilestoneStatus;
+use App\Enums\ProjectStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 final class UpdateProjectRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            //
+            // Project fields
+            'name' => ['required', 'string', 'max:255'],
+            'client' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'division_id' => ['nullable', 'integer', 'exists:divisions,id'],
+            'account_manager_id' => ['nullable', 'integer', 'exists:users,id'],
+            'head_id' => ['nullable', 'integer', 'exists:users,id'],
+            'pic_id' => ['nullable', 'integer', 'exists:users,id'],
+            'status' => ['nullable', 'string', Rule::enum(ProjectStatus::class)],
+            'project_type' => ['required', 'string', 'max:255'],
+            'sow' => ['nullable', 'string'],
+            'budget_total' => ['nullable', 'numeric', 'min:0'],
+
+            // Locations
+            'locations' => ['nullable', 'array'],
+            'locations.*.id' => ['nullable', 'integer', 'exists:project_locations,id'],
+            'locations.*.latitude' => ['nullable', 'string', 'max:255'],
+            'locations.*.longitude' => ['nullable', 'string', 'max:255'],
+            'locations.*.detail_address' => ['nullable', 'string', 'max:255'],
+
+            // Documents
+            'documents' => ['nullable', 'array'],
+            'documents.*.id' => ['nullable', 'integer', 'exists:project_documents,id'],
+            'documents.*.file' => ['nullable', 'file', 'max:10240'],
+            'documents.*.type' => ['nullable', 'string', Rule::enum(DocumentType::class)],
+
+            // Budgets
+            'budgets' => ['nullable', 'array'],
+            'budgets.*.id' => ['nullable', 'integer', 'exists:project_budgets,id'],
+            'budgets.*.category' => ['required', 'string', 'max:255'],
+            'budgets.*.planned_amount' => ['required', 'numeric', 'min:0'],
+            'budgets.*.actual_amount' => ['nullable', 'numeric', 'min:0'],
+
+            // Milestones
+            'milestones' => ['nullable', 'array'],
+            'milestones.*.id' => ['nullable', 'integer', 'exists:project_milestones,id'],
+            'milestones.*.title' => ['required', 'string', 'max:255'],
+            'milestones.*.description' => ['nullable', 'string'],
+            'milestones.*.target_date' => ['required', 'date'],
+            'milestones.*.actual_date' => ['nullable', 'date'],
+            'milestones.*.status' => ['nullable', 'string', Rule::enum(MilestoneStatus::class)],
+
+            // Issues (new for update)
+            'issues' => ['nullable', 'array'],
+            'issues.*.id' => ['nullable', 'integer', 'exists:project_issues,id'],
+            'issues.*.title' => ['required', 'string', 'max:255'],
+            'issues.*.description' => ['nullable', 'string'],
+            'issues.*.severity' => ['nullable', 'string', Rule::enum(IssueSeverity::class)],
+            'issues.*.owner_id' => ['required', 'integer', 'exists:users,id'],
+            'issues.*.status' => ['nullable', 'string', Rule::enum(IssueStatus::class)],
+
+            // IDs to delete
+            'delete_locations' => ['nullable', 'array'],
+            'delete_locations.*' => ['integer', 'exists:project_locations,id'],
+            'delete_documents' => ['nullable', 'array'],
+            'delete_documents.*' => ['integer', 'exists:project_documents,id'],
+            'delete_budgets' => ['nullable', 'array'],
+            'delete_budgets.*' => ['integer', 'exists:project_budgets,id'],
+            'delete_milestones' => ['nullable', 'array'],
+            'delete_milestones.*' => ['integer', 'exists:project_milestones,id'],
+            'delete_issues' => ['nullable', 'array'],
+            'delete_issues.*' => ['integer', 'exists:project_issues,id'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'Nama project wajib diisi.',
+            'client.required' => 'Nama client wajib diisi.',
+            'project_type.required' => 'Tipe project wajib diisi.',
+            'division_id.exists' => 'Divisi tidak ditemukan.',
+            'account_manager_id.exists' => 'Account Manager tidak ditemukan.',
+            'head_id.exists' => 'Head tidak ditemukan.',
+            'pic_id.exists' => 'PIC tidak ditemukan.',
+            'budget_total.numeric' => 'Total budget harus berupa angka.',
+            'budget_total.min' => 'Total budget tidak boleh kurang dari 0.',
+
+            // Locations
+            'locations.array' => 'Lokasi harus berupa array.',
+
+            // Documents
+            'documents.array' => 'Dokumen harus berupa array.',
+            'documents.*.file.file' => 'Dokumen harus berupa file.',
+            'documents.*.file.max' => 'Ukuran dokumen maksimal 10MB.',
+
+            // Budgets
+            'budgets.array' => 'Budget harus berupa array.',
+            'budgets.*.category.required' => 'Kategori budget wajib diisi.',
+            'budgets.*.planned_amount.required' => 'Jumlah budget yang direncanakan wajib diisi.',
+            'budgets.*.planned_amount.numeric' => 'Jumlah budget harus berupa angka.',
+
+            // Milestones
+            'milestones.array' => 'Milestone harus berupa array.',
+            'milestones.*.title.required' => 'Judul milestone wajib diisi.',
+            'milestones.*.target_date.required' => 'Target tanggal wajib diisi.',
+            'milestones.*.target_date.date' => 'Target tanggal harus berupa tanggal yang valid.',
+
+            // Issues
+            'issues.array' => 'Issue harus berupa array.',
+            'issues.*.title.required' => 'Judul issue wajib diisi.',
+            'issues.*.owner_id.required' => 'Owner issue wajib dipilih.',
+            'issues.*.owner_id.exists' => 'Owner tidak ditemukan.',
         ];
     }
 }

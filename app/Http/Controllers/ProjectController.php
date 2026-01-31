@@ -6,13 +6,20 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
+use App\Models\Division;
 use App\Models\Project;
+use App\Models\User;
+use App\Services\ProjectService;
+use Illuminate\Support\Facades\Auth;
 
 final class ProjectController
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected $projectService; 
+
+    public function __construct(ProjectService $projectService)
+    {
+        $this->projectService = $projectService;
+    }
     public function index()
     {
         // LOAD DATA FROM JSON (Dummy Source)
@@ -118,20 +125,30 @@ final class ProjectController
      * Show the form for creating a new resource.
      */
     public function create()
-    {
-        $divisions = \App\Models\Division::all();
-
-        return \Inertia\Inertia::render('Projects/Create', [
-            'divisions' => $divisions,
-        ]);
+    {   
+        $divisions = Division::orderBy('name', 'asc')->get();
+        $users = User::orderBy('name', 'asc')->get();
+        return view('create_project', ['divisions' => $divisions, 'users' => $users]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+
     public function store(StoreProjectRequest $request)
-    {
-        //
+    {   
+        try {
+        $userId = Auth::id();
+        $project = $this->projectService->createProject($request->validated(), $userId);
+        return response()->json([
+            'success' => true,
+            'message' => 'Project created successfully',
+            'data' => $project
+        ]);
+        } catch (\Throwable $th) {
+            return response()->json([ 
+                'success' => false,
+                'message' => 'Failed to create project',
+                'error' => $th->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -175,39 +192,14 @@ final class ProjectController
      */
     public function edit($slug)
     {
-        // Dummy Data for Edit Form as requested
-        $project = [
-            'name' => 'Pendampingan UMKM Jahe Merah',
-            'slug' => 'pendampingan-umkm-jahe-merah',
-            'code' => 'PRJ-2025-001',
-            'client' => 'PT Sinergi Alam',
-            'type' => 'pendampingan',
-            'division_code' => '1',
-            'status' => 'active',
-            'sow' => "Melakukan pendampingan intensif kepada 50 petani jahe merah...",
-            'start_date' => '2025-01-10',
-            'end_date' => '2025-06-10',
-            'budget_total' => 150000000,
-            'team' => [
-                'am' => 'Budi Santoso',
-                'head' => 'Siti Aminah',
-                'pic' => 'Rudi Hermawan'
-            ],
-            'issues' => [],
-            'monitoring_history' => []
-        ];
-
-        // Dummy Divisions
-        $divisions = [
-            ['id' => 1, 'name' => 'Divisi Operasional'],
-            ['id' => 2, 'name' => 'Divisi IT'],
-            ['id' => 3, 'name' => 'Divisi Keuangan'],
-            ['id' => 4, 'name' => 'Divisi SDM'],
-        ];
-
-        return \Inertia\Inertia::render('Projects/Edit', [
+        $project->load(['locations', 'documents', 'budgets', 'milestones', 'issues']);
+        $divisions = Division::orderBy('name', 'asc')->get();
+        $users = User::orderBy('name', 'asc')->get();
+        
+        return view('update_project', [
             'project' => $project,
             'divisions' => $divisions,
+            'users' => $users
         ]);
     }
 
@@ -216,7 +208,21 @@ final class ProjectController
      */
     public function update(UpdateProjectRequest $request, Project $project)
     {
-        //
+        try {
+            $userId = Auth::id();
+            $updatedProject = $this->projectService->updateProject($project, $request->validated(), $userId);
+            return response()->json([
+                'success' => true,
+                'message' => 'Project updated successfully',
+                'data' => $updatedProject
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update project',
+                'error' => $th->getMessage()
+            ], 500);
+        }
     }
 
     /**
