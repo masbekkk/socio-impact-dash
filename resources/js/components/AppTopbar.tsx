@@ -27,7 +27,7 @@ export default function AppTopbar() {
           <Bell className="w-5 h-5" />
           <span className="absolute top-1 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
         </Button>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">
@@ -45,12 +45,12 @@ export default function AppTopbar() {
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={route('profile.show') as string}>Profil</Link>
+              <Link href='/profile'>Profil</Link>
             </DropdownMenuItem>
             <DropdownMenuItem>Pengaturan</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <form method="POST" action={route('logout') as string} className="w-full">
+              <form method="POST" action="/logout" className="w-full">
                 <input type="hidden" name="_token" value={(props.csrf_token as string)} />
                 <button type="submit" className="w-full text-left text-sm flex items-center gap-2 text-red-600">
                   <LogOut className="w-4 h-4" />
