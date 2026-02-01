@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\ProjectStatus;
+use App\Enums\ProjectType;
+use App\Models\Division;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,7 +23,19 @@ final class ProjectFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'code' => 'PRJ-' . fake()->unique()->numerify('####-####'),
+            'name' => fake()->words(3, true),
+            'client' => fake()->company(),
+            'description' => null,
+            'user_id' => User::factory(),
+            'division_id' => Division::factory(),
+            'account_manager_id' => null,
+            'head_id' => null,
+            'pic_id' => null,
+            'project_type' => ProjectType::Pendampingan->value,
+            'status' => ProjectStatus::Draft->value,
+            'sow' => null,
+            'budget_total' => 0,
         ];
     }
 }

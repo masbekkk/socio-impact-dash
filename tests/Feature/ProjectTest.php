@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\ProjectStatus;
+use App\Enums\ProjectType;
 use App\Enums\UserRole;
 use App\Models\Division;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 final class ProjectTest extends TestCase
 {
+    use RefreshDatabase;
     public function test_pegawai_can_create_project(): void
     {
         $user = User::factory()->create(['role' => UserRole::Pegawai]);
@@ -23,6 +26,7 @@ final class ProjectTest extends TestCase
             'name' => 'Test Project',
             'client' => 'Test Client',
             'division_id' => $division->id,
+            'project_type' => ProjectType::Pendampingan->value,
         ]);
 
         $response->assertRedirect();
@@ -39,6 +43,7 @@ final class ProjectTest extends TestCase
             'name' => 'Test Project',
             'client' => 'Test Client',
             'division_id' => $division->id,
+            'project_type' => ProjectType::Pendampingan->value,
         ]);
 
         $response->assertForbidden();

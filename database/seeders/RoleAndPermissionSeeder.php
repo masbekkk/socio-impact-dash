@@ -70,6 +70,32 @@ final class RoleAndPermissionSeeder extends Seeder
             'view leaves',
         ]);
 
+        $directorRole = Role::firstOrCreate(['name' => UserRole::Director->value]);
+        $directorRole->syncPermissions([
+            'view projects',
+            'view leaves',
+            'approve leaves',
+            'view reimbursements',
+        ]);
+
+        $hrRole = Role::firstOrCreate(['name' => UserRole::HR->value]);
+        $hrRole->syncPermissions([
+            'view projects',
+            'view leaves',
+            'approve leaves',
+            'reject leaves',
+            'manage users',
+        ]);
+
+        $officeCoordinatorRole = Role::firstOrCreate(['name' => UserRole::OfficeCoordinator->value]);
+        $officeCoordinatorRole->syncPermissions([
+            'view projects',
+            'create projects',
+            'update projects',
+            'view reimbursements',
+            'view leaves',
+        ]);
+
         $superadminRole = Role::firstOrCreate(['name' => UserRole::Superadmin->value]);
         $superadminRole->syncPermissions($permissions);
     }

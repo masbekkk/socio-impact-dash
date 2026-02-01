@@ -10,6 +10,7 @@ use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -30,6 +31,13 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read EmployeeType|null $employee_type
  * @property-read CarbonInterface|null $contract_start
  * @property-read CarbonInterface|null $contract_end
+ * @property-read int|null $division_id
+ * @property-read string|null $nip
+ * @property-read string|null $position
+ * @property-read CarbonInterface|null $join_date
+ * @property-read string|null $phone
+ * @property-read string|null $location
+ * @property-read string|null $address
  * @property-read CarbonInterface $created_at
  * @property-read CarbonInterface $updated_at
  */
@@ -69,9 +77,15 @@ final class User extends Authenticatable implements MustVerifyEmail
             'employee_type' => EmployeeType::class,
             'contract_start' => 'date',
             'contract_end' => 'date',
+            'join_date' => 'date',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    public function division(): BelongsTo
+    {
+        return $this->belongsTo(Division::class);
     }
 
     public function projects(): HasMany

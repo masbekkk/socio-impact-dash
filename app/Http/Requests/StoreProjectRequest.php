@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Enums\DocumentType;
 use App\Enums\ProjectStatus;
+use App\Enums\ProjectType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -36,7 +37,7 @@ final class StoreProjectRequest extends FormRequest
             'head_id' => ['nullable', 'integer', 'exists:users,id'],
             'pic_id' => ['nullable', 'integer', 'exists:users,id'],
             'status' => ['nullable', 'string', Rule::enum(ProjectStatus::class)],
-            'project_type' => ['required', 'string', 'max:255'],
+            'project_type' => ['required', 'string', Rule::enum(ProjectType::class)],
             'sow' => ['nullable', 'string'],
             'budget_total' => ['nullable', 'numeric', 'min:0'],
 

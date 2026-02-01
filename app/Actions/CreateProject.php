@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\ProjectStatus;
+use App\Enums\ProjectType;
 use App\Models\Project;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -25,8 +26,9 @@ final readonly class CreateProject
                 'head_id' => $data['head_id'] ?? null,
                 'pic_id' => $data['pic_id'] ?? null,
                 'status' => ProjectStatus::Draft,
+                'project_type' => $data['project_type'] ?? ProjectType::Pendampingan->value,
                 'sow' => $data['sow'] ?? null,
-                'budget_total' => 0,
+                'budget_total' => $data['budget_total'] ?? 0,
             ]);
 
             if (isset($data['budgets'])) {

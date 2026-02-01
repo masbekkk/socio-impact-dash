@@ -23,6 +23,7 @@ final class UserSeeder extends Seeder
                 'name' => 'Admin User',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
+                'role' => UserRole::Superadmin->value,
             ]
         );
         $admin->assignRole(UserRole::Superadmin->value);
@@ -34,6 +35,7 @@ final class UserSeeder extends Seeder
                 'name' => 'Department Head',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
+                'role' => UserRole::Head->value,
             ]
         );
         $head->assignRole(UserRole::Head->value);
@@ -45,9 +47,46 @@ final class UserSeeder extends Seeder
                 'name' => 'Finance Officer',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
+                'role' => UserRole::Finance->value,
             ]
         );
         $finance->assignRole(UserRole::Finance->value);
+
+        // Create director user
+        $director = User::firstOrCreate(
+            ['email' => 'director@socio-impact.test'],
+            [
+                'name' => 'Director',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'role' => UserRole::Director->value,
+            ]
+        );
+        $director->assignRole(UserRole::Director->value);
+
+        // Create HR user
+        $hr = User::firstOrCreate(
+            ['email' => 'hr@socio-impact.test'],
+            [
+                'name' => 'HR Officer',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'role' => UserRole::HR->value,
+            ]
+        );
+        $hr->assignRole(UserRole::HR->value);
+
+        // Create office coordinator user
+        $oc = User::firstOrCreate(
+            ['email' => 'oc@socio-impact.test'],
+            [
+                'name' => 'Office Coordinator',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'role' => UserRole::OfficeCoordinator->value,
+            ]
+        );
+        $oc->assignRole(UserRole::OfficeCoordinator->value);
 
         // Create 10 regular employees
         for ($i = 1; $i <= 10; $i++) {
@@ -57,6 +96,7 @@ final class UserSeeder extends Seeder
                     'name' => "Pegawai {$i}",
                     'password' => Hash::make('password'),
                     'email_verified_at' => now(),
+                    'role' => UserRole::Pegawai->value,
                 ]
             );
             $user->assignRole(UserRole::Pegawai->value);
