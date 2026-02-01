@@ -128,6 +128,7 @@ final class ProjectController
     {
         $divisions = Division::orderBy('name', 'asc')->get();
         $users = User::orderBy('name', 'asc')->get();
+        //  return view('create_project', ['divisions' => $divisions, 'users' => $users]);
         return \Inertia\Inertia::render('Projects/Create', [
             'divisions' => $divisions,
         ]);
@@ -194,20 +195,14 @@ final class ProjectController
      */
     public function edit($slug)
     {
-        // // $project->load(['locations', 'documents', 'budgets', 'milestones', 'issues']);
+        // $project->load(['locations', 'documents', 'budgets', 'milestones', 'issues']);
         // $divisions = Division::orderBy('name', 'asc')->get();
         // $users = User::orderBy('name', 'asc')->get();
 
-        // // return view('update_project', [
-        // //     'project' => $project,
-        // //     'divisions' => $divisions,
-        // //     'users' => $users
-        // // ]);
-
-        // $project = Project::where('slug', $slug)->first();
-
-        // return \Inertia\Inertia::render('Projects/Edit', [
-        //     'project' => $project
+        // return view('update_project', [
+        //     'project' => $project,
+        //     'divisions' => $divisions,
+        //     'users' => $users
         // ]);
 
         // Dummy Data for Edit Form as requested

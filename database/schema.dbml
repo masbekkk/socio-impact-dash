@@ -1,0 +1,367 @@
+// Copy this content to dbdiagram.io
+
+Enum Alignment {
+  left
+  right
+  center
+}
+
+Enum ApprovalRole {
+  head
+  finance
+  hr
+}
+
+Enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+Enum DocumentType {
+  proposal
+  contract
+  mom
+  receipt
+  eer
+  rab
+  transfer_proof
+  other
+}
+
+Enum EmployeeType {
+  kontrak
+  intern
+  pegawai_tetap
+}
+
+Enum IssueSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+Enum IssueStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+Enum LeaveStatus {
+  draft
+  submitted
+  head_approved
+  hr_approved
+  rejected
+}
+
+Enum LeaveType {
+  annual
+  sick
+  unpaid
+  travel
+}
+
+Enum MilestoneStatus {
+  planned
+  in_progress
+  done
+}
+
+Enum PresenceStatus {
+  checked_in
+  late
+  absent
+}
+
+Enum ProjectStatus {
+  draft
+  submitted
+  active
+  finished
+  archived
+}
+
+Enum ReimbursementStatus {
+  draft
+  submitted
+  head_approved
+  finance_approved
+  transferred
+  rejected
+}
+
+Enum ReimbursementType {
+  atr
+  eer
+}
+
+Enum UserRole {
+  pegawai
+  head
+  finance
+  superadmin
+}
+
+Table users {
+  id integer [pk, increment]
+  name varchar(255)
+  email varchar(255) [unique]
+  email_verified_at timestamp [nullable]
+  password varchar(255)
+  two_factor_secret text [nullable]
+  two_factor_recovery_codes text [nullable]
+  two_factor_confirmed_at timestamp [nullable]
+  remember_token varchar(100) [nullable]
+  created_at timestamp
+  updated_at timestamp
+  role UserRole [default: 'pegawai']
+  employee_type EmployeeType [nullable]
+  contract_start date [nullable]
+  contract_end date [nullable]
+}
+
+Table password_reset_tokens {
+  email varchar(255) [pk]
+  token varchar(255)
+  created_at timestamp [nullable]
+}
+
+Table sessions {
+  id varchar(255) [pk]
+  user_id integer [nullable]
+  ip_address varchar(45) [nullable]
+  user_agent text [nullable]
+  payload longtext
+  last_activity integer
+}
+
+Table divisions {
+  id integer [pk, increment]
+  code varchar(255) [unique]
+  name varchar(255)
+  description text [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table projects {
+  id integer [pk, increment]
+  code varchar(255) [unique]
+  name varchar(255)
+  client varchar(255)
+  description text [nullable]
+  user_id integer
+  division_id integer [nullable]
+  account_manager_id integer [nullable]
+  head_id integer [nullable]
+  pic_id integer [nullable]
+  status ProjectStatus [default: 'draft']
+  sow longtext [nullable]
+  budget_total decimal(15,2) [nullable]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp [nullable]
+}
+
+Table project_milestones {
+  id integer [pk, increment]
+  project_id integer
+  title varchar(255)
+  description text [nullable]
+  target_date date
+  actual_date date [nullable]
+  status MilestoneStatus [default: 'planned']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table project_budgets {
+  id integer [pk, increment]
+  project_id integer
+  category varchar(255)
+  planned_amount decimal(15,2)
+  actual_amount decimal(15,2) [default: 0]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table project_documents {
+  id integer [pk, increment]
+  project_id integer
+  type DocumentType [default: 'other']
+  original_name varchar(255)
+  path varchar(255)
+  mime varchar(255) [nullable]
+  size integer [nullable]
+  uploaded_by integer
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table project_issues {
+  id integer [pk, increment]
+  project_id integer
+  title varchar(255)
+  description text [nullable]
+  severity IssueSeverity [default: 'medium']
+  owner_id integer
+  status IssueStatus [default: 'open']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table reimbursements {
+  id integer [pk, increment]
+  code varchar(255) [unique]
+  user_id integer
+  project_id integer [nullable]
+  type ReimbursementType [default: 'atr']
+  status ReimbursementStatus [default: 'draft']
+  amount decimal(15,2)
+  bank_name varchar(255) [nullable]
+  bank_account varchar(255) [nullable]
+  account_holder varchar(255) [nullable]
+  transferred_at timestamp [nullable]
+  transfer_proof_path varchar(255) [nullable]
+  rejection_reason text [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table reimbursement_documents {
+  id integer [pk, increment]
+  reimbursement_id integer
+  type DocumentType [default: 'other']
+  original_name varchar(255)
+  path varchar(255)
+  mime varchar(255) [nullable]
+  size integer [nullable]
+  uploaded_by integer
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table reimbursement_approvals {
+  id integer [pk, increment]
+  reimbursement_id integer
+  approver_id integer
+  role ApprovalRole [default: 'head']
+  status ApprovalStatus [default: 'pending']
+  notes text [nullable]
+  approved_at timestamp [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table leaves {
+  id integer [pk, increment]
+  code varchar(255) [unique]
+  user_id integer
+  type LeaveType [default: 'annual']
+  status LeaveStatus [default: 'draft']
+  start_date date
+  end_date date
+  reason text [nullable]
+  attachment_path varchar(255) [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table leave_approvals {
+  id integer [pk, increment]
+  leave_id integer
+  approver_id integer
+  role ApprovalRole [default: 'head']
+  status ApprovalStatus [default: 'pending']
+  notes text [nullable]
+  approved_at timestamp [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table presences {
+  id integer [pk, increment]
+  user_id integer
+  date date
+  status PresenceStatus [default: 'checked_in']
+  check_in_at timestamp
+  check_out_at timestamp [nullable]
+  latitude decimal(11,8) [nullable]
+  longitude decimal(11,8) [nullable]
+  photo_path varchar(255)
+  notes text [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+// Spatie Permission Tables
+Table permissions {
+  id integer [pk, increment]
+  name varchar(255)
+  guard_name varchar(255)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table roles {
+  id integer [pk, increment]
+  name varchar(255)
+  guard_name varchar(255)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table model_has_permissions {
+  permission_id integer
+  model_type varchar(255)
+  model_id integer
+}
+
+Table model_has_roles {
+  role_id integer
+  model_type varchar(255)
+  model_id integer
+}
+
+Table role_has_permissions {
+  permission_id integer
+  role_id integer
+}
+
+// Relationships
+
+Ref: sessions.user_id > users.id
+
+Ref: projects.user_id > users.id
+Ref: projects.division_id > divisions.id
+Ref: projects.account_manager_id > users.id
+Ref: projects.head_id > users.id
+Ref: projects.pic_id > users.id
+
+Ref: project_milestones.project_id > projects.id
+Ref: project_budgets.project_id > projects.id
+Ref: project_documents.project_id > projects.id
+Ref: project_documents.uploaded_by > users.id
+Ref: project_issues.project_id > projects.id
+Ref: project_issues.owner_id > users.id
+
+Ref: reimbursements.user_id > users.id
+Ref: reimbursements.project_id > projects.id
+Ref: reimbursement_documents.reimbursement_id > reimbursements.id
+Ref: reimbursement_documents.uploaded_by > users.id
+Ref: reimbursement_approvals.reimbursement_id > reimbursements.id
+Ref: reimbursement_approvals.approver_id > users.id
+
+Ref: leaves.user_id > users.id
+Ref: leave_approvals.leave_id > leaves.id
+Ref: leave_approvals.approver_id > users.id
+
+Ref: presences.user_id > users.id
+
+Ref: model_has_permissions.permission_id > permissions.id
+Ref: model_has_roles.role_id > roles.id
+Ref: role_has_permissions.permission_id > permissions.id
+Ref: role_has_permissions.role_id > roles.id
