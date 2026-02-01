@@ -50,7 +50,7 @@ const menusByRole: Record<string, MenuItem[]> = {
 }
 
 export default function AppSidebar() {
-  const { props } = usePage()
+  const { props, url } = usePage()
   const auth = (props.auth as any) || {}
   const userRole = auth?.user?.role || 'pegawai'
   const [collapsed, setCollapsed] = useState(false)
@@ -74,18 +74,25 @@ export default function AppSidebar() {
       </div>
 
       <nav className="flex-1 space-y-1">
-        {items.map((item) => (
-          <Link
-            key={item.key}
-            href={item.href}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium"
-          >
-            <item.icon className="w-5 h-5 flex-shrink-0" />
-            <span className={`overflow-hidden transition-all ${collapsed ? 'w-0' : 'inline'}`}>
-              {item.label}
-            </span>
-          </Link>
-        ))}
+        {items.map((item) => {
+          const isActive = url.startsWith(item.href) && (item.href !== '/dashboard' || url === '/dashboard');
+
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm font-medium ${isActive
+                ? 'bg-primary text-primary-foreground shadow-md hover:bg-primary/90'
+                : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'
+                }`}
+            >
+              <item.icon className="w-5 h-5 flex-shrink-0" />
+              <span className={`overflow-hidden transition-all ${collapsed ? 'w-0' : 'inline'}`}>
+                {item.label}
+              </span>
+            </Link>
+          )
+        })}
       </nav>
 
       <div className="pt-6 border-t space-y-2">

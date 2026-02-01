@@ -105,7 +105,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 p-4 md:p-10 pb-0 gap-4">
+      <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-8 py-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Proyek</h1>
           <p className="text-muted-foreground text-sm md:text-base">Kelola semua proyek, pantau progress dan budget.</p>
@@ -113,277 +113,279 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
         <Link href='/projects/create' className="w-full sm:w-auto">
           <Button className="w-full sm:w-auto gap-2">
             <Plus className="h-4 w-4" />
-            Ajukan Proyek
+            Proyek Baru
           </Button>
         </Link>
-      </div>
+      </CardContent>
 
-      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 pb-4 px-4 md:px-10">
-        <CardTitle className="text-base font-normal hidden md:block">Daftar Proyek</CardTitle>
-        <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Cari proyek..."
-              className="w-full pl-8"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+      <Card className="mx-4 md:mx-8 mb-8 border-none rounded-xl overflow-hidden">
+        <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 pb-4 px-4 md:px-8">
+          <CardTitle className="text-base font-normal hidden md:block">Daftar Proyek</CardTitle>
+          <div className="flex w-full md:w-auto items-center gap-2">
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Cari proyek..."
+                className="w-full pl-8"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
 
-          <div className="flex w-full sm:w-auto gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant={filters?.status || filters?.division ? "default" : "outline"} className="flex-1 sm:flex-none gap-2">
-                  <Filter className="h-4 w-4" />
-                  <span className="sm:hidden">Filter</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleFilterChange('status', 'all')}>
-                  All Status
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleFilterChange('status', 'active')}>
-                  Active
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleFilterChange('status', 'draft')}>
-                  Draft
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleFilterChange('status', 'pending_approval')}>
-                  Pending Approval
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleFilterChange('status', 'completed')}>
-                  Completed
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>Filter by Divisi</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleFilterChange('division', 'all')}>
-                  All Division
-                </DropdownMenuItem>
-                {(divisions || []).map((div: any) => (
-                  <DropdownMenuItem key={div.id} onClick={() => handleFilterChange('division', div.name)}>
-                    {div.name}
+            <div className="flex-none">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant={filters?.status || filters?.division ? "default" : "outline"} className="gap-2 px-3 sm:px-4">
+                    <Filter className="h-4 w-4" />
+                    <span className="hidden sm:inline">Filter</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'all')}>
+                    All Status
                   </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'active')}>
+                    Active
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'draft')}>
+                    Draft
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'pending')}>
+                    Pending
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'completed')}>
+                    Completed
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Filter by Divisi</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleFilterChange('division', 'all')}>
+                    All Division
+                  </DropdownMenuItem>
+                  {(divisions || []).map((div: any) => (
+                    <DropdownMenuItem key={div.id} onClick={() => handleFilterChange('division', div.name)}>
+                      {div.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
 
-      <CardContent className="px-4 md:px-10">
+        <CardContent className="px-4 md:px-8">
 
-        {/* MOBILE VIEW (CARDS) */}
-        <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
-          {projectList.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground border rounded-md">Belum ada proyek.</div>
-          ) : (
-            projectList.map((p: any) => (
-              <Card key={p.id} className="overflow-hidden">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{p.name}</h3>
-                      <p className="text-xs text-muted-foreground">{p.code}</p>
-                    </div>
-                    <StatusBadge status={p.status} />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Client</p>
-                      <p className="font-medium truncate">{p.client}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Divisi</p>
-                      <p className="font-medium truncate">{p.division ? p.division.name : '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Budget</p>
-                      <p className="font-medium text-green-700">
-                        {p.budget_total ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.budget_total) : '-'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t flex justify-end gap-2">
-                    <Link href={`/projects/${p.slug}`} className="w-full">
-                      <Button variant="outline" size="sm" className="w-full">View Details</Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-
-        {/* DESKTOP VIEW (TABLE) */}
-        <div className="rounded-md border hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kode</TableHead>
-                <TableHead>Nama Proyek</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Divisi</TableHead>
-                <TableHead>PIC / AM</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Timeline</TableHead>
-                <TableHead className="text-right">Budget</TableHead>
-                <TableHead className="w-[80px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {projectList.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    Belum ada proyek. Silakan ajukan proyek baru.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                projectList.map((p: any) => (
-                  <TableRow key={p.id} className="group">
-                    <TableCell className="font-medium">{p.code}</TableCell>
-                    <TableCell>
-                      <div className="font-medium">{p.name}</div>
-                    </TableCell>
-                    <TableCell>{p.client}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{p.division ? p.division.name : '-'}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-medium">PIC: {p.pic ? p.pic.name : '-'}</span>
-                        <span className="text-xs text-muted-foreground">AM: {p.account_manager ? p.account_manager.name : '-'}</span>
+          {/* MOBILE VIEW (CARDS) */}
+          <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
+            {projectList.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground border rounded-md">Belum ada proyek.</div>
+            ) : (
+              projectList.map((p: any) => (
+                <Card key={p.id} className="overflow-hidden">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{p.name}</h3>
+                        <p className="text-xs text-muted-foreground">{p.code}</p>
                       </div>
-                    </TableCell>
-                    <TableCell>
                       <StatusBadge status={p.status} />
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {p.sow ? 'Lihat SOW' : '-'}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {p.budget_total ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(p.budget_total) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/projects/${p.slug}`} className="flex items-center cursor-pointer">
-                              <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> View Details
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/projects/${p.slug}/edit`} className="flex items-center cursor-pointer">
-                              <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Project
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-                            onClick={() => confirmDelete(p)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete Project
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Client</p>
+                        <p className="font-medium truncate">{p.client}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Divisi</p>
+                        <p className="font-medium truncate">{p.division ? p.division.name : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Budget</p>
+                        <p className="font-medium text-green-700">
+                          {p.budget_total ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.budget_total) : '-'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t flex justify-end gap-2">
+                      <Link href={`/projects/${p.slug}`} className="w-full">
+                        <Button variant="outline" size="sm" className="w-full">View Details</Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* DESKTOP VIEW (TABLE) */}
+          <div className="rounded-md border hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kode</TableHead>
+                  <TableHead>Nama Proyek</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Divisi</TableHead>
+                  <TableHead>PIC / AM</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Timeline</TableHead>
+                  <TableHead className="text-right">Budget</TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {projectList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="h-24 text-center">
+                      Belum ada proyek. Silakan ajukan proyek baru.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* PAGINATION CONTROLS */}
-        <div className="flex items-center justify-between px-2 py-4">
-          <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            Showing {meta.from || 0} to {meta.to || 0} of {meta.total} results
+                ) : (
+                  projectList.map((p: any) => (
+                    <TableRow key={p.id} className="group">
+                      <TableCell className="font-medium">{p.code}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{p.name}</div>
+                      </TableCell>
+                      <TableCell>{p.client}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{p.division ? p.division.name : '-'}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs font-medium">PIC: {p.pic ? p.pic.name : '-'}</span>
+                          <span className="text-xs text-muted-foreground">AM: {p.account_manager ? p.account_manager.name : '-'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={p.status} />
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {p.sow ? 'Lihat SOW' : '-'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        {p.budget_total ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(p.budget_total) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/projects/${p.slug}`} className="flex items-center cursor-pointer">
+                                <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> View Details
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/projects/${p.slug}/edit`} className="flex items-center cursor-pointer">
+                                <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Project
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                              onClick={() => confirmDelete(p)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete Project
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-          <div className="flex w-full items-center gap-8 lg:w-fit">
-            <div className="hidden items-center gap-2 lg:flex">
-              <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Rows per page
-              </Label>
-              <Select
-                value={`${meta.per_page}`}
-                onValueChange={(value) => {
-                  router.get('/projects', { per_page: value, search: filters?.search }, { preserveState: true })
-                }}
-              >
-                <SelectTrigger className="w-20 h-8 text-xs" id="rows-per-page">
-                  <SelectValue placeholder={meta.per_page} />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                      {pageSize}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+          {/* PAGINATION CONTROLS */}
+          <div className="flex items-center justify-between px-2 py-4">
+            <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+              Showing {meta.from || 0} to {meta.to || 0} of {meta.total} results
             </div>
-            <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {meta.current_page} of {meta.last_page}
-            </div>
-            <div className="ml-auto flex items-center gap-2 lg:ml-0">
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                disabled={!meta.prev_page_url}
-                onClick={() => router.get(meta.first_page_url)}
-              >
-                <span className="sr-only">Go to first page</span>
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="size-8"
-                size="icon"
-                disabled={!meta.prev_page_url}
-                onClick={() => router.get(meta.prev_page_url)}
-              >
-                <span className="sr-only">Go to previous page</span>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="size-8"
-                size="icon"
-                disabled={!meta.next_page_url}
-                onClick={() => router.get(meta.next_page_url)}
-              >
-                <span className="sr-only">Go to next page</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="hidden size-8 lg:flex"
-                size="icon"
-                disabled={!meta.next_page_url}
-                onClick={() => router.get(meta.last_page_url)}
-              >
-                <span className="sr-only">Go to last page</span>
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
+            <div className="flex w-full items-center gap-8 lg:w-fit">
+              <div className="hidden items-center gap-2 lg:flex">
+                <Label htmlFor="rows-per-page" className="text-sm font-medium">
+                  Rows per page
+                </Label>
+                <Select
+                  value={`${meta.per_page}`}
+                  onValueChange={(value) => {
+                    router.get('/projects', { per_page: value, search: filters?.search }, { preserveState: true })
+                  }}
+                >
+                  <SelectTrigger className="w-20 h-8 text-xs" id="rows-per-page">
+                    <SelectValue placeholder={meta.per_page} />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[10, 20, 30, 40, 50].map((pageSize) => (
+                      <SelectItem key={pageSize} value={`${pageSize}`}>
+                        {pageSize}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex w-fit items-center justify-center text-sm font-medium">
+                Page {meta.current_page} of {meta.last_page}
+              </div>
+              <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                <Button
+                  variant="outline"
+                  className="hidden h-8 w-8 p-0 lg:flex"
+                  disabled={!meta.prev_page_url}
+                  onClick={() => router.get(meta.first_page_url)}
+                >
+                  <span className="sr-only">Go to first page</span>
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="size-8"
+                  size="icon"
+                  disabled={!meta.prev_page_url}
+                  onClick={() => router.get(meta.prev_page_url)}
+                >
+                  <span className="sr-only">Go to previous page</span>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="size-8"
+                  size="icon"
+                  disabled={!meta.next_page_url}
+                  onClick={() => router.get(meta.next_page_url)}
+                >
+                  <span className="sr-only">Go to next page</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="hidden size-8 lg:flex"
+                  size="icon"
+                  disabled={!meta.next_page_url}
+                  onClick={() => router.get(meta.last_page_url)}
+                >
+                  <span className="sr-only">Go to last page</span>
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-      </CardContent>
+        </CardContent>
+      </Card>
 
       {/* DELETE DIALOG */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

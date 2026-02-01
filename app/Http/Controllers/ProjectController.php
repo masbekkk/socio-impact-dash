@@ -6,13 +6,20 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
+use App\Models\Division;
 use App\Models\Project;
+use App\Models\User;
+use App\Services\ProjectService;
+use Illuminate\Support\Facades\Auth;
 
 final class ProjectController
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected $projectService;
+
+    public function __construct(ProjectService $projectService)
+    {
+        $this->projectService = $projectService;
+    }
     public function index()
     {
         // LOAD DATA FROM JSON (Dummy Source)
@@ -119,19 +126,31 @@ final class ProjectController
      */
     public function create()
     {
-        $divisions = \App\Models\Division::all();
-
+        $divisions = Division::orderBy('name', 'asc')->get();
+        $users = User::orderBy('name', 'asc')->get();
         return \Inertia\Inertia::render('Projects/Create', [
             'divisions' => $divisions,
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+
     public function store(StoreProjectRequest $request)
     {
-        //
+        try {
+            $userId = Auth::id();
+            $project = $this->projectService->createProject($request->validated(), $userId);
+            return response()->json([
+                'success' => true,
+                'message' => 'Project created successfully',
+                'data' => $project
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create project',
+                'error' => $th->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -175,6 +194,22 @@ final class ProjectController
      */
     public function edit($slug)
     {
+        // // $project->load(['locations', 'documents', 'budgets', 'milestones', 'issues']);
+        // $divisions = Division::orderBy('name', 'asc')->get();
+        // $users = User::orderBy('name', 'asc')->get();
+
+        // // return view('update_project', [
+        // //     'project' => $project,
+        // //     'divisions' => $divisions,
+        // //     'users' => $users
+        // // ]);
+
+        // $project = Project::where('slug', $slug)->first();
+
+        // return \Inertia\Inertia::render('Projects/Edit', [
+        //     'project' => $project
+        // ]);
+
         // Dummy Data for Edit Form as requested
         $project = [
             'name' => 'Pendampingan UMKM Jahe Merah',
@@ -216,7 +251,21 @@ final class ProjectController
      */
     public function update(UpdateProjectRequest $request, Project $project)
     {
-        //
+        try {
+            $userId = Auth::id();
+            $updatedProject = $this->projectService->updateProject($project, $request->validated(), $userId);
+            return response()->json([
+                'success' => true,
+                'message' => 'Project updated successfully',
+                'data' => $updatedProject
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update project',
+                'error' => $th->getMessage()
+            ], 500);
+        }
     }
 
     /**
