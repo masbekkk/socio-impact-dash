@@ -48,16 +48,25 @@ final class UpdateProjectRequest extends FormRequest
             'documents.*.file' => ['nullable', 'file', 'max:10240'],
             'documents.*.type' => ['nullable', 'string', Rule::enum(DocumentType::class)],
 
-            // Budgets - Updated for new schema
+            // Categories - create new or update existing
+            'categories' => ['nullable', 'array'],
+            'categories.*.id' => ['nullable', 'integer', 'exists:project_category_budgets,id'],
+            'categories.*.name' => ['required', 'string', 'max:255'],
+            'categories.*.total_amount' => ['nullable', 'numeric', 'min:0'],
+            'categories.*.status' => ['nullable', 'string'],
+
+            // Budgets
             'budgets' => ['nullable', 'array'],
             'budgets.*.id' => ['nullable', 'integer', 'exists:project_budgets,id'],
             'budgets.*.item_name' => ['required', 'string', 'max:255'],
             'budgets.*.quantity' => ['required', 'integer', 'min:1'],
             'budgets.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'budgets.*.category_id' => ['required', 'integer', 'exists:project_category_budgets,id'],
             'budgets.*.planned_amount' => ['required', 'numeric', 'min:0'],
             'budgets.*.actual_amount' => ['nullable', 'numeric', 'min:0'],
             'budgets.*.status' => ['nullable', 'string'],
+            'budgets.*.note' => ['nullable', 'string'],
+            'budgets.*.category_index' => ['nullable', 'integer', 'min:0'],
+            'budgets.*.category_id' => ['nullable', 'integer', 'exists:project_category_budgets,id'],
 
             // Milestones
             'milestones' => ['nullable', 'array'],
@@ -68,7 +77,7 @@ final class UpdateProjectRequest extends FormRequest
             'milestones.*.actual_date' => ['nullable', 'date'],
             'milestones.*.status' => ['nullable', 'string', Rule::enum(MilestoneStatus::class)],
 
-            // Issues (new for update)
+            // Issues
             'issues' => ['nullable', 'array'],
             'issues.*.id' => ['nullable', 'integer', 'exists:project_issues,id'],
             'issues.*.title' => ['required', 'string', 'max:255'],
@@ -88,6 +97,8 @@ final class UpdateProjectRequest extends FormRequest
             'delete_milestones.*' => ['integer', 'exists:project_milestones,id'],
             'delete_issues' => ['nullable', 'array'],
             'delete_issues.*' => ['integer', 'exists:project_issues,id'],
+            'delete_categories' => ['nullable', 'array'],
+            'delete_categories.*' => ['integer', 'exists:project_category_budgets,id'],
         ];
     }
 
@@ -112,18 +123,20 @@ final class UpdateProjectRequest extends FormRequest
             'documents.*.file.file' => 'Dokumen harus berupa file.',
             'documents.*.file.max' => 'Ukuran dokumen maksimal 10MB.',
 
+            // Categories
+            'categories.array' => 'Kategori harus berupa array.',
+            'categories.*.name.required' => 'Nama kategori wajib diisi.',
+
             // Budgets
             'budgets.array' => 'Budget harus berupa array.',
             'budgets.*.item_name.required' => 'Nama item budget wajib diisi.',
             'budgets.*.quantity.required' => 'Jumlah item wajib diisi.',
             'budgets.*.quantity.integer' => 'Jumlah item harus berupa angka bulat.',
-            'budgets.*.quantity.min' => 'Jumlah item minimal 1.',
             'budgets.*.unit_price.required' => 'Harga satuan wajib diisi.',
             'budgets.*.unit_price.numeric' => 'Harga satuan harus berupa angka.',
-            'budgets.*.category_id.required' => 'Kategori budget wajib dipilih.',
-            'budgets.*.category_id.exists' => 'Kategori budget tidak ditemukan.',
             'budgets.*.planned_amount.required' => 'Jumlah budget yang direncanakan wajib diisi.',
             'budgets.*.planned_amount.numeric' => 'Jumlah budget harus berupa angka.',
+            'budgets.*.category_id.exists' => 'Kategori budget tidak ditemukan.',
 
             // Milestones
             'milestones.array' => 'Milestone harus berupa array.',

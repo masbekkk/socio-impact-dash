@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Project;
 use App\Models\ProjectBudget;
 use App\Models\ProjectBudgetLog;
+use App\Models\ProjectCategoryBudget;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -18,12 +19,16 @@ class ProjectService
         return DB::transaction(function () use ($data, $creatorId) {
             $project = $this->createProjectRecord($data, $creatorId);
 
-            $this->syncRelation($project->locations(), $data['locations'] ?? []);
+            $this->syncLocations($project, $data['locations'] ?? []);
             $this->syncDocuments($project, $data['documents'] ?? [], $creatorId);
-            $this->syncBudgets($project, $data['budgets'] ?? []);
-            $this->syncRelation($project->milestones(), $data['milestones'] ?? []);
+        
+            $categoryIdMap = $this->syncCategories($data['categories'] ?? []);
 
-            return $project->load(['locations', 'documents', 'budgets', 'milestones']);
+            $this->syncBudgets($project, $data['budgets'] ?? [], $categoryIdMap);
+            
+            $this->syncMilestones($project, $data['milestones'] ?? []);
+
+            return $project->load(['locations', 'documents', 'budgets', 'budgets.category', 'milestones']);
         });
     }
 
@@ -33,13 +38,25 @@ class ProjectService
             $this->updateProjectRecord($project, $data);
             $this->deleteItems($project, $data);
 
-            $this->syncRelation($project->locations(), $data['locations'] ?? [], true);
+            $this->syncLocations($project, $data['locations'] ?? [], true);
             $this->syncDocuments($project, $data['documents'] ?? [], $userId, true);
-            $this->syncBudgets($project, $data['budgets'] ?? [], true);
-            $this->syncRelation($project->milestones(), $data['milestones'] ?? [], true);
-            $this->syncRelation($project->issues(), $data['issues'] ?? [], true);
+            
+            $categoryIdMap = $this->syncCategories($data['categories'] ?? [], true);
+            
+            $this->syncBudgets($project, $data['budgets'] ?? [], $categoryIdMap, true);
+            
+            $this->syncMilestones($project, $data['milestones'] ?? [], true);
+            $this->syncIssues($project, $data['issues'] ?? [], true);
 
-            return $project->fresh(['locations', 'documents', 'budgets', 'budgets.category', 'budgets.logs', 'milestones', 'issues']);
+            return $project->fresh([
+                'locations', 
+                'documents', 
+                'budgets', 
+                'budgets.category', 
+                'budgets.logs', 
+                'milestones', 
+                'issues'
+            ]);
         });
     }
 
@@ -99,7 +116,6 @@ class ProjectService
             }
         }
 
-        // Special handling for documents (delete files first)
         if (!empty($data['delete_documents'])) {
             $docs = $project->documents()->whereIn('id', $data['delete_documents'])->get();
             foreach ($docs as $doc) {
@@ -107,33 +123,114 @@ class ProjectService
             }
             $project->documents()->whereIn('id', $data['delete_documents'])->delete();
         }
+
+        if (!empty($data['delete_categories'])) {
+            ProjectCategoryBudget::whereIn('id', $data['delete_categories'])
+                ->whereDoesntHave('budgets')
+                ->delete();
+        }
     }
 
-    /**
-     * Generic sync method for simple relations (locations, milestones, issues)
-     */
-    private function syncRelation($relation, array $items, bool $allowUpdate = false): void
+    private function syncLocations(Project $project, array $locations, bool $allowUpdate = false): void
     {
-        foreach ($items as $item) {
-            if ($allowUpdate && !empty($item['id'])) {
-                $relation->where('id', $item['id'])->update($this->extractData($item));
+        foreach ($locations as $location) {
+            $locationData = [
+                'latitude' => $location['latitude'] ?? null,
+                'longitude' => $location['longitude'] ?? null,
+                'detail_address' => $location['detail_address'] ?? null,
+            ];
+
+            if ($allowUpdate && !empty($location['id'])) {
+                $project->locations()->where('id', $location['id'])->update($locationData);
             } else {
-                $relation->create($this->extractData($item));
+                $project->locations()->create($locationData);
             }
         }
     }
 
-    /**
-     * Sync budgets with logging support
-     */
-    private function syncBudgets(Project $project, array $budgets, bool $allowUpdate = false): void
+    private function syncMilestones(Project $project, array $milestones, bool $allowUpdate = false): void
+    {
+        foreach ($milestones as $milestone) {
+            $milestoneData = [
+                'title' => $milestone['title'],
+                'description' => $milestone['description'] ?? null,
+                'target_date' => $milestone['target_date'],
+                'actual_date' => $milestone['actual_date'] ?? null,
+                'status' => $milestone['status'] ?? 'pending',
+            ];
+
+            if ($allowUpdate && !empty($milestone['id'])) {
+                $project->milestones()->where('id', $milestone['id'])->update($milestoneData);
+            } else {
+                $project->milestones()->create($milestoneData);
+            }
+        }
+    }
+
+    private function syncIssues(Project $project, array $issues, bool $allowUpdate = false): void
+    {
+        foreach ($issues as $issue) {
+            $issueData = [
+                'title' => $issue['title'],
+                'description' => $issue['description'] ?? null,
+                'severity' => $issue['severity'] ?? 'medium',
+                'owner_id' => $issue['owner_id'],
+                'status' => $issue['status'] ?? 'open',
+            ];
+
+            if ($allowUpdate && !empty($issue['id'])) {
+                $project->issues()->where('id', $issue['id'])->update($issueData);
+            } else {
+                $project->issues()->create($issueData);
+            }
+        }
+    }
+
+    private function syncCategories(array $categories, bool $allowUpdate = false): array
+    {
+        $categoryIdMap = [];
+        
+        foreach ($categories as $index => $categoryData) {
+            $categoryId = null;
+            
+            if ($allowUpdate && !empty($categoryData['id'])) {
+              
+                $category = ProjectCategoryBudget::find($categoryData['id']);
+                if ($category) {
+                    $category->update([
+                        'name' => $categoryData['name'],
+                        'total_amount' => $categoryData['total_amount'] ?? $category->total_amount,
+                        'status' => $categoryData['status'] ?? $category->status,
+                    ]);
+                    $categoryId = $category->id;
+                }
+            } else {
+             
+                $category = ProjectCategoryBudget::create([
+                    'name' => $categoryData['name'],
+                    'total_amount' => $categoryData['total_amount'] ?? 0,
+                    'status' => $categoryData['status'] ?? 'pending',
+                ]);
+                $categoryId = $category->id;
+            }
+            
+            $categoryIdMap[$index] = $categoryId;
+        }
+        
+        return $categoryIdMap;
+    }
+
+
+    private function syncBudgets(Project $project, array $budgets, array $categoryIdMap, bool $allowUpdate = false): void
     {
         foreach ($budgets as $budget) {
+            $categoryId = $this->resolveCategoryId($budget, $categoryIdMap);
+            
             $budgetData = [
                 'item_name' => $budget['item_name'],
                 'quantity' => $budget['quantity'],
                 'unit_price' => $budget['unit_price'],
-                'category_id' => $budget['category_id'],
+                'category_id' => $categoryId,
                 'planned_amount' => $budget['planned_amount'],
                 'actual_amount' => $budget['actual_amount'] ?? 0,
                 'status' => $budget['status'] ?? 'pending',
@@ -143,9 +240,8 @@ class ProjectService
                 $existingBudget = $project->budgets()->find($budget['id']);
                 
                 if ($existingBudget) {
-                    // Log changes if planned_amount changed
                     if ($existingBudget->planned_amount != $budget['planned_amount']) {
-                        $this->createBudgetLog($existingBudget, $budget['planned_amount'], $budget['note'] ?? null);
+                        $this->createBudgetLog($existingBudget, (float) $budget['planned_amount'], $budget['note'] ?? null);
                     }
                     
                     $existingBudget->update($budgetData);
@@ -153,12 +249,35 @@ class ProjectService
             } else {
                 $project->budgets()->create($budgetData);
             }
+
+            if ($categoryId) {
+                $this->updateCategoryTotalAmount($categoryId);
+            }
         }
     }
 
-    /**
-     * Create a budget log entry for tracking changes
-     */
+    private function resolveCategoryId(array $budget, array $categoryIdMap): ?int
+    {
+        if (isset($budget['category_index']) && isset($categoryIdMap[$budget['category_index']])) {
+            return $categoryIdMap[$budget['category_index']];
+        }
+
+        if (!empty($budget['category_id'])) {
+            return (int) $budget['category_id'];
+        }
+
+        return null;
+    }
+
+    private function updateCategoryTotalAmount(int $categoryId): void
+    {
+        $category = ProjectCategoryBudget::find($categoryId);
+        if ($category) {
+            $totalPlanned = ProjectBudget::where('category_id', $categoryId)->sum('planned_amount');
+            $category->update(['total_amount' => $totalPlanned]);
+        }
+    }
+
     private function createBudgetLog(ProjectBudget $budget, float $newAmount, ?string $note = null): void
     {
         ProjectBudgetLog::create([
@@ -169,18 +288,6 @@ class ProjectService
         ]);
     }
 
-    /**
-     * Extract data from item, removing 'id' field
-     */
-    private function extractData(array $item): array
-    {
-        unset($item['id']);
-        return $item;
-    }
-
-    /**
-     * Sync documents with file handling
-     */
     private function syncDocuments(Project $project, array $documents, int $uploaderId, bool $allowUpdate = false): void
     {
         foreach ($documents as $document) {
