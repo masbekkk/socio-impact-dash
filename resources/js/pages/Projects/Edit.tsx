@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
 import PageHeader from '@/components/PageHeader'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -13,6 +13,25 @@ import { Button } from '@/components/ui/button'
 
 export default function ProjectsEdit({ project, divisions }: { project: any, divisions: any[] }) {
     const [step, setStep] = useState('basic')
+    const tabsListRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (tabsListRef.current) {
+            const container = tabsListRef.current
+            const activeTab = container.querySelector('[data-state="active"]') as HTMLElement
+
+            if (activeTab) {
+                const containerRect = container.getBoundingClientRect()
+                const activeRect = activeTab.getBoundingClientRect()
+
+                // Calculate the scroll position to center the active tab
+                const scrollLeft = container.scrollLeft + (activeRect.left - containerRect.left) - (containerRect.width / 2) + (activeRect.width / 2)
+
+                container.scrollTo({ left: scrollLeft, behavior: 'smooth' })
+            }
+        }
+    }, [step])
+
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Proyek', href: '/projects' },
@@ -25,29 +44,20 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                 <PageHeader title={`Edit: ${project.name}`} description="Perbarui detail proyek." />
             </div>
 
-            <Tabs value={step} onValueChange={(v) => setStep(v)} className="max-w-5xl mx-auto pb-10 px-4 md:px-0">
+            <Tabs value={step} onValueChange={(v) => setStep(v)} className="max-w-5xl mx-0 md:mx-auto pb-10 px-4 md:px-0">
                 <div
-                    className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0 scrollbar-hide mb-6"
-                    ref={(el) => { if (el) (window as any).editTabs = el }}
+                    ref={tabsListRef}
+                    className="mb-4 w-full overflow-x-auto scrollbar-hide px-4 md:mx-0 md:px-0"
                 >
-                    <TabsList className="inline-flex h-auto p-1 bg-muted/50 w-auto min-w-full md:w-full md:min-w-0 md:grid md:grid-cols-5">
+                    <TabsList className="inline-flex h-auto min-w-full w-max md:w-full flex-nowrap gap-2 bg-muted/50 p-1 justify-start md:grid md:grid-cols-5 md:gap-0">
                         {['basic', 'stakeholders', 'detail', 'budget', 'docs'].map((tabValue, idx) => (
                             <TabsTrigger
                                 key={tabValue}
                                 value={tabValue}
-                                className="data-[state=active]:bg-background flex-1 px-6 py-2 whitespace-nowrap"
-                                onClick={(e) => {
-                                    const container = (window as any).editTabs;
-                                    if (container) {
-                                        const target = e.currentTarget;
-                                        container.scrollTo({
-                                            left: target.offsetLeft - (container.offsetWidth / 2) + (target.offsetWidth / 2),
-                                            behavior: 'smooth'
-                                        });
-                                    }
-                                }}
+                                className="flex-none px-4 py-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm md:flex-1 md:w-auto md:px-6 md:py-2.5 md:text-sm"
                             >
-                                {idx + 1}. {tabValue === 'basic' ? 'Identitas' : tabValue === 'stakeholders' ? 'Stakeholder' : tabValue === 'detail' ? 'Detail & SOW' : tabValue === 'budget' ? 'Budget' : 'Dokumen'}
+                                <span className="mr-1.5 inline md:mr-2">{idx + 1}.</span>
+                                {tabValue === 'basic' ? 'Identitas' : tabValue === 'stakeholders' ? 'Stakeholder' : tabValue === 'detail' ? 'Detail & SOW' : tabValue === 'budget' ? 'Anggaran' : 'Dokumen'}
                             </TabsTrigger>
                         ))}
                     </TabsList>
@@ -114,15 +124,42 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="space-y-2">
                                     <Label>Account Manager</Label>
-                                    <Input defaultValue={project.team?.am} placeholder="Nama Account Manager" />
+                                    <Select defaultValue={project.team?.am}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Pilih Account Manager" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Budi Santoso">Budi Santoso</SelectItem>
+                                            <SelectItem value="Andi Pratama">Andi Pratama</SelectItem>
+                                            <SelectItem value="Citra Kirana">Citra Kirana</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Head Implementation</Label>
-                                    <Input defaultValue={project.team?.head} placeholder="Nama Head Implementation" />
+                                    <Select defaultValue={project.team?.head}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Pilih Head Implementation" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Siti Aminah">Siti Aminah</SelectItem>
+                                            <SelectItem value="Dewi Lestari">Dewi Lestari</SelectItem>
+                                            <SelectItem value="Eko Kurniawan">Eko Kurniawan</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label>PIC Project</Label>
-                                    <Input defaultValue={project.team?.pic} placeholder="Nama PIC Project" />
+                                    <Select defaultValue={project.team?.pic}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Pilih PIC Project" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Rudi Hermawan">Rudi Hermawan</SelectItem>
+                                            <SelectItem value="Fajar Nugraha">Fajar Nugraha</SelectItem>
+                                            <SelectItem value="Gita Gutawa">Gita Gutawa</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
                         </CardContent>
@@ -142,8 +179,9 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
-                                <Label>Scope of Work (SOW)</Label>
-                                <Textarea defaultValue={project.sow} placeholder="Deskripsikan ruang lingkup pekerjaan..." rows={8} className="resize-none" />
+                                <Label>Dokumen Scope of Work (SOW)</Label>
+                                <FileUploadDropzone />
+                                <p className="text-xs text-muted-foreground pt-1">Upload dokumen SOW yang telah disepakati.</p>
                             </div>
 
                             <div className="space-y-2">
