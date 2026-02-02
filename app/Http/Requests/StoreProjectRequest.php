@@ -31,6 +31,8 @@ final class StoreProjectRequest extends FormRequest
             'project_type' => ['required', 'string', 'max:255'],
             'sow' => ['nullable', 'file', 'max:10240'], // SOW document file, max 10MB
             'budget_total' => ['nullable', 'numeric', 'min:0'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
 
             // Locations
             'locations' => ['nullable', 'array'],

@@ -19,4 +19,5 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
+Route::get('projects/list', [ProjectController::class, 'list']);
 Route::apiResource('projects', ProjectController::class);

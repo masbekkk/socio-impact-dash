@@ -43,7 +43,7 @@ final class Project extends Model
         'user_id', 'division_id', 'account_manager_id', 'head_id', 'pic_id',
         'status', 'project_type', 
         'sow_path', 'sow_original_name', 'sow_mime', 'sow_size',
-        'budget_total',
+        'budget_total', 'start_date', 'end_date',
     ];
 
     public function casts(): array
@@ -52,6 +52,8 @@ final class Project extends Model
             'id' => 'integer',
             'status' => ProjectStatus::class,
             'budget_total' => 'decimal:2',
+            'start_date' => 'date',
+            'end_date' => 'date',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

@@ -34,6 +34,8 @@ final class UpdateProjectRequest extends FormRequest
             'project_type' => ['sometimes', 'string', 'max:255'],
             'sow' => ['sometimes', 'file', 'max:10240'], // SOW document file, max 10MB
             'budget_total' => ['sometimes', 'numeric', 'min:0'],
+            'start_date' => ['sometimes', 'date'],
+            'end_date' => ['sometimes', 'date', 'after_or_equal:start_date'],
 
             // Locations - all fields 'sometimes' for partial updates
             'locations' => ['nullable', 'array'],

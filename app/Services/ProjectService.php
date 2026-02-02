@@ -21,6 +21,39 @@ class ProjectService
         $this->fileUploadService = $fileUploadService;
     }
 
+    public function listProjects(array $filters = [], int $perPage = 15)
+    {
+        $query = Project::with([
+            'division',
+            'accountManager',
+            'head',
+            'pic',
+            'issues',
+            'milestones',
+        ]);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('client', 'like', "%{$search}%");
+            });
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['division_id'])) {
+            $query->where('division_id', $filters['division_id']);
+        }
+
+        $query->orderBy('created_at', 'desc');
+
+        return $query->paginate($perPage);
+    }
+
     public function createProject(array $data, int $creatorId): Project
     {
         return DB::transaction(function () use ($data, $creatorId) {
@@ -97,6 +130,8 @@ class ProjectService
             'sow_mime' => $sowData['sow_mime'] ?? null,
             'sow_size' => $sowData['sow_size'] ?? null,
             'budget_total' => $data['budget_total'] ?? null,
+            'start_date' => $data['start_date'] ?? null,
+            'end_date' => $data['end_date'] ?? null,
         ]);
     }
 
@@ -120,7 +155,8 @@ class ProjectService
         $fields = [
             'name', 'client', 'description', 'division_id', 
             'account_manager_id', 'head_id', 'pic_id', 
-            'status', 'project_type', 'budget_total'
+            'status', 'project_type', 'budget_total',
+            'start_date', 'end_date'
         ];
         
         foreach ($fields as $field) {

@@ -6,11 +6,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
+use App\Http\Resources\ProjectListResource;
 use App\Models\Division;
 use App\Models\Project;
 use App\Models\ProjectCategoryBudget;
 use App\Models\User;
 use App\Services\ProjectService;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -21,6 +24,25 @@ final class ProjectController
     public function __construct(ProjectService $projectService)
     {
         $this->projectService = $projectService;
+    }
+
+    public function list(Request $request)
+    {
+        try {
+             $filters = [
+            'search' => $request->get('search'),
+            'status' => $request->get('status'),
+            'division_id' => $request->get('division_id'),
+        ];
+
+        $perPage = (int) $request->get('per_page', 15);
+        $projects = $this->projectService->listProjects($filters, $perPage);
+
+        return ProjectListResource::collection($projects);
+        } catch (\Throwable $th) {
+            return response()->json(['error' => $th->getMessage()], 500);
+        }
+       
     }
 
     public function index()
@@ -250,7 +272,7 @@ final class ProjectController
     public function update(UpdateProjectRequest $request, Project $project)
     {
         try {
-            $userId = 1;
+            $userId = 1; // ubah ke auth::id;
             $updatedProject = $this->projectService->updateProject($project, $request->validated(), $userId);
             return response()->json([
                 'success' => true,
@@ -285,4 +307,5 @@ final class ProjectController
             ], 500);
         }
     }
+
 }

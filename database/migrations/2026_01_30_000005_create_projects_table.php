@@ -30,6 +30,8 @@ return new class extends Migration
             $table->string('sow_mime')->nullable();
             $table->unsignedBigInteger('sow_size')->nullable();
             $table->decimal('budget_total', 15, 2)->nullable();
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
