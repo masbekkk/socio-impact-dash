@@ -1,9 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
 import PageHeader from '@/components/PageHeader'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,6 +12,25 @@ import { Button } from '@/components/ui/button'
 
 export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
   const [step, setStep] = useState('basic')
+  const tabsListRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (tabsListRef.current) {
+      const container = tabsListRef.current
+      const activeTab = container.querySelector('[data-state="active"]') as HTMLElement
+
+      if (activeTab) {
+        const containerRect = container.getBoundingClientRect()
+        const activeRect = activeTab.getBoundingClientRect()
+
+        // Calculate the scroll position to center the active tab
+        const scrollLeft = container.scrollLeft + (activeRect.left - containerRect.left) - (containerRect.width / 2) + (activeRect.width / 2)
+
+        container.scrollTo({ left: scrollLeft, behavior: 'smooth' })
+      }
+    }
+  }, [step])
+
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Proyek', href: '/projects' },
@@ -22,45 +40,38 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
       <div className="p-4 md:p-8 pb-0">
-        <PageHeader title="Ajukan Proyek Baru" description="Isi form berikut sesuai dengan alur pengajuan proyek." />
+        <PageHeader title="Buat Proyek Baru" description="Lengkapi form berikut untuk membuat proyek baru." />
       </div>
 
-      <Tabs value={step} onValueChange={(v) => setStep(v)} className="max-w-5xl mx-auto pb-10 px-4 md:px-0">
+      <Tabs value={step} onValueChange={(v) => setStep(v)} className="max-w-5xl mx-0 md:mx-auto pb-10 px-4 md:px-0">
+
+        {/* Responsive Tabs: Scrollable on mobile (inline/swipe), Grid on desktop */}
         <div
-          className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0 scrollbar-hide mb-6"
-          ref={(el) => { if (el) (window as any).auditTabs = el }}
+          ref={tabsListRef}
+          className="mb-4 w-full overflow-x-auto scrollbar-hide px-4 md:mx-0 md:px-0"
         >
-          <TabsList className="inline-flex h-auto p-1 bg-muted/50 w-auto min-w-full md:w-full md:min-w-0 md:grid md:grid-cols-5">
+          <TabsList className="inline-flex h-auto min-w-full w-max md:w-full flex-nowrap gap-2 bg-muted/50 p-1 justify-start md:grid md:grid-cols-5 md:gap-0">
             {['basic', 'stakeholders', 'detail', 'budget', 'docs'].map((tabValue, idx) => (
               <TabsTrigger
                 key={tabValue}
                 value={tabValue}
-                className="data-[state=active]:bg-background flex-1 px-6 py-2 whitespace-nowrap"
-                onClick={(e) => {
-                  const container = (window as any).auditTabs;
-                  if (container) {
-                    const target = e.currentTarget;
-                    container.scrollTo({
-                      left: target.offsetLeft - (container.offsetWidth / 2) + (target.offsetWidth / 2),
-                      behavior: 'smooth'
-                    });
-                  }
-                }}
+                className="flex-none px-4 py-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm md:flex-1 md:w-auto md:px-6 md:py-2.5 md:text-sm"
               >
-                {idx + 1}. {tabValue === 'basic' ? 'Identitas' : tabValue === 'stakeholders' ? 'Stakeholder' : tabValue === 'detail' ? 'Detail & SOW' : tabValue === 'budget' ? 'Budget' : 'Dokumen'}
+                <span className="mr-1.5 inline md:mr-2">{idx + 1}.</span>
+                {tabValue === 'basic' ? 'Identitas' : tabValue === 'stakeholders' ? 'Stakeholder' : tabValue === 'detail' ? 'Detail & SOW' : tabValue === 'budget' ? 'Anggaran' : 'Dokumen'}
               </TabsTrigger>
             ))}
           </TabsList>
         </div>
 
         {/* Step 1: Identitas */}
-        <TabsContent value="basic">
+        <TabsContent value="basic" className="mt-0">
           <Card>
-            <CardHeader>
+            <CardHeader className="px-4 pt-4 md:px-6 md:pt-6">
               <CardTitle>Informasi Dasar</CardTitle>
               <CardDescription>Masukkan detail utama proyek.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-4 md:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Jenis Project</Label>
@@ -94,56 +105,91 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
 
               <div className="space-y-2">
                 <Label>Nama Project</Label>
-                <Input placeholder="Contoh: Pendampingan UMKM Jahe Merah" />
+                <Input
+                  placeholder="Nama Proyek ..."
+                  defaultValue="Peremajaan Sawit Rakyat (PSR) Area 1"
+                />
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button onClick={() => setStep('stakeholders')}>Selanjutnya</Button>
+            <CardFooter className="flex flex-col-reverse justify-end gap-3 px-4 pb-4 md:flex-row md:px-6 md:pb-6">
+              <Button onClick={() => setStep('stakeholders')} className="w-full md:w-auto">Selanjutnya</Button>
             </CardFooter>
           </Card>
         </TabsContent>
 
         {/* Step 2: Stakeholders */}
-        <TabsContent value="stakeholders">
+        <TabsContent value="stakeholders" className="mt-0">
           <Card>
-            <CardHeader>
+            <CardHeader className="px-4 pt-4 md:px-6 md:pt-6">
               <CardTitle>Tim & Stakeholder</CardTitle>
               <CardDescription>Tentukan penanggung jawab dan tim pelaksana.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-4 md:p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label>Account Manager</Label>
-                  <Input placeholder="Nama Account Manager" />
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Account Manager" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ahmad">Ahmad Fauzi</SelectItem>
+                      <SelectItem value="siti">Siti Aminah</SelectItem>
+                      <SelectItem value="budi">Budi Santoso</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Head Implementation</Label>
-                  <Input placeholder="Nama Head Implementation" />
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Head Implementation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dewi">Dewi Lestari</SelectItem>
+                      <SelectItem value="eko">Eko Prasetyo</SelectItem>
+                      <SelectItem value="rian">Rian Hidayat</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>PIC Project</Label>
-                  <Input placeholder="Nama PIC Project" />
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih PIC Project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fajar">Fajar Nugraha</SelectItem>
+                      <SelectItem value="maya">Maya Indah</SelectItem>
+                      <SelectItem value="rizky">Rizky Ramadhan</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep('basic')}>Kembali</Button>
-              <Button onClick={() => setStep('detail')}>Selanjutnya</Button>
+            <CardFooter className="flex flex-col-reverse justify-between gap-3 px-4 pb-4 md:flex-row md:px-6 md:pb-6">
+              <Button variant="outline" onClick={() => setStep('basic')} className="w-full md:w-auto">Kembali</Button>
+              <Button onClick={() => setStep('detail')} className="w-full md:w-auto">Selanjutnya</Button>
             </CardFooter>
           </Card>
         </TabsContent>
 
         {/* Step 3: Detail */}
-        <TabsContent value="detail">
+        <TabsContent value="detail" className="mt-0">
           <Card>
-            <CardHeader>
+            <CardHeader className="px-4 pt-4 md:px-6 md:pt-6">
               <CardTitle>Detail Pekerjaan</CardTitle>
               <CardDescription>Lingkup kerja dan durasi proyek.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-4 md:p-6">
               <div className="space-y-2">
                 <Label>Scope of Work (SOW)</Label>
-                <Textarea placeholder="Deskripsikan ruang lingkup pekerjaan..." rows={8} className="resize-none" />
+                <div className="border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Upload dokumen SOW (PDF/Docx).</p>
+                  </div>
+                  <FileUploadDropzone />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -161,42 +207,44 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 <p className="text-xs text-muted-foreground pt-1">Sesuaikan dengan tanggal SPK.</p>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep('stakeholders')}>Kembali</Button>
-              <Button onClick={() => setStep('budget')}>Selanjutnya</Button>
+            <CardFooter className="flex flex-col-reverse justify-between gap-3 px-4 pb-4 md:flex-row md:px-6 md:pb-6">
+              <Button variant="outline" onClick={() => setStep('stakeholders')} className="w-full md:w-auto">Kembali</Button>
+              <Button onClick={() => setStep('budget')} className="w-full md:w-auto">Selanjutnya</Button>
             </CardFooter>
           </Card>
         </TabsContent>
 
         {/* Step 4: Budget */}
-        <TabsContent value="budget">
+        <TabsContent value="budget" className="mt-0">
           <Card>
-            <CardHeader>
+            <CardHeader className="px-4 pt-4 md:px-6 md:pt-6">
               <CardTitle>Anggaran & Keuangan</CardTitle>
-              <CardDescription>Rincian budget dan proyeksi keuangan proyek.</CardDescription>
+              <CardDescription>Rincian anggaran dan proyeksi keuangan proyek.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
               <div className="space-y-2">
-                <Label>Budget Project & Proyeksi</Label>
-                <BudgetEditor />
+                <Label>Anggaran Proyek & Proyeksi</Label>
+                <div className="w-full overflow-x-auto pb-2">
+                  <BudgetEditor />
+                </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep('detail')}>Kembali</Button>
-              <Button onClick={() => setStep('docs')}>Selanjutnya</Button>
+            <CardFooter className="flex flex-col-reverse justify-between gap-3 px-4 pb-4 md:flex-row md:px-6 md:pb-6">
+              <Button variant="outline" onClick={() => setStep('detail')} className="w-full md:w-auto">Kembali</Button>
+              <Button onClick={() => setStep('docs')} className="w-full md:w-auto">Selanjutnya</Button>
             </CardFooter>
           </Card>
         </TabsContent>
 
         {/* Step 5: Dokumen */}
-        <TabsContent value="docs">
+        <TabsContent value="docs" className="mt-0">
           <Card>
-            <CardHeader>
+            <CardHeader className="px-4 pt-4 md:px-6 md:pt-6">
               <CardTitle>Dokumen Pendukung</CardTitle>
               <CardDescription>Upload dokumen legalitas dan proposal.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
+            <CardContent className="p-4 md:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors">
                   <div className="space-y-1">
                     <Label className="text-base">Proposal Kegiatan</Label>
@@ -213,13 +261,12 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep('budget')}>Kembali</Button>
-              <Button className="min-w-32">Submit Akhir</Button>
+            <CardFooter className="flex flex-col-reverse justify-between gap-3 px-4 pb-4 md:flex-row md:px-6 md:pb-6">
+              <Button variant="outline" onClick={() => setStep('budget')} className="w-full md:w-auto">Kembali</Button>
+              <Button className="w-full md:w-auto min-w-32">Submit Akhir</Button>
             </CardFooter>
           </Card>
         </TabsContent>
-
       </Tabs>
     </AppSidebarLayout>
   )
