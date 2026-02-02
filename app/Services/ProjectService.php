@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Project;
+use App\Models\ProjectBudget;
+use App\Models\ProjectBudgetLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -18,7 +20,7 @@ class ProjectService
 
             $this->syncRelation($project->locations(), $data['locations'] ?? []);
             $this->syncDocuments($project, $data['documents'] ?? [], $creatorId);
-            $this->syncRelation($project->budgets(), $data['budgets'] ?? []);
+            $this->syncBudgets($project, $data['budgets'] ?? []);
             $this->syncRelation($project->milestones(), $data['milestones'] ?? []);
 
             return $project->load(['locations', 'documents', 'budgets', 'milestones']);
@@ -33,11 +35,11 @@ class ProjectService
 
             $this->syncRelation($project->locations(), $data['locations'] ?? [], true);
             $this->syncDocuments($project, $data['documents'] ?? [], $userId, true);
-            $this->syncRelation($project->budgets(), $data['budgets'] ?? [], true);
+            $this->syncBudgets($project, $data['budgets'] ?? [], true);
             $this->syncRelation($project->milestones(), $data['milestones'] ?? [], true);
             $this->syncRelation($project->issues(), $data['issues'] ?? [], true);
 
-            return $project->fresh(['locations', 'documents', 'budgets', 'milestones', 'issues']);
+            return $project->fresh(['locations', 'documents', 'budgets', 'budgets.category', 'budgets.logs', 'milestones', 'issues']);
         });
     }
 
@@ -108,7 +110,7 @@ class ProjectService
     }
 
     /**
-     * Generic sync method for simple relations (locations, budgets, milestones, issues)
+     * Generic sync method for simple relations (locations, milestones, issues)
      */
     private function syncRelation($relation, array $items, bool $allowUpdate = false): void
     {
@@ -119,6 +121,52 @@ class ProjectService
                 $relation->create($this->extractData($item));
             }
         }
+    }
+
+    /**
+     * Sync budgets with logging support
+     */
+    private function syncBudgets(Project $project, array $budgets, bool $allowUpdate = false): void
+    {
+        foreach ($budgets as $budget) {
+            $budgetData = [
+                'item_name' => $budget['item_name'],
+                'quantity' => $budget['quantity'],
+                'unit_price' => $budget['unit_price'],
+                'category_id' => $budget['category_id'],
+                'planned_amount' => $budget['planned_amount'],
+                'actual_amount' => $budget['actual_amount'] ?? 0,
+                'status' => $budget['status'] ?? 'pending',
+            ];
+
+            if ($allowUpdate && !empty($budget['id'])) {
+                $existingBudget = $project->budgets()->find($budget['id']);
+                
+                if ($existingBudget) {
+                    // Log changes if planned_amount changed
+                    if ($existingBudget->planned_amount != $budget['planned_amount']) {
+                        $this->createBudgetLog($existingBudget, $budget['planned_amount'], $budget['note'] ?? null);
+                    }
+                    
+                    $existingBudget->update($budgetData);
+                }
+            } else {
+                $project->budgets()->create($budgetData);
+            }
+        }
+    }
+
+    /**
+     * Create a budget log entry for tracking changes
+     */
+    private function createBudgetLog(ProjectBudget $budget, float $newAmount, ?string $note = null): void
+    {
+        ProjectBudgetLog::create([
+            'project_budget_id' => $budget->id,
+            'old_planned_amount' => $budget->planned_amount,
+            'new_planned_amount' => $newAmount,
+            'note' => $note,
+        ]);
     }
 
     /**

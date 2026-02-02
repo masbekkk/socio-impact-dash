@@ -48,12 +48,16 @@ final class UpdateProjectRequest extends FormRequest
             'documents.*.file' => ['nullable', 'file', 'max:10240'],
             'documents.*.type' => ['nullable', 'string', Rule::enum(DocumentType::class)],
 
-            // Budgets
+            // Budgets - Updated for new schema
             'budgets' => ['nullable', 'array'],
             'budgets.*.id' => ['nullable', 'integer', 'exists:project_budgets,id'],
-            'budgets.*.category' => ['required', 'string', 'max:255'],
+            'budgets.*.item_name' => ['required', 'string', 'max:255'],
+            'budgets.*.quantity' => ['required', 'integer', 'min:1'],
+            'budgets.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'budgets.*.category_id' => ['required', 'integer', 'exists:project_category_budgets,id'],
             'budgets.*.planned_amount' => ['required', 'numeric', 'min:0'],
             'budgets.*.actual_amount' => ['nullable', 'numeric', 'min:0'],
+            'budgets.*.status' => ['nullable', 'string'],
 
             // Milestones
             'milestones' => ['nullable', 'array'],
@@ -110,7 +114,14 @@ final class UpdateProjectRequest extends FormRequest
 
             // Budgets
             'budgets.array' => 'Budget harus berupa array.',
-            'budgets.*.category.required' => 'Kategori budget wajib diisi.',
+            'budgets.*.item_name.required' => 'Nama item budget wajib diisi.',
+            'budgets.*.quantity.required' => 'Jumlah item wajib diisi.',
+            'budgets.*.quantity.integer' => 'Jumlah item harus berupa angka bulat.',
+            'budgets.*.quantity.min' => 'Jumlah item minimal 1.',
+            'budgets.*.unit_price.required' => 'Harga satuan wajib diisi.',
+            'budgets.*.unit_price.numeric' => 'Harga satuan harus berupa angka.',
+            'budgets.*.category_id.required' => 'Kategori budget wajib dipilih.',
+            'budgets.*.category_id.exists' => 'Kategori budget tidak ditemukan.',
             'budgets.*.planned_amount.required' => 'Jumlah budget yang direncanakan wajib diisi.',
             'budgets.*.planned_amount.numeric' => 'Jumlah budget harus berupa angka.',
 

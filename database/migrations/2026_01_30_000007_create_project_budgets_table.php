@@ -12,11 +12,16 @@ return new class extends Migration
     {
         Schema::create('project_budgets', function (Blueprint $table): void {
             $table->id();
+            $table->string('item_name');
+            $table->integer('quantity');
+            $table->decimal('unit_price', 15, 2);
             $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->string('category');
+            $table->foreignId('category_id')->constrained('project_category_budgets')->cascadeOnDelete();
             $table->decimal('planned_amount', 15, 2);
             $table->decimal('actual_amount', 15, 2)->default(0);
+            $table->string('status')->default('pending');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

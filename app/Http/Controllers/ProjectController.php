@@ -8,6 +8,7 @@ use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Division;
 use App\Models\Project;
+use App\Models\ProjectCategoryBudget;
 use App\Models\User;
 use App\Services\ProjectService;
 use Illuminate\Support\Facades\Auth;
@@ -128,7 +129,13 @@ final class ProjectController
     {   
         $divisions = Division::orderBy('name', 'asc')->get();
         $users = User::orderBy('name', 'asc')->get();
-        return view('create_project', ['divisions' => $divisions, 'users' => $users]);
+        $budgetCategories = ProjectCategoryBudget::orderBy('name', 'asc')->get();
+        
+        return view('create_project', [
+            'divisions' => $divisions, 
+            'users' => $users,
+            'budgetCategories' => $budgetCategories,
+        ]);
     }
 
 
@@ -190,16 +197,18 @@ final class ProjectController
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit($slug)
+    public function edit(Project $project)
     {
-        $project->load(['locations', 'documents', 'budgets', 'milestones', 'issues']);
+        $project->load(['locations', 'documents', 'budgets', 'budgets.category', 'budgets.logs', 'milestones', 'issues']);
         $divisions = Division::orderBy('name', 'asc')->get();
         $users = User::orderBy('name', 'asc')->get();
+        $budgetCategories = ProjectCategoryBudget::orderBy('name', 'asc')->get();
         
         return view('update_project', [
             'project' => $project,
             'divisions' => $divisions,
-            'users' => $users
+            'users' => $users,
+            'budgetCategories' => $budgetCategories,
         ]);
     }
 
