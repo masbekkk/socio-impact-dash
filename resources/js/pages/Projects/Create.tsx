@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
 import PageHeader from '@/components/PageHeader'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -9,9 +10,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import FileUploadDropzone from '@/components/FileUploadDropzone'
 import BudgetEditor from '@/components/BudgetEditor'
 import { Button } from '@/components/ui/button'
+import LocationPicker from '@/components/LocationPicker'
 
 export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
   const [step, setStep] = useState('basic')
+  const [location, setLocation] = useState({ lat: -6.2, lng: 106.8, address: '' })
   const tabsListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -111,8 +114,10 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 />
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col-reverse justify-end gap-3 px-4 pb-4 md:flex-row md:px-6 md:pb-6">
-              <Button onClick={() => setStep('stakeholders')} className="w-full md:w-auto">Selanjutnya</Button>
+            <CardFooter className="flex justify-end gap-3 px-4 pb-4 md:px-6 md:pb-6">
+              <Button onClick={() => setStep('stakeholders')} className="w-auto">
+                Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -167,9 +172,13 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col-reverse justify-between gap-3 px-4 pb-4 md:flex-row md:px-6 md:pb-6">
-              <Button variant="outline" onClick={() => setStep('basic')} className="w-full md:w-auto">Kembali</Button>
-              <Button onClick={() => setStep('detail')} className="w-full md:w-auto">Selanjutnya</Button>
+            <CardFooter className="flex justify-between gap-3 px-4 pb-4 md:px-6 md:pb-6">
+              <Button variant="outline" size="icon" onClick={() => setStep('basic')} title="Kembali">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Button onClick={() => setStep('detail')} className="w-auto">
+                Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -206,10 +215,25 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 </div>
                 <p className="text-xs text-muted-foreground pt-1">Sesuaikan dengan tanggal SPK.</p>
               </div>
+
+              <div className="space-y-2">
+                <Label>Lokasi Pelaksanaan</Label>
+                <div className="border rounded-lg p-4">
+                  <LocationPicker
+                    onLocationSelect={(lat, lng, address) => setLocation({ lat, lng, address })}
+                    initialLat={-6.200000}
+                    initialLng={106.816666}
+                  />
+                </div>
+              </div>
             </CardContent>
-            <CardFooter className="flex flex-col-reverse justify-between gap-3 px-4 pb-4 md:flex-row md:px-6 md:pb-6">
-              <Button variant="outline" onClick={() => setStep('stakeholders')} className="w-full md:w-auto">Kembali</Button>
-              <Button onClick={() => setStep('budget')} className="w-full md:w-auto">Selanjutnya</Button>
+            <CardFooter className="flex justify-between gap-3 px-4 pb-4 md:px-6 md:pb-6">
+              <Button variant="outline" size="icon" onClick={() => setStep('stakeholders')} title="Kembali">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Button onClick={() => setStep('budget')} className="w-auto">
+                Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -229,9 +253,13 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col-reverse justify-between gap-3 px-4 pb-4 md:flex-row md:px-6 md:pb-6">
-              <Button variant="outline" onClick={() => setStep('detail')} className="w-full md:w-auto">Kembali</Button>
-              <Button onClick={() => setStep('docs')} className="w-full md:w-auto">Selanjutnya</Button>
+            <CardFooter className="flex justify-between gap-3 px-4 pb-4 md:px-6 md:pb-6">
+              <Button variant="outline" size="icon" onClick={() => setStep('detail')} title="Kembali">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Button onClick={() => setStep('docs')} className="w-auto">
+                Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -261,9 +289,11 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col-reverse justify-between gap-3 px-4 pb-4 md:flex-row md:px-6 md:pb-6">
-              <Button variant="outline" onClick={() => setStep('budget')} className="w-full md:w-auto">Kembali</Button>
-              <Button className="w-full md:w-auto min-w-32">Submit Akhir</Button>
+            <CardFooter className="flex justify-between gap-3 px-4 pb-4 md:px-6 md:pb-6">
+              <Button variant="outline" size="icon" onClick={() => setStep('budget')} title="Kembali">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Button className="w-auto min-w-32">Submit Akhir</Button>
             </CardFooter>
           </Card>
         </TabsContent>

@@ -9,9 +9,10 @@ import TimelineList from '@/components/TimelineList'
 import BudgetEditor from '@/components/BudgetEditor'
 import FileUploadDropzone from '@/components/FileUploadDropzone'
 import { Button } from '@/components/ui/button'
+import LocationPicker from '@/components/LocationPicker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Circle, Clock, AlertCircle, Trash2, X, Pencil, FileText, Eye } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, Loader2, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -189,22 +190,25 @@ export default function ProjectsShow({ project }: any) {
           <h3 className="text-lg font-semibold mb-4">Status Persetujuan (Approval)</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {workflows.map((flow, index) => (
-              <Card key={index} className={flow.status === 'pending' ? 'border-blue-500/50 bg-blue-50/50' : ''}>
+              <Card key={index} className={flow.status === 'pending' ? 'border-yellow-500/50 bg-yellow-50/30' : ''}>
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-sm font-medium text-muted-foreground uppercase">{flow.role}</CardTitle>
                     {flow.status === 'approved' && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-                    {flow.status === 'pending' && <Clock className="h-5 w-5 text-blue-600 animate-pulse" />}
+                    {flow.status === 'pending' && <Hourglass className="h-5 w-5 text-yellow-600" />}
                     {flow.status === 'waiting' && <Circle className="h-5 w-5 text-gray-300" />}
                   </div>
                   <div className="text-lg font-bold mt-1">{flow.name}</div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between text-sm">
-                    <span className={`capitalize px-2 py-0.5 rounded-full text-xs font-medium 
-                                    ${flow.status === 'approved' ? 'bg-green-100 text-green-700' :
-                        flow.status === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {flow.status === 'pending' ? 'Menunggu Approval' : flow.status}
+                    <span className={`capitalize px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 border
+                                    ${flow.status === 'approved' ? 'bg-green-100 text-green-700 border-green-200' :
+                        flow.status === 'pending' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                      {flow.status === 'approved' && <CheckCircle2 className="h-3.5 w-3.5" />}
+                      {flow.status === 'pending' && <Hourglass className="h-3.5 w-3.5" />}
+                      {flow.status === 'waiting' && <Loader className="h-3.5 w-3.5 animate-spin" />}
+                      {flow.status === 'pending' ? 'Pending' : flow.status}
                     </span>
                     <span className="text-muted-foreground text-xs">{flow.date}</span>
                   </div>
@@ -257,6 +261,19 @@ export default function ProjectsShow({ project }: any) {
                     </a>
                   </Button>
                 </div>
+
+                <div className="mt-6 border-t pt-6">
+                  <h4 className="font-semibold mb-3 text-sm">Lokasi Pelaksanaan</h4>
+                  <div className="border rounded-lg p-4">
+                    <LocationPicker
+                      initialLat={-6.200000} // Nanti ambil dari props project
+                      initialLng={106.816666}
+                      initialAddress="Jakarta, Indonesia"
+                      readOnly={true}
+                    />
+                  </div>
+                </div>
+
               </CardContent>
             </Card>
           </TabsContent>
