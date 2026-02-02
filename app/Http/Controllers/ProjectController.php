@@ -12,6 +12,7 @@ use App\Models\ProjectCategoryBudget;
 use App\Models\User;
 use App\Services\ProjectService;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 final class ProjectController
 {
@@ -187,7 +188,7 @@ final class ProjectController
         $project['issues'] = $project['issues'] ?? [];
         $project['monitoring_history'] = $project['monitoring_history'] ?? [];
 
-        return \Inertia\Inertia::render('Projects/Show', [
+        return Inertia::render('Projects/Show', [
             'project' => $project
         ]);
     }
@@ -197,47 +198,6 @@ final class ProjectController
      */
     public function edit($slug)
     {
-        // $project->load(['locations', 'documents', 'budgets', 'milestones', 'issues']);
-        // $divisions = Division::orderBy('name', 'asc')->get();
-        // $users = User::orderBy('name', 'asc')->get();
-
-        // return view('update_project', [
-        //     'project' => $project,
-        //     'divisions' => $divisions,
-        //     'users' => $users
-        // ]);
-
-        // Dummy Data for Edit Form as requested
-        $project = [
-            'name' => 'Pendampingan UMKM Jahe Merah',
-            'slug' => 'pendampingan-umkm-jahe-merah',
-            'code' => 'PRJ-2025-001',
-            'client' => 'PT Sinergi Alam',
-            'type' => 'pendampingan',
-            'division_code' => '1',
-            'status' => 'active',
-            'sow' => "Melakukan pendampingan intensif kepada 50 petani jahe merah...",
-            'start_date' => '2025-01-10',
-            'end_date' => '2025-06-10',
-            'budget_total' => 150000000,
-            'team' => [
-                'am' => 'Budi Santoso',
-                'head' => 'Siti Aminah',
-                'pic' => 'Rudi Hermawan'
-            ],
-            'issues' => [],
-            'monitoring_history' => []
-        ];
-
-        // Dummy Divisions
-        $divisions = [
-            ['id' => 1, 'name' => 'Divisi Operasional'],
-            ['id' => 2, 'name' => 'Divisi IT'],
-            ['id' => 3, 'name' => 'Divisi Keuangan'],
-            ['id' => 4, 'name' => 'Divisi SDM'],
-        ];
-
-        return \Inertia\Inertia::render('Projects/Edit', [
         // $project->load(['locations', 'documents', 'budgets', 'milestones', 'issues']);
         // $divisions = Division::orderBy('name', 'asc')->get();
         // $users = User::orderBy('name', 'asc')->get();

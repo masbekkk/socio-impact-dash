@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('project_budget_logs', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->string('action');
             $table->foreignId('project_budget_id')->constrained('project_budgets')->cascadeOnDelete();
             $table->decimal('old_planned_amount', 15, 2);
             $table->decimal('new_planned_amount', 15, 2);

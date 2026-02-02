@@ -29,7 +29,7 @@ final class StoreProjectRequest extends FormRequest
             'pic_id' => ['nullable', 'integer', 'exists:users,id'],
             'status' => ['nullable', 'string', Rule::enum(ProjectStatus::class)],
             'project_type' => ['required', 'string', 'max:255'],
-            'sow' => ['nullable', 'string'],
+            'sow' => ['nullable', 'file', 'max:10240'], // SOW document file, max 10MB
             'budget_total' => ['nullable', 'numeric', 'min:0'],
 
             // Locations
@@ -46,7 +46,7 @@ final class StoreProjectRequest extends FormRequest
             // Categories - MUST be created first before budgets
             'categories' => ['nullable', 'array'],
             'categories.*.name' => ['required', 'string', 'max:255'],
-            'categories.*.total_amount' => ['nullable', 'numeric', 'min:0'],
+            // 'categories.*.total_amount' => ['nullable', 'numeric', 'min:0'], // diitung diservice
             'categories.*.status' => ['nullable', 'string'],
 
             // Budgets - references category by index (category_index) or existing ID (category_id)
@@ -54,8 +54,8 @@ final class StoreProjectRequest extends FormRequest
             'budgets.*.item_name' => ['required', 'string', 'max:255'],
             'budgets.*.quantity' => ['required', 'integer', 'min:1'],
             'budgets.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'budgets.*.planned_amount' => ['required', 'numeric', 'min:0'],
-            'budgets.*.actual_amount' => ['nullable', 'numeric', 'min:0'],
+            // 'budgets.*.planned_amount' => ['nullable', 'numeric', 'min:0'], // diitung di service
+            // 'budgets.*.actual_amount' => ['nullable', 'numeric', 'min:0'], // ini kosong
             'budgets.*.status' => ['nullable', 'string'],
             // Use category_index to reference new category from categories array (0-based index)
             'budgets.*.category_index' => ['nullable', 'integer', 'min:0'],
@@ -106,10 +106,10 @@ final class StoreProjectRequest extends FormRequest
             'budgets.*.quantity.min' => 'Jumlah item minimal 1.',
             'budgets.*.unit_price.required' => 'Harga satuan wajib diisi.',
             'budgets.*.unit_price.numeric' => 'Harga satuan harus berupa angka.',
-            'budgets.*.planned_amount.required' => 'Jumlah budget yang direncanakan wajib diisi.',
-            'budgets.*.planned_amount.numeric' => 'Jumlah budget harus berupa angka.',
+            // 'budgets.*.planned_amount.required' => 'Jumlah budget yang direncanakan wajib diisi.',
+            // 'budgets.*.planned_amount.numeric' => 'Jumlah budget harus berupa angka.',
             'budgets.*.category_id.exists' => 'Kategori budget tidak ditemukan.',
-            'budgets.*.category_index.integer' => 'Index kategori harus berupa angka.',
+            // 'budgets.*.category_index.integer' => 'Index kategori harus berupa angka.',
 
             // Milestones
             'milestones.array' => 'Milestone harus berupa array.',

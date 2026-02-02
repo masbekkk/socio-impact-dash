@@ -14,6 +14,8 @@ final class ProjectBudgetLog extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'user_id',
+        'action',
         'project_budget_id',
         'old_planned_amount',
         'new_planned_amount',
@@ -24,10 +26,19 @@ final class ProjectBudgetLog extends Model
     {
         return [
             'id' => 'integer',
+            'user_id' => 'integer',
             'project_budget_id' => 'integer',
             'old_planned_amount' => 'decimal:2',
             'new_planned_amount' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Get the user who made this log
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**

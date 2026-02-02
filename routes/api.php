@@ -20,4 +20,3 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::apiResource('projects', ProjectController::class);
-Route::post('/store/projects', [ProjectController::class, 'storeProject']);
