@@ -13,6 +13,7 @@ import LocationPicker from '@/components/LocationPicker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, Circle, Clock, Loader2, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye } from 'lucide-react'
+import MoneyInput from '@/components/MoneyInput'
 import {
   Dialog,
   DialogContent,
@@ -385,11 +386,11 @@ export default function ProjectsShow({ project }: any) {
                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.total)}
                               </td>
                               <td className="p-3 text-center">
-                                <Input
-                                  type="number"
+                                <MoneyInput
                                   className="h-8 w-20 text-center mx-auto"
                                   value={item.approvedQty}
-                                  onChange={(e) => updateApprovedQty(catIndex, item.id, Number(e.target.value))}
+                                  onValueChange={(values) => updateApprovedQty(catIndex, item.id, values.floatValue || 0)}
+                                  placeholder="0"
                                 />
                               </td>
                               <td className="p-3 text-center">
@@ -553,8 +554,7 @@ export default function ProjectsShow({ project }: any) {
                     <label className="text-sm font-medium">Realisasi Anggaran (Final)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-sm font-semibold text-muted-foreground">Rp</span>
-                      <input
-                        type="number"
+                      <MoneyInput
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-9 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono font-bold text-green-700"
                         placeholder="0"
                       />
