@@ -10,9 +10,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import FileUploadDropzone from '@/components/FileUploadDropzone'
 import BudgetEditor from '@/components/BudgetEditor'
 import { Button } from '@/components/ui/button'
+import LocationPicker from '@/components/LocationPicker'
 
 export default function ProjectsEdit({ project, divisions }: { project: any, divisions: any[] }) {
     const [step, setStep] = useState('basic')
+    const [location, setLocation] = useState({ lat: project.lat || -6.2, lng: project.lng || 106.8, address: project.address || '' })
     const tabsListRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -197,6 +199,18 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                     </div>
                                 </div>
                                 <p className="text-xs text-muted-foreground pt-1">Sesuaikan dengan tanggal SPK.</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Lokasi Pelaksanaan</Label>
+                                <div className="border rounded-lg p-4">
+                                    <LocationPicker
+                                        onLocationSelect={(lat, lng, address) => setLocation({ lat, lng, address })}
+                                        initialLat={location.lat}
+                                        initialLng={location.lng}
+                                        initialAddress={location.address}
+                                    />
+                                </div>
                             </div>
                         </CardContent>
                         <CardFooter className="flex justify-between">
