@@ -28,8 +28,8 @@ yarn-error.log
 /.zed
 /tmp/
 /config/database.php
-/composer-latest.phar 
-/composer.json
-/composer.lock
-/package.json
-/package-lock.json
+composer-latest.phar 
+composer.json
+composer.lock
+package.json
+package-lock.json
