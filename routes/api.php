@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\PresenceController;
-use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\UserProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -28,7 +28,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/history', [PresenceController::class, 'history']);
         Route::get('/summary', [PresenceController::class, 'monthlySummary']);
     });
-});
 
-Route::get('projects/list', [ProjectController::class, 'list']);
-Route::apiResource('projects', ProjectController::class);
+    // Project routes
+    Route::prefix('projects')->group(function () {
+        Route::get('/list', [ProjectController::class, 'list']);
+        Route::post('/', [ProjectController::class, 'store']);
+        Route::put('/{project}', [ProjectController::class, 'update']);
+        Route::delete('/{project}', [ProjectController::class, 'destroy']);
+    });
+});
