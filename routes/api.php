@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\UserProfileController;
 use Illuminate\Http\Request;
@@ -16,6 +17,16 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::get('/user', function (Request $request) {
         return $request->user();
+    });
+
+    // Presence / Attendance routes
+    Route::prefix('presences')->group(function () {
+        Route::post('/check-in', [PresenceController::class, 'checkIn']);
+        Route::post('/check-out', [PresenceController::class, 'checkOut']);
+        Route::post('/permission', [PresenceController::class, 'submitPermission']);
+        Route::get('/today', [PresenceController::class, 'today']);
+        Route::get('/history', [PresenceController::class, 'history']);
+        Route::get('/summary', [PresenceController::class, 'monthlySummary']);
     });
 });
 
