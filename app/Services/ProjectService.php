@@ -5,23 +5,70 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Project;
+use App\Models\ProjectBudget;
+use App\Models\ProjectBudgetLog;
+use App\Models\ProjectCategoryBudget;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProjectService
-{
+{   
+    protected $fileUploadService; 
+    public function __construct(FileUploadService $fileUploadService)
+    {
+        $this->fileUploadService = $fileUploadService;
+    }
+
+    public function listProjects(array $filters = [], int $perPage = 15)
+    {
+        $query = Project::with([
+            'division',
+            'accountManager',
+            'head',
+            'pic',
+            'issues',
+            'milestones',
+        ]);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('client', 'like', "%{$search}%");
+            });
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['division_id'])) {
+            $query->where('division_id', $filters['division_id']);
+        }
+
+        $query->orderBy('created_at', 'desc');
+
+        return $query->paginate($perPage);
+    }
+
     public function createProject(array $data, int $creatorId): Project
     {
         return DB::transaction(function () use ($data, $creatorId) {
             $project = $this->createProjectRecord($data, $creatorId);
 
-            $this->syncRelation($project->locations(), $data['locations'] ?? []);
+            $this->syncLocations($project, $data['locations'] ?? []);
             $this->syncDocuments($project, $data['documents'] ?? [], $creatorId);
-            $this->syncRelation($project->budgets(), $data['budgets'] ?? []);
-            $this->syncRelation($project->milestones(), $data['milestones'] ?? []);
+        
+            $categoryIdMap = $this->syncCategories($data['categories'] ?? []);
 
-            return $project->load(['locations', 'documents', 'budgets', 'milestones']);
+            $this->syncBudgets($project, $data['budgets'] ?? [], $categoryIdMap);
+            
+            $this->syncMilestones($project, $data['milestones'] ?? []);
+
+            return $project->load(['locations', 'documents', 'budgets', 'budgets.category', 'milestones']);
         });
     }
 
@@ -29,15 +76,27 @@ class ProjectService
     {
         return DB::transaction(function () use ($project, $data, $userId) {
             $this->updateProjectRecord($project, $data);
-            $this->deleteItems($project, $data);
+            $this->deleteRelatedProjectBudget($project, $data);
 
-            $this->syncRelation($project->locations(), $data['locations'] ?? [], true);
+            $this->syncLocations($project, $data['locations'] ?? [], true);
             $this->syncDocuments($project, $data['documents'] ?? [], $userId, true);
-            $this->syncRelation($project->budgets(), $data['budgets'] ?? [], true);
-            $this->syncRelation($project->milestones(), $data['milestones'] ?? [], true);
-            $this->syncRelation($project->issues(), $data['issues'] ?? [], true);
+            
+            $categoryIdMap = $this->syncCategories($data['categories'] ?? [], true);
+            
+            $this->syncBudgets($project, $data['budgets'] ?? [], $categoryIdMap, true);
+            
+            $this->syncMilestones($project, $data['milestones'] ?? [], true);
+            $this->syncIssues($project, $data['issues'] ?? [], $userId, true);
 
-            return $project->fresh(['locations', 'documents', 'budgets', 'milestones', 'issues']);
+            return $project->fresh([
+                'locations', 
+                'documents', 
+                'budgets', 
+                'budgets.category', 
+                'budgets.logs', 
+                'milestones', 
+                'issues'
+            ]);
         });
     }
 
@@ -52,6 +111,8 @@ class ProjectService
 
     private function createProjectRecord(array $data, int $creatorId): Project
     {
+        $sowData = $this->handleSowUpload($data);
+        
         return Project::create([
             'code' => $this->generateProjectUniqueCode(),
             'name' => $data['name'],
@@ -64,74 +125,294 @@ class ProjectService
             'pic_id' => $data['pic_id'] ?? null,
             'status' => $data['status'] ?? null,
             'project_type' => $data['project_type'],
-            'sow' => $data['sow'] ?? null,
+            'sow_path' => $sowData['sow_path'] ?? null,
+            'sow_original_name' => $sowData['sow_original_name'] ?? null,
+            'sow_mime' => $sowData['sow_mime'] ?? null,
+            'sow_size' => $sowData['sow_size'] ?? null,
             'budget_total' => $data['budget_total'] ?? null,
+            'start_date' => $data['start_date'] ?? null,
+            'end_date' => $data['end_date'] ?? null,
         ]);
+    }
+
+    private function handleSowUpload(array $data): array
+    {
+        if (empty($data['sow']) || !($data['sow'] instanceof UploadedFile)) {
+            return [];
+        }
+
+        return $this->fileUploadService->uploadFileWithPrefix(
+            $data['sow'], 
+            'projects/sow', 
+            'sow_'
+        );
     }
 
     private function updateProjectRecord(Project $project, array $data): void
     {
-        $project->update([
-            'name' => $data['name'],
-            'client' => $data['client'],
-            'description' => $data['description'] ?? null,
-            'division_id' => $data['division_id'] ?? null,
-            'account_manager_id' => $data['account_manager_id'] ?? null,
-            'head_id' => $data['head_id'] ?? null,
-            'pic_id' => $data['pic_id'] ?? null,
-            'status' => $data['status'] ?? null,
-            'project_type' => $data['project_type'],
-            'sow' => $data['sow'] ?? null,
-            'budget_total' => $data['budget_total'] ?? null,
+        $updateData = [];
+        
+        $fields = [
+            'name', 'client', 'description', 'division_id', 
+            'account_manager_id', 'head_id', 'pic_id', 
+            'status', 'project_type', 'budget_total',
+            'start_date', 'end_date'
+        ];
+        
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $data)) {
+                $updateData[$field] = $data[$field];
+            }
+        }
+        
+        // Handle SOW file upload
+        if (!empty($data['sow']) && $data['sow'] instanceof \Illuminate\Http\UploadedFile) {
+            $sowData = $this->fileUploadService->replaceFileWithPrefix(
+                $data['sow'],
+                $project->sow_path,
+                'projects/sow',
+                'sow_'
+            );
+            $updateData = array_merge($updateData, $sowData);
+        }
+        
+        if (!empty($updateData)) {
+            $project->update($updateData);
+        }
+    }
+
+    private function deleteRelatedProjectBudget(Project $project, array $data): void
+    {
+        $categoryIdsToRecalculate = [];
+
+        if (!empty($data['delete_categories'])) {
+            ProjectBudget::where('project_id', $project->id)
+                ->whereIn('category_id', $data['delete_categories'])
+                ->delete();
+            ProjectCategoryBudget::whereIn('id', $data['delete_categories'])->delete();
+        }
+
+        if (!empty($data['delete_budgets'])) {
+            $budgetsToDelete = $project->budgets()->whereIn('id', $data['delete_budgets'])->get();
+            foreach ($budgetsToDelete as $budget) {
+                if ($budget->category_id) {
+                    $categoryIdsToRecalculate[] = $budget->category_id;
+                }
+            }
+            $project->budgets()->whereIn('id', $data['delete_budgets'])->delete();
+        }
+
+        foreach (array_unique($categoryIdsToRecalculate) as $categoryId) {
+            $this->updateCategoryTotalAmount($categoryId);
+        }
+    }
+
+    private function syncLocations(Project $project, array $locations, bool $allowUpdate = false): void
+    {
+        $fields = ['latitude', 'longitude', 'detail_address'];
+        
+        foreach ($locations as $location) {
+            if ($allowUpdate && !empty($location['id'])) {
+                $updateData = $this->extractUpdateData($location, $fields);
+                if (!empty($updateData)) {
+                    $project->locations()->where('id', $location['id'])->update($updateData);
+                }
+            } else {
+                $project->locations()->create([
+                    'latitude' => $location['latitude'] ?? null,
+                    'longitude' => $location['longitude'] ?? null,
+                    'detail_address' => $location['detail_address'] ?? null,
+                ]);
+            }
+        }
+    }
+
+    private function syncMilestones(Project $project, array $milestones, bool $allowUpdate = false): void
+    {
+        $fields = ['title', 'description', 'target_date', 'actual_date', 'status'];
+        
+        foreach ($milestones as $milestone) {
+            if ($allowUpdate && !empty($milestone['id'])) {
+                $updateData = $this->extractUpdateData($milestone, $fields);
+                if (!empty($updateData)) {
+                    $project->milestones()->where('id', $milestone['id'])->update($updateData);
+                }
+            } else {
+                $project->milestones()->create([
+                    'title' => $milestone['title'],
+                    'description' => $milestone['description'] ?? null,
+                    'target_date' => $milestone['target_date'],
+                    'actual_date' => $milestone['actual_date'] ?? null,
+                    'status' => $milestone['status'] ?? 'pending',
+                ]);
+            }
+        }
+    }
+
+    private function syncIssues(Project $project, array $issues, int $userId, bool $allowUpdate = false): void
+    {
+        $fields = ['title', 'description', 'severity', 'owner_id', 'status'];
+        
+        foreach ($issues as $issue) {
+            if ($allowUpdate && !empty($issue['id'])) {
+                $updateData = $this->extractUpdateData($issue, $fields);
+                if (!empty($updateData)) {
+                    $project->issues()->where('id', $issue['id'])->update($updateData);
+                }
+            } else {
+                $project->issues()->create([
+                    'title' => $issue['title'],
+                    'description' => $issue['description'] ?? null,
+                    'severity' => $issue['severity'] ?? 'medium',
+                    'owner_id' => $issue['owner_id'] ?? $userId,
+                    'status' => $issue['status'] ?? 'open',
+                ]);
+            }
+        }
+    }
+
+    private function syncCategories(array $categories, bool $allowUpdate = false): array
+    {
+        $categoryIdMap = [];
+        $fields = ['name', 'status'];
+        
+        foreach ($categories as $index => $categoryData) {
+            $categoryId = null;
+            
+            if ($allowUpdate && !empty($categoryData['id'])) {
+                $category = ProjectCategoryBudget::find($categoryData['id']);
+                if ($category) {
+                    $updateData = $this->extractUpdateData($categoryData, $fields);
+                    if (!empty($updateData)) {
+                        $category->update($updateData);
+                    }
+                    $categoryId = $category->id;
+                }
+            } else {
+                $category = ProjectCategoryBudget::create([
+                    'name' => $categoryData['name'],
+                    'total_amount' => 0,
+                    'status' => $categoryData['status'] ?? 'pending',
+                ]);
+                $categoryId = $category->id;
+            }
+            
+            $categoryIdMap[$index] = $categoryId;
+        }
+        
+        return $categoryIdMap;
+    }
+
+    private function syncBudgets(Project $project, array $budgets, array $categoryIdMap, bool $allowUpdate = false): void
+    {
+        $fields = ['item_name', 'quantity', 'unit_price', 'actual_amount', 'status'];
+        
+        foreach ($budgets as $budget) {
+            $categoryId = $this->resolveCategoryId($budget, $categoryIdMap);
+
+            if ($allowUpdate && !empty($budget['id'])) {
+                $existingBudget = $project->budgets()->find($budget['id']);
+                
+                if ($existingBudget) {
+                    $updateData = $this->extractUpdateData($budget, $fields);
+                  
+                    $oldCategoryId = $existingBudget->category_id;
+  
+                    if ($categoryId !== null) {
+                        $updateData['category_id'] = $categoryId;
+                    }
+
+                    $newQuantity = $updateData['quantity'] ?? $existingBudget->quantity;
+                    $newUnitPrice = $updateData['unit_price'] ?? $existingBudget->unit_price;
+                    $newPlannedAmount = $newQuantity * $newUnitPrice;
+ 
+                    if ($existingBudget->planned_amount != $newPlannedAmount) {
+                        $this->createBudgetLog($existingBudget, $newPlannedAmount, $budget['note'] ?? null);
+                    }
+                    
+                    $updateData['planned_amount'] = $newPlannedAmount;
+                    
+                    if (!empty($updateData)) {
+                        $existingBudget->update($updateData);
+                    }
+        
+                    if ($categoryId) {
+                        $this->updateCategoryTotalAmount($categoryId);
+                    }
+                    
+                    if ($oldCategoryId && $oldCategoryId != $categoryId) {
+                        $this->updateCategoryTotalAmount($oldCategoryId);
+                    }
+                }
+            } else {
+                $plannedAmount = $budget['quantity'] * $budget['unit_price'];
+                
+                $project->budgets()->create([
+                    'item_name' => $budget['item_name'],
+                    'quantity' => $budget['quantity'],
+                    'unit_price' => $budget['unit_price'],
+                    'category_id' => $categoryId,
+                    'planned_amount' => $plannedAmount,
+                    'actual_amount' => $budget['actual_amount'] ?? 0,
+                    'status' => $budget['status'] ?? 'pending',
+                ]);
+
+                if ($categoryId) {
+                    $this->updateCategoryTotalAmount($categoryId);
+                }
+            }
+        }
+    }
+
+    private function extractUpdateData(array $data, array $fields): array
+    {
+        $updateData = [];
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $data)) {
+                $updateData[$field] = $data[$field];
+            }
+        }
+        return $updateData;
+    }
+
+    private function resolveCategoryId(array $budget, array $categoryIdMap): ?int
+    {
+        if (isset($budget['category_index']) && isset($categoryIdMap[$budget['category_index']])) {
+            return $categoryIdMap[$budget['category_index']];
+        }
+
+        if (!empty($budget['category_id'])) {
+            return (int) $budget['category_id'];
+        }
+
+        return null;
+    }
+
+    private function updateCategoryTotalAmount(int $categoryId): void
+    {
+        $category = ProjectCategoryBudget::find($categoryId);
+        if ($category) {
+            // Only sum non-deleted budgets (soft deleted are automatically excluded)
+            $totalPlanned = ProjectBudget::where('category_id', $categoryId)
+                ->sum('planned_amount');
+            $category->update(['total_amount' => $totalPlanned]);
+        }
+    }
+
+    private function createBudgetLog(ProjectBudget $budget, float $newAmount, ?string $note = null, int $userId = 1, string $action = 'update'): void
+    {
+        ProjectBudgetLog::create([
+            'user_id' => $userId,
+            'action' => $action,
+            'project_budget_id' => $budget->id,
+            'old_planned_amount' => $budget->planned_amount,
+            'new_planned_amount' => $newAmount,
+            'note' => $note,
         ]);
     }
 
-    private function deleteItems(Project $project, array $data): void
-    {
-        $relations = ['locations', 'budgets', 'milestones', 'issues'];
-        
-        foreach ($relations as $relation) {
-            $deleteKey = "delete_{$relation}";
-            if (!empty($data[$deleteKey])) {
-                $project->$relation()->whereIn('id', $data[$deleteKey])->delete();
-            }
-        }
-
-        // Special handling for documents (delete files first)
-        if (!empty($data['delete_documents'])) {
-            $docs = $project->documents()->whereIn('id', $data['delete_documents'])->get();
-            foreach ($docs as $doc) {
-                Storage::disk('public')->delete($doc->path);
-            }
-            $project->documents()->whereIn('id', $data['delete_documents'])->delete();
-        }
-    }
-
     /**
-     * Generic sync method for simple relations (locations, budgets, milestones, issues)
-     */
-    private function syncRelation($relation, array $items, bool $allowUpdate = false): void
-    {
-        foreach ($items as $item) {
-            if ($allowUpdate && !empty($item['id'])) {
-                $relation->where('id', $item['id'])->update($this->extractData($item));
-            } else {
-                $relation->create($this->extractData($item));
-            }
-        }
-    }
-
-    /**
-     * Extract data from item, removing 'id' field
-     */
-    private function extractData(array $item): array
-    {
-        unset($item['id']);
-        return $item;
-    }
-
-    /**
-     * Sync documents with file handling
+     * Sync documents - partial update support
      */
     private function syncDocuments(Project $project, array $documents, int $uploaderId, bool $allowUpdate = false): void
     {
@@ -146,14 +427,17 @@ class ProjectService
 
     private function createDocument(Project $project, array $document, int $uploaderId): void
     {
-        $file = $document['file'];
+        $fileMetadata = $this->fileUploadService->uploadFile(
+            $document['file'],
+            "projects/{$project->id}/documents"
+        );
         
         $project->documents()->create([
             'type' => $document['type'] ?? null,
-            'original_name' => $file->getClientOriginalName(),
-            'path' => $file->store("projects/{$project->id}/documents", 'public'),
-            'mime' => $file->getMimeType(),
-            'size' => $file->getSize(),
+            'original_name' => $fileMetadata['original_name'],
+            'path' => $fileMetadata['path'],
+            'mime' => $fileMetadata['mime'],
+            'size' => $fileMetadata['size'],
             'uploaded_by' => $uploaderId,
         ]);
     }
@@ -166,19 +450,25 @@ class ProjectService
             return;
         }
 
-        $updateData = ['type' => $document['type'] ?? $existingDoc->type];
-
-        if (!empty($document['file'])) {
-            Storage::disk('public')->delete($existingDoc->path);
-            $file = $document['file'];
-            $updateData = array_merge($updateData, [
-                'original_name' => $file->getClientOriginalName(),
-                'path' => $file->store("projects/{$project->id}/documents", 'public'),
-                'mime' => $file->getMimeType(),
-                'size' => $file->getSize(),
-            ]);
+        $updateData = [];
+        
+        // Only update type if provided
+        if (array_key_exists('type', $document)) {
+            $updateData['type'] = $document['type'];
         }
 
-        $existingDoc->update($updateData);
+        // Handle file replacement
+        if (!empty($document['file'])) {
+            $fileMetadata = $this->fileUploadService->replaceFile(
+                $document['file'],
+                $existingDoc->path,
+                "projects/{$project->id}/documents"
+            );
+            $updateData = array_merge($updateData, $fileMetadata);
+        }
+
+        if (!empty($updateData)) {
+            $existingDoc->update($updateData);
+        }
     }
 }
