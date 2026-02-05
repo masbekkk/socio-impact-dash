@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Link } from '@inertiajs/react'
+import { Link, usePage } from '@inertiajs/react'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import StatusBadge from '@/components/StatusBadge'
@@ -24,7 +24,10 @@ import {
 } from "@/components/ui/dialog"
 
 export default function ProjectsShow({ project }: any) {
-  // Use data from backend passed via Inertia
+  const { auth } = usePage().props as any;
+  // const currentUserRole = auth.user?.role || 'Admin'; 
+  const currentUserRole = 'Admin'; 
+
   const mock = {
     slug: project.slug,
     code: project.code,
@@ -81,6 +84,7 @@ export default function ProjectsShow({ project }: any) {
   const [isApproveAlertOpen, setIsApproveAlertOpen] = useState(false);
   const [isRevisionAlertOpen, setIsRevisionAlertOpen] = useState(false);
   const [selectedLocIndex, setSelectedLocIndex] = useState(0);
+  const [isSubmitReportAlertOpen, setIsSubmitReportAlertOpen] = useState(false);
 
   const handleApproveAction = () => {
     setIsApproveAlertOpen(false);
@@ -177,7 +181,7 @@ export default function ProjectsShow({ project }: any) {
   const workflows = [
     { role: 'Admin', name: 'Admin Project', status: 'approved', date: project.start_date, note: 'Dokumen administrasi dan kelengkapan proposal sudah valid.' },
     { role: 'Finance', name: 'Finance Team', status: currentStatus === 'draft' ? 'pending' : 'approved', date: currentStatus !== 'draft' ? project.start_date : '-', note: currentStatus !== 'draft' ? 'Budget tersedia dan sesuai dengan alokasi Q1.' : '' },
-    { role: 'Head', name: project.team?.head || 'Unassigned', status: (currentStatus === 'completed' || isReadyForClosing) ? 'approved' : 'waiting', date: '-', note: (currentStatus === 'completed' || isReadyForClosing) ? 'Project berjalan baik, hasil sesuai target.' : '-' },
+    { role: 'Direktur', name: 'Direktur', status: (currentStatus === 'completed' || isReadyForClosing) ? 'approved' : 'waiting', date: '-', note: (currentStatus === 'completed' || isReadyForClosing) ? 'Project berjalan baik, hasil sesuai target.' : '-' },
   ];
 
   return (
@@ -215,49 +219,66 @@ export default function ProjectsShow({ project }: any) {
         <section>
           <h3 className="text-lg font-semibold mb-4">Status Persetujuan (Approval)</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {workflows.map((flow, index) => (
-              <Card key={index} className={flow.status === 'pending' ? 'border-yellow-500/50 bg-yellow-50/30' : ''}>
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-sm font-medium text-muted-foreground uppercase">{flow.role}</CardTitle>
-                    {flow.status === 'approved' && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-                    {flow.status === 'pending' && <Hourglass className="h-5 w-5 text-yellow-600" />}
-                    {flow.status === 'waiting' && <Circle className="h-5 w-5 text-gray-300" />}
-                  </div>
-                  <div className="text-lg font-bold mt-1">{flow.name}</div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm mb-3">
-                    <span className={`capitalize px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 border
-                                    ${flow.status === 'approved' ? 'bg-green-100 text-green-700 border-green-200' :
-                        flow.status === 'pending' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-                      {flow.status === 'approved' && <CheckCircle2 className="h-3.5 w-3.5" />}
-                      {flow.status === 'pending' && <Hourglass className="h-3.5 w-3.5" />}
-                      {flow.status === 'waiting' && <Loader className="h-3.5 w-3.5 animate-spin" />}
-                      {flow.status === 'pending' ? 'Pending' : flow.status}
-                    </span>
-                    <span className="text-muted-foreground text-xs">{flow.date}</span>
-                  </div>
+            {workflows.map((flow, index) => {
+              const isMyRole = currentUserRole === flow.role;
+              return (
+                <Card
+                  key={index}
+                  className={`transition-all duration-200 ${isMyRole
+                    ? 'bg-[var(--sidebar)] text-white border-[var(--sidebar)] shadow-md'
+                    : flow.status === 'pending'
+                      ? 'border-yellow-500/50 bg-yellow-50/30'
+                      : ''
+                    }`}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <CardTitle className={`text-sm font-medium ${isMyRole ? 'text-white/80' : 'text-muted-foreground'}`}>{flow.role}</CardTitle>
+                      {flow.status === 'approved' && <CheckCircle2 className={`h-5 w-5 ${isMyRole ? 'text-white' : 'text-green-600'}`} />}
+                      {flow.status === 'pending' && <Hourglass className={`h-5 w-5 ${isMyRole ? 'text-white' : 'text-yellow-600'}`} />}
+                      {flow.status === 'waiting' && <Circle className={`h-5 w-5 ${isMyRole ? 'text-white/50' : 'text-gray-300'}`} />}
+                    </div>
+                    <div className={`text-lg font-bold mt-1 ${isMyRole ? 'text-white' : 'text-[var(--sidebar)]'}`}>{flow.name}</div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between text-sm mb-3">
+                      <span className={`capitalize px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 border
+                                      ${isMyRole
+                          ? 'bg-white/20 text-white border-white/20'
+                          : flow.status === 'approved'
+                            ? 'bg-green-100 text-green-700 border-green-200'
+                            : flow.status === 'pending'
+                              ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                              : 'bg-gray-100 text-gray-500 border-gray-200'
+                        }`}>
+                        {flow.status === 'approved' && <CheckCircle2 className="h-3.5 w-3.5" />}
+                        {flow.status === 'pending' && <Hourglass className="h-3.5 w-3.5" />}
+                        {flow.status === 'waiting' && <Loader className="h-3.5 w-3.5 animate-spin" />}
+                        {flow.status === 'pending' ? 'Pending' : flow.status}
+                      </span>
+                      <span className={`text-xs ${isMyRole ? 'text-white/80' : 'text-muted-foreground'}`}>{flow.date}</span>
+                    </div>
 
-                  {/* Notes Section */}
-                  <div className="bg-white/50 p-3 rounded-lg border border-gray-100 text-sm mt-3">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
-                      <FileText className="h-3 w-3" /> Catatan:
-                    </p>
-                    {flow.note && flow.note !== '-' ? (
-                      <p className="text-gray-700 italic">"{flow.note}"</p>
-                    ) : (
-                      <p className="text-gray-400 italic text-xs">Belum ada catatan.</p>
-                    )}
-                  </div>
-                </CardContent>
-                {flow.status === 'pending' && (
-                  <CardFooter>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700" size="sm">Approve Sekarang</Button>
-                  </CardFooter>
-                )}
-              </Card>
-            ))}
+                    {/* Notes Section */}
+                    <div className={`p-3 rounded-lg border text-sm mt-3 ${isMyRole ? 'bg-white/10 border-white/20' : 'bg-white/50 border-gray-100'}`}>
+                      <p className={`text-xs font-semibold mb-1 flex items-center gap-1 ${isMyRole ? 'text-white/90' : 'text-muted-foreground'}`}>
+                        <FileText className="h-3 w-3" /> Catatan:
+                      </p>
+                      {flow.note && flow.note !== '-' ? (
+                        <p className={`italic ${isMyRole ? 'text-white' : 'text-gray-700'}`}>"{flow.note}"</p>
+                      ) : (
+                        <p className={`italic text-xs ${isMyRole ? 'text-white/50' : 'text-gray-400'}`}>Belum ada catatan.</p>
+                      )}
+                    </div>
+                  </CardContent>
+                  {flow.status === 'pending' && (
+                    <CardFooter>
+                      <Button className={`w-full ${isMyRole ? 'bg-white text-[var(--sidebar)] hover:bg-gray-100' : 'bg-blue-600 hover:bg-blue-700'}`} size="sm">Approve Sekarang</Button>
+                    </CardFooter>
+                  )}
+                </Card>
+              );
+            })}
           </div>
 
           {/* Approval Notes Input (Below Cards) */}
@@ -279,7 +300,7 @@ export default function ProjectsShow({ project }: any) {
                   <AlertCircle className="h-4 w-4 mr-2" />
                   Revisi
                 </Button>
-                <Button onClick={() => setIsApproveAlertOpen(true)} className="bg-green-600 hover:bg-green-700 text-white shadow-sm">
+                <Button onClick={() => setIsApproveAlertOpen(true)} className="bg-[#00763c] hover:bg-[#005f30] text-white shadow-sm">
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   Approve
                 </Button>
@@ -292,12 +313,11 @@ export default function ProjectsShow({ project }: any) {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div ref={tabsListRef} className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0 scrollbar-hide">
             <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max md:w-full min-w-full md:min-w-0">
-              <TabsTrigger value="detail" className="flex-none md:flex-1 whitespace-nowrap px-4">Detail & Proposal</TabsTrigger>
-              <TabsTrigger value="timeline" className="flex-none md:flex-1 whitespace-nowrap px-4">Timeline</TabsTrigger>
-              <TabsTrigger value="budget" className="flex-none md:flex-1 whitespace-nowrap px-4">Budget</TabsTrigger>
-              <TabsTrigger value="docs" className="flex-none md:flex-1 whitespace-nowrap px-4">Dokumen</TabsTrigger>
-              <TabsTrigger value="monitoring" className="flex-none md:flex-1 whitespace-nowrap px-4">Monitoring</TabsTrigger>
-              <TabsTrigger value="closing" className="flex-none md:flex-1 whitespace-nowrap px-4">Closing</TabsTrigger>
+              <TabsTrigger value="detail" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[#00763c] data-[state=active]:text-white">Detail & Proposal</TabsTrigger>
+              <TabsTrigger value="timeline" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[#00763c] data-[state=active]:text-white">Timeline</TabsTrigger>
+              <TabsTrigger value="budget" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[#00763c] data-[state=active]:text-white">Budget</TabsTrigger>
+              <TabsTrigger value="monitoring" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[#00763c] data-[state=active]:text-white">Monitoring</TabsTrigger>
+              <TabsTrigger value="closing" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[#00763c] data-[state=active]:text-white">Closing</TabsTrigger>
             </TabsList>
           </div>
 
@@ -356,16 +376,16 @@ export default function ProjectsShow({ project }: any) {
                               onClick={() => setSelectedLocIndex(idx)}
                               className={`flex gap-3 items-start p-3 border rounded-lg cursor-pointer transition-all duration-200 group
                                 ${isActive
-                                  ? 'bg-blue-50 border-blue-500 shadow-sm ring-1 ring-blue-500'
-                                  : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}
+                                  ? 'bg-gray-50 border-gray-500 shadow-sm ring-1 ring-gray-500'
+                                  : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
                             >
-                              <div className={`mt-0.5 p-1.5 rounded-full ${isActive ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600'}`}>
+                              <div className={`mt-0.5 p-1.5 rounded-full ${isActive ? 'bg-gray-600 text-white shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-gray-100 group-hover:text-gray-600'}`}>
                                 <MapPin className="h-3.5 w-3.5" />
                               </div>
                               <div className="flex-1">
                                 <div className="flex justify-between items-center">
-                                  <h4 className={`font-semibold text-xs ${isActive ? 'text-blue-700' : 'text-gray-900'}`}>Titik {idx + 1}</h4>
-                                  {isActive && <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">Aktif</span>}
+                                  <h4 className={`font-semibold text-xs ${isActive ? 'text-green-700' : 'text-gray-900'}`}>Titik {idx + 1}</h4>
+                                  {isActive && <span className="text-[10px] font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">Aktif</span>}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">{loc.address}</p>
                                 <div className="text-[10px] text-gray-400 mt-2 font-mono flex items-center gap-1">
@@ -493,19 +513,6 @@ export default function ProjectsShow({ project }: any) {
             </Card>
           </TabsContent>
 
-          <TabsContent value="docs" className="mt-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="border rounded p-4">
-                <h4 className="font-medium mb-2">Proposal</h4>
-                <div className="text-sm text-blue-600 underline cursor-pointer">proposal_kegiatan_v1.pdf</div>
-              </div>
-              <div className="border rounded p-4 opacity-50 bg-gray-50">
-                <h4 className="font-medium mb-2">Kontrak / SPK</h4>
-                <div className="text-sm text-gray-400">Belum diupload</div>
-              </div>
-            </div>
-          </TabsContent>
-
           <TabsContent value="monitoring" className="mt-4">
             <div className="space-y-8">
               {/* FORM INPUT SECTION (INLINE) */}
@@ -593,7 +600,7 @@ export default function ProjectsShow({ project }: any) {
                 </CardContent>
                 <CardFooter className="justify-between border-t p-4 bg-gray-50/50">
                   <p className="text-xs text-muted-foreground">Pastikan data yang diinput sudah benar sebelum submit.</p>
-                  <Button onClick={submitReport} className="bg-gray-900 hover:bg-gray-800 text-white min-w-[180px]">
+                  <Button onClick={() => setIsSubmitReportAlertOpen(true)} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar-active)] text-white hover:text-black hover:border-black border-1 min-w-[180px]">
                     Submit Laporan
                   </Button>
                 </CardFooter>
@@ -821,7 +828,7 @@ export default function ProjectsShow({ project }: any) {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsApproveAlertOpen(false)}>Batal</Button>
-            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleApproveAction}>Ya, Approve</Button>
+            <Button className="bg-[#00763c] hover:bg-[#005f30] text-white" onClick={handleApproveAction}>Ya, Approve</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -835,6 +842,24 @@ export default function ProjectsShow({ project }: any) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRevisionAlertOpen(false)}>Batal</Button>
             <Button variant="destructive" onClick={handleRevisionAction}>Kirim Revisi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSubmitReportAlertOpen} onOpenChange={setIsSubmitReportAlertOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Submit Laporan</DialogTitle>
+            <DialogDescription>
+              Apakah anda yakin data yang diinput sudah benar? Laporan ini akan dikirim ke atasan untuk approval.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSubmitReportAlertOpen(false)}>Batal</Button>
+            <Button className="bg-[#00763c] hover:bg-[#005f30] text-white" onClick={() => {
+              submitReport();
+              setIsSubmitReportAlertOpen(false);
+            }}>Ya, Submit Laporan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

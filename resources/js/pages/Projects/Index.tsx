@@ -111,7 +111,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
           <h1 className="text-2xl font-bold tracking-tight">Proyek</h1>
           <p className="text-muted-foreground text-sm md:text-base">Kelola semua proyek, pantau progress dan budget.</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto gap-2">
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar-foreground)] hover:text-black hover:border-black hover:border-1">
           <Plus className="h-4 w-4" />
           Proyek Baru
         </Button>
