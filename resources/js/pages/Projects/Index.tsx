@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import StatusBadge from '@/components/StatusBadge'
-import { Link, router } from '@inertiajs/react'
+import { Head, Link, router } from '@inertiajs/react'
 import {
   Table,
   TableBody,
@@ -104,7 +104,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
-
+      <Head title="Proyek" />
       <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-8 py-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Proyek</h1>

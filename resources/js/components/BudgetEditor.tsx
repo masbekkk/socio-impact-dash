@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import MoneyInput from '@/components/MoneyInput'
 
 type BudgetItem = {
   id: string
@@ -100,11 +101,10 @@ export default function BudgetEditor() {
               <p className="text-sm text-muted-foreground mb-3">Nilai kontrak yang akan diterima dari Client (Revenue).</p>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-sm font-semibold">Rp</span>
-                <Input
-                  type="number"
-                  className="pl-9 text-lg font-mono font-semibold"
-                  value={revenue || ''}
-                  onChange={(e) => setRevenue(Number(e.target.value))}
+                <MoneyInput
+                  className="pl-9 text-lg font-mono font-semibold text-left"
+                  value={revenue}
+                  onValueChange={(values) => setRevenue(values.floatValue || 0)}
                   placeholder="0"
                 />
               </div>
@@ -148,8 +148,8 @@ export default function BudgetEditor() {
                       <Box className="w-5 h-5 text-primary" />
                     </div>
                     <Input
-                      className="font-semibold text-lg bg-transparent border-none shadow-none focus-visible:ring-0 px-0 h-auto w-full placeholder:text-muted-foreground/50"
-                      placeholder="Nama Kategori (Contoh: ATK, Konsumsi, Transportasi)"
+                      className="font-semibold text-lg hover:border-input focus:border-input h-10 w-full placeholder:text-red-500/70 border border-input shadow-sm bg-background"
+                      placeholder="Masukkan nama kategori (Contoh: ATK, Konsumsi)"
                       value={category.name}
                       onChange={(e) => updateCategoryName(category.id, e.target.value)}
                     />
@@ -196,23 +196,21 @@ export default function BudgetEditor() {
                             />
                           </td>
                           <td className="p-2">
-                            <Input
-                              type="number"
+                            <MoneyInput
                               className="h-8 text-center border-transparent hover:border-input focus:border-input bg-transparent"
                               placeholder="0"
-                              value={item.qty || ''}
-                              onChange={(e) => updateItem(category.id, item.id, 'qty', Number(e.target.value))}
+                              value={item.qty}
+                              onValueChange={(values) => updateItem(category.id, item.id, 'qty', values.floatValue || 0)}
                             />
                           </td>
                           <td className="p-2">
                             <div className="relative">
                               <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">Rp</span>
-                              <Input
-                                type="number"
+                              <MoneyInput
                                 className="h-8 pl-8 text-right border-transparent hover:border-input focus:border-input bg-transparent font-mono"
                                 placeholder="0"
-                                value={item.price || ''}
-                                onChange={(e) => updateItem(category.id, item.id, 'price', Number(e.target.value))}
+                                value={item.price}
+                                onValueChange={(values) => updateItem(category.id, item.id, 'price', values.floatValue || 0)}
                               />
                             </div>
                           </td>
