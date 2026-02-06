@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import StatusBadge from '@/components/StatusBadge'
-import { Link, router } from '@inertiajs/react'
+import { Head, Link, router } from '@inertiajs/react'
 import {
   Table,
   TableBody,
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Filter, MoreHorizontal, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, CheckCircle2, X } from 'lucide-react'
+import { Search, Plus, Filter, MoreHorizontal, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, CheckCircle2, X, FileText } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,6 +54,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
   // Delete Dialog & Toast State
   const [projectToDelete, setProjectToDelete] = React.useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [toast, setToast] = React.useState({ show: false, message: '', type: 'success' });
 
   // Toast Timer
@@ -104,18 +105,16 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
-
+      <Head title="Proyek" />
       <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-8 py-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Proyek</h1>
           <p className="text-muted-foreground text-sm md:text-base">Kelola semua proyek, pantau progress dan budget.</p>
         </div>
-        <Link href='/projects/create' className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto gap-2">
-            <Plus className="h-4 w-4" />
-            Proyek Baru
-          </Button>
-        </Link>
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar-foreground)] hover:text-black hover:border-black hover:border-1">
+          <Plus className="h-4 w-4" />
+          Proyek Baru
+        </Button>
       </CardContent>
 
       <Card className="mx-4 md:mx-8 mb-8 border-none rounded-xl overflow-hidden">
@@ -150,14 +149,8 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                   <DropdownMenuItem onClick={() => handleFilterChange('status', 'active')}>
                     Active
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'draft')}>
-                    Draft
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'pending')}>
-                    Pending
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'completed')}>
-                    Completed
+                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'proposal')}>
+                    Proposal
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
@@ -202,7 +195,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Divisi</p>
-                        <p className="font-medium truncate">{p.division ? p.division.name : '-'}</p>
+                        <p className="font-medium truncate">{p.division_name || (p.division ? p.division.name : '-')}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Budget</p>
@@ -255,12 +248,12 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                       </TableCell>
                       <TableCell>{p.client}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{p.division ? p.division.name : '-'}</Badge>
+                        <Badge variant="outline">{p.division_name || (p.division ? p.division.name : '-')}</Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <span className="text-xs font-medium">PIC: {p.pic ? p.pic.name : '-'}</span>
-                          <span className="text-xs text-muted-foreground">AM: {p.account_manager ? p.account_manager.name : '-'}</span>
+                          <span className="text-xs font-medium">PIC: {p.team?.pic || (p.pic ? p.pic.name : '-')}</span>
+                          <span className="text-xs text-muted-foreground">AM: {p.team?.am || (p.account_manager ? p.account_manager.name : '-')}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -403,6 +396,42 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
               Hapus Permanen
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CREATE OPTION DIALOG */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Buat Proyek Baru</DialogTitle>
+            <DialogDescription>
+              Pilih jenis inisiasi proyek yang ingin Anda buat.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <Link href="/projects/create?type=proposal" onClick={() => setIsCreateDialogOpen(false)}>
+              <div className="cursor-pointer rounded-xl border-2 border-dashed border-gray-200 p-6 hover:border-black hover:bg-gray-50 transition-all text-center h-full flex flex-col items-center justify-center gap-3">
+                <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Proposal Project</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Pengajuan proposal.</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/projects/create?type=active" onClick={() => setIsCreateDialogOpen(false)}>
+              <div className="cursor-pointer rounded-xl border-2 border-dashed border-gray-200 p-6 hover:border-black hover:bg-gray-50 transition-all text-center h-full flex flex-col items-center justify-center gap-3">
+                <div className="p-3 bg-green-100 rounded-full text-green-600">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Active Project</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Yang sudah (disetujui)</p>
+                </div>
+              </div>
+            </Link>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -13,7 +13,20 @@ final class Presence extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'date', 'status', 'check_in_at', 'check_out_at', 'latitude', 'longitude', 'photo_path', 'notes'];
+    protected $fillable = [
+        'user_id', 
+        'date', 
+        'status', 
+        'check_in_at', 
+        'check_out_at', 
+        'check_in_latitude', 
+        'check_in_longitude',
+        'check_out_latitude', 
+        'check_out_longitude',
+        'photo_path', 
+        'attachment_path',
+        'notes'
+    ];
 
     public function casts(): array
     {
@@ -24,8 +37,10 @@ final class Presence extends Model
             'status' => PresenceStatus::class,
             'check_in_at' => 'datetime',
             'check_out_at' => 'datetime',
-            'latitude' => 'decimal:8',
-            'longitude' => 'decimal:8',
+            'check_in_latitude' => 'decimal:8',
+            'check_in_longitude' => 'decimal:8',
+            'check_out_latitude' => 'decimal:8',
+            'check_out_longitude' => 'decimal:8',
         ];
     }
 
