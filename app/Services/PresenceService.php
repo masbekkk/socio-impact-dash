@@ -1,0 +1,223 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Enums\PresenceStatus;
+use App\Models\Presence;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
+
+class PresenceService
+{
+    public function __construct(
+        private FileUploadService $fileUploadService
+    ) {}
+
+
+    public function checkIn(User $user, array $data): Presence
+    {
+        return DB::transaction(function () use ($user, $data) {
+            $today = Carbon::today();
+            
+            $existingPresence = $this->getTodayPresence($user);
+            if ($existingPresence && $existingPresence->check_in_at) {
+                throw new \Exception('Anda sudah melakukan check-in hari ini.');
+            }
+
+            $presenceData = $this->buildCheckInData($user, $data, $today);
+            
+            if (!empty($data['photo']) && $data['photo'] instanceof UploadedFile) {
+                $presenceData['photo_path'] = $this->uploadPresencePhoto(
+                    $data['photo'], 
+                    $user->id, 
+                    'check_in'
+                );
+            }
+
+            if (!empty($data['attachment']) && $data['attachment'] instanceof UploadedFile) {
+                $presenceData['attachment_path'] = $this->uploadAttachment(
+                    $data['attachment'], 
+                    $user->id
+                );
+            }
+
+            if ($existingPresence) {
+                $existingPresence->update($presenceData);
+                return $existingPresence->fresh();
+            }
+
+            return Presence::create($presenceData);
+        });
+    }
+
+
+    public function checkOut(User $user, array $data): Presence
+    {
+        return DB::transaction(function () use ($user, $data) {
+            $presence = $this->getTodayPresence($user);
+            
+            if (!$presence) {
+                throw new \Exception('Anda belum melakukan check-in hari ini.');
+            }
+            
+            if ($presence->check_out_at) {
+                throw new \Exception('Anda sudah melakukan check-out hari ini.');
+            }
+
+            $checkOutData = $this->buildCheckOutData($data);
+            
+            $presence->update($checkOutData);
+            
+            return $presence->fresh();
+        });
+    }
+
+    public function submitPermission(User $user, array $data): Presence
+    {
+        return DB::transaction(function () use ($user, $data) {
+            $date = Carbon::parse($data['date']);
+            
+            $existingPresence = $this->getPresenceByDate($user, $date);
+            if ($existingPresence) {
+                throw new \Exception('Sudah ada data absensi untuk tanggal tersebut.');
+            }
+
+            $presenceData = [
+                'user_id' => $user->id,
+                'date' => $date,
+                'status' => $data['status'],
+                'notes' => $data['notes'] ?? null,
+            ];
+
+            if (!empty($data['attachment']) && $data['attachment'] instanceof UploadedFile) {
+                $presenceData['attachment_path'] = $this->uploadAttachment(
+                    $data['attachment'], 
+                    $user->id
+                );
+            }
+
+            return Presence::create($presenceData);
+        });
+    }
+
+    public function getTodayPresence(User $user): ?Presence
+    {
+        return Presence::where('user_id', $user->id)
+            ->whereDate('date', Carbon::today())
+            ->first();
+    }
+
+    public function getPresenceByDate(User $user, Carbon $date): ?Presence
+    {
+        return Presence::where('user_id', $user->id)
+            ->whereDate('date', $date)
+            ->first();
+    }
+
+    public function getPresenceHistory(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = Presence::where('user_id', $user->id);
+
+        if (!empty($filters['start_date'])) {
+            $query->whereDate('date', '>=', $filters['start_date']);
+        }
+
+        if (!empty($filters['end_date'])) {
+            $query->whereDate('date', '<=', $filters['end_date']);
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['month'])) {
+            $query->whereMonth('date', $filters['month']);
+        }
+
+        if (!empty($filters['year'])) {
+            $query->whereYear('date', $filters['year']);
+        }
+
+        return $query->orderBy('date', 'desc')->paginate($perPage);
+    }
+
+    public function getMonthlySummary(User $user, int $month, int $year): array
+    {
+        $presences = Presence::where('user_id', $user->id)
+            ->whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->get();
+
+        return [
+            'total_days' => $presences->count(),
+            'present' => $presences->whereIn('status', [PresenceStatus::CheckedIn, PresenceStatus::Late])->count(),
+            'late' => $presences->where('status', PresenceStatus::Late)->count(),
+            'sick' => $presences->where('status', PresenceStatus::Sick)->count(),
+            'permission' => $presences->where('status', PresenceStatus::Permission)->count(),
+            'annual_leave' => $presences->where('status', PresenceStatus::AnnualLeave)->count(),
+            'field_duty' => $presences->where('status', PresenceStatus::FieldDuty)->count(),
+            'wfh' => $presences->where('status', PresenceStatus::WorkFromHome)->count(),
+            'absent' => $presences->where('status', PresenceStatus::Absent)->count(),
+        ];
+    }
+
+
+    private function buildCheckInData(User $user, array $data, Carbon $today): array
+    {
+        $checkInTime = Carbon::now();
+        $status = $this->determineCheckInStatus($checkInTime, $data['status'] ?? null);
+
+        return [
+            'user_id' => $user->id,
+            'date' => $today,
+            'status' => $status,
+            'check_in_at' => $checkInTime,
+            'check_in_latitude' => $data['latitude'] ?? null,
+            'check_in_longitude' => $data['longitude'] ?? null,
+            'notes' => $data['notes'] ?? null,
+        ];
+    }
+    private function buildCheckOutData(array $data): array
+    {
+        return [
+            'check_out_at' => Carbon::now(),
+            'check_out_latitude' => $data['latitude'] ?? null,
+            'check_out_longitude' => $data['longitude'] ?? null,
+            'notes' => $data['notes'] ?? null,
+        ];
+    }
+
+    private function determineCheckInStatus(Carbon $checkInTime, ?string $requestedStatus): PresenceStatus
+    {
+        if ($requestedStatus) {
+            return PresenceStatus::from($requestedStatus);
+        }
+
+        $lateThreshold = Carbon::today()->setTime(8, 0, 0);
+        
+        if ($checkInTime->gt($lateThreshold)) {
+            return PresenceStatus::Late;
+        }
+
+        return PresenceStatus::CheckedIn;
+    }
+
+    private function uploadPresencePhoto(UploadedFile $file, int $userId, string $type): string
+    {
+        $storagePath = "presences/{$userId}/{$type}";
+        $metadata = $this->fileUploadService->uploadFile($file, $storagePath);
+        return $metadata['path'];
+    }
+
+    private function uploadAttachment(UploadedFile $file, int $userId): string
+    {
+        $storagePath = "presences/{$userId}/attachments";
+        $metadata = $this->fileUploadService->uploadFile($file, $storagePath);
+        return $metadata['path'];
+    }
+}

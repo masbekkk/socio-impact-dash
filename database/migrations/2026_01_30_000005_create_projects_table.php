@@ -24,8 +24,14 @@ return new class extends Migration
             $table->foreignId('pic_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('status')->default(ProjectStatus::Draft->value)->index();
             $table->string('project_type');
-            $table->longText('sow')->nullable();
+            // SOW Document File
+            $table->string('sow_path')->nullable();
+            $table->string('sow_original_name')->nullable();
+            $table->string('sow_mime')->nullable();
+            $table->unsignedBigInteger('sow_size')->nullable();
             $table->decimal('budget_total', 15, 2)->nullable();
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

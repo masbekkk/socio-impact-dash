@@ -6,11 +6,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
+use App\Http\Resources\ProjectListResource;
 use App\Models\Division;
 use App\Models\Project;
+use App\Models\ProjectCategoryBudget;
 use App\Models\User;
 use App\Services\ProjectService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 final class ProjectController
 {
@@ -20,6 +24,9 @@ final class ProjectController
     {
         $this->projectService = $projectService;
     }
+
+
+
     public function index()
     {
         // LOAD DATA FROM JSON (Dummy Source)
@@ -135,24 +142,7 @@ final class ProjectController
     }
 
 
-    public function store(StoreProjectRequest $request)
-    {
-        try {
-            $userId = Auth::id();
-            $project = $this->projectService->createProject($request->validated(), $userId);
-            return response()->json([
-                'success' => true,
-                'message' => 'Project created successfully',
-                'data' => $project
-            ]);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create project',
-                'error' => $th->getMessage()
-            ], 500);
-        }
-    }
+
 
     /**
      * Display the allowance page for the specified resource.
@@ -216,7 +206,7 @@ final class ProjectController
         $project['issues'] = $project['issues'] ?? [];
         $project['monitoring_history'] = $project['monitoring_history'] ?? [];
 
-        return \Inertia\Inertia::render('Projects/Show', [
+        return Inertia::render('Projects/Show', [
             'project' => $project
         ]);
     }
@@ -272,33 +262,8 @@ final class ProjectController
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateProjectRequest $request, Project $project)
-    {
-        try {
-            $userId = Auth::id();
-            $updatedProject = $this->projectService->updateProject($project, $request->validated(), $userId);
-            return response()->json([
-                'success' => true,
-                'message' => 'Project updated successfully',
-                'data' => $updatedProject
-            ]);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update project',
-                'error' => $th->getMessage()
-            ], 500);
-        }
-    }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Project $project)
-    {
-        //
-    }
+
+
+
 }
