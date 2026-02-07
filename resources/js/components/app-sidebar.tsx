@@ -43,6 +43,11 @@ function getMenusByRole(): Record<string, NavItem[]> {
                 icon: Folder,
             },
             {
+                title: 'Kalender',
+                href: '/calendar',
+                icon: Calendar,
+            },
+            {
                 title: 'Reimbursement',
                 href: '/reimbursements',
                 icon: DollarSign,

@@ -19,13 +19,14 @@ use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', fn () => redirect()->route('projects.index'))->name('home');
+Route::get('/', fn() => redirect()->route('projects.index'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
-    Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
+    Route::get('dashboard', fn() => Inertia::render('dashboard'))->name('dashboard');
 
     // Projects
     Route::resource('projects', ProjectController::class);
+    Route::get('projects/{project}/allowance', [ProjectController::class, 'allowance'])->name('projects.allowance');
     Route::post('projects/{project}/finish', [ProjectController::class, 'finish'])->name('projects.finish');
 
     // Reimbursements
@@ -66,7 +67,7 @@ Route::middleware('auth')->group(function (): void {
         ->name('password.update');
 
     // Appearance...
-    Route::get('settings/appearance', fn () => Inertia::render('appearance/update'))->name('appearance.edit');
+    Route::get('settings/appearance', fn() => Inertia::render('appearance/update'))->name('appearance.edit');
 
     // User Two-Factor Authentication...
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
