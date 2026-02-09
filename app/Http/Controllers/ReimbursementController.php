@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreReimbursementRequest;
 use App\Http\Requests\UpdateReimbursementRequest;
 use App\Models\Reimbursement;
+use Inertia\Inertia;
 
 final class ReimbursementController
 {
@@ -15,7 +16,22 @@ final class ReimbursementController
      */
     public function index()
     {
-        //
+        return Inertia::render('Reimbursements/Index');
+    }
+
+    public function createATR()
+    {
+        return Inertia::render('Reimbursements/CreateATR');
+    }
+
+    public function createEER()
+    {
+        return Inertia::render('Reimbursements/CreateEER');
+    }
+
+    public function approvals()
+    {
+        return Inertia::render('Reimbursements/Index');
     }
 
     /**
@@ -37,9 +53,14 @@ final class ReimbursementController
     /**
      * Display the specified resource.
      */
+    /**
+     * Display the specified resource.
+     */
     public function show(Reimbursement $reimbursement)
     {
-        //
+        return Inertia::render('Reimbursements/Show', [
+            'reimbursement' => $reimbursement
+        ]);
     }
 
     /**
@@ -64,5 +85,17 @@ final class ReimbursementController
     public function destroy(Reimbursement $reimbursement)
     {
         //
+    }
+
+    public function approve(Reimbursement $reimbursement)
+    {
+        // Logic to approve
+        return back();
+    }
+
+    public function reject(Reimbursement $reimbursement)
+    {
+        // Logic to reject
+        return back();
     }
 }

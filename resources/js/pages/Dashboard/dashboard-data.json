@@ -1,0 +1,208 @@
+{
+    "executive_summary": {
+        "total_projects": 25,
+        "projects_by_division": [
+            {
+                "division": "Task Force",
+                "count": 9,
+                "percentage": 36
+            },
+            {
+                "division": "Research",
+                "count": 3,
+                "percentage": 14
+            },
+            {
+                "division": "Learning",
+                "count": 2,
+                "percentage": 9
+            },
+            {
+                "division": "Lestari",
+                "count": 5,
+                "percentage": 23
+            },
+            {
+                "division": "Marketing",
+                "count": 4,
+                "percentage": 18
+            }
+        ],
+        "projects_by_region": [
+            {
+                "region": "Sumatera",
+                "count": 5
+            },
+            {
+                "region": "Jawa",
+                "count": 5
+            },
+            {
+                "region": "Kalimantan",
+                "count": 5
+            },
+            {
+                "region": "Sulawesi",
+                "count": 5
+            },
+            {
+                "region": "Bali",
+                "count": 5
+            }
+        ],
+        "projects_by_status": [
+            {
+                "status": "Not Started",
+                "count": 2
+            },
+            {
+                "status": "On Track",
+                "count": 15
+            },
+            {
+                "status": "At Risk",
+                "count": 1
+            },
+            {
+                "status": "Delayed",
+                "count": 3
+            },
+            {
+                "status": "Completed",
+                "count": 4
+            }
+        ],
+        "projects_by_type": [
+            {
+                "type": "Pendampingan",
+                "count": 10
+            },
+            {
+                "type": "Event",
+                "count": 1
+            },
+            {
+                "type": "Dokumen",
+                "count": 5
+            },
+            {
+                "type": "Pelatihan",
+                "count": 4
+            }
+        ]
+    },
+    "division_dashboard": {
+        "total_projects": 25,
+        "projects_by_division": [
+            {
+                "division": "Task Force",
+                "count": 9,
+                "percentage": 36
+            },
+            {
+                "division": "Research",
+                "count": 3,
+                "percentage": 14
+            },
+            {
+                "division": "Learning",
+                "count": 2,
+                "percentage": 9
+            },
+            {
+                "division": "Lestari",
+                "count": 5,
+                "percentage": 23
+            },
+            {
+                "division": "Marketing",
+                "count": 4,
+                "percentage": 18
+            }
+        ],
+        "projects_by_region": [
+            {
+                "region": "Sumatera",
+                "count": 5
+            },
+            {
+                "region": "Jawa",
+                "count": 5
+            },
+            {
+                "region": "Kalimantan",
+                "count": 5
+            },
+            {
+                "region": "Sulawesi",
+                "count": 5
+            },
+            {
+                "region": "Bali",
+                "count": 5
+            }
+        ],
+        "project_health": [
+            {
+                "status": "Sehat",
+                "count": 15,
+                "percentage": 60
+            },
+            {
+                "status": "Waspada",
+                "count": 5,
+                "percentage": 20
+            },
+            {
+                "status": "Kritikal",
+                "count": 3,
+                "percentage": 12
+            },
+            {
+                "status": "Sangat Kritikal",
+                "count": 2,
+                "percentage": 8
+            }
+        ],
+        "projects_by_status": [
+            {
+                "status": "Not Started",
+                "count": 2
+            },
+            {
+                "status": "On Track",
+                "count": 15
+            },
+            {
+                "status": "At Risk",
+                "count": 1
+            },
+            {
+                "status": "Delayed",
+                "count": 3
+            },
+            {
+                "status": "Completed",
+                "count": 4
+            }
+        ],
+        "projects_by_type": [
+            {
+                "type": "Pendampingan",
+                "count": 10
+            },
+            {
+                "type": "Event",
+                "count": 1
+            },
+            {
+                "type": "Dokumen",
+                "count": 5
+            },
+            {
+                "type": "Pelatihan",
+                "count": 4
+            }
+        ]
+    }
+}

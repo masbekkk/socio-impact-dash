@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePresenceRequest;
 use App\Http\Requests\UpdatePresenceRequest;
 use App\Models\Presence;
+use Inertia\Inertia;
 
 final class PresenceController
 {
@@ -15,7 +16,12 @@ final class PresenceController
      */
     public function index()
     {
-        //
+        return Inertia::render('Presence/Index');
+    }
+
+    public function checkIn()
+    {
+        // Placeholder
     }
 
     /**
@@ -23,7 +29,7 @@ final class PresenceController
      */
     public function create()
     {
-        //
+        return Inertia::render('Presence/Create');
     }
 
     /**
@@ -31,15 +37,34 @@ final class PresenceController
      */
     public function store(StorePresenceRequest $request)
     {
-        //
+        // Validation is handled by StorePresenceRequest
+        // Logic to store presence
+
+        return to_route('presences.index')->with('success', 'Presensi berhasil dikirim.');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Presence $presence)
+    public function show(string $id)
     {
-        //
+        // Mock data loading
+        $json = file_get_contents(resource_path('js/Pages/Presence/presence_logs.json'));
+        $logs = json_decode($json, true);
+
+        // Find the log with the matching ID OR User Name (slug)
+        $presence = collect($logs)->first(function ($log) use ($id) {
+            $slugName = \Illuminate\Support\Str::slug($log['user']['name']);
+            return $log['id'] === $id || $slugName === $id || $log['user']['name'] === $id;
+        });
+
+        if (!$presence) {
+            abort(404, 'Presence log not found for identifier: ' . $id);
+        }
+
+        return Inertia::render('Presence/Show', [
+            'presence' => $presence
+        ]);
     }
 
     /**

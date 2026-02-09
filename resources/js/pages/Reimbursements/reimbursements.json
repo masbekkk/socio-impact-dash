@@ -1,0 +1,135 @@
+[
+    {
+        "id": "ATR-2023-001",
+        "type": "ATR",
+        "request_date": "2023-10-15",
+        "requester": "Budi Santoso",
+        "project": "Project Edukasi Digital",
+        "description": "Pengajuan dana awal untuk transportasi tim ke lokasi survei",
+        "amount": 2500000,
+        "status": "submitted",
+        "documents": [
+            "Proposal_Project_A.pdf",
+            "RAB_Transport_Survey.xlsx"
+        ],
+        "timeline": [
+            {
+                "status": "Draft Dibuat",
+                "by": "Budi Santoso",
+                "date": "2023-10-14 10:00"
+            },
+            {
+                "status": "Diajukan (Submitted)",
+                "by": "Budi Santoso",
+                "date": "2023-10-15 09:30"
+            }
+        ]
+    },
+    {
+        "id": "EER-2023-042",
+        "type": "EER",
+        "request_date": "2023-10-20",
+        "requester": "Siti Aminah",
+        "project": "Kampanye Kesehatan Masyarakat",
+        "description": "Reimbursement biaya cetak flyer dan konsumsi rapat koordinasi",
+        "amount": 750000,
+        "status": "approved",
+        "documents": [
+            "EER_Form_Siti.pdf",
+            "Receipt_Percetakan.jpg",
+            "Receipt_Makan_Siang.jpg"
+        ],
+        "timeline": [
+            {
+                "status": "Draft Dibuat",
+                "by": "Siti Aminah",
+                "date": "2023-10-19 14:00"
+            },
+            {
+                "status": "Diajukan (Submitted)",
+                "by": "Siti Aminah",
+                "date": "2023-10-20 08:15"
+            },
+            {
+                "status": "Disetujui (Approved)",
+                "by": "Manager Operasional",
+                "date": "2023-10-21 11:00"
+            }
+        ]
+    },
+    {
+        "id": "ATR-2023-005",
+        "type": "ATR",
+        "request_date": "2023-10-25",
+        "requester": "Andi Pratama",
+        "project": "Workshop Pemberdayaan UMKM",
+        "description": "Dana operasional workshop 3 hari di Bandung",
+        "amount": 5000000,
+        "status": "rejected",
+        "documents": [
+            "Proposal_Workshop_UMKM.pdf",
+            "RAB_Workshop.xlsx"
+        ],
+        "timeline": [
+            {
+                "status": "Draft Dibuat",
+                "by": "Andi Pratama",
+                "date": "2023-10-24 16:45"
+            },
+            {
+                "status": "Diajukan (Submitted)",
+                "by": "Andi Pratama",
+                "date": "2023-10-25 09:00"
+            },
+            {
+                "status": "Ditolak (Rejected)",
+                "by": "Manager Keuangan",
+                "date": "2023-10-26 10:30",
+                "reason": "RAB tidak sesuai standar maksimal harian."
+            }
+        ]
+    },
+    {
+        "id": "EER-2023-055",
+        "type": "EER",
+        "request_date": "2023-11-01",
+        "requester": "Dewi Sartika",
+        "project": "Internal - Office Supplies",
+        "description": "Pembelian alat tulis kantor bulanan (urgent)",
+        "amount": 350000,
+        "status": "draft",
+        "documents": [],
+        "timeline": [
+            {
+                "status": "Draft Dibuat",
+                "by": "Dewi Sartika",
+                "date": "2023-11-01 13:20"
+            }
+        ]
+    },
+    {
+        "id": "ATR-2023-008",
+        "type": "ATR",
+        "request_date": "2023-11-05",
+        "requester": "Budi Santoso",
+        "project": "Project Edukasi Digital",
+        "description": "Dana tambahan operasional lapangan minggu ke-2",
+        "amount": 1200000,
+        "status": "submitted",
+        "documents": [
+            "Memo_Tambahan_Dana.pdf"
+        ],
+        "timeline": [
+            {
+                "status": "Draft Dibuat",
+                "by": "Budi Santoso",
+                "date": "2023-11-05 08:00"
+            },
+            {
+                "status": "Diajukan (Submitted)",
+                "by": "Budi Santoso",
+                "date": "2023-11-05 08:30"
+            }
+        ]
+    }
+]
