@@ -23,7 +23,7 @@ use Inertia\Inertia;
 Route::get('/', fn() => redirect()->route('projects.index'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
-    Route::get('dashboard', fn() => Inertia::render('dashboard'))->name('dashboard');
+    Route::get('dashboard', fn() => Inertia::render('Dashboard/Index'))->name('dashboard');
 
     // Presences
     Route::resource('presences', PresenceController::class)->only(['index', 'create', 'store', 'show']);
@@ -49,6 +49,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('leaves/approvals', [LeaveController::class, 'approvals'])->name('leaves.approvals');
     Route::resource('leaves', LeaveController::class);
     Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
+    Route::post('leaves/{leave}/reject', [LeaveController::class, 'reject'])->name('leaves.reject');
 
     // Presence
     Route::post('presences/check-in', [PresenceController::class, 'checkIn'])->name('presences.check-in');

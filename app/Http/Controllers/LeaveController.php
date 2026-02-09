@@ -53,9 +53,29 @@ final class LeaveController
     /**
      * Display the specified resource.
      */
-    public function show(Leave $leave)
+    public function show(string $slug)
     {
-        //
+        // Mock data for testing - replace with actual database query later
+        $mockData = json_decode(file_get_contents(resource_path('js/Pages/Leave/leave-detail.json')), true);
+
+        // Find the leave by slug
+        $leave = collect($mockData)->firstWhere('slug', $slug);
+
+        // If not found by slug, try to match by generated slug from user name
+        if (!$leave) {
+            $leave = collect($mockData)->first(function ($item) use ($slug) {
+                $generatedSlug = strtolower(str_replace(' ', '-', $item['user']['name']));
+                return $generatedSlug === $slug;
+            });
+        }
+
+        if (!$leave) {
+            abort(404, 'Leave request not found');
+        }
+
+        return Inertia::render('Leave/Show', [
+            'leave' => $leave,
+        ]);
     }
 
     /**
@@ -80,5 +100,37 @@ final class LeaveController
     public function destroy(Leave $leave)
     {
         //
+    }
+
+    /**
+     * Approve a leave request.
+     */
+    public function approve(string $slug)
+    {
+        // Mock implementation - replace with actual database update later
+        // In real implementation:
+        // $leave = Leave::where('slug', $slug)->firstOrFail();
+        // $leave->status = 'approved';
+        // $leave->approver_id = auth()->id();
+        // $leave->approved_at = now();
+        // $leave->save();
+
+        return redirect()->route('leaves.show', $slug)->with('success', 'Pengajuan berhasil disetujui.');
+    }
+
+    /**
+     * Reject a leave request.
+     */
+    public function reject(string $slug)
+    {
+        // Mock implementation - replace with actual database update later
+        // In real implementation:
+        // $leave = Leave::where('slug', $slug)->firstOrFail();
+        // $leave->status = 'rejected';
+        // $leave->approver_id = auth()->id();
+        // $leave->rejection_reason = request('reason');
+        // $leave->save();
+
+        return redirect()->route('leaves.show', $slug)->with('success', 'Pengajuan berhasil ditolak.');
     }
 }

@@ -200,8 +200,8 @@ export default function PresenceIndex() {
 
       <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-8 py-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Presensi Harian</h1>
-          <p className="text-muted-foreground text-sm md:text-base">Catat kehadiran, lokasi, dan aktivitas harian Anda.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Presensi Di Luar Kantor</h1>
+          <p className="text-muted-foreground text-sm md:text-base">Catat kehadiran, lokasi, dan aktivitas di luar kantor.</p>
         </div>
 
         <Link href="/presences/create">

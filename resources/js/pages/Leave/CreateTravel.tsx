@@ -5,18 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Card, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Save, Plane, Calendar, MapPin, Briefcase } from 'lucide-react';
+import { ArrowLeft, Save, Calendar, MapPin, Briefcase } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
-import MoneyInput from '@/components/MoneyInput';
 
 // Mock User Data for Auto-fill
 const MOCK_USER = {
@@ -28,14 +20,7 @@ const MOCK_USER = {
   join_date: '2023-01-15'
 };
 
-const TRANSPORT_MODES = [
-  'Pesawat Terbang',
-  'Kereta Api',
-  'Bus',
-  'Mobil Dinas',
-  'Mobil Pribadi',
-  'Kapal Laut'
-];
+
 
 export default function CreateTravel() {
   const breadcrumbs = [
@@ -48,10 +33,8 @@ export default function CreateTravel() {
     destination: '',
     project_name: '',
     purpose: '',
-    transport_mode: 'Pesawat Terbang',
     start_date: '',
     end_date: '',
-    budget_estimation: '',
     pic_replacement: '',
     phone_number: '',
     stay_address: '',
@@ -80,9 +63,7 @@ export default function CreateTravel() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +105,7 @@ export default function CreateTravel() {
                   <Input value={MOCK_USER.name} readOnly className="bg-muted/50 border-transparent font-medium" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">NIP / NIK</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">NIP</Label>
                   <Input value={MOCK_USER.nip} readOnly className="bg-muted/50 border-transparent font-medium" />
                 </div>
                 <div className="space-y-2">
@@ -220,41 +201,7 @@ export default function CreateTravel() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="transport_mode">Moda Transportasi Utama <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <Plane className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
-                      <Select
-                        value={formData.transport_mode}
-                        onValueChange={(val) => handleSelectChange('transport_mode', val)}
-                      >
-                        <SelectTrigger className="h-10 pl-9">
-                          <SelectValue placeholder="Pilih transportasi" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TRANSPORT_MODES.map(mode => (
-                            <SelectItem key={mode} value={mode}>{mode}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="budget_estimation">Estimasi Biaya (IDR) <span className="text-red-500">*</span></Label>
-                    <MoneyInput
-                      id="budget_estimation"
-                      name="budget_estimation"
-                      placeholder="0"
-                      value={formData.budget_estimation}
-                      onValueChange={(values) => {
-                        setFormData(prev => ({ ...prev, budget_estimation: values.value }));
-                      }}
-                      className="h-10"
-                    />
-                    <p className="text-[10px] text-muted-foreground">Termasuk tiket, akomodasi, dan uang harian.</p>
-                  </div>
-                </div>
+
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">

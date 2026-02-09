@@ -11,7 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { FileText, Plus, Receipt, Eye, Search } from 'lucide-react';
+import { FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -36,6 +38,8 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | 
 export default function ReimbursementsIndex() {
   const [tab, setTab] = useState('atr');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -56,6 +60,15 @@ export default function ReimbursementsIndex() {
 
     return matchesTab && matchesSearch;
   });
+
+  // Reset page when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [tab, searchQuery]);
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -142,7 +155,7 @@ export default function ReimbursementsIndex() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredData.map((item) => (
+                        {currentData.map((item) => (
                           <TableRow key={item.id}>
                             <TableCell className="font-medium font-mono">{item.id}</TableCell>
                             <TableCell>
@@ -155,8 +168,13 @@ export default function ReimbursementsIndex() {
                             </TableCell>
                             <TableCell>Rp {item.amount.toLocaleString('id-ID')}</TableCell>
                             <TableCell>
-                              {/* @ts-ignore */}
-                              <StatusBadge status={item.status} />
+                              <div className="flex items-center gap-2">
+                                {item.status === 'approved' && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200 gap-1"><CheckCircle className="h-3 w-3" /> Approved</Badge>}
+                                {item.status === 'rejected' && <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200 gap-1"><XCircle className="h-3 w-3" /> Rejected</Badge>}
+                                {item.status === 'submitted' && <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-yellow-200 gap-1"><Clock className="h-3 w-3" /> Submitted</Badge>}
+                                {item.status === 'draft' && <Badge variant="outline" className="gap-1"><FileText className="h-3 w-3" /> Draft</Badge>}
+                                {!['approved', 'rejected', 'submitted', 'draft'].includes(item.status) && <Badge variant="secondary" className="gap-1">{item.status}</Badge>}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right">
                               <Button variant="ghost" size="icon" asChild>
@@ -176,6 +194,82 @@ export default function ReimbursementsIndex() {
                   </div>
                 )}
               </CardContent>
+              {filteredData.length > 0 && (
+                <div className="flex items-center justify-between px-2 py-4 border-t">
+                  <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredData.length)} of {filteredData.length} results
+                  </div>
+                  <div className="flex w-full items-center gap-8 lg:w-fit">
+                    <div className="hidden items-center gap-2 lg:flex">
+                      <Label htmlFor="rows-per-page" className="text-sm font-medium">
+                        Rows per page
+                      </Label>
+                      <Select
+                        value={`${itemsPerPage}`}
+                        onValueChange={(value) => {
+                          setItemsPerPage(Number(value));
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <SelectTrigger className="w-20 h-8 text-xs" id="rows-per-page">
+                          <SelectValue placeholder={itemsPerPage} />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                          {[5, 10, 20, 30, 40, 50].map((pageSize) => (
+                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                              {pageSize}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex w-fit items-center justify-center text-sm font-medium">
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                      <Button
+                        variant="outline"
+                        className="hidden h-8 w-8 p-0 lg:flex"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(1)}
+                      >
+                        <span className="sr-only">Go to first page</span>
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="size-8"
+                        size="icon"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      >
+                        <span className="sr-only">Go to previous page</span>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="size-8"
+                        size="icon"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      >
+                        <span className="sr-only">Go to next page</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="hidden size-8 lg:flex"
+                        size="icon"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(totalPages)}
+                      >
+                        <span className="sr-only">Go to last page</span>
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </Card>
           </TabsContent>
         </Tabs>
