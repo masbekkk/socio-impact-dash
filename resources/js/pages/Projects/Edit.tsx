@@ -43,6 +43,24 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
         setLocations(locations.filter(l => l.id !== id))
     }
 
+    // Dynamic Docs State
+    const [supportingDocs, setSupportingDocs] = useState([{ id: 1, type: 'TOR' }]);
+    const addSupportingDoc = () => {
+        const usedTypes = supportingDocs.map(d => d.type);
+        const available = ['TOR', 'KAK', 'RFP'].find(t => !usedTypes.includes(t));
+        if (available) {
+            setSupportingDocs([...supportingDocs, { id: Date.now(), type: available }]);
+        }
+    };
+    const updateSupportingDocType = (id: number, type: string) => {
+        setSupportingDocs(supportingDocs.map(d => d.id === id ? { ...d, type } : d));
+    };
+    const removeSupportingDoc = (id: number) => {
+        if (supportingDocs.length > 1) {
+            setSupportingDocs(supportingDocs.filter(d => d.id !== id));
+        }
+    };
+
     const tabsListRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -118,29 +136,29 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                 <CardDescription>Perbarui nama, jenis, dan status proyek.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6 p-6 md:p-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* STATUS DROPDOWN */}
-                                    <div className="space-y-2">
-                                        <Label>Status Proyek</Label>
-                                        <Select value={status} onValueChange={setStatus}>
-                                            <SelectTrigger className={
-                                                status === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                    status === 'proposal' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''
-                                            }>
-                                                <SelectValue placeholder="Pilih Status" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="proposal">Proposal</SelectItem>
-                                                <SelectItem value="active">Active (Deal)</SelectItem>
-                                                <SelectItem value="draft">Draft</SelectItem>
-                                                <SelectItem value="completed">Completed</SelectItem>
-                                                <SelectItem value="on_hold">On Hold</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                                {/* Status Proyek */}
+                                <div className="space-y-2">
+                                    <Label>Status Proyek</Label>
+                                    <Select value={status} onValueChange={setStatus}>
+                                        <SelectTrigger className={
+                                            status === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                status === 'proposal' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''
+                                        }>
+                                            <SelectValue placeholder="Pilih Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="proposal">Proposal</SelectItem>
+                                            <SelectItem value="active">Active (Deal)</SelectItem>
+                                            {/* <SelectItem value="draft">Draft</SelectItem> */}
+                                            {/* <SelectItem value="completed">Completed</SelectItem> */}
+                                            {/* <SelectItem value="on_hold">On Hold</SelectItem> */}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
 
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label>Jenis Project</Label>
+                                        <Label>Jenis Project <span className="text-red-500">*</span></Label>
                                         <Select defaultValue={project.type || "pendampingan"}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Pilih Jenis Project" />
@@ -150,6 +168,20 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                                 <SelectItem value="pelatihan">Pelatihan</SelectItem>
                                                 <SelectItem value="dokumen">Dokumen</SelectItem>
                                                 <SelectItem value="event">Event</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Anak Perusahaan <span className="text-red-500">*</span></Label>
+                                        <Select defaultValue="pt_sinergi">
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih Anak Perusahaan" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="pt_sinergi">PT Sawit Jaya Abadi</SelectItem>
+                                                <SelectItem value="pt_bakti">PT AminLabs</SelectItem>
+                                                <SelectItem value="yayasan_harapan">PT Wowoengine</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -250,28 +282,81 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                 <CardDescription>Lingkup kerja dan durasi proyek.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6 p-6 md:p-8">
-                                <div className="space-y-2">
-                                    <Label>{status === 'active' ? 'Dokumen Scope of Work (SOW)' : 'Dokumen Proposal Project'} <span className="text-red-500">*</span></Label>
-                                    <div className="border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white">
-                                        <div className="space-y-1">
-                                            <p className="text-sm text-muted-foreground">
-                                                {status === 'active' ? 'Upload dokumen SOW yang telah disepakati (PDF).' : 'Upload dokumen Proposal lengkap (PDF).'}
-                                            </p>
+                                {/* DOCUMENT UPLOAD SECTION */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label>{status === 'active' ? 'Dokumen Scope of Work (SOW)' : 'Dokumen Proposal Project'} <span className="text-red-500">*</span></Label>
+                                        <div className="border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white h-full">
+                                            <div className="space-y-1">
+                                                <p className="text-sm text-muted-foreground">
+                                                    {status === 'active' ? 'Upload dokumen SOW yang telah disepakati (PDF).' : 'Upload dokumen Proposal lengkap (PDF).'}
+                                                </p>
+                                            </div>
+                                            <FileUploadDropzone />
                                         </div>
-                                        <FileUploadDropzone />
+                                    </div>
+                                    <div className="space-y-3">
+                                        {/* Optional Doc */}
+                                        <Label>TOR / KAK / RFP <span className="text-xs font-normal text-muted-foreground ml-1">(Tidak Wajib)</span></Label>
+
+                                        {supportingDocs.map((doc, idx) => {
+                                            const otherUsedTypes = supportingDocs.filter(d => d.id !== doc.id).map(d => d.type);
+                                            return (
+                                                <div key={doc.id} className="relative border rounded-lg p-5 space-y-3 hover:bg-muted/30 transition-colors bg-white group animate-in fade-in slide-in-from-top-2">
+                                                    <div className="flex justify-between items-start gap-4">
+                                                        <div className="space-y-2 w-full flex justify-between">
+                                                            <Label className="text-xs font-medium text-muted-foreground">Jenis Dokumen Pendukung #{idx + 1}</Label>
+                                                            <Select value={doc.type} onValueChange={(val) => updateSupportingDocType(doc.id, val)}>
+                                                                <SelectTrigger className="h-7 w-[220px] bg-white border-gray-300">
+                                                                    <SelectValue placeholder="Pilih Tipe" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="TOR" disabled={otherUsedTypes.includes('TOR')}>TOR</SelectItem>
+                                                                    <SelectItem value="KAK" disabled={otherUsedTypes.includes('KAK')}>KAK</SelectItem>
+                                                                    <SelectItem value="RFP" disabled={otherUsedTypes.includes('RFP')}>RFP</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        {supportingDocs.length > 1 && (
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0 mt-6" onClick={() => removeSupportingDoc(doc.id)}>
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                    <FileUploadDropzone />
+                                                </div>
+                                            )
+                                        })}
+
+                                        {supportingDocs.length < 3 && (
+                                            <Button variant="outline" size="sm" onClick={addSupportingDoc} className="w-full border-dashed border-gray-400 text-muted-foreground hover:text-primary hover:border-primary gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                                                Tambah Dokumen Lainnya
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
 
+                                <div className="space-y-2">
+                                    <Label>Catatan (Notes)</Label>
+                                    <Textarea
+                                        placeholder="Tambahkan catatan..."
+                                        className="min-h-[100px] bg-white"
+                                        defaultValue={project.notes}
+                                    />
+                                </div>
+
+                                {/* TIMELINE */}
                                 <div className="space-y-2">
                                     <Label>Timeline (Durasi)</Label>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label className="text-xs font-normal text-muted-foreground">Tanggal Mulai</Label>
-                                            <Input type="date" className="bg-white" defaultValue={project.start_date} />
+                                            <Input type="date" className="bg-white" defaultValue={project.start_date ? new Date((project.start_date.split("T"))[0]).toISOString().split('T')[0] : ''} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="text-xs font-normal text-muted-foreground">Tanggal Selesai</Label>
-                                            <Input type="date" className="bg-white" defaultValue={project.end_date} />
+                                            <Input type="date" className="bg-white" defaultValue={project.end_date ? new Date((project.end_date.split("T"))[0]).toISOString().split('T')[0] : ''} />
                                         </div>
                                     </div>
                                     <p className="text-xs text-muted-foreground pt-1">Estimasi durasi pelaksanaan.</p>
@@ -360,7 +445,8 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                 <CardDescription>Masukkan Nominal dan lampirkan rincian anggaran (RAB).</CardDescription>
                             </CardHeader>
                             <CardContent className="p-6 md:p-8 space-y-6">
-                                {/* Main Budget Section */}
+
+                                {/* Main Budget Section (Gray Box like screenshot) */}
                                 <div className="bg-gray-50 border rounded-xl p-6 md:p-8">
                                     <div className="flex flex-col md:flex-row gap-8 items-start justify-between">
                                         {/* Left: Input Section */}
@@ -368,6 +454,7 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                             <div className="space-y-1">
                                                 <h3 className="text-lg font-semibold text-gray-900">Nominal Project</h3>
                                             </div>
+
                                             <div className="relative">
                                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900 font-bold z-10">Rp</span>
                                                 <MoneyInput
@@ -394,22 +481,39 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                     </div>
                                 </div>
 
-                                {/* Upload RAB */}
-                                <div className="space-y-2 pt-2">
-                                    <Label>Rincian Anggaran</Label>
-                                    <div className="border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-blue-50 rounded-full text-blue-600 border border-blue-100">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-spreadsheet"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M8 13h2" /><path d="M8 17h2" /><path d="M14 13h2" /><path d="M14 17h2" /></svg>
+                                {/* Upload RAB & Negotiation */}
+                                <div className={`grid grid-cols-1 ${status !== 'proposal' ? 'md:grid-cols-2' : ''} gap-6 pt-2`}>
+                                    {/* RAB */}
+                                    <div className="space-y-2">
+                                        <Label>Rincian Anggaran (RAB)</Label> <span className="text-red-500">*</span>
+                                        <div className="border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full">
+                                            <div className="flex items-center gap-4">
+                                                <div className="space-y-1">
+                                                    <h4 className="text-sm font-medium text-gray-900">Upload File RAB.</h4>
+                                                    <p className="text-xs text-muted-foreground">Lampirkan detail Rencana Anggaran Biaya.</p>
+                                                </div>
                                             </div>
-                                            <div className="space-y-1">
-                                                <h4 className="text-sm font-medium text-gray-900">Upload File Excel / PDF</h4>
-                                                <p className="text-xs text-muted-foreground">Lampirkan detai RAB (Rencana Anggaran Biaya) di sini.</p>
+                                            <FileUploadDropzone />
+                                        </div>
+                                    </div>
+
+                                    {/* Berita Acara Negosiasi (Only for Active Projects) */}
+                                    {status !== 'proposal' && (
+                                        <div className="space-y-2">
+                                            <Label>Berita Acara Negosiasi <span className="text-red-500">*</span></Label>
+                                            <div className="border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="space-y-1">
+                                                        <h4 className="text-sm font-medium text-gray-900">Upload Dokumen Negosiasi</h4>
+                                                        <p className="text-xs text-muted-foreground">Lampirkan Berita Acara Negosiasi harga.</p>
+                                                    </div>
+                                                </div>
+                                                <FileUploadDropzone />
                                             </div>
                                         </div>
-                                        <FileUploadDropzone />
-                                    </div>
+                                    )}
                                 </div>
+
                             </CardContent>
                             <CardFooter className="flex justify-between gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
                                 <Button variant="outline" onClick={() => setStep('location')} title="Kembali">

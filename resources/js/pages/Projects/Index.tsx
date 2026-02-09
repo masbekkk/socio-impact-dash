@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Filter, MoreHorizontal, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, CheckCircle2, X, FileText } from 'lucide-react'
+import { Search, Plus, Filter, MoreHorizontal, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, CheckCircle2, X, FileText, Cpu, BarChart3, Users, Globe, HeartHandshake, Layers, Building, Wallet } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -111,7 +111,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
           <h1 className="text-2xl font-bold tracking-tight">Proyek</h1>
           <p className="text-muted-foreground text-sm md:text-base">Kelola semua proyek, pantau progress dan budget.</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar-foreground)] hover:text-black hover:border-black hover:border-1">
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)] transition-transform hover:scale-105 active:scale-95 shadow-sm">
           <Plus className="h-4 w-4" />
           Proyek Baru
         </Button>
@@ -248,7 +248,38 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                       </TableCell>
                       <TableCell>{p.client}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{p.division_name || (p.division ? p.division.name : '-')}</Badge>
+                        {(() => {
+                          const divName = (p.division_name || (p.division ? p.division.name : '')).toLowerCase();
+                          let badgeStyle = "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200";
+                          let Icon = Building;
+
+                          if (divName.includes('tech') || divName.includes('it') || divName.includes('dev')) {
+                            badgeStyle = "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100";
+                            Icon = Cpu;
+                          } else if (divName.includes('finance') || divName.includes('keuangan')) {
+                            badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
+                            Icon = BarChart3;
+                          } else if (divName.includes('hr') || divName.includes('human') || divName.includes('sdm')) {
+                            badgeStyle = "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100";
+                            Icon = Users;
+                          } else if (divName.includes('marketing') || divName.includes('sales') || divName.includes('cmo')) {
+                            badgeStyle = "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100";
+                            Icon = Globe;
+                          } else if (divName.includes('social') || divName.includes('sosial') || divName.includes('impact')) {
+                            badgeStyle = "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100";
+                            Icon = HeartHandshake;
+                          } else if (divName.includes('ops') || divName.includes('operasional')) {
+                            badgeStyle = "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100";
+                            Icon = Layers;
+                          }
+
+                          return (
+                            <Badge variant="outline" className={`gap-1.5 py-1 px-2.5 font-medium ${badgeStyle}`}>
+                              <Icon className="h-3.5 w-3.5" />
+                              {p.division_name || (p.division ? p.division.name : '-')}
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
@@ -259,8 +290,16 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                       <TableCell>
                         <StatusBadge status={p.status} />
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {p.sow ? 'Lihat SOW' : '-'}
+                      <TableCell className="text-sm text-muted-foreground">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs">
+                            {p.start_date ? new Date(p.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}
+                          </span>
+                          <span className="text-[10px] text-gray-400">s/d</span>
+                          <span className="text-xs">
+                            {p.end_date ? new Date(p.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {p.budget_total ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(p.budget_total) : '-'}
@@ -283,6 +322,11 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                             <DropdownMenuItem asChild>
                               <Link href={`/projects/${p.slug}/edit`} className="flex items-center cursor-pointer">
                                 <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Project
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/projects/${p.slug}/allowance`} className="flex items-center cursor-pointer">
+                                <Wallet className="mr-2 h-4 w-4 text-muted-foreground" /> Allowance
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />

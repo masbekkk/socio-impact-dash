@@ -126,7 +126,7 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 <TabsTrigger
                   key={tabValue}
                   value={tabValue}
-                  className="flex-none px-4 py-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm md:flex-1 md:w-auto md:px-3 md:py-2.5 md:text-xs lg:text-sm"
+                  className="flex-none px-4 py-2 text-xs transition-all data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white data-[state=active]:shadow-sm md:flex-1 md:w-auto md:px-3 md:py-2.5 md:text-xs lg:text-sm"
                 >
                   <span className="mr-1.5 inline md:mr-2">{idx + 1}.</span>
                   {tabValue === 'basic' ? 'Identitas' : tabValue === 'stakeholders' ? 'Stakeholder' : tabValue === 'detail' ? 'Detail' : tabValue === 'location' ? 'Lokasi' : 'Anggaran'}
@@ -145,12 +145,6 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
               <CardContent className="space-y-6 p-6 md:p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>Kode Proyek <span className="text-red-500">*</span></Label>
-                    <Input placeholder="Contoh: PRJ-2024-001" className="font-mono uppercase" />
-                    <p className="text-[10px] text-muted-foreground">Kode unik untuk identifikasi proyek.</p>
-                  </div>
-
-                  <div className="space-y-2">
                     <Label>Jenis Project <span className="text-red-500">*</span></Label>
                     <Select>
                       <SelectTrigger>
@@ -161,6 +155,20 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                         <SelectItem value="pelatihan">Pelatihan</SelectItem>
                         <SelectItem value="dokumen">Dokumen</SelectItem>
                         <SelectItem value="event">Event</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Anak Perusahaan<span className="text-red-500">*</span></Label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Anak Perusahaan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pt_sinergi">PT Sawit Jaya Abadi </SelectItem>
+                        <SelectItem value="pt_bakti">PT AminLabs</SelectItem>
+                        <SelectItem value="yayasan_harapan">PT Wowoengine</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -397,14 +405,12 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
 
                   {/* Picker */}
                   <div className="lg:col-span-2 order-1 lg:order-2">
-                    <div className="border rounded-lg p-1 bg-white h-full min-h-[400px]">
-                      <LocationPicker
-                        onLocationSelect={(lat, lng, address) => addLocation(lat, lng, address)}
-                        initialLat={-6.200000}
-                        initialLng={106.816666}
-                        existingLocations={locations}
-                      />
-                    </div>
+                    <LocationPicker
+                      onLocationSelect={(lat, lng, address) => addLocation(lat, lng, address)}
+                      initialLat={-6.200000}
+                      initialLng={106.816666}
+                      existingLocations={locations}
+                    />
                     <p className="text-[10px] text-muted-foreground mt-2">Dukungan Multi-lokasi: Klik titik baru di peta untuk menambah lokasi.</p>
                   </div>
                 </div>
@@ -511,7 +517,7 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 <Button variant="outline" onClick={() => setStep('location')} title="Kembali">
                   <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
                 </Button>
-                <Button className="w-auto px-8 min-w-32 bg-green-600 hover:bg-green-700">
+                <Button className="w-auto px-8 min-w-32 bg-[var(--sidebar)] hover:bg-[var(--sidebar)] hover:scale-105">
                   Simpan Proyek
                 </Button>
               </CardFooter>

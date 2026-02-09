@@ -24,7 +24,7 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
                 decimalSeparator=","
                 allowNegative={false} // Prevent negative numbers
                 customInput={Input} // Use our existing UI Input component
-                className={cn("text-right font-mono", className)}
+                className={cn("text-left font-mono", className)}
             />
         );
     }
