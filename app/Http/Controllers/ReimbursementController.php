@@ -53,9 +53,14 @@ final class ReimbursementController
     /**
      * Display the specified resource.
      */
+    /**
+     * Display the specified resource.
+     */
     public function show(Reimbursement $reimbursement)
     {
-        //
+        return Inertia::render('Reimbursements/Show', [
+            'reimbursement' => $reimbursement
+        ]);
     }
 
     /**
@@ -80,5 +85,17 @@ final class ReimbursementController
     public function destroy(Reimbursement $reimbursement)
     {
         //
+    }
+
+    public function approve(Reimbursement $reimbursement)
+    {
+        // Logic to approve
+        return back();
+    }
+
+    public function reject(Reimbursement $reimbursement)
+    {
+        // Logic to reject
+        return back();
     }
 }

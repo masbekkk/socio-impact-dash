@@ -39,7 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, MapPin, Camera, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal, Eye, Building, Calendar } from 'lucide-react';
+import { Search, Filter, MapPin, Camera, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal, Eye, Building, Calendar, Download, FileText, CheckCircle, XCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { Label } from '@/components/ui/label';
 
@@ -55,38 +55,27 @@ interface PresenceLog {
   time: string;
   project: string;
   activity: string;
+  notes?: string;
   location: {
     lat: number;
     lng: number;
     address: string;
   };
   status: 'pending' | 'approved' | 'rejected';
+  user: {
+    name: string;
+    email: string;
+  };
 }
 
 // --- Mock Data ---
+import MOCK_LOGS_DATA from './presence_logs.json';
+
 const MOCK_PROJECTS: Project[] = [
   { id: '1', name: 'Socio Impact Development' },
   { id: '2', name: 'Community Outreach Phase 1' },
   { id: '3', name: 'Education Fund Assessment' },
 ];
-
-const GENERATE_MOCK_LOGS = (count: number): PresenceLog[] => {
-  return Array.from({ length: count }).map((_, i) => ({
-    id: `LOG-${1000 + i}`,
-    date: `2026-02-${String(Math.max(1, 28 - i)).padStart(2, '0')}`,
-    time: '08:30',
-    project: MOCK_PROJECTS[i % MOCK_PROJECTS.length].name,
-    activity: i % 2 === 0
-      ? 'Melakukan survei lapangan dan wawancara dengan penerima manfaat lokal.'
-      : 'Meeting koordinasi dengan tim internal membahas progress laporan bulanan.',
-    location: {
-      lat: -6.200000 + (Math.random() * 0.01),
-      lng: 106.816666 + (Math.random() * 0.01),
-      address: 'Jakarta Selatan, DKI Jakarta'
-    },
-    status: i === 0 ? 'pending' : (i % 5 === 0 ? 'rejected' : 'approved'),
-  }));
-};
 
 export default function PresenceIndex() {
   // --- State ---
@@ -106,15 +95,26 @@ export default function PresenceIndex() {
   const [formData, setFormData] = useState({
     project_id: '',
     activity: '',
+    notes: '',
     lat: '',
     lng: '',
     image: null as File | null,
   });
 
+  // Action Dialog State
+  const [actionDialog, setActionDialog] = useState<{ open: boolean; type: 'approve' | 'reject' | null; log: PresenceLog | null }>({
+    open: false,
+    type: null,
+    log: null
+  });
+
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+
   // --- Effects ---
   useEffect(() => {
     // Load mock data
-    setLogs(GENERATE_MOCK_LOGS(25));
+    // @ts-ignore
+    setLogs(MOCK_LOGS_DATA);
   }, []);
 
   // --- Handlers ---
@@ -151,7 +151,7 @@ export default function PresenceIndex() {
   const handleSubmit = () => {
     // Here you would normally send formData to your backend via Inertia or Axios
     if (!formData.project_id || !formData.activity || !formData.lat || !formData.image) {
-      alert('Harap lengkapi semua data (Project, Kegiatan, Lokasi, dan Foto).');
+      alert('Harap lengkapi semua data wajib (Project, Kegiatan, Lokasi, dan Foto).');
       return;
     }
 
@@ -164,12 +164,29 @@ export default function PresenceIndex() {
     // Reset form or optimistically update UI here
   };
 
+  const openActionDialog = (type: 'approve' | 'reject', log: PresenceLog) => {
+    setActionDialog({ open: true, type, log });
+  };
+
+  const handleActionConfirm = () => {
+    if (!actionDialog.log || !actionDialog.type) return;
+    alert(`Konfirmasi: ${actionDialog.type === 'approve' ? 'Menyetujui' : 'Menolak'} presensi untuk ${actionDialog.log.user.name}`);
+    setActionDialog({ open: false, type: null, log: null });
+    // In real app, make API call here
+  };
+
   // --- Filtering & Pagination Logic (Frontend Mock) ---
-  const filteredLogs = logs.filter(log =>
-    log.project.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.activity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLogs = logs.filter(log => {
+    const matchesSearch =
+      log.project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.activity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.id.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStatus = filterStatus === 'all' || log.status === filterStatus;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
   const paginatedLogs = filteredLogs.slice(
@@ -187,103 +204,12 @@ export default function PresenceIndex() {
           <p className="text-muted-foreground text-sm md:text-base">Catat kehadiran, lokasi, dan aktivitas harian Anda.</p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)] transition-transform hover:scale-105 active:scale-95 shadow-sm">
-              <PlusIcon className="h-4 w-4" />
-              Check-In Baru
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Form Check-In Harian</DialogTitle>
-              <DialogDescription>
-                Lengkapi data kegiatan, lokasi, dan dokumentasi untuk melakukan presensi.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              {/* 1. Project Selection */}
-              <div className="grid gap-2">
-                <label htmlFor="project" className="text-sm font-medium">Proyek</label>
-                <Select
-                  onValueChange={(val) => setFormData({ ...formData, project_id: val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Proyek..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MOCK_PROJECTS.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* 2. Location (Lat/Long) */}
-              <div className="grid gap-2">
-                <label className="text-sm font-medium">Lokasi</label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Latitude"
-                    value={formData.lat}
-                    readOnly
-                    className="bg-muted"
-                  />
-                  <Input
-                    placeholder="Longitude"
-                    value={formData.lng}
-                    readOnly
-                    className="bg-muted"
-                  />
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleFetchLocation}
-                  disabled={loadingLocation}
-                  className="w-full"
-                >
-                  {loadingLocation ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MapPin className="h-4 w-4 mr-2" />}
-                  {formData.lat ? 'Perbarui Lokasi' : 'Ambil Lokasi Saat Ini'}
-                </Button>
-              </div>
-
-              {/* 3. Activity */}
-              <div className="grid gap-2">
-                <label htmlFor="activity" className="text-sm font-medium">Kegiatan</label>
-                <Textarea
-                  id="activity"
-                  placeholder="Deskripsikan kegiatan yang dilakukan hari ini..."
-                  value={formData.activity}
-                  onChange={(e) => setFormData({ ...formData, activity: e.target.value })}
-                />
-              </div>
-
-              {/* 4. Documentation */}
-              <div className="grid gap-2">
-                <label className="text-sm font-medium">Dokumentasi (Foto)</label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
-                  />
-                </div>
-                {formData.image && (
-                  <p className="text-xs text-muted-foreground">
-                    File terpilih: {formData.image.name}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button onClick={handleSubmit}>Kirim Presensi</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Link href="/presences/create">
+          <Button className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)] transition-transform hover:scale-105 active:scale-95 shadow-sm">
+            <PlusIcon className="h-4 w-4" />
+            Check-In Baru
+          </Button>
+        </Link>
       </CardContent>
 
       <Card className="mx-4 md:mx-8 mb-8 border-none rounded-xl overflow-hidden shadow-sm">
@@ -304,6 +230,13 @@ export default function PresenceIndex() {
             </div>
 
             <div className="flex-none">
+              <Button variant="outline" size="sm" className="h-9 gap-2" onClick={() => alert('Mendownload rekap presensi (CSV)...')}>
+                <Download className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+            </div>
+
+            <div className="flex-none">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-9 gap-2">
@@ -317,6 +250,20 @@ export default function PresenceIndex() {
                   <DropdownMenuItem>Hari Ini</DropdownMenuItem>
                   <DropdownMenuItem>Minggu Ini</DropdownMenuItem>
                   <DropdownMenuItem>Bulan Ini</DropdownMenuItem>
+                  <DropdownMenuLabel>Filter Status</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setFilterStatus('all')} className={filterStatus === 'all' ? 'bg-accent' : ''}>
+                    Semua Status
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterStatus('pending')} className={filterStatus === 'pending' ? 'bg-accent' : ''}>
+                    Menunggu (Pending)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterStatus('approved')} className={filterStatus === 'approved' ? 'bg-accent' : ''}>
+                    Disetujui (Approved)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterStatus('rejected')} className={filterStatus === 'rejected' ? 'bg-accent' : ''}>
+                    Ditolak (Rejected)
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -342,6 +289,10 @@ export default function PresenceIndex() {
 
                     <div className="space-y-2">
                       <div className="text-sm">
+                        <p className="text-xs text-muted-foreground mb-0.5">Karyawan</p>
+                        <div className="font-medium">{log.user?.name || 'Unknown User'}</div>
+                      </div>
+                      <div className="text-sm">
                         <p className="text-xs text-muted-foreground mb-0.5">Proyek</p>
                         <div className="font-medium">{log.project}</div>
                       </div>
@@ -351,10 +302,15 @@ export default function PresenceIndex() {
                       </div>
                       <div className="text-sm">
                         <p className="text-xs text-muted-foreground mb-0.5">Lokasi</p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${log.location.lat},${log.location.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary hover:underline"
+                        >
                           <MapPin className="h-3 w-3" />
                           {log.location.lat.toFixed(4)}, {log.location.lng.toFixed(4)}
-                        </div>
+                        </a>
                       </div>
                     </div>
 
@@ -373,6 +329,7 @@ export default function PresenceIndex() {
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="w-[180px]">Tanggal & Waktu</TableHead>
+                  <TableHead>Karyawan</TableHead>
                   <TableHead>Proyek</TableHead>
                   <TableHead className="hidden md:table-cell">Kegiatan</TableHead>
                   <TableHead>Lokasi</TableHead>
@@ -397,6 +354,12 @@ export default function PresenceIndex() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{log.user?.name || 'Unknown User'}</span>
+                          <span className="text-xs text-muted-foreground">{log.user?.email}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
                         {log.project}
                       </TableCell>
                       <TableCell className="hidden md:table-cell max-w-[300px]">
@@ -405,15 +368,23 @@ export default function PresenceIndex() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="font-mono text-[10px] font-normal gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {log.location.lat.toFixed(4)}, {log.location.lng.toFixed(4)}
+                        <Badge variant="outline" className="font-mono text-[10px] font-normal gap-1 hover:bg-muted cursor-pointer" asChild>
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${log.location.lat},${log.location.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <MapPin className="h-3 w-3" />
+                            {log.location.lat.toFixed(4)}, {log.location.lng.toFixed(4)}
+                          </a>
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        {/* @ts-ignore */}
                         <StatusBadge status={log.status} />
                       </TableCell>
                       <TableCell className="text-right">
+
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
@@ -423,9 +394,23 @@ export default function PresenceIndex() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                            <DropdownMenuItem className="cursor-pointer">
-                              <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Lihat Detail
+                            <DropdownMenuItem asChild>
+                              {/* Using name/slug in URL as requested */}
+                              <Link href={`/presences/${log.user.name.split(' ').join('-').toLowerCase()}`} className="cursor-pointer flex items-center">
+                                <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Lihat Detail
+                              </Link>
                             </DropdownMenuItem>
+                            {log.status === 'pending' && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => openActionDialog('approve', log)} className="text-emerald-600 focus:text-emerald-600 cursor-pointer">
+                                  <CheckCircle className="mr-2 h-4 w-4" /> Setujui
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openActionDialog('reject', log)} className="text-rose-600 focus:text-rose-600 cursor-pointer">
+                                  <XCircle className="mr-2 h-4 w-4" /> Tolak
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -510,7 +495,51 @@ export default function PresenceIndex() {
           </div>
         </div>
       </Card>
-    </AppSidebarLayout >
+
+      {/* Action Confirmation Dialog */}
+      <Dialog open={actionDialog.open} onOpenChange={(open) => !open && setActionDialog(prev => ({ ...prev, open: false }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {actionDialog.type === 'approve' ? (
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+              ) : (
+                <XCircle className="h-5 w-5 text-rose-600" />
+              )}
+              Konfirmasi Aksi
+            </DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin {actionDialog.type === 'approve' ? 'menyetujui' : 'menolak'} presensi dari <b>{actionDialog.log?.user.name}</b>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Proyek: {actionDialog.log?.project} <br />
+              Waktu: {actionDialog.log?.date} {actionDialog.log?.time}
+            </p>
+            {actionDialog.type === 'reject' && (
+              <Textarea placeholder="Alasan penolakan (opsional)" className="mt-4" />
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActionDialog(prev => ({ ...prev, open: false }))}>
+              Batal
+            </Button>
+            <Button
+              variant={actionDialog.type === 'approve' ? 'default' : 'destructive'}
+              onClick={handleActionConfirm}
+              className="gap-2"
+            >
+              {actionDialog.type === 'approve' ? (
+                <><CheckCircle className="h-4 w-4" /> Setujui Presensi</>
+              ) : (
+                <><XCircle className="h-4 w-4" /> Tolak Presensi</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AppSidebarLayout>
   );
 }
 

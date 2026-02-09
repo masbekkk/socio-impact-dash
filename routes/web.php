@@ -25,6 +25,9 @@ Route::get('/', fn() => redirect()->route('projects.index'))->name('home');
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('dashboard', fn() => Inertia::render('dashboard'))->name('dashboard');
 
+    // Presences
+    Route::resource('presences', PresenceController::class)->only(['index', 'create', 'store', 'show']);
+
     // Projects
     Route::resource('projects', ProjectController::class);
     Route::get('projects/{project}/allowance', [ProjectController::class, 'allowance'])->name('projects.allowance');
@@ -33,8 +36,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // Reimbursements
     Route::get('reimbursements/create/atr', [ReimbursementController::class, 'createATR'])->name('reimbursements.create.atr');
     Route::get('reimbursements/create/eer', [ReimbursementController::class, 'createEER'])->name('reimbursements.create.eer');
-    Route::resource('reimbursements', ReimbursementController::class);
     Route::get('reimbursements/approvals', [ReimbursementController::class, 'approvals'])->name('reimbursements.approvals');
+    Route::resource('reimbursements', ReimbursementController::class);
     Route::post('reimbursements/{reimbursement}/approve', [ReimbursementController::class, 'approve'])->name('reimbursements.approve');
     Route::post('reimbursements/{reimbursement}/reject', [ReimbursementController::class, 'reject'])->name('reimbursements.reject');
 
