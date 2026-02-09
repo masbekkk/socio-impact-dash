@@ -19,18 +19,28 @@ final class LeaveController
         return Inertia::render('Leave/Index');
     }
 
-    public function approvals()
-    {
-        return Inertia::render('Leave/Index');
-    }
-
     /**
      * Show the form for creating a new resource.
      */
     public function create()
     {
-        //
+        return Inertia::render('Leave/CreateLeave');
     }
+
+    /**
+     * Show the form for creating a new travel request.
+     */
+    public function createTravel()
+    {
+        return Inertia::render('Leave/CreateTravel');
+    }
+
+    public function approvals()
+    {
+        return Inertia::render('Leave/Index');
+    }
+
+
 
     /**
      * Store a newly created resource in storage.

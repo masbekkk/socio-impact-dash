@@ -220,7 +220,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
           <div className="rounded-md border hidden md:block">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Kode</TableHead>
                   <TableHead>Nama Proyek</TableHead>
                   <TableHead>Client</TableHead>

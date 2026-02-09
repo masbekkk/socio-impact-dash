@@ -42,8 +42,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
 
     // Leaves
-    Route::resource('leaves', LeaveController::class);
+    Route::get('leaves/create-travel', [LeaveController::class, 'createTravel'])->name('leaves.create_travel');
     Route::get('leaves/approvals', [LeaveController::class, 'approvals'])->name('leaves.approvals');
+    Route::resource('leaves', LeaveController::class);
     Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
 
     // Presence
