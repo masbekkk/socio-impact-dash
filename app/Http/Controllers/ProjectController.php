@@ -145,6 +145,37 @@ final class ProjectController
 
 
     /**
+     * Display the allowance page for the specified resource.
+     */
+    public function allowance($slug)
+    {
+        // LOAD DATA FROM JSON
+        $jsonPath = database_path('data/projects.json');
+        if (!file_exists($jsonPath)) {
+            abort(404, 'Project data not found.');
+        }
+
+        $projects = json_decode(file_get_contents($jsonPath), true);
+
+        // Find project by slug
+        $project = null;
+        foreach ($projects as $p) {
+            if (($p['slug'] ?? '') === $slug) {
+                $project = $p;
+                break;
+            }
+        }
+
+        if (!$project) {
+            abort(404, 'Project not found.');
+        }
+
+        return \Inertia\Inertia::render('Projects/Allowance', [
+            'project' => $project
+        ]);
+    }
+
+    /**
      * Display the specified resource.
      */
     public function show($slug)
