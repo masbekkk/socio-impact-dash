@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreReimbursementRequest;
 use App\Http\Requests\UpdateReimbursementRequest;
 use App\Models\Reimbursement;
+use Inertia\Inertia;
 
 final class ReimbursementController
 {
@@ -15,7 +16,22 @@ final class ReimbursementController
      */
     public function index()
     {
-        //
+        return Inertia::render('Reimbursements/Index');
+    }
+
+    public function createATR()
+    {
+        return Inertia::render('Reimbursements/CreateATR');
+    }
+
+    public function createEER()
+    {
+        return Inertia::render('Reimbursements/CreateEER');
+    }
+
+    public function approvals()
+    {
+        return Inertia::render('Reimbursements/Index');
     }
 
     /**

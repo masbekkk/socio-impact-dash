@@ -16,6 +16,7 @@ use App\Http\Controllers\UserEmailVerificationNotificationController;
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
+use App\Http\Controllers\CalendarController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -30,10 +31,15 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('projects/{project}/finish', [ProjectController::class, 'finish'])->name('projects.finish');
 
     // Reimbursements
+    Route::get('reimbursements/create/atr', [ReimbursementController::class, 'createATR'])->name('reimbursements.create.atr');
+    Route::get('reimbursements/create/eer', [ReimbursementController::class, 'createEER'])->name('reimbursements.create.eer');
     Route::resource('reimbursements', ReimbursementController::class);
     Route::get('reimbursements/approvals', [ReimbursementController::class, 'approvals'])->name('reimbursements.approvals');
     Route::post('reimbursements/{reimbursement}/approve', [ReimbursementController::class, 'approve'])->name('reimbursements.approve');
     Route::post('reimbursements/{reimbursement}/reject', [ReimbursementController::class, 'reject'])->name('reimbursements.reject');
+
+    // Calendar
+    Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
 
     // Leaves
     Route::resource('leaves', LeaveController::class);

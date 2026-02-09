@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePresenceRequest;
 use App\Http\Requests\UpdatePresenceRequest;
 use App\Models\Presence;
+use Inertia\Inertia;
 
 final class PresenceController
 {
@@ -15,7 +16,12 @@ final class PresenceController
      */
     public function index()
     {
-        //
+        return Inertia::render('Presence/Index');
+    }
+
+    public function checkIn()
+    {
+        // Placeholder
     }
 
     /**

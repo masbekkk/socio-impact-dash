@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreLeaveRequest;
 use App\Http\Requests\UpdateLeaveRequest;
 use App\Models\Leave;
+use Inertia\Inertia;
 
 final class LeaveController
 {
@@ -15,7 +16,12 @@ final class LeaveController
      */
     public function index()
     {
-        //
+        return Inertia::render('Leave/Index');
+    }
+
+    public function approvals()
+    {
+        return Inertia::render('Leave/Index');
     }
 
     /**
