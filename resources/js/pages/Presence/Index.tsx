@@ -42,6 +42,11 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Filter, MapPin, Camera, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal, Eye, Building, Calendar, Download, FileText, CheckCircle, XCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { Label } from '@/components/ui/label';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { DateFilterPresets } from '@/components/DateFilterPresets';
+import { X as XIcon } from 'lucide-react';
 
 // --- Types ---
 interface Project {
@@ -109,6 +114,8 @@ export default function PresenceIndex() {
   });
 
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // --- Effects ---
   useEffect(() => {
@@ -185,7 +192,15 @@ export default function PresenceIndex() {
 
     const matchesStatus = filterStatus === 'all' || log.status === filterStatus;
 
-    return matchesSearch && matchesStatus;
+    const logDate = new Date(log.date);
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+
+    const matchesDate =
+      (!start || logDate >= start) &&
+      (!end || logDate <= end);
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
@@ -215,7 +230,7 @@ export default function PresenceIndex() {
       <Card className="mx-4 md:mx-8 mb-8 border-none rounded-xl overflow-hidden shadow-sm">
         <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 pb-4 px-4 md:px-8">
           <CardTitle className="text-base font-normal hidden md:block">Riwayat Presensi</CardTitle>
-          <div className="flex w-full md:w-auto items-center gap-2">
+          <div className="flex w-full md:w-auto items-center gap-2 flex-wrap md:flex-nowrap">
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -228,6 +243,64 @@ export default function PresenceIndex() {
                 }}
               />
             </div>
+
+            {/* Date Range Filter */}
+            {/* Date Range Filter */}
+            {/* Desktop View */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "justify-start text-left font-normal w-[240px] px-3 border-dashed hidden md:flex",
+                    !startDate && "text-muted-foreground",
+                    (startDate || endDate) && "border-solid bg-emerald-50/50 border-emerald-200 text-emerald-700"
+                  )}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {startDate ? (
+                    endDate ? (
+                      <>
+                        {format(new Date(startDate), "dd MMM yyyy", { locale: id })} -{" "}
+                        {format(new Date(endDate), "dd MMM yyyy", { locale: id })}
+                      </>
+                    ) : (
+                      format(new Date(startDate), "dd MMM yyyy", { locale: id })
+                    )
+                  ) : (
+                    <span>Pilih Rentang Tanggal</span>
+                  )}
+                  {(startDate || endDate) && (
+                    <div className="ml-auto hover:bg-emerald-200 rounded-full p-0.5 transition-colors" role="button" onClick={(e) => { e.stopPropagation(); setStartDate(''); setEndDate(''); }}>
+                      <XIcon className="h-3 w-3" />
+                    </div>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-auto p-0 bg-white" align="start">
+                <DateFilterPresets
+                  startDate={startDate}
+                  endDate={endDate}
+                  onSelect={(start, end) => { setStartDate(start); setEndDate(end); }}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Mobile View Icon */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className={cn("md:hidden", (startDate || endDate) ? "bg-accent text-accent-foreground border-primary" : "")}>
+                  <Calendar className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-auto p-0 bg-white" align="end">
+                <DateFilterPresets
+                  startDate={startDate}
+                  endDate={endDate}
+                  onSelect={(start, end) => { setStartDate(start); setEndDate(end); }}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <div className="flex-none">
               <Button variant="outline" size="sm" className="h-9 gap-2" onClick={() => alert('Mendownload rekap presensi (CSV)...')}>

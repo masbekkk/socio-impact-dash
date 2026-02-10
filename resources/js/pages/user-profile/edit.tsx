@@ -64,6 +64,20 @@ export default function Edit({ status }: { status?: string }) {
                                 </div>
 
                                 <div className="grid gap-2">
+                                    <Label htmlFor="role">Role</Label>
+
+                                    <Input
+                                        id="role"
+                                        className="mt-1 block w-full bg-muted text-muted-foreground capitalize"
+                                        defaultValue={auth.user.role}
+                                        name="role"
+                                        readOnly
+                                        disabled
+                                        placeholder="User Role"
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
                                     <Label htmlFor="email">Email address</Label>
 
                                     <Input
@@ -99,11 +113,11 @@ export default function Edit({ status }: { status?: string }) {
 
                                         {status ===
                                             'verification-link-sent' && (
-                                            <div className="mt-2 text-sm font-medium text-green-600">
-                                                A new verification link has been
-                                                sent to your email address.
-                                            </div>
-                                        )}
+                                                <div className="mt-2 text-sm font-medium text-green-600">
+                                                    A new verification link has been
+                                                    sent to your email address.
+                                                </div>
+                                            )}
                                     </div>
                                 )}
 
