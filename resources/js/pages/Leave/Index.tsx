@@ -50,6 +50,11 @@ import {
   ChevronsRight
 } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { DateFilterPresets } from '@/components/DateFilterPresets';
+import { X as XIcon } from 'lucide-react';
 
 // Import Mock Data
 import MOCK_LEAVES_DATA from './leaves.json';
@@ -111,6 +116,8 @@ export default function LeaveIndex() {
   const [leaves, setLeaves] = useState<LeaveItem[]>([]);
   const [leaveSearchQuery, setLeaveSearchQuery] = useState('');
   const [leaveFilterStatus, setLeaveFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [leaveStartDate, setLeaveStartDate] = useState('');
+  const [leaveEndDate, setLeaveEndDate] = useState('');
   const [leaveCurrentPage, setLeaveCurrentPage] = useState(1);
   const [leaveItemsPerPage, setLeaveItemsPerPage] = useState(10);
 
@@ -118,6 +125,8 @@ export default function LeaveIndex() {
   const [travels, setTravels] = useState<TravelItem[]>([]);
   const [travelSearchQuery, setTravelSearchQuery] = useState('');
   const [travelFilterStatus, setTravelFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [travelStartDate, setTravelStartDate] = useState('');
+  const [travelEndDate, setTravelEndDate] = useState('');
   const [travelCurrentPage, setTravelCurrentPage] = useState(1);
   const [travelItemsPerPage, setTravelItemsPerPage] = useState(10);
 
@@ -148,7 +157,15 @@ export default function LeaveIndex() {
 
     const matchesStatus = leaveFilterStatus === 'all' || item.status === leaveFilterStatus;
 
-    return matchesSearch && matchesStatus;
+    const itemDate = new Date(item.start);
+    const start = leaveStartDate ? new Date(leaveStartDate) : null;
+    const end = leaveEndDate ? new Date(leaveEndDate) : null;
+
+    const matchesDate =
+      (!start || itemDate >= start) &&
+      (!end || itemDate <= end);
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const leaveTotalPages = Math.ceil(filteredLeaves.length / leaveItemsPerPage);
@@ -168,7 +185,15 @@ export default function LeaveIndex() {
 
     const matchesStatus = travelFilterStatus === 'all' || item.status === travelFilterStatus;
 
-    return matchesSearch && matchesStatus;
+    const itemDate = new Date(item.start);
+    const start = travelStartDate ? new Date(travelStartDate) : null;
+    const end = travelEndDate ? new Date(travelEndDate) : null;
+
+    const matchesDate =
+      (!start || itemDate >= start) &&
+      (!end || itemDate <= end);
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const travelTotalPages = Math.ceil(filteredTravels.length / travelItemsPerPage);
@@ -181,7 +206,7 @@ export default function LeaveIndex() {
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
       <Head title="Cuti & Dinas" />
 
-      <div className="p-6 md:p-10 space-y-6">
+      <div className="p-6 md:p-8 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Manajemen Cuti & Dinas</h1>
@@ -232,7 +257,7 @@ export default function LeaveIndex() {
                   <CardTitle className="text-lg">Daftar Pengajuan Cuti</CardTitle>
                   <CardDescription>Riwayat pengajuan cuti tahunan, sakit, dan lainnya.</CardDescription>
                 </div>
-                <div className="flex w-full md:w-auto items-center gap-2">
+                <div className="flex w-full md:w-auto items-center gap-2 flex-wrap md:flex-nowrap">
                   <div className="relative flex-1 md:w-64">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -245,6 +270,63 @@ export default function LeaveIndex() {
                       }}
                     />
                   </div>
+
+                  {/* Date Range Filter (Leave) */}
+                  {/* Desktop View */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal w-[240px] px-3 border-dashed hidden md:flex",
+                          !leaveStartDate && "text-muted-foreground",
+                          (leaveStartDate || leaveEndDate) && "border-solid bg-emerald-50/50 border-emerald-200 text-emerald-700"
+                        )}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {leaveStartDate ? (
+                          leaveEndDate ? (
+                            <>
+                              {format(new Date(leaveStartDate), "dd MMM yyyy", { locale: id })} -{" "}
+                              {format(new Date(leaveEndDate), "dd MMM yyyy", { locale: id })}
+                            </>
+                          ) : (
+                            format(new Date(leaveStartDate), "dd MMM yyyy", { locale: id })
+                          )
+                        ) : (
+                          <span>Pilih Rentang Tanggal</span>
+                        )}
+                        {(leaveStartDate || leaveEndDate) && (
+                          <div className="ml-auto hover:bg-emerald-200 rounded-full p-0.5 transition-colors" role="button" onClick={(e) => { e.stopPropagation(); setLeaveStartDate(''); setLeaveEndDate(''); }}>
+                            <XIcon className="h-3 w-3" />
+                          </div>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-auto p-0 bg-white" align="start">
+                      <DateFilterPresets
+                        startDate={leaveStartDate}
+                        endDate={leaveEndDate}
+                        onSelect={(start, end) => { setLeaveStartDate(start); setLeaveEndDate(end); }}
+                      />
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Mobile View Icon */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className={cn("md:hidden", (leaveStartDate || leaveEndDate) ? "bg-accent text-accent-foreground border-primary" : "")}>
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-auto p-0 bg-white" align="end">
+                      <DateFilterPresets
+                        startDate={leaveStartDate}
+                        endDate={leaveEndDate}
+                        onSelect={(start, end) => { setLeaveStartDate(start); setLeaveEndDate(end); }}
+                      />
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
                   <div className="flex-none">
                     <DropdownMenu>
@@ -441,7 +523,7 @@ export default function LeaveIndex() {
                   <CardTitle className="text-lg">Daftar Dinas Luar</CardTitle>
                   <CardDescription>Riwayat pengajuan dinas luar kantor.</CardDescription>
                 </div>
-                <div className="flex w-full md:w-auto items-center gap-2">
+                <div className="flex w-full md:w-auto items-center gap-2 flex-wrap md:flex-nowrap">
                   <div className="relative flex-1 md:w-64">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -454,6 +536,63 @@ export default function LeaveIndex() {
                       }}
                     />
                   </div>
+
+                  {/* Date Range Filter (Travel) */}
+                  {/* Desktop View */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal w-[240px] px-3 border-dashed hidden md:flex",
+                          !travelStartDate && "text-muted-foreground",
+                          (travelStartDate || travelEndDate) && "border-solid bg-emerald-50/50 border-emerald-200 text-emerald-700"
+                        )}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {travelStartDate ? (
+                          travelEndDate ? (
+                            <>
+                              {format(new Date(travelStartDate), "dd MMM yyyy", { locale: id })} -{" "}
+                              {format(new Date(travelEndDate), "dd MMM yyyy", { locale: id })}
+                            </>
+                          ) : (
+                            format(new Date(travelStartDate), "dd MMM yyyy", { locale: id })
+                          )
+                        ) : (
+                          <span>Pilih Rentang Tanggal</span>
+                        )}
+                        {(travelStartDate || travelEndDate) && (
+                          <div className="ml-auto hover:bg-emerald-200 rounded-full p-0.5 transition-colors" role="button" onClick={(e) => { e.stopPropagation(); setTravelStartDate(''); setTravelEndDate(''); }}>
+                            <XIcon className="h-3 w-3" />
+                          </div>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-auto p-0 bg-white" align="start">
+                      <DateFilterPresets
+                        startDate={travelStartDate}
+                        endDate={travelEndDate}
+                        onSelect={(start, end) => { setTravelStartDate(start); setTravelEndDate(end); }}
+                      />
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Mobile View Icon */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className={cn("md:hidden", (travelStartDate || travelEndDate) ? "bg-accent text-accent-foreground border-primary" : "")}>
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-auto p-0 bg-white" align="end">
+                      <DateFilterPresets
+                        startDate={travelStartDate}
+                        endDate={travelEndDate}
+                        onSelect={(start, end) => { setTravelStartDate(start); setTravelEndDate(end); }}
+                      />
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
                   <div className="flex-none">
                     <DropdownMenu>

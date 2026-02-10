@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { MapPin, Loader2, FileText, ArrowLeft, Save } from 'lucide-react';
+import { MapPin, Loader2, FileText, ArrowLeft, Save, Camera, RotateCcw, X, Image as ImageIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 // --- Mock Projects ---
@@ -31,6 +31,23 @@ export default function CreatePresence() {
     ];
 
     const [loadingLocation, setLoadingLocation] = useState(false);
+
+    // Camera State
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
+    const [stream, setStream] = useState<MediaStream | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        handleFetchLocation();
+        return () => {
+            // Cleanup stream on unmount
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, []);
 
     // Using Inertia useForm for better form handling
     const { data, setData, post, processing, errors } = useForm({
@@ -60,11 +77,81 @@ export default function CreatePresence() {
                 setLoadingLocation(false);
             },
             (err) => {
-                alert('Gagal mengambil lokasi: ' + err.message);
+                // Silent fail for auto-fetch, user can retry if needed
+                console.error(err);
                 setLoadingLocation(false);
             }
         );
     };
+
+    // Camera Functions
+    const startCamera = async (facingMode: 'user' | 'environment' = 'user') => {
+        try {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facingMode }
+            });
+
+            setStream(newStream);
+            setIsCameraOpen(true);
+            setCameraFacingMode(facingMode);
+
+            if (videoRef.current) {
+                videoRef.current.srcObject = newStream;
+            }
+        } catch (err) {
+            console.error("Error accessing camera:", err);
+            alert("Gagal membuka kamera. Pastikan izin kamera diberikan.");
+        }
+    };
+
+    const stopCamera = () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+        setIsCameraOpen(false);
+    };
+
+    const switchCamera = () => {
+        const newMode = cameraFacingMode === 'user' ? 'environment' : 'user';
+        startCamera(newMode);
+    };
+
+    const capturePhoto = () => {
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            const context = canvas.getContext('2d');
+
+            if (context) {
+                // Set canvas dimensions to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Draw video frame to canvas
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Convert to file
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const file = new File([blob], `presence_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        setData('image', file);
+                        stopCamera();
+                    }
+                }, 'image/jpeg', 0.8);
+            }
+        }
+    };
+
+    const retakePhoto = () => {
+        setData('image', null);
+        startCamera(cameraFacingMode);
+    };
+
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -98,8 +185,8 @@ export default function CreatePresence() {
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">Form Check-In Harian</h1>
-                        <p className="text-muted-foreground text-sm">Isi formulir di bawah ini untuk melakukan presensi harian Anda.</p>
+                        <h1 className="text-xl font-bold tracking-tight">Form Presensi Di Luar Kantor</h1>
+                        <p className="text-muted-foreground text-sm">Isi formulir di bawah ini untuk melakukan presensi di luar kantor.</p>
                     </div>
                 </div>
 
@@ -149,20 +236,9 @@ export default function CreatePresence() {
                                     </div>
                                 </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="description">
-                                        Deskripsi Detail
-                                    </Label>
-                                    <Textarea
-                                        id="description"
-                                        placeholder="Deskripsikan kegiatan secara rinci..."
-                                        value={data.notes}
-                                        onChange={(e) => setData('notes', e.target.value)}
-                                        className="resize-none h-24"
-                                    />
-                                </div>
-                            </div>
 
+
+                            </div>
                             <Separator />
 
                             {/* 2. Location & Documentation */}
@@ -172,88 +248,93 @@ export default function CreatePresence() {
                                     <p className="text-sm text-muted-foreground">Lokasi dan foto dokumentasi wajib disertakan.</p>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Location */}
-                                    <div className="grid gap-2">
-                                        <Label>
-                                            Lokasi Saat Ini <span className="text-destructive">*</span>
-                                        </Label>
-                                        <div className="bg-muted/30 p-4 rounded-lg border border-dashed flex flex-col justify-between gap-4 h-full">
-                                            <div className="text-sm text-muted-foreground">
-                                                {data.lat ? (
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-2 text-foreground font-medium">
-                                                            <MapPin className="h-4 w-4 text-primary" />
-                                                            Lokasi Terkunci
-                                                        </div>
-                                                        <div className="text-xs font-mono bg-muted p-1 rounded inline-block">
-                                                            {Number(data.lat).toFixed(6)}, {Number(data.lng).toFixed(6)}
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col items-center justify-center h-full py-4 text-center gap-2">
-                                                        <MapPin className="h-8 w-8 text-muted-foreground/50" />
-                                                        <span>Belum ada data lokasi.</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <Button
-                                                type="button"
-                                                variant="secondary"
-                                                onClick={handleFetchLocation}
-                                                disabled={loadingLocation}
-                                                className="w-full"
-                                            >
-                                                {loadingLocation ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                                ) : (
-                                                    <MapPin className="h-4 w-4 mr-2" />
-                                                )}
-                                                {data.lat ? 'Perbarui Lokasi' : 'Ambil Lokasi'}
-                                            </Button>
-                                        </div>
-                                        {errors.lat && <p className="text-sm text-destructive">Data lokasi wajib diisi.</p>}
-                                    </div>
+                                <div className="grid grid-cols-1 gap-6">
 
                                     {/* Documentation */}
                                     <div className="grid gap-2">
                                         <Label htmlFor="documentation">
                                             Dokumentasi (Foto) <span className="text-destructive">*</span>
                                         </Label>
-                                        <div className="border-2 border-dashed rounded-lg h-full min-h-[160px] flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors cursor-pointer relative bg-muted/30"
-                                            onClick={() => document.getElementById('documentation')?.click()}
-                                        >
-                                            <input
-                                                id="documentation"
-                                                type="file"
-                                                accept="image/*"
-                                                className="hidden"
-                                                onChange={handleFileChange}
-                                            />
-                                            <div className="flex flex-col items-center gap-3 text-center">
-                                                {data.image ? (
-                                                    <>
-                                                        <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-                                                            <FileText className="h-5 w-5 text-primary" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-medium text-sm truncate max-w-[200px]">{data.image.name}</p>
-                                                            <p className="text-xs text-muted-foreground">Klik untuk mengganti</p>
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <div className="h-10 w-10 bg-muted rounded-full flex items-center justify-center">
-                                                            <CameraIcon className="h-5 w-5 text-muted-foreground" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-medium text-sm">Upload Foto</p>
-                                                            <p className="text-xs text-muted-foreground">Klik di sini untuk memilih file</p>
-                                                        </div>
-                                                    </>
-                                                )}
+
+                                        {/* Hidden Canvas for processing */}
+                                        <canvas ref={canvasRef} className="hidden" />
+
+                                        {!isCameraOpen && !data.image && (
+                                            <div className="border-2 border-dashed rounded-lg h-[250px] flex flex-col items-center justify-center p-6 bg-muted/30 gap-4">
+                                                <div className="h-12 w-12 bg-muted rounded-full flex items-center justify-center">
+                                                    <Camera className="h-6 w-6 text-muted-foreground" />
+                                                </div>
+                                                <div className="text-center space-y-1">
+                                                    <p className="font-medium text-sm">Ambil Foto Presensi</p>
+                                                    <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">Pastikan wajah dan lokasi terlihat jelas</p>
+                                                </div>
+                                                <Button type="button" onClick={() => startCamera('user')} variant="outline">
+                                                    <Camera className="h-4 w-4 mr-2" />
+                                                    Buka Kamera
+                                                </Button>
                                             </div>
-                                        </div>
+                                        )}
+
+                                        {isCameraOpen && (
+                                            <div className="relative rounded-lg overflow-hidden bg-black aspect-[3/4] md:aspect-video flex flex-col">
+                                                <video
+                                                    ref={videoRef}
+                                                    autoPlay
+                                                    playsInline
+                                                    className="flex-1 object-cover w-full h-full"
+                                                />
+                                                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-center gap-6 items-center">
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                        size="icon"
+                                                        onClick={stopCamera}
+                                                        className="h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 text-white border-0"
+                                                    >
+                                                        <X className="h-5 w-5" />
+                                                    </Button>
+
+                                                    <Button
+                                                        type="button"
+                                                        size="icon"
+                                                        className="h-16 w-16 rounded-full border-4 border-white bg-transparent hover:bg-white/20"
+                                                        onClick={capturePhoto}
+                                                    >
+                                                        <div className="h-12 w-12 rounded-full bg-white" />
+                                                    </Button>
+
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                        size="icon"
+                                                        onClick={switchCamera}
+                                                        className="h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 text-white border-0"
+                                                    >
+                                                        <RotateCcw className="h-5 w-5" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {data.image && !isCameraOpen && (
+                                            <div className="relative rounded-lg overflow-hidden border bg-muted aspect-[3/4] md:aspect-video group">
+                                                <img
+                                                    src={URL.createObjectURL(data.image)}
+                                                    alt="Preview"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Button type="button" onClick={retakePhoto} variant="secondary">
+                                                        <RotateCcw className="h-4 w-4 mr-2" />
+                                                        Foto Ulang
+                                                    </Button>
+                                                </div>
+                                                <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
+                                                    {data.image.name}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {errors.image && <p className="text-sm text-destructive">{errors.image}</p>}
                                     </div>
                                 </div>
@@ -261,14 +342,25 @@ export default function CreatePresence() {
                         </div>
 
                         <div className="p-6 md:p-8 bg-gray-50 flex justify-between items-center border-t">
-                            <div className="text-sm text-muted-foreground hidden sm:block">
-                                Pastikan semua data valid sebelum mengirim.
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground overflow-hidden">
+                                {loadingLocation ? (
+                                    <><Loader2 className="h-3 w-3 animate-spin shrink-0" /> <span className="truncate">Mengambil lokasi...</span></>
+                                ) : data.lat ? (
+                                    <><MapPin className="h-3 w-3 text-primary shrink-0" /> <span className="truncate hidden sm:inline">Lokasi: {Number(data.lat).toFixed(4)}, {Number(data.lng).toFixed(4)}</span><span className="truncate sm:hidden">Lokasi Terkunci</span></>
+                                ) : (
+                                    <span className="text-destructive flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" /> Gagal ambil lokasi</span>
+                                )}
                             </div>
-                            <div className="flex gap-3 w-full sm:w-auto">
+                            <div className="flex gap-3 w-full sm:w-auto ml-2 shrink-0">
                                 <Button variant="outline" type="button" className="w-full sm:w-auto" asChild>
                                     <Link href="/presences">Batal</Link>
                                 </Button>
-                                <Button type="submit" className="w-full sm:w-auto bg-[var(--sidebar)] hover:bg-[var(--sidebar)]/90" disabled={processing}>
+                                <Button
+                                    type="submit"
+                                    className="w-full sm:w-auto bg-[var(--sidebar)] hover:bg-[var(--sidebar)]/90"
+                                    disabled={processing || !data.lat || !data.image}
+                                    title={!data.lat ? "Menunggu lokasi..." : !data.image ? "Upload foto terlebih dahulu" : "Kirim Presensi"}
+                                >
                                     <Save className="h-4 w-4 mr-2" />
                                     Kirim Presensi
                                 </Button>
@@ -278,7 +370,7 @@ export default function CreatePresence() {
                     </form>
                 </Card>
             </div>
-        </AppSidebarLayout>
+        </AppSidebarLayout >
     );
 }
 

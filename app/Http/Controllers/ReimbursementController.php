@@ -53,13 +53,10 @@ final class ReimbursementController
     /**
      * Display the specified resource.
      */
-    /**
-     * Display the specified resource.
-     */
-    public function show(Reimbursement $reimbursement)
+    public function show($id)
     {
         return Inertia::render('Reimbursements/Show', [
-            'reimbursement' => $reimbursement
+            'slug' => $id
         ]);
     }
 
