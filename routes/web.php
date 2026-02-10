@@ -16,13 +16,17 @@ use App\Http\Controllers\UserEmailVerificationNotificationController;
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
+use App\Http\Controllers\CalendarController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', fn() => redirect()->route('projects.index'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
-    Route::get('dashboard', fn() => Inertia::render('dashboard'))->name('dashboard');
+    Route::get('dashboard', fn() => Inertia::render('Dashboard/Index'))->name('dashboard');
+
+    // Presences
+    Route::resource('presences', PresenceController::class)->only(['index', 'create', 'store', 'show']);
 
     // Projects
     Route::resource('projects', ProjectController::class);
@@ -30,15 +34,22 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('projects/{project}/finish', [ProjectController::class, 'finish'])->name('projects.finish');
 
     // Reimbursements
-    Route::resource('reimbursements', ReimbursementController::class);
+    Route::get('reimbursements/create/atr', [ReimbursementController::class, 'createATR'])->name('reimbursements.create.atr');
+    Route::get('reimbursements/create/eer', [ReimbursementController::class, 'createEER'])->name('reimbursements.create.eer');
     Route::get('reimbursements/approvals', [ReimbursementController::class, 'approvals'])->name('reimbursements.approvals');
+    Route::resource('reimbursements', ReimbursementController::class);
     Route::post('reimbursements/{reimbursement}/approve', [ReimbursementController::class, 'approve'])->name('reimbursements.approve');
     Route::post('reimbursements/{reimbursement}/reject', [ReimbursementController::class, 'reject'])->name('reimbursements.reject');
 
+    // Calendar
+    Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+
     // Leaves
-    Route::resource('leaves', LeaveController::class);
+    Route::get('leaves/create-travel', [LeaveController::class, 'createTravel'])->name('leaves.create_travel');
     Route::get('leaves/approvals', [LeaveController::class, 'approvals'])->name('leaves.approvals');
+    Route::resource('leaves', LeaveController::class);
     Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
+    Route::post('leaves/{leave}/reject', [LeaveController::class, 'reject'])->name('leaves.reject');
 
     // Presence
     Route::post('presences/check-in', [PresenceController::class, 'checkIn'])->name('presences.check-in');

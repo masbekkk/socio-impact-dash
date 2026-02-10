@@ -1,0 +1,131 @@
+[
+    {
+        "id": "L-2025-001",
+        "type": "Cuti Tahunan",
+        "start": "2025-02-20",
+        "end": "2025-02-22",
+        "duration": "3 Hari",
+        "reason": "Acara keluarga di Bandung",
+        "status": "approved",
+        "approver": "Budi Santoso (Head)",
+        "created_at": "2025-02-01",
+        "user": {
+            "name": "Siti Aminah",
+            "email": "siti.a@socioimpact.org",
+            "position": "Project Manager"
+        }
+    },
+    {
+        "id": "L-2025-002",
+        "type": "Cuti Sakit",
+        "start": "2025-03-01",
+        "end": "2025-03-02",
+        "duration": "2 Hari",
+        "reason": "Demam tinggi dan perlu istirahat",
+        "status": "pending",
+        "approver": "-",
+        "created_at": "2025-02-08",
+        "user": {
+            "name": "Rudi Hartono",
+            "email": "rudi.h@socioimpact.org",
+            "position": "Assessment Specialist"
+        }
+    },
+    {
+        "id": "L-2025-003",
+        "type": "Cuti Tahunan",
+        "start": "2025-03-15",
+        "end": "2025-03-17",
+        "duration": "3 Hari",
+        "reason": "Liburan keluarga ke Bali",
+        "status": "approved",
+        "approver": "Director",
+        "created_at": "2025-02-05",
+        "user": {
+            "name": "Dewi Sartika",
+            "email": "dewi.s@socioimpact.org",
+            "position": "M&E Officer"
+        }
+    },
+    {
+        "id": "L-2025-004",
+        "type": "Cuti Menikah",
+        "start": "2025-04-01",
+        "end": "2025-04-03",
+        "duration": "3 Hari",
+        "reason": "Pernikahan saudara kandung",
+        "status": "pending",
+        "approver": "-",
+        "created_at": "2025-02-09",
+        "user": {
+            "name": "Agus Setiawan",
+            "email": "agus.s@socioimpact.org",
+            "position": "Community Liaison"
+        }
+    },
+    {
+        "id": "L-2025-005",
+        "type": "Cuti Tahunan",
+        "start": "2025-05-10",
+        "end": "2025-05-14",
+        "duration": "5 Hari",
+        "reason": "Mudik lebaran ke kampung halaman",
+        "status": "approved",
+        "approver": "Budi Santoso (Head)",
+        "created_at": "2025-01-20",
+        "user": {
+            "name": "Rina Wati",
+            "email": "rina.w@socioimpact.org",
+            "position": "Data Entry"
+        }
+    },
+    {
+        "id": "L-2025-006",
+        "type": "Cuti Sakit",
+        "start": "2025-02-12",
+        "end": "2025-02-13",
+        "duration": "2 Hari",
+        "reason": "Sakit flu dan batuk",
+        "status": "rejected",
+        "approver": "Budi Santoso (Head)",
+        "created_at": "2025-02-11",
+        "rejection_reason": "Tidak melampirkan surat keterangan dokter",
+        "user": {
+            "name": "Budi Santoso",
+            "email": "budi.s@socioimpact.org",
+            "position": "Field Officer"
+        }
+    },
+    {
+        "id": "L-2025-007",
+        "type": "Cuti Tahunan",
+        "start": "2025-06-01",
+        "end": "2025-06-05",
+        "duration": "5 Hari",
+        "reason": "Liburan keluarga ke Yogyakarta",
+        "status": "pending",
+        "approver": "-",
+        "created_at": "2025-02-07",
+        "user": {
+            "name": "Siti Aminah",
+            "email": "siti.a@socioimpact.org",
+            "position": "Project Manager"
+        }
+    },
+    {
+        "id": "L-2025-008",
+        "type": "Cuti Melahirkan",
+        "start": "2025-07-01",
+        "end": "2025-09-30",
+        "duration": "90 Hari",
+        "reason": "Cuti melahirkan anak pertama",
+        "status": "approved",
+        "approver": "Director",
+        "created_at": "2025-01-15",
+        "user": {
+            "name": "Dewi Sartika",
+            "email": "dewi.s@socioimpact.org",
+            "position": "M&E Officer"
+        }
+    }
+]

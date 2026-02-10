@@ -30,6 +30,10 @@ export default function StatusBadge({ status }: Props) {
 
     on_hold: { cls: 'bg-orange-100 text-orange-800 border-orange-200', icon: <PauseCircle className="w-3 h-3 mr-1" /> },
     delayed: { cls: 'bg-orange-100 text-orange-800 border-orange-200', icon: <AlertCircle className="w-3 h-3 mr-1" /> },
+
+    // Presence Statuses
+    approved: { cls: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
+    rejected: { cls: 'bg-rose-100 text-rose-800 border-rose-200', icon: <XCircle className="w-3 h-3 mr-1" /> },
   }
 
   const { cls, icon } = config[status] || { cls: 'bg-gray-100 text-gray-800', icon: null }

@@ -1,0 +1,154 @@
+[
+    {
+        "id": "ATR-2023-001",
+        "type": "ATR",
+        "request_date": "2023-11-01",
+        "requester": "Budi Santoso",
+        "amount": 5000000,
+        "description": "Dinas Luar Kota untuk Project Alpha",
+        "status": "approved",
+        "details": {
+            "usage_plan": "Kunjungan ke site project di Surabaya selama 3 hari.",
+            "urgency": "normal",
+            "bank_name": "BCA",
+            "account_number": "8273612345",
+            "account_name": "Budi Santoso",
+            "documents": [
+                "RAB_Surabaya.pdf",
+                "Surat_Tugas.pdf"
+            ],
+            "project_name": "Project Alpha",
+            "division": "Field Operations",
+            "pic": "Manager Ops"
+        },
+        "timeline": [
+            {
+                "status": "Submitted",
+                "date": "2023-11-01",
+                "by": "Budi Santoso"
+            },
+            {
+                "status": "Approved",
+                "date": "2023-11-02",
+                "by": "Manager Ops"
+            }
+        ]
+    },
+    {
+        "id": "EER-2023-045",
+        "type": "EER",
+        "request_date": "2023-11-05",
+        "requester": "Siti Aminah",
+        "amount": 350000,
+        "description": "Biaya transport meeting klien",
+        "status": "submitted",
+        "details": {
+            "nip": "EMP002",
+            "project_name": "Marketing Campaign Q4",
+            "division": "Marketing",
+            "pic": "Budi Santoso",
+            "reimbursement_type": "refund",
+            "financing_category": "Transportasi",
+            "payment_method": "Transfer Bank",
+            "documents": [
+                "Grab_Receipt.pdf"
+            ]
+        },
+        "timeline": [
+            {
+                "status": "Submitted",
+                "date": "2023-11-05",
+                "by": "Siti Aminah"
+            }
+        ]
+    },
+    {
+        "id": "ATR-2023-002",
+        "type": "ATR",
+        "request_date": "2023-11-10",
+        "requester": "Budi Santoso",
+        "amount": 2500000,
+        "description": "Pembelian perlengkapan mendesak",
+        "status": "draft",
+        "details": {
+            "usage_plan": "Pembelian server backup darurat.",
+            "urgency": "urgent",
+            "bank_name": "BCA",
+            "account_number": "8273612345",
+            "account_name": "Budi Santoso",
+            "documents": [],
+            "project_name": "Infra Maintenance",
+            "division": "IT Support",
+            "pic": "Head of IT"
+        },
+        "timeline": []
+    },
+    {
+        "id": "EER-2023-046",
+        "type": "EER",
+        "request_date": "2023-11-12",
+        "requester": "Andi Saputra",
+        "amount": 1200000,
+        "description": "Biaya pelatihan React Advance",
+        "status": "approved",
+        "details": {
+            "nip": "EMP005",
+            "project_name": "Internal Training",
+            "division": "IT",
+            "pic": "Manager IT",
+            "reimbursement_type": "reimburse",
+            "financing_category": "Biaya Pelatihan",
+            "payment_method": "Transfer Bank",
+            "documents": [
+                "Certificate.pdf",
+                "Invoice.pdf"
+            ]
+        },
+        "timeline": [
+            {
+                "status": "Submitted",
+                "date": "2023-11-12",
+                "by": "Andi Saputra"
+            },
+            {
+                "status": "Approved",
+                "date": "2023-11-13",
+                "by": "HRD"
+            }
+        ]
+    },
+    {
+        "id": "EER-2023-047",
+        "type": "EER",
+        "request_date": "2023-11-15",
+        "requester": "Budi Santoso",
+        "amount": 75000,
+        "description": "Makan siang lembur",
+        "status": "rejected",
+        "details": {
+            "nip": "EMP001",
+            "project_name": "Project Alpha",
+            "division": "Engineering",
+            "pic": "Manager Eng",
+            "reimbursement_type": "refund",
+            "financing_category": "Konsumsi",
+            "payment_method": "Tunai",
+            "documents": [
+                "Struk_Makan.jpg"
+            ]
+        },
+        "timeline": [
+            {
+                "status": "Submitted",
+                "date": "2023-11-15",
+                "by": "Budi Santoso"
+            },
+            {
+                "status": "Rejected",
+                "date": "2023-11-16",
+                "by": "Manager",
+                "reason": "Tidak ada jatah lembur"
+            }
+        ]
+    }
+]
