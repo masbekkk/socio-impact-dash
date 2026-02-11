@@ -10,8 +10,9 @@ import FileUploadDropzone from '@/components/FileUploadDropzone'
 import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import MoneyInput from '@/components/MoneyInput'
-import { ArrowLeft, ArrowRight, X, Save } from 'lucide-react'
+import { ArrowLeft, ArrowRight, X, Save, Building2 } from 'lucide-react'
 import { Head, Link, usePage } from '@inertiajs/react'
+import { PROJECT_MAPPINGS } from '@/constants/project-mappings'
 
 export default function ProjectsEdit({ project, divisions }: { project: any, divisions: any[] }) {
     const [step, setStep] = useState('basic')
@@ -173,15 +174,17 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label>Anak Perusahaan <span className="text-red-500">*</span></Label>
-                                        <Select defaultValue="pt_sinergi">
+                                        <Label>Divisi & Anak Perusahaan <span className="text-red-500">*</span></Label>
+                                        <Select defaultValue={project.division_mapping_value}>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Pilih Anak Perusahaan" />
+                                                <SelectValue placeholder="Pilih Divisi & Anak Perusahaan" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="pt_sinergi">PT Sawit Jaya Abadi</SelectItem>
-                                                <SelectItem value="pt_bakti">PT AminLabs</SelectItem>
-                                                <SelectItem value="yayasan_harapan">PT Wowoengine</SelectItem>
+                                                {PROJECT_MAPPINGS.map((mapping) => (
+                                                    <SelectItem key={mapping.value} value={mapping.value}>
+                                                        {mapping.label}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -192,19 +195,6 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                     <Input defaultValue={project.name} placeholder="Contoh: Pendampingan UMKM Jahe Merah" />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label>Divisi Pelaksana</Label>
-                                    <Select defaultValue={project.division_code}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Pilih Divisi" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {(divisions || []).map((div) => (
-                                                <SelectItem key={div.id} value={div.id.toString()}>{div.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
                             </CardContent>
                             <CardFooter className="flex justify-end gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
                                 <Button onClick={() => setStep('stakeholders')} className="w-auto px-8">
