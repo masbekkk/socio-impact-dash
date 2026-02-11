@@ -13,4 +13,17 @@ final class CalendarController
     {
         return Inertia::render('Calendar/Index');
     }
+
+    public function show(string $date)
+    {
+        // In real app, you would:
+        // 1. Validate the date format
+        // 2. Fetch events for this specific date from database
+        // 3. Pass the date and events to the view
+
+        return Inertia::render('Calendar/Show', [
+            'selectedDate' => $date,
+            // 'events' => Event::whereDate('date', $date)->get(),
+        ]);
+    }
 }
