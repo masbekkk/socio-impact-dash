@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import {
     ChevronLeft,
@@ -169,11 +169,6 @@ export default function CalendarIndex() {
         });
     };
 
-    const handleDateClick = (day: Date) => {
-        setSelectedDate(day);
-        setIsDialogOpen(true);
-    };
-
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
             <Head title="Kalender" />
@@ -274,15 +269,16 @@ export default function CalendarIndex() {
                 <div className="flex-1 bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col">
                     {/* Weekday Headers */}
                     <div className="grid grid-cols-7 border-b bg-gray-50/50">
-                        {weekDays.map((day) => (
-                            <div key={day} className="py-3 text-center text-sm font-semibold text-gray-500 uppercase tracking-wider border-r last:border-r-0">
-                                {day}
+                        {weekDays.map((day, idx) => (
+                            <div key={day} className="py-2 md:py-3 text-center text-[10px] md:text-sm font-semibold text-gray-500 uppercase tracking-wider border-r last:border-r-0">
+                                <span className="hidden md:inline">{day}</span>
+                                <span className="md:hidden">{day.charAt(0)}</span>
                             </div>
                         ))}
                     </div>
 
                     {/* Days Grid */}
-                    <div className="grid grid-cols-7 grid-rows-5 flex-1 divide-x divide-y">
+                    <div className="grid grid-cols-7 auto-rows-fr md:grid-rows-5 flex-1 divide-x divide-y">
                         {calendarDays.map((day, dayIdx) => {
                             const dayEvents = getEventsForDay(day);
                             const isCurrentMonth = isSameMonth(day, currentDate);
@@ -291,49 +287,60 @@ export default function CalendarIndex() {
                             return (
                                 <div
                                     key={day.toString()}
-                                    onClick={() => handleDateClick(day)}
                                     className={cn(
-                                        "min-h-[120px] p-2 transition-all hover:bg-gray-50 cursor-pointer flex flex-col gap-1 relative group bg-white",
+                                        "min-h-[80px] md:min-h-[120px] p-1 md:p-2 transition-all hover:bg-gray-50 flex flex-col gap-0.5 md:gap-1 relative group bg-white",
                                         !isCurrentMonth && "bg-gray-50/30 text-gray-400"
                                     )}
                                 >
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span
+                                    <div className="flex items-center justify-between mb-0.5 md:mb-1">
+                                        <Link
+                                            href={`/calendar/day/${format(day, 'yyyy-MM-dd')}`}
                                             className={cn(
-                                                "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full transition-colors",
+                                                "text-xs md:text-sm font-medium w-5 h-5 md:w-7 md:h-7 flex items-center justify-center rounded-full transition-colors hover:bg-gray-200",
                                                 isTodayDate
-                                                    ? "bg-[var(--sidebar)] text-white shadow-sm"
-                                                    : "text-gray-700 group-hover:text-black",
+                                                    ? "bg-[var(--sidebar)] text-white shadow-sm hover:bg-[var(--sidebar)]/90"
+                                                    : "text-gray-700",
                                                 !isCurrentMonth && "text-gray-400"
                                             )}
                                         >
                                             {format(day, 'd')}
-                                        </span>
+                                        </Link>
+                                        {dayEvents.length > 0 && (
+                                            <Badge variant="secondary" className="h-4 md:h-5 text-[9px] md:text-[10px] px-1 md:px-1.5">
+                                                {dayEvents.length}
+                                            </Badge>
+                                        )}
                                     </div>
 
                                     {/* Event List */}
-                                    <div className="flex flex-col gap-1.5 overflow-hidden">
-                                        {dayEvents.map((event) => (
-                                            <div
+                                    <div className="flex flex-col gap-0.5 md:gap-1.5 overflow-hidden">
+                                        {dayEvents.slice(0, 2).map((event) => (
+                                            <Link
                                                 key={event.id}
+                                                href={`/calendar/${event.id}`}
                                                 className={cn(
-                                                    "text-[11px] px-2 py-1 rounded-md border truncate font-medium flex items-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] hover:shadow-md",
+                                                    "text-[9px] md:text-[11px] px-1 md:px-2 py-0.5 md:py-1 rounded-md border truncate font-medium flex items-center gap-1 md:gap-1.5 shadow-sm transition-all hover:scale-[1.02] hover:shadow-md",
                                                     EVENT_STYLES[event.type]
                                                 )}
                                                 title={event.title}
                                             >
-                                                {!event.allDay && <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${event.type === 'meeting' ? 'bg-blue-500' : event.type === 'deadline' ? 'bg-red-500' : 'bg-gray-500'}`} />}
+                                                {!event.allDay && <div className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-full shrink-0 ${event.type === 'meeting' ? 'bg-blue-500' : event.type === 'deadline' ? 'bg-red-500' : 'bg-gray-500'}`} />}
                                                 <span className="truncate flex-1">
-                                                    {event.allDay ? '' : format(event.date, 'HH:mm')} {event.title}
+                                                    <span className="hidden md:inline">{event.allDay ? '' : format(event.date, 'HH:mm')} </span>
+                                                    {event.title}
                                                 </span>
-                                            </div>
+                                            </Link>
                                         ))}
-                                        {/* Placeholder for overflow events could be added here */}
+                                        {dayEvents.length > 2 && (
+                                            <div className="text-[9px] md:text-[10px] text-gray-500 font-medium px-1 md:px-2">
+                                                +{dayEvents.length - 2} lagi
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Add button on hover (desktop) */}
-                                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity md:block hidden">
-                                        <Button size="icon" variant="ghost" className="h-6 w-6 rounded-full hover:bg-gray-200">
+                                    <div className="absolute bottom-1 md:bottom-2 right-1 md:right-2 opacity-0 group-hover:opacity-100 transition-opacity md:block hidden">
+                                        <Button size="icon" variant="ghost" className="h-5 w-5 md:h-6 md:w-6 rounded-full hover:bg-gray-200">
                                             <Plus className="h-3 w-3 text-gray-500" />
                                         </Button>
                                     </div>

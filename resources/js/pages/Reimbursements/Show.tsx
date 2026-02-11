@@ -1,10 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import {
   ArrowLeft,
   CheckCircle,
@@ -18,12 +35,16 @@ import {
   Building2,
   Download,
   AlertCircle,
-  DollarSign
+  DollarSign,
+  MoreVertical
 } from 'lucide-react';
 import REIMBURSEMENTS_MOCK from './reimbursements.json';
 
 export default function Show() {
   const { slug } = usePage().props as any;
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   // Find data by slug matching pattern from Index
   const data = REIMBURSEMENTS_MOCK.find(item => {
@@ -95,8 +116,39 @@ export default function Show() {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline">Download PDF</Button>
-            {data.status === 'submitted' && <Button>Approve / Reject</Button>}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <MoreVertical className="mr-2 h-4 w-4" />
+                  Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => alert('Download PDF')}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PDF
+                </DropdownMenuItem>
+                {data.status === 'submitted' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                      onClick={() => setApproveDialogOpen(true)}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Approve
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                      onClick={() => setRejectDialogOpen(true)}
+                    >
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Reject
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -223,6 +275,54 @@ export default function Show() {
                   )}
                 </div>
 
+                {/* Bukti Transfer - Only show for approved status */}
+                {data.status === 'approved' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Bukti Transfer</label>
+                      <Badge variant="outline" className="text-xs">Finance Only</Badge>
+                    </div>
+
+                    {data.details?.transfer_proof ? (
+                      <div className="bg-green-50/50 p-4 rounded-lg border border-green-200 space-y-3">
+                        <div className="flex items-center gap-2 text-green-800 font-medium text-sm">
+                          <CheckCircle className="h-4 w-4" />
+                          Transfer Telah Dilakukan
+                        </div>
+                        <div className="flex items-center gap-3 p-3 rounded-lg border bg-white">
+                          <div className="bg-green-50 p-2 rounded text-green-600">
+                            <FileText className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{data.details.transfer_proof}</p>
+                            <p className="text-xs text-muted-foreground">Bukti Transfer</p>
+                          </div>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {data.details?.transfer_date && (
+                          <div className="text-xs text-muted-foreground">
+                            Ditransfer pada: {data.details.transfer_date}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-yellow-50/50 p-4 rounded-lg border border-yellow-200">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-yellow-900">Menunggu Upload Bukti Transfer</p>
+                            <p className="text-xs text-yellow-700 mt-1">
+                              Finance akan mengupload bukti transfer setelah pembayaran dilakukan.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
               </CardContent>
             </Card>
           </div>
@@ -281,6 +381,86 @@ export default function Show() {
 
         </div>
       </div>
+
+      {/* Approve Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <CheckCircle className="h-5 w-5" />
+              Konfirmasi Approve
+            </DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menyetujui pengajuan <strong>{data.type}</strong> dengan ID <strong className="font-mono">{data.id}</strong>?
+              <br /><br />
+              Setelah disetujui, pengajuan akan diproses lebih lanjut dan notifikasi akan dikirim ke pemohon.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                alert(`Approved: ${data.id}`);
+                setApproveDialogOpen(false);
+              }}
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Ya, Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <XCircle className="h-5 w-5" />
+              Konfirmasi Reject
+            </DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menolak pengajuan <strong>{data.type}</strong> dengan ID <strong className="font-mono">{data.id}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4">
+            <Label htmlFor="rejection_reason">Alasan Penolakan <span className="text-red-500">*</span></Label>
+            <Textarea
+              id="rejection_reason"
+              placeholder="Jelaskan alasan penolakan pengajuan ini..."
+              className="min-h-[100px] resize-none"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Alasan penolakan akan dikirim ke pemohon</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setRejectDialogOpen(false);
+              setRejectionReason('');
+            }}>
+              Batal
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              disabled={!rejectionReason.trim()}
+              onClick={() => {
+                if (rejectionReason.trim()) {
+                  alert(`Rejected: ${data.id}\nReason: ${rejectionReason}`);
+                  setRejectDialogOpen(false);
+                  setRejectionReason('');
+                }
+              }}
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Ya, Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppSidebarLayout>
   );
 }

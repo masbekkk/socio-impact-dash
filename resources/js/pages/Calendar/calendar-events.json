@@ -1,0 +1,96 @@
+[
+    {
+        "id": "1",
+        "title": "Morning Standup Meeting",
+        "date": "2026-02-11",
+        "start_time": "09:00",
+        "end_time": "09:30",
+        "type": "meeting",
+        "location": "Zoom",
+        "description": "Daily team sync",
+        "organizer": "Budi Santoso",
+        "participants": [
+            "Budi Santoso",
+            "Siti Aminah",
+            "Andi Saputra"
+        ],
+        "status": "upcoming"
+    },
+    {
+        "id": "2",
+        "title": "Meeting Tim Proyek Alpha",
+        "date": "2026-02-11",
+        "start_time": "10:00",
+        "end_time": "12:00",
+        "type": "meeting",
+        "location": "Ruang Meeting 1, Lantai 3",
+        "description": "Diskusi mingguan untuk review progress proyek Alpha",
+        "organizer": "Dewi Lestari",
+        "participants": [
+            "Dewi Lestari",
+            "Rudi Hartono",
+            "Siti Aminah",
+            "Andi Saputra"
+        ],
+        "status": "upcoming"
+    },
+    {
+        "id": "3",
+        "title": "Lunch Break",
+        "date": "2026-02-11",
+        "start_time": "12:00",
+        "end_time": "13:00",
+        "type": "task",
+        "location": "Kantin Lantai 1",
+        "description": null,
+        "organizer": null,
+        "participants": [],
+        "status": "upcoming"
+    },
+    {
+        "id": "4",
+        "title": "Client Presentation - Q1 Results",
+        "date": "2026-02-11",
+        "start_time": "14:00",
+        "end_time": "15:30",
+        "type": "meeting",
+        "location": "Meeting Room 2",
+        "description": "Present Q1 results to client ABC Corp",
+        "organizer": "Budi Santoso",
+        "participants": [
+            "Budi Santoso",
+            "Dewi Lestari",
+            "Client Team"
+        ],
+        "status": "upcoming"
+    },
+    {
+        "id": "5",
+        "title": "Code Review Session",
+        "date": "2026-02-11",
+        "start_time": "16:00",
+        "end_time": "17:00",
+        "type": "task",
+        "location": "Online - Google Meet",
+        "description": "Review pull requests from sprint 12",
+        "organizer": "Andi Saputra",
+        "participants": [
+            "Andi Saputra",
+            "Rudi Hartono"
+        ],
+        "status": "upcoming"
+    },
+    {
+        "id": "6",
+        "title": "Project Deadline - Feature X",
+        "date": "2026-02-11",
+        "start_time": "18:00",
+        "end_time": "18:00",
+        "type": "deadline",
+        "location": null,
+        "description": "Final submission for Feature X implementation",
+        "organizer": null,
+        "participants": [],
+        "status": "upcoming"
+    }
+]

@@ -11,6 +11,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter, ListFilter, Calendar as CalendarIcon, X, MoreHorizontal } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -50,6 +59,10 @@ export default function ReimbursementsIndex() {
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -309,9 +322,35 @@ export default function ReimbursementsIndex() {
                                   href={`/reimbursements/${(item.requester + '-' + item.type + '-' + item.id).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}
                                   className="cursor-pointer"
                                 >
+                                  <Eye className="mr-2 h-4 w-4" />
                                   View Detail
                                 </Link>
                               </DropdownMenuItem>
+                              {item.status === 'submitted' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="cursor-pointer text-green-600 focus:text-green-600 focus:bg-green-50"
+                                    onClick={() => {
+                                      setSelectedItem(item);
+                                      setApproveDialogOpen(true);
+                                    }}
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Approve
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                                    onClick={() => {
+                                      setSelectedItem(item);
+                                      setRejectDialogOpen(true);
+                                    }}
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Reject
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -333,7 +372,7 @@ export default function ReimbursementsIndex() {
             )}
           </CardContent>
           {filteredData.length > 0 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t">
+            <div className="flex items-center justify-between px-6 py-4 ">
               <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
                 Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredData.length)} of {filteredData.length} results
               </div>
@@ -410,6 +449,98 @@ export default function ReimbursementsIndex() {
           )}
         </Card>
       </div>
+
+      {/* Approve Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <CheckCircle className="h-5 w-5" />
+              Konfirmasi Approve
+            </DialogTitle>
+            <DialogDescription>
+              {selectedItem && (
+                <>
+                  Apakah Anda yakin ingin menyetujui pengajuan <strong>{selectedItem.type}</strong> dengan ID <strong className="font-mono">{selectedItem.id}</strong> dari <strong>{selectedItem.requester}</strong>?
+                  <br /><br />
+                  Setelah disetujui, pengajuan akan diproses lebih lanjut dan notifikasi akan dikirim ke pemohon.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                if (selectedItem) {
+                  alert(`Approved: ${selectedItem.id}`);
+                  setApproveDialogOpen(false);
+                  setSelectedItem(null);
+                }
+              }}
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Ya, Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <XCircle className="h-5 w-5" />
+              Konfirmasi Reject
+            </DialogTitle>
+            <DialogDescription>
+              {selectedItem && (
+                <>
+                  Apakah Anda yakin ingin menolak pengajuan <strong>{selectedItem.type}</strong> dengan ID <strong className="font-mono">{selectedItem.id}</strong> dari <strong>{selectedItem.requester}</strong>?
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4">
+            <Label htmlFor="rejection_reason_index">Alasan Penolakan <span className="text-red-500">*</span></Label>
+            <Textarea
+              id="rejection_reason_index"
+              placeholder="Jelaskan alasan penolakan pengajuan ini..."
+              className="min-h-[100px] resize-none"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Alasan penolakan akan dikirim ke pemohon</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setRejectDialogOpen(false);
+              setRejectionReason('');
+            }}>
+              Batal
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              disabled={!rejectionReason.trim()}
+              onClick={() => {
+                if (selectedItem && rejectionReason.trim()) {
+                  alert(`Rejected: ${selectedItem.id}\nReason: ${rejectionReason}`);
+                  setRejectDialogOpen(false);
+                  setSelectedItem(null);
+                  setRejectionReason('');
+                }
+              }}
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Ya, Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppSidebarLayout>
   );
 }

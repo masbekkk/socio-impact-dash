@@ -154,7 +154,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Card className="@container/card bg-[var(--sidebar)] border-none shadow-md text-white">
             <CardHeader>
-              <CardDescription className="text-emerald-100/90">Presensi Lapangan</CardDescription>
+              <CardDescription className="text-emerald-100/90">Presensi</CardDescription>
               <CardTitle className="text-2xl text-white font-semibold tabular-nums @[250px]/card:text-3xl flex flex-col gap-1">
                 <span suppressHydrationWarning className="text-lg font-normal opacity-90">
                   {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -175,7 +175,7 @@ export default function Dashboard() {
               <Link href="/presences/create" className="w-full">
                 <div className="bg-white text-[#1a5f4a] hover:bg-emerald-50 w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer active:scale-95 hover:scale-105">
                   <MapPin className="h-4 w-4" />
-                  Presensi Di Luar Kantor
+                  Presensi 
                 </div>
               </Link>
             </CardFooter>
