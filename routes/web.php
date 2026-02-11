@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Calendar
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+    Route::get('calendar/day/{date}', [CalendarController::class, 'show'])->name('calendar.show');
 
     // Leaves
     Route::get('leaves/create-travel', [LeaveController::class, 'createTravel'])->name('leaves.create_travel');

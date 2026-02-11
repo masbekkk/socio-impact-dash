@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +19,9 @@ interface DateFilterPresetsProps {
 
 export const DateFilterPresets = ({ startDate, endDate, onSelect }: DateFilterPresetsProps) => {
 
+    const startRef = useRef<HTMLInputElement>(null);
+    const endRef = useRef<HTMLInputElement>(null);
+
     const applyPreset = (type: 'today' | 'yesterday' | 'thisMonth' | 'last3Months') => {
         const today = new Date();
         let start = today;
@@ -33,7 +37,7 @@ export const DateFilterPresets = ({ startDate, endDate, onSelect }: DateFilterPr
     };
 
     return (
-        <div className="w-[280px] bg-white">
+        <div className="w-auto min-w-[340px] bg-white">
             <div className="p-2 grid grid-cols-2 gap-2 border-b bg-muted/20">
                 <Button variant="outline" size="sm" onClick={() => applyPreset('today')} className="text-xs h-8">Hari Ini</Button>
                 <Button variant="outline" size="sm" onClick={() => applyPreset('yesterday')} className="text-xs h-8">Kemarin</Button>
@@ -43,13 +47,37 @@ export const DateFilterPresets = ({ startDate, endDate, onSelect }: DateFilterPr
 
             <div className="p-3 border-b space-y-3">
                 <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
+                    <div className="space-y-1 relative">
                         <Label className="text-[10px] text-muted-foreground uppercase font-bold">Dari</Label>
-                        <Input type="date" className="h-8 text-xs" value={startDate} onChange={(e) => onSelect(e.target.value, endDate)} />
+                        <div className="relative">
+                            <Input
+                                ref={startRef}
+                                type="date"
+                                className="h-8 text-xs pr-12 [&::-webkit-calendar-picker-indicator]:hidden"
+                                value={startDate}
+                                onChange={(e) => onSelect(e.target.value, endDate)}
+                            />
+                            <CalendarIcon
+                                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground md:block"
+                                onClick={() => startRef.current?.showPicker()}
+                            />
+                        </div>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 relative">
                         <Label className="text-[10px] text-muted-foreground uppercase font-bold">Sampai</Label>
-                        <Input type="date" className="h-8 text-xs" value={endDate} onChange={(e) => onSelect(startDate, e.target.value)} />
+                        <div className="relative">
+                            <Input
+                                ref={endRef}
+                                type="date"
+                                className="h-8 text-xs pr-12 [&::-webkit-calendar-picker-indicator]:hidden"
+                                value={endDate}
+                                onChange={(e) => onSelect(startDate, e.target.value)}
+                            />
+                            <CalendarIcon
+                                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground md:block"
+                                onClick={() => endRef.current?.showPicker()}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, UploadCloud, FileText, CreditCard, User, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, UploadCloud, FileText, CreditCard, User, AlertCircle, Building2, Briefcase, UserCheck } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +14,14 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 export default function CreateATR() {
   const [status, setStatus] = useState('draft');
   const [formData, setFormData] = useState({
+    nama: '',
+    nip: '',
+    nama_project: '',
+    divisi: '',
+    pic_project: '',
+    approver_name: '',
+    approver_position: '',
+    approver_email: '',
     bank_name: '',
     account_number: '',
     account_name: '',
@@ -61,6 +69,86 @@ export default function CreateATR() {
 
         <Card className="border-none shadow-sm rounded-xl overflow-hidden">
           <form onSubmit={handleSubmit}>
+            <div className="p-6 md:p-8 bg-white">
+              <h3 className="text-lg font-semibold mb-1">Informasi Pemohon</h3>
+              <p className="text-sm text-muted-foreground mb-6">Data diri pemohon dan informasi proyek terkait.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="nama">Nama Lengkap</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="nama"
+                      name="nama"
+                      placeholder="Masukkan nama lengkap"
+                      className="pl-9 h-10"
+                      value={formData.nama}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nip">NIP</Label>
+                  <div className="relative">
+                    <UserCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="nip"
+                      name="nip"
+                      placeholder="Nomor Induk Pegawai"
+                      className="pl-9 h-10"
+                      value={formData.nip}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nama_project">Nama Project</Label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="nama_project"
+                      name="nama_project"
+                      placeholder="Nama proyek terkait"
+                      className="pl-9 h-10"
+                      value={formData.nama_project}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="divisi">Divisi</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="divisi"
+                      name="divisi"
+                      placeholder="Divisi/Departemen"
+                      className="pl-9 h-10"
+                      value={formData.divisi}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="pic_project">PIC Project</Label>
+                  <div className="relative">
+                    <UserCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="pic_project"
+                      name="pic_project"
+                      placeholder="Person In Charge proyek"
+                      className="pl-9 h-10"
+                      value={formData.pic_project}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
             <div className="p-6 md:p-8 bg-white">
               <h3 className="text-lg font-semibold mb-1">Dokumen Pendukung</h3>
               <p className="text-sm text-muted-foreground mb-6">Unggah proposal dan RAB proyek.</p>
@@ -135,6 +223,59 @@ export default function CreateATR() {
                       </Label>
                     </div>
                   </RadioGroup>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="p-6 md:p-8 bg-white">
+              <h3 className="text-lg font-semibold mb-1">Persetujuan</h3>
+              <p className="text-sm text-muted-foreground mb-6">Informasi pihak yang akan menyetujui pengajuan ATR ini.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="approver_name">Nama Approver</Label>
+                  <div className="relative">
+                    <UserCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="approver_name"
+                      name="approver_name"
+                      placeholder="Nama pihak yang menyetujui"
+                      className="pl-9 h-10"
+                      value={formData.approver_name}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="approver_position">Jabatan Approver</Label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="approver_position"
+                      name="approver_position"
+                      placeholder="Jabatan/Posisi approver"
+                      className="pl-9 h-10"
+                      value={formData.approver_position}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="approver_email">Email Approver</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="approver_email"
+                      name="approver_email"
+                      type="email"
+                      placeholder="email@example.com"
+                      className="pl-9 h-10"
+                      value={formData.approver_email}
+                      onChange={handleChange}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

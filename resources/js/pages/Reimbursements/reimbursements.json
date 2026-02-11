@@ -19,7 +19,9 @@
             ],
             "project_name": "Project Alpha",
             "division": "Field Operations",
-            "pic": "Manager Ops"
+            "pic": "Manager Ops",
+            "transfer_proof": "Bukti_Transfer_ATR001.pdf",
+            "transfer_date": "2023-11-03"
         },
         "timeline": [
             {
@@ -69,7 +71,7 @@
         "requester": "Budi Santoso",
         "amount": 2500000,
         "description": "Pembelian perlengkapan mendesak",
-        "status": "draft",
+        "status": "submitted",
         "details": {
             "usage_plan": "Pembelian server backup darurat.",
             "urgency": "urgent",
@@ -102,7 +104,9 @@
             "documents": [
                 "Certificate.pdf",
                 "Invoice.pdf"
-            ]
+            ],
+            "transfer_proof": "Bukti_Transfer_EER046.pdf",
+            "transfer_date": "2023-11-14"
         },
         "timeline": [
             {
