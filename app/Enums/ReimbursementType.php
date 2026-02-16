@@ -8,4 +8,5 @@ enum ReimbursementType: string
 {
     case ATR = 'atr';
     case EER = 'eer';
+    case ALLOWANCE = 'allowance';
 }
