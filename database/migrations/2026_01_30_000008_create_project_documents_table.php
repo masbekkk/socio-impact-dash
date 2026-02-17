@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('project_documents', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->string('type')->default(DocumentType::Other->value);
+            $table->string('type')->default(DocumentType::SOW->value);
             $table->string('original_name');
             $table->string('path');
             $table->string('mime')->nullable();

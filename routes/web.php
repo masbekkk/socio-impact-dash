@@ -17,6 +17,7 @@ use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\LetterRequestController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -30,16 +31,20 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Projects
     Route::resource('projects', ProjectController::class);
-    Route::get('projects/{project}/allowance', [ProjectController::class, 'allowance'])->name('projects.allowance');
-    Route::post('projects/{project}/finish', [ProjectController::class, 'finish'])->name('projects.finish');
 
     // Reimbursements
     Route::get('reimbursements/create/atr', [ReimbursementController::class, 'createATR'])->name('reimbursements.create.atr');
     Route::get('reimbursements/create/eer', [ReimbursementController::class, 'createEER'])->name('reimbursements.create.eer');
+    Route::get('reimbursements/create/allowance', [ReimbursementController::class, 'createAllowance'])->name('reimbursements.create.allowance');
     Route::get('reimbursements/approvals', [ReimbursementController::class, 'approvals'])->name('reimbursements.approvals');
     Route::resource('reimbursements', ReimbursementController::class);
     Route::post('reimbursements/{reimbursement}/approve', [ReimbursementController::class, 'approve'])->name('reimbursements.approve');
     Route::post('reimbursements/{reimbursement}/reject', [ReimbursementController::class, 'reject'])->name('reimbursements.reject');
+
+    // Letter Requests
+    Route::resource('letter-requests', LetterRequestController::class)->only(['index', 'create', 'store']);
+    Route::post('letter-requests/{letter_request}/assign', [LetterRequestController::class, 'assignNumber'])->name('letter-requests.assign');
+    Route::post('letter-requests/{letter_request}/reject', [LetterRequestController::class, 'reject'])->name('letter-requests.reject');
 
     // Calendar
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
@@ -60,6 +65,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::prefix('admin')->middleware('can:adminAccess')->group(function (): void {
         Route::resource('users', AdminUserController::class);
         Route::resource('divisions', AdminDivisionController::class);
+        Route::get('rbac', fn() => Inertia::render('admin/rbac/index'))->name('admin.rbac');
     });
 });
 

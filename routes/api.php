@@ -1,39 +1,26 @@
 <?php
 
-use App\Http\Controllers\Api\PresenceController;
-use App\Http\Controllers\Api\ProjectController;
-use App\Http\Controllers\UserProfileController;
-use Illuminate\Http\Request;
+declare(strict_types=1);
+
+use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\RoleController;
 use Illuminate\Support\Facades\Route;
 
-// Public routes (no auth required)
-Route::post('/register', [UserProfileController::class, 'register']);
-Route::post('/login', [UserProfileController::class, 'login']);
+Route::middleware(['auth:sanctum', 'can:view-admin'])->prefix('rbac')->group(function () {
+    // Roles
+    Route::get('roles', [RoleController::class, 'index']);
+    Route::post('roles', [RoleController::class, 'store']);
+    Route::get('roles/{role}', [RoleController::class, 'show']);
+    Route::put('roles/{role}', [RoleController::class, 'update']);
+    Route::delete('roles/{role}', [RoleController::class, 'destroy']);
+    Route::post('roles/{role}/permissions', [RoleController::class, 'syncPermissions']);
 
-// Protected routes (auth required)
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/me', [UserProfileController::class, 'me']);
-    Route::post('/logout', [UserProfileController::class, 'logout']);
-    
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    // Permissions
+    Route::get('permissions', [PermissionController::class, 'index']);
+    Route::post('permissions', [PermissionController::class, 'store']);
+    Route::delete('permissions/{permission}', [PermissionController::class, 'destroy']);
+});
 
-    // Presence / Attendance routes
-    Route::prefix('presences')->group(function () {
-        Route::post('/check-in', [PresenceController::class, 'checkIn']);
-        Route::post('/check-out', [PresenceController::class, 'checkOut']);
-        Route::post('/permission', [PresenceController::class, 'submitPermission']);
-        Route::get('/today', [PresenceController::class, 'today']);
-        Route::get('/history', [PresenceController::class, 'history']);
-        Route::get('/summary', [PresenceController::class, 'monthlySummary']);
-    });
-
-    // Project routes
-    Route::prefix('projects')->group(function () {
-        Route::get('/list', [ProjectController::class, 'list']);
-        Route::post('/', [ProjectController::class, 'store']);
-        Route::put('/{project}', [ProjectController::class, 'update']);
-        Route::delete('/{project}', [ProjectController::class, 'destroy']);
-    });
+Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
+    Route::apiResource('projects', \App\Http\Controllers\Api\V1\ProjectController::class);
 });

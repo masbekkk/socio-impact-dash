@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use Illuminate\Foundation\Inspiring;
+use App\Services\UserService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Middleware;
 
 final class HandleInertiaRequests extends Middleware
@@ -32,19 +33,11 @@ final class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $quote = Inspiring::quotes()->random();
-        assert(is_string($quote));
-
-        [$message, $author] = str($quote)->explode('-');
-
         return [
             ...parent::share($request),
             'name' => config('app.name'),
-            'quote' => ['message' => mb_trim((string) $message), 'author' => mb_trim((string) $author)],
-
-            // yang lama ini saya command buat test 
-              'auth' => [
-                'user' => $request->user(),
+            'auth' => [
+                'user' => Auth::check() ? UserService::loggedUser() : null,
             ],
             // 'auth' => [
             //     'user' => $request->user() ? array_merge($request->user()->toArray(), [
@@ -56,7 +49,7 @@ final class HandleInertiaRequests extends Middleware
             //         'role' => $request->user()->getRoleNames()->first(),
             //     ]) : null,
             // ],
-            'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
 }

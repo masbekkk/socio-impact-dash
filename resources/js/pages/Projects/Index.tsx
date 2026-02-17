@@ -130,10 +130,12 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
           <h1 className="text-2xl font-bold tracking-tight">Proyek</h1>
           <p className="text-muted-foreground text-sm md:text-base">Kelola semua proyek, pantau progress dan budget.</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)] transition-transform hover:scale-105 active:scale-95 shadow-sm">
-          <Plus className="h-4 w-4" />
-          Proyek Baru
-        </Button>
+        <Link href="/projects/create?type=active">
+          <Button className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)] transition-transform hover:scale-105 active:scale-95 shadow-sm">
+            <Plus className="h-4 w-4" />
+            Proyek Baru
+          </Button>
+        </Link>
       </CardContent>
 
       <Card className="mx-4 md:mx-8 mb-8 border-none rounded-xl overflow-hidden">
@@ -398,11 +400,6 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                             <DropdownMenuItem asChild>
                               <Link href={`/projects/${p.slug}/edit`} className="flex items-center cursor-pointer">
                                 <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Project
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/projects/${p.slug}/allowance`} className="flex items-center cursor-pointer">
-                                <Wallet className="mr-2 h-4 w-4 text-muted-foreground" /> Allowance
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />

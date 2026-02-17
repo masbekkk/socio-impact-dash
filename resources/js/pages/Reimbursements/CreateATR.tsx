@@ -11,12 +11,24 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-export default function CreateATR() {
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import MoneyInput from '@/components/MoneyInput';
+
+interface Project {
+  id: number;
+  name: string;
+  code: string;
+  operational_budget: number;
+  used_operational_budget: string | null;
+}
+
+export default function CreateATR({ projects }: { projects: Project[] }) {
   const [status, setStatus] = useState('draft');
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nama: '',
     nip: '',
-    nama_project: '',
+    project_id: '',
     divisi: '',
     pic_project: '',
     approver_name: '',
@@ -26,6 +38,7 @@ export default function CreateATR() {
     account_number: '',
     account_name: '',
     usage_plan: '',
+    amount: 0,
     urgency: 'normal',
   });
 
@@ -37,7 +50,32 @@ export default function CreateATR() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation
+    if (!formData.project_id) {
+      setError('Pilih proyek terlebih dahulu.');
+      return;
+    }
+
+    const selectedProject = projects.find(p => p.id === parseInt(formData.project_id));
+    if (selectedProject) {
+      const remainingBudget = selectedProject.operational_budget - parseFloat(selectedProject.used_operational_budget || '0');
+      if (formData.amount > remainingBudget) {
+        setError('Nominal pengajuan melebihi sisa pagu operasional proyek.');
+        return;
+      }
+    }
+
+    setError(null);
     alert(`ATR Submitted with status: ${status}\nData: ${JSON.stringify(formData, null, 2)}`);
+  };
+
+  const handleAmountChange = (values: any) => {
+    setFormData(prev => ({ ...prev, amount: values.floatValue || 0 }));
+  };
+
+  const handleProjectChange = (value: string) => {
+    setFormData(prev => ({ ...prev, project_id: value }));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -103,18 +141,33 @@ export default function CreateATR() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="nama_project">Nama Project</Label>
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="nama_project"
-                      name="nama_project"
-                      placeholder="Nama proyek terkait"
-                      className="pl-9 h-10"
-                      value={formData.nama_project}
-                      onChange={handleChange}
-                    />
-                  </div>
+                  <Label htmlFor="project_id">Nama Project</Label>
+                  <Select onValueChange={handleProjectChange} value={formData.project_id}>
+                    <SelectTrigger className="h-10">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        <SelectValue placeholder="Pilih proyek terkait" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id.toString()}>
+                          {project.code} - {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Nominal ATR</Label>
+                  <MoneyInput
+                    id="amount"
+                    value={formData.amount}
+                    onValueChange={handleAmountChange}
+                    className="h-10"
+                    placeholder="Masukkan nominal pengajuan"
+                  />
+                  {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="divisi">Divisi</Label>
