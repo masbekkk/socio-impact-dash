@@ -64,7 +64,7 @@ final class ProjectController extends Controller
 
     public function show(Project $project): Response
     {
-        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'budgets', 'milestones', 'documents']);
+        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'monitorings', 'documents', 'events', 'approvals']);
 
         return Inertia::render('Projects/Show', [
             'project' => new ProjectResource($project),
@@ -73,7 +73,7 @@ final class ProjectController extends Controller
 
     public function edit(Project $project): Response
     {
-        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'budgets', 'milestones', 'documents']);
+        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents']);
 
         return Inertia::render('Projects/Edit', [
             'project' => new ProjectResource($project),

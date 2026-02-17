@@ -24,19 +24,15 @@ class CreateProject
                 $this->syncLocations($project, $data['locations']);
             }
 
-            if (isset($data['budgets'])) {
-                $this->syncBudgets($project, $data['budgets']);
-            }
-
-            if (isset($data['milestones'])) {
-                $this->syncMilestones($project, $data['milestones']);
+            if (isset($data['termin_payments'])) {
+                $this->syncTerminPayments($project, $data['termin_payments']);
             }
 
             if (isset($data['documents'])) {
                 $this->syncDocuments($project, $data['documents'], $userId);
             }
 
-            return $project->load(['locations', 'budgets', 'milestones', 'documents']);
+            return $project->load(['locations', 'terminPayments', 'documents']);
         });
     }
 
@@ -100,27 +96,13 @@ class CreateProject
         }
     }
 
-    protected function syncBudgets(Project $project, array $budgets): void
+    protected function syncTerminPayments(Project $project, array $terminPayments): void
     {
-        foreach ($budgets as $budget) {
-            $project->budgets()->create([
-                'item_name' => $budget['item_name'],
-                'quantity' => $budget['quantity'],
-                'unit_price' => $budget['unit_price'],
-                'planned_amount' => $budget['quantity'] * $budget['unit_price'],
-                'category_id' => $budget['category_id'] ?? null,
-                'status' => 'pending',
-            ]);
-        }
-    }
-
-    protected function syncMilestones(Project $project, array $milestones): void
-    {
-        foreach ($milestones as $milestone) {
-            $project->milestones()->create([
-                'title' => $milestone['title'],
-                'target_date' => $milestone['target_date'],
-                'status' => $milestone['status'] ?? 'pending',
+        foreach ($terminPayments as $term) {
+            $project->terminPayments()->create([
+                'nominal' => $term['nominal'],
+                'due_date' => $term['due_date'],
+                'notes' => $term['notes'] ?? null,
             ]);
         }
     }

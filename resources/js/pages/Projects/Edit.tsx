@@ -1,507 +1,558 @@
-import React, { useState, useRef, useEffect } from 'react'
-import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import FileUploadDropzone from '@/components/FileUploadDropzone'
-import { Button } from '@/components/ui/button'
-import LocationPicker from '@/components/LocationPicker'
-import MoneyInput from '@/components/MoneyInput'
-import { ArrowLeft, ArrowRight, X, Save, Building2 } from 'lucide-react'
-import { Head, Link, usePage } from '@inertiajs/react'
-import { PROJECT_MAPPINGS } from '@/constants/project-mappings'
+import React, { useState, useEffect, useRef } from 'react';
+import AppLayout from '@/layouts/app-layout';
+import { Head, Link, useForm } from '@inertiajs/react';
+import {
+    ArrowLeft, ArrowRight, Save, UploadCloud, FileText, X, Plus, MapPin,
+    CheckCircle2, AlertCircle, Loader2, DollarSign, LayoutDashboard, Briefcase
+} from 'lucide-react';
 
-export default function ProjectsEdit({ project, divisions }: { project: any, divisions: any[] }) {
-    const [step, setStep] = useState('basic')
-    const [budget, setBudget] = useState<number>(project.budget_total || 0)
-    const [status, setStatus] = useState(project.status || 'draft')
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import LocationPicker from '@/components/LocationPicker';
+import FileUploadDropzone from '@/components/FileUploadDropzone';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
-    // Simulate Multi-location from single if needed, or use existing array
-    const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string }[]>([])
+// Helper for Toast
+interface ToastState {
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+}
 
-    // Init locations if project has them (mock logic check)
+interface EditProps {
+    project: any;
+    divisions: any[];
+    employees: any[];
+}
+
+export default function ProjectsEdit({ project, divisions, employees }: EditProps) {
+    const [step, setStep] = useState('basic');
+
+    const { data, setData, post, processing, errors } = useForm({
+        _method: 'PUT',
+        name: project.name || '',
+        client: project.client || '',
+        code: project.code || '',
+        description: project.description || '',
+        division_id: project.division_id ? project.division_id.toString() : '',
+        account_manager_id: project.account_manager_id ? project.account_manager_id.toString() : '',
+        head_id: project.head_id ? project.head_id.toString() : '',
+        pic_id: project.pic_id ? project.pic_id.toString() : '',
+        status: project.status || 'draft',
+        project_type: project.project_type || 'pendampingan',
+        start_date: project.start_date ? project.start_date.split('T')[0] : '',
+        end_date: project.end_date ? project.end_date.split('T')[0] : '',
+        budget_total: project.budget_total || 0,
+        sow: null as File | null,
+
+        // Arrays
+        locations: project.locations ? project.locations.map((l: any) => ({
+            id: l.id,
+            latitude: l.latitude,
+            longitude: l.longitude,
+            detail_address: l.detail_address
+        })) : [],
+
+        termin_payments: project.termin_payments ? project.termin_payments.map((t: any) => ({
+            id: t.id,
+            nominal: t.nominal,
+            due_date: t.due_date ? t.due_date.split('T')[0] : '',
+            notes: t.notes
+        })) : [],
+
+        documents: [] as { file: File, type: string }[], // New documents to upload
+
+        // Tracker for deletions
+        delete_locations: [] as number[],
+        delete_termin_payments: [] as number[],
+        delete_documents: [] as number[],
+    });
+
+    // Local Toast State
+    const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'success' });
+
     useEffect(() => {
-        if (project.locations && project.locations.length > 0) {
-            setLocations(project.locations);
-        } else if (project.lat) {
-            setLocations([{ id: '1', name: 'Lokasi Utama', lat: parseFloat(project.lat), lng: parseFloat(project.lng), address: project.address || '' }])
+        if (toast.show) {
+            const timer = setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+            return () => clearTimeout(timer);
         }
-    }, [])
+    }, [toast.show]);
 
-    const addLocation = (lat: number, lng: number, addr: string) => {
-        const isDuplicate = locations.some(loc =>
-            Math.abs(loc.lat - lat) < 0.0001 && Math.abs(loc.lng - lng) < 0.0001
-        );
-        if (!isDuplicate) {
-            setLocations([...locations, { id: crypto.randomUUID(), name: `Lokasi ${locations.length + 1}`, lat, lng, address: addr }])
-        }
-    }
-
-    const removeLocation = (id: string) => {
-        setLocations(locations.filter(l => l.id !== id))
-    }
-
-    // Dynamic Docs State
-    const [supportingDocs, setSupportingDocs] = useState([{ id: 1, type: 'TOR' }]);
-    const addSupportingDoc = () => {
-        const usedTypes = supportingDocs.map(d => d.type);
-        const available = ['TOR', 'KAK', 'RFP'].find(t => !usedTypes.includes(t));
-        if (available) {
-            setSupportingDocs([...supportingDocs, { id: Date.now(), type: available }]);
-        }
-    };
-    const updateSupportingDocType = (id: number, type: string) => {
-        setSupportingDocs(supportingDocs.map(d => d.id === id ? { ...d, type } : d));
-    };
-    const removeSupportingDoc = (id: number) => {
-        if (supportingDocs.length > 1) {
-            setSupportingDocs(supportingDocs.filter(d => d.id !== id));
-        }
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ show: true, message, type });
     };
 
-    const tabsListRef = useRef<HTMLDivElement>(null)
+    // Local State for interactive UI before syncing to data
+    const [activeLocations, setActiveLocations] = useState<any[]>(data.locations);
+    const [activePayments, setActivePayments] = useState<any[]>(data.termin_payments);
+
+    // Sync local to form data
+    useEffect(() => {
+        setData('locations', activeLocations);
+    }, [activeLocations]);
 
     useEffect(() => {
-        if (tabsListRef.current) {
-            const container = tabsListRef.current
-            const activeTab = container.querySelector('[data-state="active"]') as HTMLElement
-            if (activeTab) {
-                const containerRect = container.getBoundingClientRect()
-                const activeRect = activeTab.getBoundingClientRect()
-                const scrollLeft = container.scrollLeft + (activeRect.left - containerRect.left) - (containerRect.width / 2) + (activeRect.width / 2)
-                container.scrollTo({ left: scrollLeft, behavior: 'smooth' })
+        setData('termin_payments', activePayments);
+    }, [activePayments]);
+
+    // Location Handlers
+    const [locationInput, setLocationInput] = useState({ lat: -6.2088, lng: 106.8456, address: '' });
+
+    const addLocation = () => {
+        if (locationInput.address) {
+            setActiveLocations([...activeLocations, {
+                latitude: locationInput.lat,
+                longitude: locationInput.lng,
+                detail_address: locationInput.address
+            }]);
+            showToast("Lokasi ditambahkan");
+        }
+    };
+
+    const removeLocation = (index: number) => {
+        const loc = activeLocations[index];
+        if (loc.id) {
+            setData('delete_locations', [...data.delete_locations, loc.id]);
+        }
+        setActiveLocations(activeLocations.filter((_, i) => i !== index));
+    };
+
+    // Payment Handlers
+    const addPaymentTerm = () => {
+        setActivePayments([...activePayments, { nominal: 0, notes: '', due_date: '' }]);
+    };
+
+    const updatePaymentTerm = (index: number, field: string, value: any) => {
+        const newTerms = [...activePayments];
+        newTerms[index] = { ...newTerms[index], [field]: value };
+        setActivePayments(newTerms);
+    };
+
+    const removePaymentTerm = (index: number) => {
+        const term = activePayments[index];
+        if (term.id) {
+            setData('delete_termin_payments', [...data.delete_termin_payments, term.id]);
+        }
+        setActivePayments(activePayments.filter((_, i) => i !== index));
+    };
+
+    // Document Handlers (Existing docs are not in 'data.documents', only new ones)
+    // We display existing docs from project.documents and allow deletion
+    const [displayDocs, setDisplayDocs] = useState(project.documents || []);
+
+    const handleDeleteExistingDoc = (docId: number) => {
+        setData('delete_documents', [...data.delete_documents, docId]);
+        setDisplayDocs(displayDocs.filter((d: any) => d.id !== docId));
+    };
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post(route('projects.update', project.id), {
+            onSuccess: () => showToast("Project berhasil diperbarui!"),
+            onError: (err) => {
+                console.error(err);
+                showToast("Gagal memperbarui project. Periksa input anda.", 'error');
             }
-        }
-    }, [step])
+        });
+    };
 
-    const breadcrumbs = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Proyek', href: '/projects' },
-        { title: 'Edit', href: '#' },
-    ];
+    const nextStep = () => {
+        const steps = ['basic', 'details', 'budget', 'locations', 'review'];
+        const currentIndex = steps.indexOf(step);
+        if (currentIndex < steps.length - 1) setStep(steps[currentIndex + 1]);
+    };
 
-    const stepsList = ['basic', 'stakeholders', 'detail', 'location', 'budget'];
+    const prevStep = () => {
+        const steps = ['basic', 'details', 'budget', 'locations', 'review'];
+        const currentIndex = steps.indexOf(step);
+        if (currentIndex > 0) setStep(steps[currentIndex - 1]);
+    };
+
+    const budgetRemaining = Number(data.budget_total) - activePayments.reduce((sum, t) => sum + Number(t.nominal), 0);
 
     return (
-        <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Edit: ${project.name}`} />
+        <AppLayout breadcrumbs={[
+            { title: 'Projects', href: route('projects.index') },
+            { title: project.code || 'Detail', href: route('projects.show', project.id) },
+            { title: 'Edit', href: '#' },
+        ]}>
+            <Head title={`Edit Project: ${project.name}`} />
 
-            <div className="flex flex-col h-full">
-                {/* Header Section */}
-                <div className="bg-background border-b px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link href="/projects">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <ArrowLeft className="h-5 w-5" />
-                            </Button>
-                        </Link>
+            <div className="flex flex-col h-[calc(100vh-4rem)]">
+                <div className="flex-none p-6 pb-2">
+                    <div className="flex items-center justify-between mb-2">
                         <div>
-                            <h1 className="text-xl font-bold">Edit Proyek</h1>
-                            <p className="text-xs text-muted-foreground hidden sm:block">{project.name}</p>
+                            <h1 className="text-2xl font-semibold tracking-tight">Edit Project</h1>
+                            <p className="text-sm text-muted-foreground">{project.code} - {project.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Link href={route('projects.show', project.id)}>
+                                <Button variant="outline">Batal</Button>
+                            </Link>
+                            <Button onClick={submit} disabled={processing}>
+                                {processing ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            </Button>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground mr-2 hidden sm:inline">Step {stepsList.indexOf(step) + 1}/5</span>
-                        <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-primary transition-all duration-500" style={{ width: `${(stepsList.indexOf(step) + 1) * (100 / 5)}%` }} />
-                        </div>
+
+                    {/* Steps */}
+                    <div className="flex w-full items-center gap-2 py-4 overflow-x-auto">
+                        {['basic', 'details', 'budget', 'locations', 'review'].map((s, i) => (
+                            <div key={s} className="flex items-center">
+                                <button
+                                    onClick={() => setStep(s)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${step === s
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-muted hover:bg-muted/80'
+                                        }`}
+                                >
+                                    <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">
+                                        {i + 1}
+                                    </span>
+                                    <span className="capitalize">{s}</span>
+                                </button>
+                                {i < 4 && <div className="w-8 h-[1px] bg-border mx-2" />}
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                <Tabs value={step} onValueChange={(v) => setStep(v)} className="flex-1 w-full p-6">
+                <Separator />
 
-                    {/* Tab Navigation */}
-                    <div ref={tabsListRef} className="mb-6 w-full overflow-x-auto scrollbar-hide border-b bg-background">
-                        <TabsList className="inline-flex h-auto min-w-full w-max md:w-full flex-nowrap gap-2 bg-muted/50 p-1 justify-start md:grid md:grid-cols-5 md:gap-0">
-                            {stepsList.map((tabValue, idx) => (
-                                <TabsTrigger
-                                    key={tabValue}
-                                    value={tabValue}
-                                    className="flex-none px-4 py-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm md:flex-1 md:w-auto md:px-3 md:py-2.5 md:text-xs lg:text-sm"
-                                >
-                                    <span className="mr-1.5 inline md:mr-2">{idx + 1}.</span>
-                                    {tabValue === 'basic' ? 'Identitas' : tabValue === 'stakeholders' ? 'Stakeholder' : tabValue === 'detail' ? 'Detail & Proposal' : tabValue === 'location' ? 'Lokasi' : 'Anggaran'}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </div>
+                <div className="flex-1 p-6 overflow-y-auto">
+                    <div className="max-w-4xl mx-auto pb-20">
+                        <form onSubmit={submit}>
+                            <Tabs value={step} onValueChange={setStep} className="w-full">
 
-                    {/* Step 1: Identitas */}
-                    <TabsContent value="basic" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
-                        <Card className="border-none shadow-md">
-                            <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
-                                <CardTitle>Informasi Dasar</CardTitle>
-                                <CardDescription>Perbarui nama, jenis, dan status proyek.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6 p-6 md:p-8">
-                                {/* Status Proyek */}
-                                <div className="space-y-2">
-                                    <Label>Status Proyek</Label>
-                                    <Select value={status} onValueChange={setStatus}>
-                                        <SelectTrigger className={
-                                            status === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                status === 'proposal' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''
-                                        }>
-                                            <SelectValue placeholder="Pilih Status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="proposal">Proposal</SelectItem>
-                                            <SelectItem value="active">Active (Deal)</SelectItem>
-                                            {/* <SelectItem value="draft">Draft</SelectItem> */}
-                                            {/* <SelectItem value="completed">Completed</SelectItem> */}
-                                            {/* <SelectItem value="on_hold">On Hold</SelectItem> */}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                {/* BASIC */}
+                                <TabsContent value="basic" className="space-y-6 mt-0">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Informasi Dasar</CardTitle>
+                                            <CardDescription>Update identitas utama project</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="grid gap-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="md:col-span-2 space-y-2">
+                                                    <Label>Nama Project</Label>
+                                                    <Input value={data.name} onChange={e => setData('name', e.target.value)} />
+                                                    {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+                                                </div>
+                                                <div className="md:col-span-2 space-y-2">
+                                                    <Label>Klien</Label>
+                                                    <Input value={data.client} onChange={e => setData('client', e.target.value)} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Tipe Project</Label>
+                                                    <Select value={data.project_type} onValueChange={v => setData('project_type', v)}>
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="pendampingan">Pendampingan</SelectItem>
+                                                            <SelectItem value="survey">Survey / Riset</SelectItem>
+                                                            <SelectItem value="event">Event Organizer</SelectItem>
+                                                            <SelectItem value="csr_management">CSR Management</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Status</Label>
+                                                    <Select value={data.status} onValueChange={v => setData('status', v)}>
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="draft">Draft</SelectItem>
+                                                            <SelectItem value="active">Active</SelectItem>
+                                                            <SelectItem value="completed">Completed</SelectItem>
+                                                            <SelectItem value="hold">Hold</SelectItem>
+                                                            <SelectItem value="canceled">Canceled</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Divisi</Label>
+                                                    <Select value={data.division_id} onValueChange={v => setData('division_id', v)}>
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {divisions.map((d: any) => (
+                                                                <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="md:col-span-2 space-y-2">
+                                                    <Label>Deskripsi</Label>
+                                                    <Textarea value={data.description} onChange={e => setData('description', e.target.value)} />
+                                                </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label>Jenis Project <span className="text-red-500">*</span></Label>
-                                        <Select defaultValue={project.type || "pendampingan"}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Pilih Jenis Project" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="pendampingan">Pendampingan</SelectItem>
-                                                <SelectItem value="pelatihan">Pelatihan</SelectItem>
-                                                <SelectItem value="dokumen">Dokumen</SelectItem>
-                                                <SelectItem value="event">Event</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label>Divisi & Anak Perusahaan <span className="text-red-500">*</span></Label>
-                                        <Select defaultValue={project.division_mapping_value}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Pilih Divisi & Anak Perusahaan" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {PROJECT_MAPPINGS.map((mapping) => (
-                                                    <SelectItem key={mapping.value} value={mapping.value}>
-                                                        {mapping.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>Nama Project</Label>
-                                    <Input defaultValue={project.name} placeholder="Contoh: Pendampingan UMKM Jahe Merah" />
-                                </div>
-
-                            </CardContent>
-                            <CardFooter className="flex justify-end gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
-                                <Button onClick={() => setStep('stakeholders')} className="w-auto px-8">
-                                    Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-
-                    {/* Step 2: Stakeholders */}
-                    <TabsContent value="stakeholders" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
-                        <Card className="border-none shadow-md">
-                            <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
-                                <CardTitle>Tim & Stakeholder</CardTitle>
-                                <CardDescription>Perbarui penanggung jawab dan tim pelaksana.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6 p-6 md:p-8">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="space-y-2">
-                                        <Label>Account Manager</Label>
-                                        <Select defaultValue={project.team?.am}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Pilih Account Manager" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Budi Santoso">Budi Santoso</SelectItem>
-                                                <SelectItem value="Andi Pratama">Andi Pratama</SelectItem>
-                                                <SelectItem value="Citra Kirana">Citra Kirana</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Head Implementation</Label>
-                                        <Select defaultValue={project.team?.head}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Pilih Head Implementation" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Siti Aminah">Siti Aminah</SelectItem>
-                                                <SelectItem value="Dewi Lestari">Dewi Lestari</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>PIC Project</Label>
-                                        <Select defaultValue={project.team?.pic}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Pilih PIC Project" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Rudi Hermawan">Rudi Hermawan</SelectItem>
-                                                <SelectItem value="Fajar Nugraha">Fajar Nugraha</SelectItem>
-                                                <SelectItem value="Gita Gutawa">Gita Gutawa</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="flex justify-between gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
-                                <Button variant="outline" onClick={() => setStep('basic')} title="Kembali">
-                                    <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
-                                </Button>
-                                <Button onClick={() => setStep('detail')} className="w-auto px-8">
-                                    Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-
-                    {/* Step 3: Detail & Proposal */}
-                    <TabsContent value="detail" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
-                        <Card className="border-none shadow-md">
-                            <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
-                                <CardTitle>Detail & Proposal Project</CardTitle>
-                                <CardDescription>Lingkup kerja dan durasi proyek.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6 p-6 md:p-8">
-                                {/* DOCUMENT UPLOAD SECTION */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label>{status === 'active' ? 'Dokumen Scope of Work (SOW)' : 'Dokumen Proposal Project'} <span className="text-red-500">*</span></Label>
-                                        <div className="border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white h-full">
-                                            <div className="space-y-1">
-                                                <p className="text-sm text-muted-foreground">
-                                                    {status === 'active' ? 'Upload dokumen SOW yang telah disepakati (PDF).' : 'Upload dokumen Proposal lengkap (PDF).'}
-                                                </p>
+                                                <div className="space-y-2">
+                                                    <Label>Start Date</Label>
+                                                    <Input type="date" value={data.start_date} onChange={e => setData('start_date', e.target.value)} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>End Date</Label>
+                                                    <Input type="date" value={data.end_date} onChange={e => setData('end_date', e.target.value)} />
+                                                </div>
                                             </div>
-                                            <FileUploadDropzone />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {/* Optional Doc */}
-                                        <Label>TOR / KAK / RFP <span className="text-xs font-normal text-muted-foreground ml-1">(Tidak Wajib)</span></Label>
+                                        </CardContent>
+                                        <CardFooter className="justify-end border-t p-4">
+                                            <Button type="button" onClick={nextStep}>Lanjut <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                                        </CardFooter>
+                                    </Card>
+                                </TabsContent>
 
-                                        {supportingDocs.map((doc, idx) => {
-                                            const otherUsedTypes = supportingDocs.filter(d => d.id !== doc.id).map(d => d.type);
-                                            return (
-                                                <div key={doc.id} className="relative border rounded-lg p-5 space-y-3 hover:bg-muted/30 transition-colors bg-white group animate-in fade-in slide-in-from-top-2">
-                                                    <div className="flex justify-between items-start gap-4">
-                                                        <div className="space-y-2 w-full flex justify-between">
-                                                            <Label className="text-xs font-medium text-muted-foreground">Jenis Dokumen Pendukung #{idx + 1}</Label>
-                                                            <Select value={doc.type} onValueChange={(val) => updateSupportingDocType(doc.id, val)}>
-                                                                <SelectTrigger className="h-7 w-[220px] bg-white border-gray-300">
-                                                                    <SelectValue placeholder="Pilih Tipe" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="TOR" disabled={otherUsedTypes.includes('TOR')}>TOR</SelectItem>
-                                                                    <SelectItem value="KAK" disabled={otherUsedTypes.includes('KAK')}>KAK</SelectItem>
-                                                                    <SelectItem value="RFP" disabled={otherUsedTypes.includes('RFP')}>RFP</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                        {supportingDocs.length > 1 && (
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0 mt-6" onClick={() => removeSupportingDoc(doc.id)}>
-                                                                <X className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                    <FileUploadDropzone />
+                                {/* DETAILS */}
+                                <TabsContent value="details" className="space-y-6 mt-0">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Tim & Dokumen</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                <div className="space-y-2">
+                                                    <Label>Account Manager</Label>
+                                                    <Select value={data.account_manager_id} onValueChange={v => setData('account_manager_id', v)}>
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {employees.map((e: any) => (
+                                                                <SelectItem key={e.id} value={e.id.toString()}>{e.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
-                                            )
-                                        })}
-
-                                        {supportingDocs.length < 3 && (
-                                            <Button variant="outline" size="sm" onClick={addSupportingDoc} className="w-full border-dashed border-gray-400 text-muted-foreground hover:text-primary hover:border-primary gap-2">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-                                                Tambah Dokumen Lainnya
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>Catatan (Notes)</Label>
-                                    <Textarea
-                                        placeholder="Tambahkan catatan..."
-                                        className="min-h-[100px] bg-white"
-                                        defaultValue={project.notes}
-                                    />
-                                </div>
-
-                                {/* TIMELINE */}
-                                <div className="space-y-2">
-                                    <Label>Timeline (Durasi)</Label>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-xs font-normal text-muted-foreground">Tanggal Mulai</Label>
-                                            <Input type="date" className="bg-white" defaultValue={project.start_date ? new Date((project.start_date.split("T"))[0]).toISOString().split('T')[0] : ''} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs font-normal text-muted-foreground">Tanggal Selesai</Label>
-                                            <Input type="date" className="bg-white" defaultValue={project.end_date ? new Date((project.end_date.split("T"))[0]).toISOString().split('T')[0] : ''} />
-                                        </div>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground pt-1">Estimasi durasi pelaksanaan.</p>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="flex justify-between gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
-                                <Button variant="outline" onClick={() => setStep('stakeholders')} title="Kembali">
-                                    <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
-                                </Button>
-                                <Button onClick={() => setStep('location')} className="w-auto px-8">
-                                    Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-
-                    {/* Step 4: Location (SEPARATE TAB) */}
-                    <TabsContent value="location" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
-                        <Card className="border-none shadow-md">
-                            <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
-                                <CardTitle>Lokasi Pelaksanaan</CardTitle>
-                                <CardDescription>Kelola titik lokasi proyek (Multi-location).</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6 p-6 md:p-8">
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    {/* List Lokasi */}
-                                    <div className="lg:col-span-1 space-y-4 order-2 lg:order-1">
-                                        <div className="flex items-center justify-between">
-                                            <Label>Daftar Lokasi ({locations.length})</Label>
-                                        </div>
-                                        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                                            {locations.length === 0 ? (
-                                                <div className="p-6 border-2 border-dashed rounded-lg text-center text-muted-foreground text-sm bg-gray-50">
-                                                    Belum ada lokasi dipilih. <br />
-                                                    Klik peta untuk menambahkan.
+                                                <div className="space-y-2">
+                                                    <Label>Head of Project</Label>
+                                                    <Select value={data.head_id} onValueChange={v => setData('head_id', v)}>
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {employees.map((e: any) => (
+                                                                <SelectItem key={e.id} value={e.id.toString()}>{e.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
-                                            ) : (
-                                                locations.map((loc, idx) => (
-                                                    <div key={loc.id} className="p-3 border rounded-lg bg-white shadow-sm group hover:border-primary transition-colors">
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <span className="font-semibold text-sm">Titik {idx + 1}</span>
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 -mt-1 -mr-1" onClick={() => removeLocation(loc.id)}>
-                                                                <X className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
-                                                        <p className="text-xs text-muted-foreground line-clamp-2" title={loc.address}>{loc.address || 'Alamat tidak terdeteksi'}</p>
-                                                        <div className="mt-2 flex gap-2 text-[10px] items-center text-gray-500 font-mono">
-                                                            <span className="bg-gray-100 px-1.5 py-0.5 rounded">{loc.lat.toFixed(6)}</span>
-                                                            <span className="bg-gray-100 px-1.5 py-0.5 rounded">{loc.lng.toFixed(6)}</span>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Picker */}
-                                    <div className="lg:col-span-2 order-1 lg:order-2">
-                                        <div className="border rounded-lg p-1 bg-white h-full min-h-[400px]">
-                                            <LocationPicker
-                                                onLocationSelect={(lat, lng, address) => addLocation(lat, lng, address)}
-                                                initialLat={locations[0]?.lat || -6.200000}
-                                                initialLng={locations[0]?.lng || 106.816666}
-                                                existingLocations={locations}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="flex justify-between gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
-                                <Button variant="outline" onClick={() => setStep('detail')} title="Kembali">
-                                    <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
-                                </Button>
-                                <Button onClick={() => setStep('budget')} className="w-auto px-8">
-                                    Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-
-                    {/* Step 5: Budget */}
-                    <TabsContent value="budget" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
-                        <Card className="border-none shadow-md">
-                            <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
-                                <CardTitle>Anggaran & Keuangan</CardTitle>
-                                <CardDescription>Masukkan Nominal dan lampirkan rincian anggaran (RAB).</CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-6 md:p-8 space-y-6">
-
-                                {/* Main Budget Section (Gray Box like screenshot) */}
-                                <div className="bg-gray-50 border rounded-xl p-6 md:p-8">
-                                    <div className="flex flex-col md:flex-row gap-8 items-start justify-between">
-                                        {/* Left: Input Section */}
-                                        <div className="flex-1 space-y-4 w-full">
-                                            <div className="space-y-1">
-                                                <h3 className="text-lg font-semibold text-gray-900">Nominal Project</h3>
+                                                <div className="space-y-2">
+                                                    <Label>PIC (Project Manager)</Label>
+                                                    <Select value={data.pic_id} onValueChange={v => setData('pic_id', v)}>
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {employees.map((e: any) => (
+                                                                <SelectItem key={e.id} value={e.id.toString()}>{e.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
                                             </div>
 
-                                            <div className="relative">
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900 font-bold z-10">Rp</span>
-                                                <MoneyInput
-                                                    value={budget}
-                                                    onValueChange={(vals) => setBudget(vals.floatValue || 0)}
-                                                    placeholder="0"
-                                                    className="pl-12 text-xl font-bold h-14 bg-white border-gray-200 shadow-sm"
+                                            <Separator />
+
+                                            <div className="space-y-4">
+                                                <Label>SOW / Proposal</Label>
+                                                {project.sow_path && (
+                                                    <div className="flex items-center gap-2 p-3 bg-muted rounded">
+                                                        <FileText className="h-4 w-4" />
+                                                        <span className="text-sm truncate flex-1">{project.sow_original_name || 'Current SOW'}</span>
+                                                        <Badge variant="outline">Current</Badge>
+                                                    </div>
+                                                )}
+                                                <Input
+                                                    type="file"
+                                                    onChange={e => setData('sow', e.target.files ? e.target.files[0] : null)}
                                                 />
+                                                <p className="text-xs text-muted-foreground">Upload baru untuk mengganti file lama.</p>
                                             </div>
-                                        </div>
 
-                                        {/* Right: Visualization Card */}
-                                        <div className="w-full md:w-[320px] shrink-0">
-                                            <div className="bg-white border rounded-xl p-6 shadow-sm text-center space-y-2">
-                                                <p className="text-sm text-gray-500 font-medium">Total Anggaran Project</p>
-                                                <div className="text-3xl font-bold text-red-600 tracking-tight">
-                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(budget).replace('Rp', 'Rp ')}
+                                            <div className="space-y-4">
+                                                <Label>Dokumen Pendukung</Label>
+                                                {/* Existing */}
+                                                {displayDocs.length > 0 && (
+                                                    <div className="space-y-2 mb-4">
+                                                        {displayDocs.map((doc: any) => (
+                                                            <div key={doc.id} className="flex justify-between items-center p-3 border rounded">
+                                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                                    <FileText className="h-4 w-4 text-blue-500" />
+                                                                    <div className="text-sm truncate">
+                                                                        <p className="font-medium">{doc.original_name}</p>
+                                                                        <p className="text-xs text-muted-foreground">{doc.type}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteExistingDoc(doc.id)}>
+                                                                    <X className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {/* New Uploads */}
+                                                <FileUploadDropzone onFilesChange={(files) => {
+                                                    setData('documents', files.map(f => ({ file: f, type: 'other' })));
+                                                }} />
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter className="justify-between border-t p-4">
+                                            <Button type="button" variant="ghost" onClick={prevStep}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+                                            <Button type="button" onClick={nextStep}>Next <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                                        </CardFooter>
+                                    </Card>
+                                </TabsContent>
+
+                                {/* BUDGET */}
+                                <TabsContent value="budget" className="space-y-6 mt-0">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Anggaran & Termin</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-6">
+                                            <div className="space-y-2">
+                                                <Label>Total Budget (RAB)</Label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-2.5 text-muted-foreground">Rp</span>
+                                                    <Input
+                                                        type="number"
+                                                        className="pl-10 text-lg font-bold"
+                                                        value={data.budget_total}
+                                                        onChange={e => setData('budget_total', Number(e.target.value))}
+                                                    />
                                                 </div>
-                                                <p className="text-xs text-muted-foreground pt-1">
-                                                    100% dari Total Project
+                                                <p className={`text-sm text-right ${budgetRemaining < 0 ? 'text-red-500' : 'text-green-600'}`}>
+                                                    Sisa: Rp {budgetRemaining.toLocaleString()}
                                                 </p>
                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
 
-                                {/* Upload RAB & Negotiation */}
-                                <div className={`grid grid-cols-1 ${status !== 'proposal' ? 'md:grid-cols-2' : ''} gap-6 pt-2`}>
-                                    {/* RAB */}
-                                    <div className="space-y-2">
-                                        <Label>Rincian Anggaran (RAB)</Label> <span className="text-red-500">*</span>
-                                        <div className="border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full">
-                                            <div className="flex items-center gap-4">
-                                                <div className="space-y-1">
-                                                    <h4 className="text-sm font-medium text-gray-900">Upload File RAB.</h4>
-                                                    <p className="text-xs text-muted-foreground">Lampirkan detail Rencana Anggaran Biaya.</p>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <Label>Termin Pembayaran</Label>
+                                                    <Button type="button" size="sm" variant="outline" onClick={addPaymentTerm}><Plus className="h-4 w-4 mr-1" /> Tambah</Button>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {activePayments.map((term, idx) => (
+                                                        <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 border rounded bg-card">
+                                                            <div>
+                                                                <Label className="text-xs">Nominal</Label>
+                                                                <Input type="number" value={term.nominal} onChange={e => updatePaymentTerm(idx, 'nominal', Number(e.target.value))} />
+                                                            </div>
+                                                            <div>
+                                                                <Label className="text-xs">Jatuh Tempo</Label>
+                                                                <Input type="date" value={term.due_date} onChange={e => updatePaymentTerm(idx, 'due_date', e.target.value)} />
+                                                            </div>
+                                                            <div className="flex gap-2 items-end">
+                                                                <div className="flex-1">
+                                                                    <Label className="text-xs">Note</Label>
+                                                                    <Input value={term.notes} onChange={e => updatePaymentTerm(idx, 'notes', e.target.value)} />
+                                                                </div>
+                                                                <Button type="button" variant="ghost" size="icon" className="text-red-500 text-xs" onClick={() => removePaymentTerm(idx)}><X className="h-4 w-4" /></Button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
-                                            <FileUploadDropzone />
-                                        </div>
-                                    </div>
-                                </div>
+                                        </CardContent>
+                                        <CardFooter className="justify-between border-t p-4">
+                                            <Button type="button" variant="ghost" onClick={prevStep}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+                                            <Button type="button" onClick={nextStep}>Next <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                                        </CardFooter>
+                                    </Card>
+                                </TabsContent>
 
-                            </CardContent>
-                            <CardFooter className="flex justify-between gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
-                                <Button variant="outline" onClick={() => setStep('location')} title="Kembali">
-                                    <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
-                                </Button>
-                                <Button className="w-auto px-8 min-w-32 bg-green-600 hover:bg-green-700">
-                                    Simpan Perubahan
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
+                                {/* LOCATIONS */}
+                                <TabsContent value="locations" className="space-y-6 mt-0">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Lokasi Project</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-6">
+                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                                <div className="lg:col-span-2">
+                                                    <LocationPicker
+                                                        onLocationSelect={(lat, lng, addr) => setLocationInput({ lat, lng, address: addr })}
+                                                        initialLat={locationInput.lat}
+                                                        initialLng={locationInput.lng}
+                                                        initialAddress={locationInput.address}
+                                                    />
+                                                    <div className="mt-2 flex gap-2">
+                                                        <Input readOnly value={locationInput.address} placeholder="Pilih lokasi di peta..." className="bg-muted" />
+                                                        <Button type="button" onClick={addLocation} disabled={!locationInput.address}>Tambah</Button>
+                                                    </div>
+                                                </div>
+                                                <div className="border rounded-lg p-4 bg-muted/30">
+                                                    <h4 className="font-medium mb-3">Daftar Lokasi</h4>
+                                                    <div className="h-[300px] overflow-y-auto pr-2">
+                                                        <div className="space-y-3">
+                                                            {activeLocations.map((loc, idx) => (
+                                                                <div key={idx} className="p-3 bg-white rounded border shadow-sm relative">
+                                                                    <p className="text-sm font-medium">{loc.detail_address}</p>
+                                                                    <p className="text-xs text-muted-foreground">{Number(loc.latitude).toFixed(4)}, {Number(loc.longitude).toFixed(4)}</p>
+                                                                    <button type="button" onClick={() => removeLocation(idx)} className="absolute top-2 right-2 text-red-500"><X className="h-4 w-4" /></button>
+                                                                </div>
+                                                            ))}
+                                                            {activeLocations.length === 0 && <p className="text-muted-foreground text-sm">Belum ada lokasi.</p>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter className="justify-between border-t p-4">
+                                            <Button type="button" variant="ghost" onClick={prevStep}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+                                            <Button type="button" onClick={nextStep}>Next <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                                        </CardFooter>
+                                    </Card>
+                                </TabsContent>
 
-                </Tabs>
+                                {/* REVIEW */}
+                                <TabsContent value="review" className="space-y-6 mt-0">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Review & Save</CardTitle>
+                                            <CardDescription>Pastikan perubahan sudah benar.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div className="bg-muted p-3 rounded">
+                                                    <span className="block text-muted-foreground text-xs">Project Name</span>
+                                                    <span className="font-medium">{data.name}</span>
+                                                </div>
+                                                <div className="bg-muted p-3 rounded">
+                                                    <span className="block text-muted-foreground text-xs">Client</span>
+                                                    <span className="font-medium">{data.client}</span>
+                                                </div>
+                                                <div className="bg-muted p-3 rounded">
+                                                    <span className="block text-muted-foreground text-xs">Budget</span>
+                                                    <span className="font-medium">Rp {Number(data.budget_total).toLocaleString()}</span>
+                                                </div>
+                                                <div className="bg-muted p-3 rounded">
+                                                    <span className="block text-muted-foreground text-xs">Termin</span>
+                                                    <span className="font-medium">{activePayments.length} termin</span>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter className="justify-between border-t p-4">
+                                            <Button type="button" variant="ghost" onClick={prevStep}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+                                            <Button onClick={submit} className="bg-green-600 hover:bg-green-700 min-w-[150px]">
+                                                {processing ? <Loader2 className="animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                                Simpan Perubahan
+                                            </Button>
+                                        </CardFooter>
+                                    </Card>
+                                </TabsContent>
+
+                            </Tabs>
+                        </form>
+                    </div>
+                </div>
             </div>
-        </AppSidebarLayout>
-    )
+
+            {/* Toast Notification */}
+            {toast.show && (
+                <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-2 text-white animate-in slide-in-from-bottom-5 fade-in duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+                    {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+                    <span className="font-medium">{toast.message}</span>
+                </div>
+            )}
+        </AppLayout>
+    );
 }

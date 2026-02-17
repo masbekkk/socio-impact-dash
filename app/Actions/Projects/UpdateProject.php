@@ -23,19 +23,27 @@ class UpdateProject
                 $this->syncLocations($project, $data['locations']);
             }
 
-            if (isset($data['budgets'])) {
-                $this->syncBudgets($project, $data['budgets']);
-            }
-
-            if (isset($data['milestones'])) {
-                $this->syncMilestones($project, $data['milestones']);
+            if (isset($data['termin_payments'])) {
+                $this->syncTerminPayments($project, $data['termin_payments']);
             }
 
             if (isset($data['documents'])) {
                 $this->syncDocuments($project, $data['documents'], $userId);
             }
 
-            return $project->fresh(['locations', 'budgets', 'milestones', 'documents']);
+            // Handle deletions
+            if (isset($data['delete_locations'])) {
+                $project->locations()->whereIn('id', $data['delete_locations'])->delete();
+            }
+            if (isset($data['delete_documents'])) {
+                // Should also delete file from storage in real app
+                $project->documents()->whereIn('id', $data['delete_documents'])->delete();
+            }
+            if (isset($data['delete_termin_payments'])) {
+                $project->terminPayments()->whereIn('id', $data['delete_termin_payments'])->delete();
+            }
+
+            return $project->fresh(['locations', 'terminPayments', 'documents']);
         });
     }
 
@@ -75,40 +83,40 @@ class UpdateProject
     {
         // For simplicity, we'll replace all locations if they are passed as a full array
         // or we could do a more sophisticated diffing.
-        $project->locations()->delete();
+        // Actually, let's just update or create based on ID
         foreach ($locations as $location) {
-            $project->locations()->create([
-                'latitude' => $location['latitude'],
-                'longitude' => $location['longitude'],
-                'detail_address' => $location['detail_address'],
-            ]);
+            if (isset($location['id'])) {
+                $project->locations()->where('id', $location['id'])->update([
+                    'latitude' => $location['latitude'],
+                    'longitude' => $location['longitude'],
+                    'detail_address' => $location['detail_address'],
+                ]);
+            } else {
+                $project->locations()->create([
+                    'latitude' => $location['latitude'],
+                    'longitude' => $location['longitude'],
+                    'detail_address' => $location['detail_address'],
+                ]);
+            }
         }
     }
 
-    protected function syncBudgets(Project $project, array $budgets): void
+    protected function syncTerminPayments(Project $project, array $terminPayments): void
     {
-        $project->budgets()->delete();
-        foreach ($budgets as $budget) {
-            $project->budgets()->create([
-                'item_name' => $budget['item_name'],
-                'quantity' => $budget['quantity'],
-                'unit_price' => $budget['unit_price'],
-                'planned_amount' => $budget['quantity'] * $budget['unit_price'],
-                'category_id' => $budget['category_id'] ?? null,
-                'status' => $budget['status'] ?? 'pending',
-            ]);
-        }
-    }
-
-    protected function syncMilestones(Project $project, array $milestones): void
-    {
-        $project->milestones()->delete();
-        foreach ($milestones as $milestone) {
-            $project->milestones()->create([
-                'title' => $milestone['title'],
-                'target_date' => $milestone['target_date'],
-                'status' => $milestone['status'] ?? 'pending',
-            ]);
+        foreach ($terminPayments as $term) {
+            if (isset($term['id'])) {
+                $project->terminPayments()->where('id', $term['id'])->update([
+                    'nominal' => $term['nominal'],
+                    'due_date' => $term['due_date'],
+                    'notes' => $term['notes'] ?? null,
+                ]);
+            } else {
+                $project->terminPayments()->create([
+                    'nominal' => $term['nominal'],
+                    'due_date' => $term['due_date'],
+                    'notes' => $term['notes'] ?? null,
+                ]);
+            }
         }
     }
 

@@ -36,6 +36,15 @@ interface ProjectTabsProps {
     setIsCloseAlertOpen: (val: boolean) => void;
 }
 
+interface PaymentTerm {
+    id: number;
+    nominal: number;
+    notes: string;
+    date: string;
+    verified: boolean;
+    proof_file?: string;
+}
+
 export default function ProjectTabs({
     project,
     currentStatus,
@@ -72,22 +81,29 @@ export default function ProjectTabs({
             }
         }
     }, [activeTab]);
-    // Mock data - replace with actual project.payment_terms
-    const [paymentTerms, setPaymentTerms] = useState([
-        { id: 1, nominal: 50000000, notes: 'DP 30%', date: '2026-03-01', verified: false, proof_file: null },
-        { id: 2, nominal: 70000000, notes: 'Progress 40%', date: '2026-04-15', verified: true, proof_file: 'bukti_transfer_termin2.pdf' },
-        { id: 3, nominal: 50000000, notes: 'Pelunasan 30%', date: '2026-05-30', verified: false, proof_file: null },
-    ]);
+    // Real data from project.termin_payments
+    const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>(
+        project.termin_payments ? project.termin_payments.map((t: any) => ({
+            id: t.id,
+            nominal: t.nominal,
+            notes: t.notes,
+            date: t.due_date,
+            verified: !!t.verified_by, // Assuming non-null 'verified_by' means verified
+            proof_file: t.proof_payment
+        })) : []
+    );
 
-    // Handler to toggle verification status
+    // Handler to toggle verification status (Mock implementation for now, should call API)
     const toggleVerification = (termId: number) => {
+        // In a real implementation, this should probably call an API endpoint
         setPaymentTerms(prevTerms =>
             prevTerms.map(term =>
                 term.id === termId ? { ...term, verified: !term.verified } : term
             )
         );
     };
-    console.log(userRole)
+
+    console.log(userRole);
     const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
