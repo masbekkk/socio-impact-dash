@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter, ListFilter, Calendar as CalendarIcon, X, MoreHorizontal } from 'lucide-react';
+import { FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter, ListFilter, Calendar as CalendarIcon, X, MoreHorizontal, Wallet } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -130,6 +130,11 @@ export default function ReimbursementsIndex() {
                     <Receipt className="mr-2 h-4 w-4" /> Pengajuan EER
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/reimbursements/create/allowance" className="cursor-pointer">
+                    <Wallet className="mr-2 h-4 w-4" /> Pengajuan Allowance
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -152,6 +157,7 @@ export default function ReimbursementsIndex() {
                   <TabsList>
                     <TabsTrigger value="atr">ATR</TabsTrigger>
                     <TabsTrigger value="eer">EER</TabsTrigger>
+                    <TabsTrigger value="allowance">Allowance</TabsTrigger>
                   </TabsList>
                 </Tabs>
 

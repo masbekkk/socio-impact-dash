@@ -1,6 +1,6 @@
 import React, { ReactNode, useState } from 'react'
-import AppSidebar from '@/Components/AppSidebar'
-import AppTopbar from '@/Components/AppTopbar'
+import AppSidebar from '@/components/AppSidebar'
+import AppTopbar from '@/components/AppTopbar'
 
 type Props = {
   children: ReactNode

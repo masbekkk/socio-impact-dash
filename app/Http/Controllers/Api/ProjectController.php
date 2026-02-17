@@ -12,8 +12,9 @@ use App\Models\Project;
 use App\Services\ProjectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Throwable;
 
-class ProjectController
+final class ProjectController
 {
     public function __construct(
         private ProjectService $projectService
@@ -34,9 +35,9 @@ class ProjectController
             return JsonResponseFormatter::success(
                 ProjectListResource::collection($projects)
             );
-        } catch (\Throwable $th) {
+        } catch (Throwable $th) {
             return JsonResponseFormatter::error(
-                'Failed to fetch projects: ' . $th->getMessage(),
+                'Failed to fetch projects: '.$th->getMessage(),
                 500
             );
         }
@@ -55,9 +56,9 @@ class ProjectController
                 $project,
                 'Project created successfully'
             );
-        } catch (\Throwable $th) {
+        } catch (Throwable $th) {
             return JsonResponseFormatter::error(
-                'Failed to create project: ' . $th->getMessage(),
+                'Failed to create project: '.$th->getMessage(),
                 500
             );
         }
@@ -77,9 +78,9 @@ class ProjectController
                 $updatedProject,
                 'Project updated successfully'
             );
-        } catch (\Throwable $th) {
+        } catch (Throwable $th) {
             return JsonResponseFormatter::error(
-                'Failed to update project: ' . $th->getMessage(),
+                'Failed to update project: '.$th->getMessage(),
                 500
             );
         }
@@ -94,9 +95,9 @@ class ProjectController
                 null,
                 'Project deleted successfully'
             );
-        } catch (\Throwable $th) {
+        } catch (Throwable $th) {
             return JsonResponseFormatter::error(
-                'Failed to delete project: ' . $th->getMessage(),
+                'Failed to delete project: '.$th->getMessage(),
                 500
             );
         }

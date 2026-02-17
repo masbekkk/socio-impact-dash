@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { ArrowLeft, ArrowRight, X, FileSpreadsheet, FileCheck, Building2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, X, FileSpreadsheet, FileCheck, Building2, Plus } from 'lucide-react'
 import { Head, Link, usePage } from '@inertiajs/react'
 import { PROJECT_MAPPINGS } from '@/constants/project-mappings'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
@@ -25,6 +25,10 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
   const [budget, setBudget] = useState<number>(0)
   // State Lokasi Multiple
   const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string }[]>([])
+  // State Termin Pembayaran
+  const [paymentTerms, setPaymentTerms] = useState<{ id: string, nominal: number, notes: string, date: string }[]>([
+    { id: crypto.randomUUID(), nominal: 0, notes: '', date: '' }
+  ])
 
   const addLocation = (lat: number, lng: number, addr: string) => {
     // Cek duplikasi (jika lat/lng sama persis atau sangat dekat)
@@ -58,6 +62,20 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
       setSupportingDocs(supportingDocs.filter(d => d.id !== id));
     }
   };
+
+  // Payment Terms Functions
+  const addPaymentTerm = () => {
+    setPaymentTerms([...paymentTerms, { id: crypto.randomUUID(), nominal: 0, notes: '', date: '' }]);
+  };
+  const removePaymentTerm = (id: string) => {
+    if (paymentTerms.length > 1) {
+      setPaymentTerms(paymentTerms.filter(t => t.id !== id));
+    }
+  };
+  const updatePaymentTerm = (id: string, field: 'nominal' | 'notes' | 'date', value: any) => {
+    setPaymentTerms(paymentTerms.map(t => t.id === id ? { ...t, [field]: value } : t));
+  };
+
   const tabsListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -482,24 +500,104 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                     </div>
                   </div>
 
-                  {/* Berita Acara Negosiasi (Only for Active Projects) */}
-                  {type !== 'proposal' && (
-                    <div className="space-y-2">
-                      <Label>Berita Acara Negosiasi <span className="text-red-500">*</span></Label>
-                      <div className="border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full">
-                        <div className="flex items-center gap-4">
-                          {/* <div className="p-3 bg-purple-50 rounded-full text-purple-600 border border-purple-100">
-                            <FileCheck className="h-6 w-6" />
-                          </div> */}
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-medium text-gray-900">Upload Dokumen Negosiasi</h4>
-                            <p className="text-xs text-muted-foreground">Lampirkan Berita Acara Negosiasi harga.</p>
+                </div>
+
+                {/* Termin Pembayaran Section */}
+                <div className="space-y-4 pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-semibold">Termin Pembayaran</Label>
+                      <p className="text-xs text-muted-foreground mt-1">Atur jadwal pembayaran bertahap untuk proyek ini.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addPaymentTerm}
+                      className="gap-2 border-dashed hover:border-solid"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Tambah Termin
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {paymentTerms.map((term, idx) => (
+                      <div key={term.id} className="border rounded-xl p-5 bg-white shadow-sm space-y-4 group hover:border-gray-300 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-sm text-gray-900">Termin #{idx + 1}</h4>
+                          {paymentTerms.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removePaymentTerm(term.id)}
+                              className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Nominal */}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground">Nominal Pembayaran</Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
+                              <MoneyInput
+                                value={term.nominal}
+                                onValueChange={(vals) => updatePaymentTerm(term.id, 'nominal', vals.floatValue || 0)}
+                                placeholder="0"
+                                className="pl-10 bg-white h-10"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Tanggal */}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground">Tanggal Jatuh Tempo</Label>
+                            <Input
+                              type="date"
+                              value={term.date}
+                              onChange={(e) => updatePaymentTerm(term.id, 'date', e.target.value)}
+                              className="bg-white h-10"
+                            />
+                          </div>
+
+                          {/* Notes */}
+                          <div className="space-y-2 md:col-span-1">
+                            <Label className="text-xs font-medium text-muted-foreground">Keterangan</Label>
+                            <Input
+                              type="text"
+                              value={term.notes}
+                              onChange={(e) => updatePaymentTerm(term.id, 'notes', e.target.value)}
+                              placeholder="Contoh: DP 30%, Pelunasan, dll"
+                              className="bg-white h-10"
+                            />
                           </div>
                         </div>
-                        <FileUploadDropzone />
                       </div>
+                    ))}
+                  </div>
+
+                  {/* Summary */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Total Termin Pembayaran</p>
+                      <p className="text-xs text-blue-700 mt-0.5">{paymentTerms.length} termin terjadwal</p>
                     </div>
-                  )}
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-blue-900">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
+                          paymentTerms.reduce((sum, term) => sum + (term.nominal || 0), 0)
+                        )}
+                      </p>
+                      <p className="text-xs text-blue-700">
+                        {budget > 0 ? `${((paymentTerms.reduce((sum, term) => sum + (term.nominal || 0), 0) / budget) * 100).toFixed(1)}% dari total` : '0%'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
               </CardContent>

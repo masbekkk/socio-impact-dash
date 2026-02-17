@@ -130,6 +130,9 @@ class ProjectService
             'sow_mime' => $sowData['sow_mime'] ?? null,
             'sow_size' => $sowData['sow_size'] ?? null,
             'budget_total' => $data['budget_total'] ?? null,
+            'operational_budget' => ($data['budget_total'] ?? 0) * 0.50,
+            'management_budget' => ($data['budget_total'] ?? 0) * 0.30,
+            'allowance_budget' => ($data['budget_total'] ?? 0) * 0.20,
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
         ]);
@@ -176,6 +179,12 @@ class ProjectService
             $updateData = array_merge($updateData, $sowData);
         }
         
+        if (array_key_exists('budget_total', $data)) {
+            $updateData['operational_budget'] = $data['budget_total'] * 0.50;
+            $updateData['management_budget'] = $data['budget_total'] * 0.30;
+            $updateData['allowance_budget'] = $data['budget_total'] * 0.20;
+        }
+
         if (!empty($updateData)) {
             $project->update($updateData);
         }

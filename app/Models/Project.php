@@ -43,7 +43,8 @@ final class Project extends Model
         'user_id', 'division_id', 'account_manager_id', 'head_id', 'pic_id',
         'status', 'project_type', 
         'sow_path', 'sow_original_name', 'sow_mime', 'sow_size',
-        'budget_total', 'start_date', 'end_date',
+        'budget_total', 'operational_budget', 'management_budget', 'allowance_budget',
+        'start_date', 'end_date',
     ];
 
     public function casts(): array
@@ -52,6 +53,9 @@ final class Project extends Model
             'id' => 'integer',
             'status' => ProjectStatus::class,
             'budget_total' => 'decimal:2',
+            'operational_budget' => 'decimal:2',
+            'management_budget' => 'decimal:2',
+            'allowance_budget' => 'decimal:2',
             'start_date' => 'date',
             'end_date' => 'date',
             'created_at' => 'datetime',
@@ -84,6 +88,7 @@ final class Project extends Model
         return $this->belongsTo(User::class, 'pic_id');
     }
 
+    /*
     public function milestones(): HasMany
     {
         return $this->hasMany(ProjectMilestone::class);
@@ -94,14 +99,35 @@ final class Project extends Model
         return $this->hasMany(ProjectBudget::class);
     }
 
+    public function issues(): HasMany
+    {
+        return $this->hasMany(ProjectIssue::class);
+    }
+    */
+
     public function documents(): HasMany
     {
         return $this->hasMany(ProjectDocument::class);
     }
 
-    public function issues(): HasMany
+    public function monitorings(): HasMany
     {
-        return $this->hasMany(ProjectIssue::class);
+        return $this->hasMany(ProjectMonitoring::class);
+    }
+
+    public function terminPayments(): HasMany
+    {
+        return $this->hasMany(ProjectTerminPayment::class);
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(ProjectApproval::class);
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(ProjectEvent::class);
     }
 
     public function locations(): HasMany

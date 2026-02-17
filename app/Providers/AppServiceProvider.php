@@ -37,5 +37,6 @@ final class AppServiceProvider extends ServiceProvider
     private function bootGates(): void
     {
         Gate::define('adminAccess', fn ($user) => $user->hasRole(UserRole::Superadmin->value));
+        Gate::define('view-admin', fn ($user) => $user->hasRole(UserRole::Superadmin->value));
     }
 }
