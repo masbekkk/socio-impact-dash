@@ -44,24 +44,72 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateFilterPresets } from '@/components/DateFilterPresets';
+import axios from 'axios';
 
-export default function ProjectsIndex({ projects, filters, divisions }: { projects: any, filters?: any, divisions?: any[] }) {
+export default function ProjectsIndex({ filters, divisions }: { filters?: any, divisions?: any[] }) {
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Proyek', href: '/projects' },
   ];
 
-  const projectList = projects.data || [];
-  const meta = projects;
+  const [projects, setProjects] = React.useState<any[]>([]);
+  const [pagination, setPagination] = React.useState<any>({
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    from: 0,
+    to: 0
+  });
+  const [loading, setLoading] = React.useState(true);
+
   const [search, setSearch] = React.useState(filters?.search || '');
   const [startDate, setStartDate] = React.useState(filters?.start_date || '');
   const [endDate, setEndDate] = React.useState(filters?.end_date || '');
+  const [status, setStatus] = React.useState(filters?.status || 'all');
+  const [division, setDivision] = React.useState(filters?.division || 'all');
+  const [perPage, setPerPage] = React.useState(10);
+  const [currentPage, setCurrentPage] = React.useState(1);
 
   // Delete Dialog & Toast State
   const [projectToDelete, setProjectToDelete] = React.useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [toast, setToast] = React.useState({ show: false, message: '', type: 'success' });
+
+  const fetchProjects = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/v1/projects', {
+        params: {
+          search,
+          status,
+          division,
+          start_date: startDate,
+          end_date: endDate,
+          per_page: perPage,
+          page: currentPage
+        },
+      });
+      setProjects(response.data.data.data);
+      setPagination({
+        current_page: response.data.data.current_page,
+        last_page: response.data.data.last_page,
+        per_page: response.data.data.per_page,
+        total: response.data.data.total,
+        from: response.data.data.from,
+        to: response.data.data.to,
+        prev_page_url: response.data.data.prev_page_url,
+        next_page_url: response.data.data.next_page_url,
+        first_page_url: response.data.data.first_page_url,
+        last_page_url: response.data.data.last_page_url,
+      });
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Toast Timer
   React.useEffect(() => {
@@ -76,50 +124,34 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
     setIsDeleteDialogOpen(true);
   };
 
-  const executeDelete = () => {
-    setIsDeleteDialogOpen(false);
-    setToast({ show: true, message: 'Proyek berhasil dihapus.', type: 'success' });
-    setProjectToDelete(null);
-    // In real app: router.delete(...) or reload data
+  const executeDelete = async () => {
+    if (!projectToDelete) return;
+    try {
+      await axios.delete(`/api/v1/projects/${projectToDelete.code}`);
+      setToast({ show: true, message: 'Proyek berhasil dihapus.', type: 'success' });
+      fetchProjects();
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      setToast({ show: true, message: 'Gagal menghapus proyek.', type: 'error' });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setProjectToDelete(null);
+    }
   };
 
-  // Debounce search & filters
+  // Fetch data on filter change
   React.useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      if (
-        search !== (filters?.search || '') ||
-        startDate !== (filters?.start_date || '') ||
-        endDate !== (filters?.end_date || '')
-      ) {
-        router.get('/projects',
-          {
-            search: search,
-            per_page: meta.per_page,
-            status: filters?.status,
-            division: filters?.division,
-            start_date: startDate,
-            end_date: endDate
-          },
-          { preserveState: true, replace: true }
-        );
-      }
+      fetchProjects();
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, startDate, endDate]);
+  }, [search, startDate, endDate, status, division, perPage, currentPage]);
 
   const handleFilterChange = (key: string, value: string) => {
-    router.get('/projects',
-      {
-        search: search,
-        per_page: meta.per_page,
-        status: key === 'status' ? value : filters?.status,
-        division: key === 'division' ? value : filters?.division,
-        start_date: startDate,
-        end_date: endDate
-      },
-      { preserveState: true }
-    );
+    if (key === 'status') setStatus(value);
+    if (key === 'division') setDivision(value);
+    setCurrentPage(1); // Reset to first page on filter change
   };
 
   return (
@@ -252,10 +284,10 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
 
           {/* MOBILE VIEW (CARDS) */}
           <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
-            {projectList.length === 0 ? (
+            {projects.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground border rounded-md">Belum ada proyek.</div>
             ) : (
-              projectList.map((p: any) => (
+              projects.map((p: any) => (
                 <Card key={p.id} className="overflow-hidden">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-start">
@@ -267,10 +299,6 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Client</p>
-                        <p className="font-medium truncate">{p.client}</p>
-                      </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Divisi</p>
                         <p className="font-medium truncate">{p.division_name || (p.division ? p.division.name : '-')}</p>
@@ -284,7 +312,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                     </div>
 
                     <div className="pt-2 border-t flex justify-end gap-2">
-                      <Link href={`/projects/${p.slug}`} className="w-full">
+                      <Link href={`/projects/${p.code}`} className="w-full">
                         <Button variant="outline" size="sm" className="w-full">View Details</Button>
                       </Link>
                     </div>
@@ -301,7 +329,6 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Kode</TableHead>
                   <TableHead>Nama Proyek</TableHead>
-                  <TableHead>Client</TableHead>
                   <TableHead>Divisi</TableHead>
                   <TableHead>PIC / AM</TableHead>
                   <TableHead>Status</TableHead>
@@ -311,20 +338,19 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {projectList.length === 0 ? (
+                {projects.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="h-24 text-center">
                       Belum ada proyek. Silakan ajukan proyek baru.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  projectList.map((p: any) => (
+                  projects.map((p: any) => (
                     <TableRow key={p.id} className="group">
                       <TableCell className="font-medium">{p.code}</TableCell>
                       <TableCell>
                         <div className="font-medium">{p.name}</div>
                       </TableCell>
-                      <TableCell>{p.client}</TableCell>
                       <TableCell>
                         {(() => {
                           const divName = (p.division_name || (p.division ? p.division.name : '')).toLowerCase();
@@ -393,12 +419,12 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                             <DropdownMenuItem asChild>
-                              <Link href={`/projects/${p.slug}`} className="flex items-center cursor-pointer">
+                              <Link href={`/projects/${p.code}`} className="flex items-center cursor-pointer">
                                 <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> View Details
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link href={`/projects/${p.slug}/edit`} className="flex items-center cursor-pointer">
+                              <Link href={`/projects/${p.code}/edit`} className="flex items-center cursor-pointer">
                                 <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Project
                               </Link>
                             </DropdownMenuItem>
@@ -422,7 +448,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
           {/* PAGINATION CONTROLS */}
           <div className="flex items-center justify-between px-2 py-4">
             <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-              Showing {meta.from || 0} to {meta.to || 0} of {meta.total} results
+              Showing {pagination.from || 0} to {pagination.to || 0} of {pagination.total} results
             </div>
             <div className="flex w-full items-center gap-8 lg:w-fit">
               <div className="hidden items-center gap-2 lg:flex">
@@ -430,13 +456,14 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                   Rows per page
                 </Label>
                 <Select
-                  value={`${meta.per_page}`}
+                  value={`${pagination.per_page}`}
                   onValueChange={(value) => {
-                    router.get('/projects', { per_page: value, search: filters?.search }, { preserveState: true })
+                    setPerPage(parseInt(value));
+                    setCurrentPage(1);
                   }}
                 >
                   <SelectTrigger className="w-20 h-8 text-xs" id="rows-per-page">
-                    <SelectValue placeholder={meta.per_page} />
+                    <SelectValue placeholder={pagination.per_page} />
                   </SelectTrigger>
                   <SelectContent side="top">
                     {[10, 20, 30, 40, 50].map((pageSize) => (
@@ -448,14 +475,14 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                 </Select>
               </div>
               <div className="flex w-fit items-center justify-center text-sm font-medium">
-                Page {meta.current_page} of {meta.last_page}
+                Page {pagination.current_page} of {pagination.last_page}
               </div>
               <div className="ml-auto flex items-center gap-2 lg:ml-0">
                 <Button
                   variant="outline"
                   className="hidden h-8 w-8 p-0 lg:flex"
-                  disabled={!meta.prev_page_url}
-                  onClick={() => router.get(meta.first_page_url)}
+                  disabled={pagination.current_page === 1}
+                  onClick={() => setCurrentPage(1)}
                 >
                   <span className="sr-only">Go to first page</span>
                   <ChevronsLeft className="h-4 w-4" />
@@ -464,8 +491,8 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                   variant="outline"
                   className="size-8"
                   size="icon"
-                  disabled={!meta.prev_page_url}
-                  onClick={() => router.get(meta.prev_page_url)}
+                  disabled={pagination.current_page === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 >
                   <span className="sr-only">Go to previous page</span>
                   <ChevronLeft className="h-4 w-4" />
@@ -474,8 +501,8 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                   variant="outline"
                   className="size-8"
                   size="icon"
-                  disabled={!meta.next_page_url}
-                  onClick={() => router.get(meta.next_page_url)}
+                  disabled={pagination.current_page === pagination.last_page}
+                  onClick={() => setCurrentPage(prev => Math.min(pagination.last_page, prev + 1))}
                 >
                   <span className="sr-only">Go to next page</span>
                   <ChevronRight className="h-4 w-4" />
@@ -484,8 +511,8 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                   variant="outline"
                   className="hidden size-8 lg:flex"
                   size="icon"
-                  disabled={!meta.next_page_url}
-                  onClick={() => router.get(meta.last_page_url)}
+                  disabled={pagination.current_page === pagination.last_page}
+                  onClick={() => setCurrentPage(pagination.last_page)}
                 >
                   <span className="sr-only">Go to last page</span>
                   <ChevronsRight className="h-4 w-4" />

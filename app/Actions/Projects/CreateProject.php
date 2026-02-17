@@ -9,11 +9,9 @@ use App\Services\FileUploadService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-class CreateProject
+final class CreateProject
 {
-    public function __construct(protected FileUploadService $fileUploadService)
-    {
-    }
+    public function __construct(private FileUploadService $fileUploadService) {}
 
     public function handle(array $data, int $userId): Project
     {
@@ -36,56 +34,38 @@ class CreateProject
         });
     }
 
-    protected function createProjectRecord(array $data, int $userId): Project
+    private function createProjectRecord(array $data, int $userId): Project
     {
-        $code = $data['code'] ?? $this->generateUniqueCode();
-        
-        $sowData = [];
-        if (isset($data['sow']) && $data['sow'] instanceof \Illuminate\Http\UploadedFile) {
-            $sowData = $this->fileUploadService->uploadFileWithPrefix(
-                $data['sow'],
-                'projects/sow',
-                'sow_'
-            );
-        }
-
+        $code = $data['code'] ?? null;
         $budgetTotal = $data['budget_total'] ?? 0;
 
         return Project::create([
             'code' => $code,
             'name' => $data['name'],
-            'client' => $data['client'],
             'description' => $data['description'] ?? null,
-            'user_id' => $userId,
+            'created_by' => $userId,
             'division_id' => $data['division_id'],
             'account_manager_id' => $data['account_manager_id'],
             'head_id' => $data['head_id'],
             'pic_id' => $data['pic_id'],
             'status' => $data['status'] ?? 'draft',
             'project_type' => $data['project_type'],
-            'sow_path' => $sowData['sow_path'] ?? null,
-            'sow_original_name' => $sowData['sow_original_name'] ?? null,
-            'sow_mime' => $sowData['sow_mime'] ?? null,
-            'sow_size' => $sowData['sow_size'] ?? null,
             'budget_total' => $budgetTotal,
-            'operational_budget' => $budgetTotal * 0.50,
-            'management_budget' => $budgetTotal * 0.30,
-            'allowance_budget' => $budgetTotal * 0.20,
             'start_date' => $data['start_date'],
             'end_date' => $data['end_date'],
         ]);
     }
 
-    protected function generateUniqueCode(): string
+    private function generateUniqueCode(): string
     {
         do {
-            $code = 'PRJ-' . strtoupper(Str::random(6));
+            $code = 'PRJ-'.mb_strtoupper(Str::random(6));
         } while (Project::where('code', $code)->exists());
 
         return $code;
     }
 
-    protected function syncLocations(Project $project, array $locations): void
+    private function syncLocations(Project $project, array $locations): void
     {
         foreach ($locations as $location) {
             $project->locations()->create([
@@ -96,7 +76,7 @@ class CreateProject
         }
     }
 
-    protected function syncTerminPayments(Project $project, array $terminPayments): void
+    private function syncTerminPayments(Project $project, array $terminPayments): void
     {
         foreach ($terminPayments as $term) {
             $project->terminPayments()->create([
@@ -107,7 +87,7 @@ class CreateProject
         }
     }
 
-    protected function syncDocuments(Project $project, array $documents, int $userId): void
+    private function syncDocuments(Project $project, array $documents, int $userId): void
     {
         foreach ($documents as $doc) {
             if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {

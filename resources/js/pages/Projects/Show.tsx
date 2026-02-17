@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react'
 import ProjectTabs from './ProjectTabs'
-import { Link, usePage } from '@inertiajs/react'
+import { Link, usePage, Head, router } from '@inertiajs/react'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
+import axios from 'axios'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -24,8 +26,10 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog"
 
-export default function ProjectsShow({ project }: any) {
+export default function ProjectsShow({ project_slug }: { project_slug: string }) {
   const { auth } = usePage().props as any;
+  const [project, setProject] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   // Mapping role backend (lowercase) ke Role Tampilan Frontend (Capitalized)
   const rawRole = auth.user?.roles?.[0]?.name || 'Admin';
@@ -36,36 +40,17 @@ export default function ProjectsShow({ project }: any) {
   };
   const currentUserRole = roleMap[rawRole] || rawRole;
 
-  const mock = {
-    slug: project.slug,
-    code: project.code,
-    name: project.name,
-    client: project.client,
-    status: project.status,
-    budget: project.budget_total,
-    division: project.division_name || project.division_code,
-    sow: project.sow
-  };
-
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Proyek', href: '/projects' },
     { title: 'Detail Proyek', href: '#' },
   ];
 
-  // Dummy Multi-Locations (Showcase)
-  const locations = project.locations && project.locations.length > 0 ? project.locations : [
-    { id: '1', lat: -6.175392, lng: 106.827153, address: 'Monas, Gambir, Jakarta Pusat' },
-    { id: '2', lat: -6.211544, lng: 106.845172, address: 'Tebet, Jakarta Selatan' },
-    { id: '3', lat: -6.121435, lng: 106.774124, address: 'PIK, Jakarta Utara' },
-  ];
-
-  // Issues Data from JSON
-  const mockIssues = project.issues || [];
-  const hasOpenIssues = mockIssues.some((i: any) => i.status === 'open');
-  // Local state to simulate status change without backend refresh
-  const [currentStatus, setCurrentStatus] = useState(mock.status);
-  const isReadyForClosing = currentStatus === 'active' && !hasOpenIssues;
+  // State moved inside useEffect or updated after fetch
+  const [currentStatus, setCurrentStatus] = useState('draft');
+  const [isProjectDealed, setIsProjectDealed] = useState(false);
+  const [monitoringList, setMonitoringList] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
 
   // Dialog & Toast States
   const [isCloseAlertOpen, setIsCloseAlertOpen] = useState(false);
@@ -76,12 +61,50 @@ export default function ProjectsShow({ project }: any) {
   const [isRevisionAlertOpen, setIsRevisionAlertOpen] = useState(false);
   const [isSubmitReportAlertOpen, setIsSubmitReportAlertOpen] = useState(false);
   const [isDealAlertOpen, setIsDealAlertOpen] = useState(false);
-  const [isProjectDealed, setIsProjectDealed] = useState(false); // Dummy state for deal flow
 
-  const handleDealProject = () => {
-    setIsDealAlertOpen(false);
-    setIsProjectDealed(true);
-    setToast({ show: true, message: 'Project berhasil di-Deal! Menu Penutupan Proyek kini aktif.', type: 'success' });
+  useEffect(() => {
+    const fetchProject = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(`/api/v1/projects/${project_slug}`);
+        const data = response.data.data;
+        setProject(data);
+        setCurrentStatus(data.status);
+        setMonitoringList(data.monitoring_history || []);
+
+        if (data.locations && data.locations.length > 0) {
+          setLocations(data.locations.map((loc: any) => ({
+            id: loc.id.toString(),
+            lat: parseFloat(loc.latitude),
+            lng: parseFloat(loc.longitude),
+            address: loc.detail_address || ''
+          })));
+        } else {
+          setLocations([
+            { id: '1', lat: -6.175392, lng: 106.827153, address: 'Monas, Gambir, Jakarta Pusat' },
+            { id: '2', lat: -6.211544, lng: 106.845172, address: 'Tebet, Jakarta Selatan' },
+            { id: '3', lat: -6.121435, lng: 106.774124, address: 'PIK, Jakarta Utara' },
+          ]);
+        }
+      } catch (error) {
+        console.error("Error fetching project:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProject();
+  }, [project_slug]);
+
+  const handleDealProject = async () => {
+    try {
+      await axios.post(`/api/v1/projects/${project_slug}/deal`);
+      setIsDealAlertOpen(false);
+      setIsProjectDealed(true);
+      setCurrentStatus('active');
+      setToast({ show: true, message: 'Project berhasil di-Deal! Menu Penutupan Proyek kini aktif.', type: 'success' });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleApproveAction = () => {
@@ -107,19 +130,6 @@ export default function ProjectsShow({ project }: any) {
   });
 
   // MONITORING STATE (Inline Form)
-  const [monitoringList, setMonitoringList] = useState(project.monitoring_history || [
-    {
-      id: 1,
-      date: "2025-01-25",
-      uploader: "Siti Aminah (Head)",
-      status: "approved",
-      notes: "Project berjalan lancar sesuai timeline. Tidak ada kendala berarti.",
-      files: [
-        { title: "Laporan Mingguan Jan W4.pdf", size: "1.2 MB" },
-        { title: "Dokumentasi Kegiatan.zip", size: "4.5 MB" }
-      ]
-    }
-  ]);
   const [reportForm, setReportForm] = useState({
     date: new Date().toISOString().split('T')[0],
     notes: '',
@@ -154,7 +164,7 @@ export default function ProjectsShow({ project }: any) {
   };
 
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (toast.show) {
       const timer = setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
       return () => clearTimeout(timer);
@@ -164,16 +174,47 @@ export default function ProjectsShow({ project }: any) {
   const handleCloseProject = () => {
     setIsCloseAlertOpen(false);
     setCurrentStatus('completed');
-    mock.status = 'completed';
     setToast({ show: true, message: 'Proyek berhasil ditutup (Closing Success).', type: 'success' });
   };
 
-  const handleDeleteProject = () => {
-    setIsDeleteAlertOpen(false);
-    setToast({ show: true, message: 'Proyek berhasil dihapus.', type: 'success' });
-    setTimeout(() => {
-      window.location.href = '/projects';
-    }, 1500);
+  const handleDeleteProject = async () => {
+    try {
+      await axios.delete(`/api/v1/projects/${project_slug}`);
+      setIsDeleteAlertOpen(false);
+      setToast({ show: true, message: 'Proyek berhasil dihapus.', type: 'success' });
+      setTimeout(() => {
+        router.visit('/projects');
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AppSidebarLayout breadcrumbs={breadcrumbs}>
+        <div className="p-8 space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </AppSidebarLayout>
+    );
+  }
+
+  // Derived Values
+  const mockIssues = project.issues || [];
+  const hasOpenIssues = mockIssues.some((i: any) => i.status === 'open');
+  const isReadyForClosing = currentStatus === 'active' && !hasOpenIssues;
+
+  const mock = {
+    slug: project.slug,
+    code: project.code,
+    name: project.name,
+    // client: project.client?.name || '-', // Removed as per strict schema
+    status: currentStatus,
+    budget: project.budget_total,
+    division: project.division?.name || '-',
+    sow: project.documents?.find((d: any) => d.type === 'SOW' || d.type === 'PROPOSAL')?.path
   };
 
   // Approval Workflow Logic
@@ -183,7 +224,7 @@ export default function ProjectsShow({ project }: any) {
     { role: 'Direktur', name: 'Direktur', status: (currentStatus === 'completed' || isReadyForClosing) ? 'approved' : 'waiting', date: '-', note: (currentStatus === 'completed' || isReadyForClosing) ? 'Project berjalan baik, hasil sesuai target.' : '-' },
   ];
 
-  const workflows = project.approvals ? project.approvals.map((ap: any) => ({
+  const workflows = project.approvals && project.approvals.length > 0 ? project.approvals.map((ap: any) => ({
     ...ap,
     name: ap.role === 'Admin' ? 'Admin Project' : ap.role === 'Finance' ? 'Finance Team' : ap.role
   })) : defaultWorkflows;
@@ -198,7 +239,7 @@ export default function ProjectsShow({ project }: any) {
             <h1 className="text-2xl font-bold tracking-tight">{mock.name}</h1>
             <Badge variant="outline">{mock.code}</Badge>
           </div>
-          <p className="text-muted-foreground">Client: {mock.client} • {mock.division}</p>
+          <p className="text-muted-foreground">{mock.division}</p>
         </div>
         <div className="flex flex-col md:flex-row items-end md:items-center gap-2 w-full md:w-auto">
           <StatusBadge status={currentStatus} />

@@ -1,663 +1,744 @@
-import React, { useState, useEffect } from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { Head, useForm } from '@inertiajs/react';
-import {
-  Briefcase, Calendar, CheckCircle2, DollarSign, FileText, LayoutDashboard, MapPin,
-  MoreVertical, ArrowRight, ArrowLeft, Save, Plus, X, UploadCloud, AlertCircle, Loader2
-} from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react'
+import { ArrowLeft, ArrowRight, X, FileSpreadsheet, FileCheck, Building2, Plus } from 'lucide-react'
+import { Head, Link, usePage, router } from '@inertiajs/react'
+import { PROJECT_MAPPINGS } from '@/constants/project-mappings'
+import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import FileUploadDropzone from '@/components/FileUploadDropzone'
+import BudgetEditor from '@/components/BudgetEditor'
+import MoneyInput from '@/components/MoneyInput'
+import { Button } from '@/components/ui/button'
+import LocationPicker from '@/components/LocationPicker'
+import { cn } from '@/lib/utils'
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import LocationPicker from '@/components/LocationPicker';
-import FileUploadDropzone from '@/components/FileUploadDropzone';
 
-// Helper for Toast
-interface ToastState {
-  show: boolean;
-  message: string;
-  type: 'success' | 'error';
-}
+import axios from 'axios';
 
-interface CreateProps {
-  divisions: any[];
-  employees: any[];
-}
+export default function ProjectsCreate({ divisions, employees }: { divisions: any[], employees: any[] }) {
+  const { url } = usePage();
+  const queryParams = new URLSearchParams(url.split('?')[1]);
+  const type = queryParams.get('type') || 'active'; // 'proposal' or 'active'
 
-export default function ProjectsCreate({ divisions, employees }: CreateProps) {
-  const [step, setStep] = useState('basic'); // basic, details, budget, locations, review
+  const [step, setStep] = useState('basic')
+  const [budget, setBudget] = useState<number>(0)
 
-  const { data, setData, post, processing, errors } = useForm({
+  // Form State
+  const [formData, setFormData] = useState({
     name: '',
-    client: '',
-    code: '', // Validated on backend usually, but can be input
     description: '',
     division_id: '',
     account_manager_id: '',
     head_id: '',
     pic_id: '',
-    status: 'draft',
-    project_type: 'pendampingan',
+    project_type: '',
     start_date: '',
     end_date: '',
-    budget_total: 0,
-    sow: null as File | null,
-    locations: [] as any[],
-    termin_payments: [] as any[],
-    documents: [] as any[], // Supporting docs
+    status: type === 'proposal' ? 'draft' : 'active',
   });
 
-  // Local Toast State
-  const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'success' });
+  const [sowFile, setSowFile] = useState<File | null>(null);
+  const [rabFile, setRabFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
-      return () => clearTimeout(timer);
+  // State Lokasi Multiple
+  const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string }[]>([])
+  // State Termin Pembayaran
+  const [paymentTerms, setPaymentTerms] = useState<{ id: string, nominal: number, notes: string, date: string }[]>([
+    { id: crypto.randomUUID(), nominal: 0, notes: '', date: '' }
+  ])
+
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<any>({});
+
+  const addLocation = (lat: number, lng: number, addr: string) => {
+    // Cek duplikasi (jika lat/lng sama persis atau sangat dekat)
+    const isDuplicate = locations.some(loc =>
+      Math.abs(loc.lat - lat) < 0.0001 && Math.abs(loc.lng - lng) < 0.0001
+    );
+
+    if (!isDuplicate) {
+      setLocations([...locations, { id: crypto.randomUUID(), name: `Lokasi ${locations.length + 1}`, lat, lng, address: addr }])
     }
-  }, [toast.show]);
+  }
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ show: true, message, type });
+  const removeLocation = (id: string) => {
+    setLocations(locations.filter(l => l.id !== id))
+  }
+
+  // Dynamic Docs State
+  const [supportingDocs, setSupportingDocs] = useState([{ id: 1, type: 'TOR' }]);
+  const addSupportingDoc = () => {
+    const usedTypes = supportingDocs.map(d => d.type);
+    const available = ['TOR', 'KAK', 'RFP'].find(t => !usedTypes.includes(t));
+    if (available) {
+      setSupportingDocs([...supportingDocs, { id: Date.now(), type: available }]);
+    }
   };
-
-  // Local state for complex UI interactions before syncing to form data
-  const [locations, setPositions] = useState<any[]>([]);
-  const [paymentTerms, setPaymentTerms] = useState<{ id: string, nominal: number, notes: string, date: string }[]>([]);
-  const [locationInput, setLocationInput] = useState({ lat: -6.2088, lng: 106.8456, address: '' });
-
-  // Sync complex state to form data
-  useEffect(() => {
-    setData('locations', locations.map(l => ({
-      latitude: l.lat,
-      longitude: l.lng,
-      detail_address: l.address
-    })));
-  }, [locations]);
-
-  useEffect(() => {
-    setData('termin_payments', paymentTerms.map(t => ({
-      nominal: t.nominal,
-      due_date: t.date,
-      notes: t.notes
-    })));
-  }, [paymentTerms]);
-
-  const handleStepChange = (value: string) => {
-    setStep(value);
+  const updateSupportingDocType = (id: number, type: string) => {
+    setSupportingDocs(supportingDocs.map(d => d.id === id ? { ...d, type } : d));
   };
-
-  const nextStep = () => {
-    const steps = ['basic', 'details', 'budget', 'locations', 'review'];
-    const currentIndex = steps.indexOf(step);
-    if (currentIndex < steps.length - 1) {
-      setStep(steps[currentIndex + 1]);
+  const removeSupportingDoc = (id: number) => {
+    if (supportingDocs.length > 1) {
+      setSupportingDocs(supportingDocs.filter(d => d.id !== id));
     }
   };
 
-  const prevStep = () => {
-    const steps = ['basic', 'details', 'budget', 'locations', 'review'];
-    const currentIndex = steps.indexOf(step);
-    if (currentIndex > 0) {
-      setStep(steps[currentIndex - 1]);
+  const handleInputChange = (field: string, value: any) => {
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev: any) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
-  const addLocation = () => {
-    if (locationInput.address) {
-      setPositions([...locations, { ...locationInput, id: Date.now().toString() }]);
-      showToast("Lokasi ditambahkan");
-      // Reset input handled by LocationPicker effectively
+  const handleSubmit = async () => {
+    setLoading(true);
+    setErrors({});
+
+    const submitData = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      submitData.append(key, value);
+    });
+
+    submitData.append('budget_total', budget.toString());
+
+    let docIndex = 0;
+
+    if (rabFile) {
+      submitData.append(`documents[${docIndex}][file]`, rabFile);
+      submitData.append(`documents[${docIndex}][type]`, 'RAB');
+      docIndex++;
     }
-  };
 
-  const removeLocation = (index: number) => {
-    setPositions(locations.filter((_, i) => i !== index));
-  };
+    if (sowFile) {
+      submitData.append(`documents[${docIndex}][file]`, sowFile);
+      submitData.append(`documents[${docIndex}][type]`, type === 'proposal' ? 'PROPOSAL' : 'SOW');
+      docIndex++;
+    }
 
-  const addPaymentTerm = () => {
-    setPaymentTerms([...paymentTerms, { id: Date.now().toString(), nominal: 0, notes: '', date: '' }]);
-  };
+    locations.forEach((loc, index) => {
+      submitData.append(`locations[${index}][latitude]`, loc.lat.toString());
+      submitData.append(`locations[${index}][longitude]`, loc.lng.toString());
+      submitData.append(`locations[${index}][detail_address]`, loc.address);
+    });
 
-  const updatePaymentTerm = (index: number, field: string, value: any) => {
-    const newTerms = [...paymentTerms];
-    newTerms[index] = { ...newTerms[index], [field]: value };
-    setPaymentTerms(newTerms);
-  };
+    paymentTerms.forEach((term, index) => {
+      submitData.append(`termin_payments[${index}][nominal]`, term.nominal.toString());
+      submitData.append(`termin_payments[${index}][due_date]`, term.date);
+      if (term.notes) submitData.append(`termin_payments[${index}][notes]`, term.notes);
+    });
 
-  const removePaymentTerm = (index: number) => {
-    setPaymentTerms(paymentTerms.filter((_, i) => i !== index));
-  };
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    post(route('projects.store'), {
-      onSuccess: () => showToast("Project berhasil dibuat!"),
-      onError: (err) => {
-        console.error(err);
-        showToast("Gagal membuat project. Periksa input anda.", 'error');
+    supportingDocs.forEach((doc: any) => {
+      if (doc.file) {
+        submitData.append(`documents[${docIndex}][file]`, doc.file);
+        submitData.append(`documents[${docIndex}][type]`, doc.type);
+        docIndex++;
       }
     });
+
+    try {
+      const response = await axios.post('/api/v1/projects', submitData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      router.visit(`/projects/${response.data.data.code}`);
+    } catch (error: any) {
+      if (error.response?.status === 422) {
+        setErrors(error.response.data.errors);
+      } else {
+        console.error("Error creating project:", error);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Calculate totals for budget validation
-  const totalTermin = paymentTerms.reduce((sum, term) => sum + Number(term.nominal), 0);
-  const budgetRemaining = Number(data.budget_total) - totalTermin;
+  // Payment Terms Functions
+  const addPaymentTerm = () => {
+    setPaymentTerms([...paymentTerms, { id: crypto.randomUUID(), nominal: 0, notes: '', date: '' }]);
+  };
+  const removePaymentTerm = (id: string) => {
+    if (paymentTerms.length > 1) {
+      setPaymentTerms(paymentTerms.filter(t => t.id !== id));
+    }
+  };
+  const updatePaymentTerm = (id: string, field: 'nominal' | 'notes' | 'date', value: any) => {
+    setPaymentTerms(paymentTerms.map(t => t.id === id ? { ...t, [field]: value } : t));
+  };
+
+  const tabsListRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (tabsListRef.current) {
+      const container = tabsListRef.current
+      const activeTab = container.querySelector('[data-state="active"]') as HTMLElement
+
+      if (activeTab) {
+        const containerRect = container.getBoundingClientRect()
+        const activeRect = activeTab.getBoundingClientRect()
+
+        const scrollLeft = container.scrollLeft + (activeRect.left - containerRect.left) - (containerRect.width / 2) + (activeRect.width / 2)
+
+        container.scrollTo({ left: scrollLeft, behavior: 'smooth' })
+      }
+    }
+  }, [step])
+
+  const breadcrumbs = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Proyek', href: '/projects' },
+    { title: 'Create', href: '#' },
+  ];
+
+  const stepsList = ['basic', 'stakeholders', 'detail', 'location', 'budget'];
 
   return (
-    <AppLayout breadcrumbs={[
-      { title: 'Projects', href: route('projects.index') },
-      { title: 'Create', href: route('projects.create') },
-    ]}>
-      <Head title="Create Project" />
+    <AppSidebarLayout breadcrumbs={breadcrumbs}>
+      <Head title={type === 'proposal' ? 'Buat Proposal Proyek' : 'Buat Proyek Baru'} />
 
-      <div className="flex flex-col h-[calc(100vh-4rem)]">
-        <div className="flex-none p-6 pb-2">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Buat Project Baru</h1>
-              <p className="text-sm text-muted-foreground">Mulai inisiasi project sosial baru</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => window.history.back()}>Batal</Button>
-              <Button onClick={submit} disabled={processing}>
-                {processing ? 'Menyimpan...' : 'Simpan Project'}
+      {/* Full Width content container */}
+      <div className="flex flex-col h-full">
+
+        {/* Header Section */}
+        <div className="bg-background border-b px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/projects">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <ArrowLeft className="h-5 w-5" />
               </Button>
+            </Link>
+            <div>
+              <h1 className="text-xl font-bold">{type === 'proposal' ? 'Pengajuan Proposal Baru' : 'Input Active Project'}</h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">Lengkapi data di bawah ini.</p>
             </div>
           </div>
-
-          {/* Steps Indicator */}
-          <div className="flex w-full items-center gap-2 py-4 overflow-x-auto">
-            {['basic', 'details', 'budget', 'locations', 'review'].map((s, i) => (
-              <div key={s} className="flex items-center">
-                <button
-                  onClick={() => setStep(s)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${step === s
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted hover:bg-muted/80'
-                    }`}
-                >
-                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">
-                    {i + 1}
-                  </span>
-                  <span className="capitalize">{s}</span>
-                </button>
-                {i < 4 && <div className="w-8 h-[1px] bg-border mx-2" />}
-              </div>
-            ))}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground mr-2 hidden sm:inline">Step {stepsList.indexOf(step) + 1}/5</span>
+            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-500"
+                style={{ width: `${(stepsList.indexOf(step) + 1) * (100 / 5)}%` }}
+              />
+            </div>
           </div>
         </div>
 
-        <Separator />
+        <Tabs value={step} onValueChange={(v) => setStep(v)} className="flex-1 w-full p-6">
 
-        <div className="flex-1 p-6 overflow-y-auto">
-          <div className="max-w-4xl mx-auto pb-20">
-            <form onSubmit={submit}>
-              <Tabs value={step} onValueChange={handleStepChange} className="w-full">
+          {/* Tab Navigation */}
+          <div
+            ref={tabsListRef}
+            className="mb-6 w-full overflow-x-auto scrollbar-hide border-b bg-background"
+          >
+            <TabsList className="inline-flex h-auto min-w-full w-max md:w-full flex-nowrap gap-2 bg-muted/50 p-1 justify-start md:grid md:grid-cols-5 md:gap-0">
+              {stepsList.map((tabValue, idx) => (
+                <TabsTrigger
+                  key={tabValue}
+                  value={tabValue}
+                  className="flex-none px-4 py-2 text-xs transition-all data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white data-[state=active]:shadow-sm md:flex-1 md:w-auto md:px-3 md:py-2.5 md:text-xs lg:text-sm"
+                >
+                  <span className="mr-1.5 inline md:mr-2">{idx + 1}.</span>
+                  {tabValue === 'basic' ? 'Identitas' : tabValue === 'stakeholders' ? 'Stakeholder' : tabValue === 'detail' ? 'Detail' : tabValue === 'location' ? 'Lokasi' : 'Anggaran'}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
-                {/* BASIC INFO */}
-                <TabsContent value="basic" className="space-y-6 mt-0">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <LayoutDashboard className="h-5 w-5 text-primary" />
-                        Informasi Dasar
-                      </CardTitle>
-                      <CardDescription>Detail utama identitas project</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2 md:col-span-1 space-y-2">
-                          <Label htmlFor="name">Nama Project <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="name"
-                            placeholder="Contoh: Pendampingan UMKM JaBoDeTaBek"
-                            value={data.name}
-                            onChange={e => setData('name', e.target.value)}
-                          />
-                          {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-                        </div>
-                        <div className="col-span-2 md:col-span-1 space-y-2">
-                          <Label htmlFor="client">Klien (Pemberi Kerja) <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="client"
-                            placeholder="Nama instansi/perusahaan klien"
-                            value={data.client}
-                            onChange={e => setData('client', e.target.value)}
-                          />
-                          {errors.client && <p className="text-sm text-red-500">{errors.client}</p>}
-                        </div>
+          {/* Step 1: Identitas */}
+          <TabsContent value="basic" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+            <Card className="border-none shadow-md">
+              <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
+                <CardTitle>Informasi Dasar</CardTitle>
+                <CardDescription>Masukkan detail identitas utama proyek.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 p-6 md:p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Jenis Project <span className="text-red-500">*</span></Label>
+                    <Select value={formData.project_type} onValueChange={(v) => handleInputChange('project_type', v)}>
+                      <SelectTrigger className={errors.project_type ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Pilih Jenis Project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pendampingan">Pendampingan</SelectItem>
+                        <SelectItem value="pelatihan">Pelatihan</SelectItem>
+                        <SelectItem value="dokumen">Dokumen</SelectItem>
+                        <SelectItem value="event">Event</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.project_type && <p className="text-xs text-red-500">{errors.project_type}</p>}
+                  </div>
 
-                        <div className="space-y-2">
-                          <Label>Tipe Project</Label>
-                          <Select value={data.project_type} onValueChange={v => setData('project_type', v)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih tipe" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pendampingan">Pendampingan</SelectItem>
-                              <SelectItem value="survey">Survey / Riset</SelectItem>
-                              <SelectItem value="event">Event Organizer</SelectItem>
-                              <SelectItem value="csr_management">CSR Management</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Divisi Utama</Label>
-                          <Select value={data.division_id} onValueChange={v => setData('division_id', v)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih divisi" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {divisions.map((div: any) => (
-                                <SelectItem key={div.id} value={div.id.toString()}>{div.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {errors.division_id && <p className="text-sm text-red-500">{errors.division_id}</p>}
-                        </div>
+                  <div className="space-y-2">
+                    <Label>Divisi & Anak Perusahaan <span className="text-red-500">*</span></Label>
+                    <Select value={formData.division_id} onValueChange={(v) => handleInputChange('division_id', v)}>
+                      <SelectTrigger className={errors.division_id ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Pilih Divisi & Anak Perusahaan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {divisions.map((div) => (
+                          <SelectItem key={div.id} value={div.id.toString()}>
+                            {div.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.division_id && <p className="text-xs text-red-500">{errors.division_id}</p>}
+                  </div>
+                </div>
 
-                        <div className="col-span-2 space-y-2">
-                          <Label>Deskripsi Singkat</Label>
-                          <Textarea
-                            placeholder="Jelaskan tujuan dan scope project secara singkat..."
-                            className="min-h-[100px]"
-                            value={data.description}
-                            onChange={e => setData('description', e.target.value)}
-                          />
-                        </div>
+                <div className="space-y-2">
+                  <Label>Nama Project <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="Nama Lengkap Proyek ..."
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    className={errors.name ? 'border-red-500' : ''}
+                  />
+                  {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                </div>
 
-                        <div className="space-y-2">
-                          <Label>Tanggal Mulai</Label>
-                          <Input
-                            type="date"
-                            value={data.start_date}
-                            onChange={e => setData('start_date', e.target.value)}
-                          />
-                          {errors.start_date && <p className="text-sm text-red-500">{errors.start_date}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Tanggal Selesai (Estimasi)</Label>
-                          <Input
-                            type="date"
-                            value={data.end_date}
-                            onChange={e => setData('end_date', e.target.value)}
-                          />
-                        </div>
+              </CardContent>
+              <CardFooter className="flex justify-end gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
+                <Button onClick={() => setStep('stakeholders')} className="w-auto px-8">
+                  Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+          {/* Step 2: Stakeholders */}
+          <TabsContent value="stakeholders" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+            <Card className="border-none shadow-md">
+              <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
+                <CardTitle>Tim & Stakeholder</CardTitle>
+                <CardDescription>Tentukan penanggung jawab dan tim pelaksana.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 p-6 md:p-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label>Account Manager <span className="text-red-500">*</span></Label>
+                    <Select value={formData.account_manager_id} onValueChange={(v) => handleInputChange('account_manager_id', v)}>
+                      <SelectTrigger className={errors.account_manager_id ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Pilih Account Manager" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.account_manager_id && <p className="text-xs text-red-500">{errors.account_manager_id}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Head Implementation <span className="text-red-500">*</span></Label>
+                    <Select value={formData.head_id} onValueChange={(v) => handleInputChange('head_id', v)}>
+                      <SelectTrigger className={errors.head_id ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Pilih Head Implementation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.head_id && <p className="text-xs text-red-500">{errors.head_id}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>PIC Project <span className="text-red-500">*</span></Label>
+                    <Select value={formData.pic_id} onValueChange={(v) => handleInputChange('pic_id', v)}>
+                      <SelectTrigger className={errors.pic_id ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Pilih PIC Project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.pic_id && <p className="text-xs text-red-500">{errors.pic_id}</p>}
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
+                <Button variant="outline" onClick={() => setStep('basic')} title="Kembali">
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
+                </Button>
+                <Button onClick={() => setStep('detail')} className="w-auto px-8">
+                  Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+          {/* Step 3: Detail & Proposal */}
+          <TabsContent value="detail" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+            <Card className="border-none shadow-md">
+              <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
+                <CardTitle>Detail & {type === 'proposal' ? 'Proposal' : 'SOW'}</CardTitle>
+                <CardDescription>Dokumen {type === 'proposal' ? 'proposal' : 'SOW'}, durasi, dan lingkup kerja.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8 p-6 md:p-8">
+
+                {/* DOCUMENT UPLOAD SECTION */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>{type === 'proposal' ? 'Dokumen Proposal Project' : 'Dokumen Scope of Work (SOW)'} <span className="text-red-500">*</span></Label>
+                    <div className={cn("border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white h-full", errors.sow && 'border-red-500')}>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {type === 'proposal' ? 'Upload dokumen Proposal lengkap.' : 'Upload dokumen SOW yang disepakati.'}
+                        </p>
                       </div>
-                    </CardContent>
-                    <CardFooter className="justify-end border-t p-4">
-                      <Button type="button" onClick={nextStep}>
-                        Lanjut: Detail & Tim <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
+                      <FileUploadDropzone onFilesChange={(files) => setSowFile(files[0])} />
+                      {errors.sow && <p className="text-xs text-red-500">{errors.sow}</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {/* Optional Doc */}
+                    <Label>TOR / KAK / RFP <span className="text-xs font-normal text-muted-foreground ml-1">(Tidak Wajib)</span></Label>
 
-                {/* DETAILS & TEAM */}
-                <TabsContent value="details" className="space-y-6 mt-0">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Briefcase className="h-5 w-5 text-primary" />
-                        Tim & Dokumen Awal
-                      </CardTitle>
-                      <CardDescription>Tunjuk struktur tim dan upload dokumen dasar (SOW/Verifikasi)</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                          <Label>Account Manager (Sales)</Label>
-                          <Select value={data.account_manager_id} onValueChange={v => setData('account_manager_id', v)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih AM" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {employees.map((emp: any) => (
-                                <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {errors.account_manager_id && <p className="text-sm text-red-500">{errors.account_manager_id}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Head of Project</Label>
-                          <Select value={data.head_id} onValueChange={v => setData('head_id', v)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih Head" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {employees.map((emp: any) => (
-                                <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>PIC Project (PM)</Label>
-                          <Select value={data.pic_id} onValueChange={v => setData('pic_id', v)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih PM" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {employees.map((emp: any) => (
-                                <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 pt-4 border-t">
-                        <h3 className="font-medium flex items-center gap-2">
-                          <FileText className="h-4 w-4" /> Upload SOW / Proposal Final
-                        </h3>
-                        <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-muted/50 transition-colors">
-                          <Input
-                            type="file"
-                            className="hidden"
-                            id="sow-upload"
-                            onChange={e => setData('sow', e.target.files ? e.target.files[0] : null)}
-                          />
-                          <Label htmlFor="sow-upload" className="cursor-pointer flex flex-col items-center">
-                            <UploadCloud className="h-8 w-8 text-muted-foreground mb-2" />
-                            <span className="text-sm font-medium">Klik untuk upload SOW</span>
-                            <span className="text-xs text-muted-foreground mt-1">
-                              {data.sow ? data.sow.name : 'PDF/DOCX Max 10MB'}
-                            </span>
-                          </Label>
-                        </div>
-                        {/* Supporting Docs */}
-                        <div className="space-y-2">
-                          <Label>Dokumen Pendukung Lainnya (TOR, KAK, RFP)</Label>
+                    {supportingDocs.map((doc, idx) => {
+                      const otherUsedTypes = supportingDocs.filter(d => d.id !== doc.id).map(d => d.type);
+                      return (
+                        <div key={doc.id} className="relative border rounded-lg p-5 space-y-3 hover:bg-muted/30 transition-colors bg-white group animate-in fade-in slide-in-from-top-2">
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="space-y-2 w-full flex justify-between">
+                              <Label className="text-xs font-medium text-muted-foreground">Jenis Dokumen Pendukung #{idx + 1}</Label>
+                              <Select value={doc.type} onValueChange={(val) => updateSupportingDocType(doc.id, val)}>
+                                <SelectTrigger className="h-7 w-[220px] bg-white border-gray-300">
+                                  <SelectValue placeholder="Pilih Tipe" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="TOR" disabled={otherUsedTypes.includes('TOR')}>TOR</SelectItem>
+                                  <SelectItem value="KAK" disabled={otherUsedTypes.includes('KAK')}>KAK</SelectItem>
+                                  <SelectItem value="RFP" disabled={otherUsedTypes.includes('RFP')}>RFP</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {supportingDocs.length > 1 && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0 mt-6" onClick={() => removeSupportingDoc(doc.id)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                           <FileUploadDropzone onFilesChange={(files) => {
-                            // Map files to the format expected by backend if needed, or just handle array of files
-                            const docs = files.map(f => ({ file: f, type: 'other' }));
-                            setData('documents', docs);
+                            setSupportingDocs(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] } : d));
                           }} />
                         </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-between border-t p-4">
-                      <Button type="button" variant="ghost" onClick={prevStep}>
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Kembali
+                      )
+                    })}
+
+                    {supportingDocs.length < 3 && (
+                      <Button variant="outline" size="sm" onClick={addSupportingDoc} className="w-full border-dashed border-gray-400 text-muted-foreground hover:text-primary hover:border-primary gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                        Tambah Dokumen Lainnya
                       </Button>
-                      <Button type="button" onClick={nextStep}>
-                        Lanjut: Anggaran & Termin <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
+                    )}
+                  </div>
+                </div>
 
-                {/* BUDGET & TERMIN */}
-                <TabsContent value="budget" className="space-y-6 mt-0">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5 text-primary" />
-                        Anggaran & Termin Pembayaran
-                      </CardTitle>
-                      <CardDescription>Total nilai project dan rencana penagihan</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="bg-muted/50 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-end">
-                        <div className="flex-1 space-y-2 w-full">
-                          <Label>Total Nilai Project (RAB)</Label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-muted-foreground font-semibold">Rp</span>
-                            <Input
-                              type="number"
-                              className="pl-10 text-lg font-bold"
-                              placeholder="0"
-                              value={data.budget_total}
-                              onChange={e => setData('budget_total', Number(e.target.value))}
-                            />
-                          </div>
+                <div className="space-y-2">
+                  <Label>Catatan (Notes)</Label>
+                  <Textarea
+                    placeholder="Tambahkan catatan..."
+                    className="min-h-[100px] bg-white"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                  />
+                </div>
+
+                {/* TIMELINE */}
+                <div className="space-y-2">
+                  <Label>Deadline <span className="text-red-500">*</span></Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-normal text-muted-foreground">Tanggal Mulai Kegiatan</Label>
+                      <Input
+                        type="date"
+                        className={cn("bg-white", errors.start_date && 'border-red-500')}
+                        value={formData.start_date}
+                        onChange={(e) => handleInputChange('start_date', e.target.value)}
+                      />
+                      {errors.start_date && <p className="text-xs text-red-500">{errors.start_date}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-normal text-muted-foreground">Tanggal Deadline Kegiatan</Label>
+                      <Input
+                        type="date"
+                        className={cn("bg-white", errors.end_date && 'border-red-500')}
+                        value={formData.end_date}
+                        onChange={(e) => handleInputChange('end_date', e.target.value)}
+                      />
+                      {errors.end_date && <p className="text-xs text-red-500">{errors.end_date}</p>}
+                    </div>
+                  </div>
+                </div>
+
+              </CardContent>
+              <CardFooter className="flex justify-between gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
+                <Button variant="outline" onClick={() => setStep('stakeholders')} title="Kembali">
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
+                </Button>
+                <Button onClick={() => setStep('location')} className="w-auto px-8">
+                  Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+          {/* Step 4: Location (SEPARATE TAB) */}
+          <TabsContent value="location" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+            <Card className="border-none shadow-md">
+              <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
+                <CardTitle>Lokasi Pelaksanaan</CardTitle>
+                <CardDescription>Kelola titik lokasi proyek (Bisa lebih dari 1 lokasi).</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 p-6 md:p-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* List Lokasi */}
+                  <div className="lg:col-span-1 space-y-4 order-2 lg:order-1">
+                    <div className="flex items-center justify-between">
+                      <Label>Daftar Lokasi ({locations.length})</Label>
+                    </div>
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                      {locations.length === 0 ? (
+                        <div className="p-6 border-2 border-dashed rounded-lg text-center text-muted-foreground text-sm bg-gray-50">
+                          Belum ada lokasi dipilih. <br />
+                          Klik peta untuk menambahkan.
                         </div>
-                        <div className="bg-white p-3 rounded border shadow-sm w-full md:w-auto min-w-[200px]">
-                          <p className="text-xs text-muted-foreground">Sisa Alokasi Termin</p>
-                          <p className={`text-xl font-bold ${budgetRemaining < 0 ? 'text-red-500' : 'text-green-600'}`}>
-                            Rp {budgetRemaining.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium text-sm">Rencana Termin (Invoice)</h3>
-                          <Button type="button" size="sm" variant="outline" onClick={addPaymentTerm}>
-                            <Plus className="h-4 w-4 mr-1" /> Tambah Termin
-                          </Button>
-                        </div>
-
-                        {paymentTerms.length === 0 && (
-                          <div className="text-center py-8 bg-muted/20 border-2 border-dashed rounded-lg">
-                            <p className="text-sm text-muted-foreground">Belum ada rencana termin pembayaran.</p>
-                          </div>
-                        )}
-
-                        <div className="space-y-3">
-                          {paymentTerms.map((term, index) => (
-                            <div key={term.id} className="grid grid-cols-12 gap-3 items-start bg-card border p-3 rounded-lg shadow-sm">
-                              <div className="col-span-1 flex items-center justify-center pt-2">
-                                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                                  {index + 1}
-                                </div>
-                              </div>
-                              <div className="col-span-11 md:col-span-4 space-y-1">
-                                <Label className="text-xs">Nominal (Rp)</Label>
-                                <Input
-                                  type="number"
-                                  value={term.nominal}
-                                  onChange={(e) => updatePaymentTerm(index, 'nominal', Number(e.target.value))}
-                                />
-                              </div>
-                              <div className="col-span-11 md:col-span-3 space-y-1 md:col-start-6">
-                                <Label className="text-xs">Jatuh Tempo</Label>
-                                <Input
-                                  type="date"
-                                  value={term.date}
-                                  onChange={(e) => updatePaymentTerm(index, 'date', e.target.value)}
-                                />
-                              </div>
-                              <div className="col-span-11 md:col-span-3 space-y-1">
-                                <Label className="text-xs">Keterangan</Label>
-                                <Input
-                                  placeholder="Misal: DP 30%"
-                                  value={term.notes}
-                                  onChange={(e) => updatePaymentTerm(index, 'notes', e.target.value)}
-                                />
-                              </div>
-                              <div className="col-span-1 md:col-span-1 flex items-center justify-end pt-6">
-                                <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => removePaymentTerm(index)}>
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
+                      ) : (
+                        locations.map((loc, idx) => (
+                          <div key={loc.id} className="p-3 border rounded-lg bg-white shadow-sm group hover:border-primary transition-colors">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-semibold text-sm">Titik {idx + 1}</span>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 -mt-1 -mr-1" onClick={() => removeLocation(loc.id)}>
+                                <X className="h-3 w-3" />
+                              </Button>
                             </div>
-                          ))}
+                            <p className="text-xs text-muted-foreground line-clamp-2" title={loc.address}>{loc.address || 'Alamat tidak terdeteksi'}</p>
+                            <div className="mt-2 flex gap-2 text-[10px] items-center text-gray-500 font-mono">
+                              <span className="bg-gray-100 px-1.5 py-0.5 rounded">{loc.lat.toFixed(6)}</span>
+                              <span className="bg-gray-100 px-1.5 py-0.5 rounded">{loc.lng.toFixed(6)}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Picker */}
+                  <div className="lg:col-span-2 order-1 lg:order-2">
+                    <LocationPicker
+                      onLocationSelect={(lat, lng, address) => addLocation(lat, lng, address)}
+                      initialLat={-6.200000}
+                      initialLng={106.816666}
+                      existingLocations={locations}
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-2">Dukungan Multi-lokasi: Klik titik baru di peta untuk menambah lokasi.</p>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
+                <Button variant="outline" onClick={() => setStep('detail')} title="Kembali">
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
+                </Button>
+                <Button onClick={() => setStep('budget')} className="w-auto px-8">
+                  Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+          {/* Step 5: Budget */}
+          <TabsContent value="budget" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+            <Card className="border-none shadow-md">
+              <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
+                <CardTitle>Anggaran & Keuangan</CardTitle>
+                <CardDescription>Masukkan Nominal dan lampirkan rincian anggaran (RAB).</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 md:p-8 space-y-6">
+
+                {/* Main Budget Section (Gray Box like screenshot) */}
+                <div className="bg-gray-50 border rounded-xl p-6 md:p-8">
+                  <div className="flex flex-col md:flex-row gap-8 items-start justify-between">
+
+                    {/* Left: Input Section */}
+                    <div className="flex-1 space-y-4 w-full">
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-semibold text-gray-900">Nominal Project</h3>
+                      </div>
+
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900 font-bold z-10">Rp</span>
+                        <MoneyInput
+                          value={budget}
+                          onValueChange={(vals) => setBudget(vals.floatValue || 0)}
+                          placeholder="0"
+                          className="pl-12 text-xl font-bold h-14 bg-white border-gray-200 shadow-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Right: Visualization Card */}
+                    <div className="w-full md:w-[320px] shrink-0">
+                      <div className="bg-white border rounded-xl p-6 shadow-sm text-center space-y-2">
+                        <p className="text-sm text-gray-500 font-medium">Total Anggaran Project</p>
+                        <div className="text-3xl font-bold text-red-600 tracking-tight">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(budget).replace('Rp', 'Rp ')}
+                        </div>
+                        <p className="text-xs text-muted-foreground pt-1">
+                          100% dari Total Project
+                        </p>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Upload RAB */}
+                {/* Upload Section: RAB & Negotiation */}
+                <div className={`grid grid-cols-1 ${type !== 'proposal' ? 'md:grid-cols-2' : ''} gap-6 pt-2`}>
+                  {/* RAB */}
+                  <div className="space-y-2">
+                    <Label>Rincian Anggaran (RAB)</Label> <span className="text-red-500">*</span>
+                    <div className={cn("border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full", errors['documents.0.file'] && 'border-red-500')}>
+                      <div className="flex items-center gap-4">
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-medium text-gray-900">Upload File RAB.</h4>
+                          <p className="text-xs text-muted-foreground">Lampirkan detail Rencana Anggaran Biaya.</p>
                         </div>
                       </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-between border-t p-4">
-                      <Button type="button" variant="ghost" onClick={prevStep}>
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Kembali
-                      </Button>
-                      <Button type="button" onClick={nextStep}>
-                        Lanjut: Lokasi <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
+                      <FileUploadDropzone onFilesChange={(files) => setRabFile(files[0])} />
+                      {errors['documents.0.file'] && <p className="text-xs text-red-500">{errors['documents.0.file']}</p>}
+                    </div>
+                  </div>
 
-                {/* LOCATIONS */}
-                <TabsContent value="locations" className="space-y-6 mt-0">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <MapPin className="h-5 w-5 text-primary" />
-                        Titik Lokasi Project
-                      </CardTitle>
-                      <CardDescription>Tentukan lokasi pelaksanaan (bisa lebih dari satu)</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="md:col-span-2">
-                          <Label className="mb-2 block">Pilih di Peta</Label>
-                          <LocationPicker
-                            onLocationSelect={(lat, lng, address) => {
-                              setLocationInput({ lat, lng, address });
-                            }}
-                            initialLat={locationInput.lat}
-                            initialLng={locationInput.lng}
-                            initialAddress={locationInput.address}
-                            existingLocations={locations}
-                          />
-                          <div className="mt-2 flex gap-2">
-                            <Input
-                              value={locationInput.address}
-                              readOnly
-                              placeholder="Alamat akan muncul disini..."
-                              className="flex-1 bg-muted"
-                            />
-                            <Button type="button" onClick={addLocation} disabled={!locationInput.address}>
-                              <Plus className="h-4 w-4 mr-2" /> Tambah Lokasi
+                </div>
+
+                {/* Termin Pembayaran Section */}
+                <div className="space-y-4 pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-semibold">Termin Pembayaran</Label>
+                      <p className="text-xs text-muted-foreground mt-1">Atur jadwal pembayaran bertahap untuk proyek ini.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addPaymentTerm}
+                      className="gap-2 border-dashed hover:border-solid"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Tambah Termin
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {paymentTerms.map((term, idx) => (
+                      <div key={term.id} className="border rounded-xl p-5 bg-white shadow-sm space-y-4 group hover:border-gray-300 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-sm text-gray-900">Termin #{idx + 1}</h4>
+                          {paymentTerms.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removePaymentTerm(term.id)}
+                              className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                            >
+                              <X className="h-4 w-4" />
                             </Button>
-                          </div>
-                        </div>
-                        <div className="bg-muted/30 rounded-lg p-4 h-full border">
-                          <h3 className="font-medium mb-3 flex items-center gap-2 text-sm">
-                            <MapPin className="h-4 w-4" /> Daftar Lokasi ({locations.length})
-                          </h3>
-                          <div className="h-[300px] overflow-y-auto pr-3">
-                            <div className="space-y-3">
-                              {locations.length === 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-10">Belum ada lokasi ditambahkan.</p>
-                              ) : (
-                                locations.map((loc, idx) => (
-                                  <div key={idx} className="bg-background p-3 rounded border shadow-sm text-sm relative group">
-                                    <p className="font-medium line-clamp-2 pr-6">{loc.address}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Lat: {loc.lat.toFixed(6)}, Lng: {loc.lng.toFixed(6)}</p>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeLocation(idx)}
-                                      className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50 p-1 rounded"
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-between border-t p-4">
-                      <Button type="button" variant="ghost" onClick={prevStep}>
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Kembali
-                      </Button>
-                      <Button type="button" onClick={nextStep}>
-                        Lanjut: Review <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-
-                {/* REVIEW */}
-                <TabsContent value="review" className="space-y-6 mt-0">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                        Review & Submit
-                      </CardTitle>
-                      <CardDescription>Pastikan semua data sudah benar sebelum disimpan</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <div className="bg-muted p-4 rounded-lg space-y-2">
-                            <h3 className="font-semibold">{data.name || 'Nama Project Belum Diisi'}</h3>
-                            <p className="text-sm text-muted-foreground">{data.client}</p>
-                            <Badge variant="outline" className="capitalize">{data.project_type}</Badge>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <Label className="text-muted-foreground">Budget Total</Label>
-                              <p className="font-medium">Rp {Number(data.budget_total).toLocaleString()}</p>
-                            </div>
-                            <div>
-                              <Label className="text-muted-foreground">Periode</Label>
-                              <p className="font-medium">{data.start_date} s/d {data.end_date}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-sm border-b pb-1">Summary Data</h4>
-                          <ul className="space-y-2 text-sm">
-                            <li className="flex justify-between">
-                              <span>Termin Pembayaran</span>
-                              <span className="font-medium">{paymentTerms.length} tahap</span>
-                            </li>
-                            <li className="flex justify-between">
-                              <span>Lokasi Project</span>
-                              <span className="font-medium">{locations.length} titik</span>
-                            </li>
-                            <li className="flex justify-between">
-                              <span>Dokumen Pendukung</span>
-                              <span className="font-medium">{data.documents ? data.documents.length : 0} file</span>
-                            </li>
-                          </ul>
-
-                          {budgetRemaining !== 0 && (
-                            <div className="bg-yellow-50 text-yellow-800 p-3 rounded text-xs flex items-start gap-2">
-                              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                              <span>Warning: Total termin pembayaran belum match dengan total budget project. Selisih: Rp {budgetRemaining.toLocaleString()}</span>
-                            </div>
                           )}
                         </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-between border-t p-4">
-                      <Button type="button" variant="ghost" onClick={prevStep}>
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Kembali
-                      </Button>
-                      <Button
-                        onClick={submit}
-                        className="bg-primary hover:bg-primary/90 min-w-[150px]"
-                        disabled={processing}
-                      >
-                        {processing ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</>
-                        ) : (
-                          <><Save className="mr-2 h-4 w-4" /> Simpan Project</>
-                        )}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </form>
-          </div>
-        </div>
 
-        {/* Toast Notification */}
-        {toast.show && (
-          <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-2 text-white animate-in slide-in-from-bottom-5 fade-in duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-            {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
-            <span className="font-medium">{toast.message}</span>
-          </div>
-        )}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Nominal */}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground">Nominal Pembayaran</Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
+                              <MoneyInput
+                                value={term.nominal}
+                                onValueChange={(vals) => updatePaymentTerm(term.id, 'nominal', vals.floatValue || 0)}
+                                placeholder="0"
+                                className="pl-10 bg-white h-10"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Tanggal */}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground">Tanggal Jatuh Tempo</Label>
+                            <Input
+                              type="date"
+                              value={term.date}
+                              onChange={(e) => updatePaymentTerm(term.id, 'date', e.target.value)}
+                              className="bg-white h-10"
+                            />
+                          </div>
+
+                          {/* Notes */}
+                          <div className="space-y-2 md:col-span-1">
+                            <Label className="text-xs font-medium text-muted-foreground">Keterangan</Label>
+                            <Input
+                              type="text"
+                              value={term.notes}
+                              onChange={(e) => updatePaymentTerm(term.id, 'notes', e.target.value)}
+                              placeholder="Contoh: DP 30%, Pelunasan, dll"
+                              className="bg-white h-10"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Summary */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Total Termin Pembayaran</p>
+                      <p className="text-xs text-blue-700 mt-0.5">{paymentTerms.length} termin terjadwal</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-blue-900">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
+                          paymentTerms.reduce((sum, term) => sum + (term.nominal || 0), 0)
+                        )}
+                      </p>
+                      <p className="text-xs text-blue-700">
+                        {budget > 0 ? `${((paymentTerms.reduce((sum, term) => sum + (term.nominal || 0), 0) / budget) * 100).toFixed(1)}% dari total` : '0%'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+              </CardContent>
+              <CardFooter className="flex justify-between gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
+                <Button variant="outline" onClick={() => setStep('location')} title="Kembali">
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="w-auto px-8 min-w-32 bg-[var(--sidebar)] hover:bg-[var(--sidebar)] hover:scale-105"
+                >
+                  {loading ? 'Menyimpan...' : 'Simpan Proyek'}
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+
+        </Tabs>
       </div>
-    </AppLayout>
-  );
+    </AppSidebarLayout>
+  )
 }

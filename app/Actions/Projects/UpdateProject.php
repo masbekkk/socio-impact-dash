@@ -50,28 +50,15 @@ class UpdateProject
     protected function updateProjectRecord(Project $project, array $data): void
     {
         $updateData = collect($data)->only([
-            'name', 'client', 'description', 'division_id',
+            'name', 'description', 'division_id',
             'account_manager_id', 'head_id', 'pic_id',
             'status', 'project_type', 'budget_total',
             'start_date', 'end_date',
         ])->toArray();
 
-        // Handle SOW file replacement
-        if (isset($data['sow']) && $data['sow'] instanceof \Illuminate\Http\UploadedFile) {
-            $sowData = $this->fileUploadService->replaceFileWithPrefix(
-                $data['sow'],
-                $project->sow_path,
-                'projects/sow',
-                'sow_'
-            );
-            $updateData = array_merge($updateData, $sowData);
-        }
 
         if (isset($updateData['budget_total'])) {
             $budgetTotal = (float) $updateData['budget_total'];
-            $updateData['operational_budget'] = $budgetTotal * 0.50;
-            $updateData['management_budget'] = $budgetTotal * 0.30;
-            $updateData['allowance_budget'] = $budgetTotal * 0.20;
         }
 
         if (!empty($updateData)) {

@@ -39,16 +39,6 @@ final class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => Auth::check() ? UserService::loggedUser() : null,
             ],
-            // 'auth' => [
-            //     'user' => $request->user() ? array_merge($request->user()->toArray(), [
-            //         'role' => $request->user()->getRoleNames()->first() ?? $request->user()->role?->value,
-            //     ]) : null,
-            // ],
-            // 'auth' => [
-            //     'user' => $request->user() ? array_merge($request->user()->toArray(), [
-            //         'role' => $request->user()->getRoleNames()->first(),
-            //     ]) : null,
-            // ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

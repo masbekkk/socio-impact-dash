@@ -8,10 +8,10 @@ use App\Actions\Projects\CreateProject;
 use App\Actions\Projects\DeleteProject;
 use App\Actions\Projects\UpdateProject;
 use App\Formatters\JsonResponseFormatter;
-use App\Http\Requests\Projects\StoreProjectRequest;
-use App\Http\Requests\Projects\UpdateProjectRequest;
 use App\Http\Resources\V1\Project\ProjectCollection;
 use App\Http\Resources\V1\Project\ProjectResource;
+use App\Http\Requests\Projects\StoreProjectRequest;
+use App\Http\Requests\Projects\UpdateProjectRequest;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,15 +24,33 @@ final class ProjectController extends Controller
         $query = Project::with(['division', 'accountManager', 'head', 'pic']);
 
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = (string) $request->string('search');
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('client', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
-        $projects = $query->latest()->paginate($request->get('per_page', 10));
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('division') && $request->division !== 'all') {
+            $query->whereHas('division', function ($q) use ($request) {
+                $q->where('name', $request->division);
+            });
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('start_date', '>=', (string) $request->get('start_date'));
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('end_date', '<=', (string) $request->get('end_date'));
+        }
+
+        $perPage = $request->integer('per_page', 10);
+        $projects = $query->latest()->paginate($perPage);
 
         return JsonResponseFormatter::success(
             new ProjectCollection($projects),
@@ -42,7 +60,9 @@ final class ProjectController extends Controller
 
     public function store(StoreProjectRequest $request, CreateProject $createProject): JsonResponse
     {
-        $project = $createProject->handle($request->validated(), $request->user()->id);
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $project = $createProject->handle($request->validated(), $user->id);
 
         return JsonResponseFormatter::success(
             new ProjectResource($project),
@@ -53,7 +73,7 @@ final class ProjectController extends Controller
 
     public function show(Project $project): JsonResponse
     {
-        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'budgets', 'milestones', 'documents']);
+        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents']);
 
         return JsonResponseFormatter::success(
             new ProjectResource($project),
@@ -63,7 +83,9 @@ final class ProjectController extends Controller
 
     public function update(UpdateProjectRequest $request, Project $project, UpdateProject $updateProject): JsonResponse
     {
-        $project = $updateProject->handle($project, $request->validated(), $request->user()->id);
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $project = $updateProject->handle($project, $request->validated(), $user->id);
 
         return JsonResponseFormatter::success(
             new ProjectResource($project),
@@ -78,6 +100,18 @@ final class ProjectController extends Controller
         return JsonResponseFormatter::success(
             null,
             'Project deleted successfully'
+        );
+    }
+
+    public function deal(Project $project, UpdateProject $updateProject): JsonResponse
+    {
+        /** @var int $userId */
+        $userId = auth()->id();
+        $project = $updateProject->handle($project, ['status' => 'active'], $userId);
+
+        return JsonResponseFormatter::success(
+            new ProjectResource($project),
+            'Project marked as Dealed successfully'
         );
     }
 }
