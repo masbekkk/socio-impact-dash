@@ -20,3 +20,7 @@ Route::middleware(['auth:sanctum', 'can:view-admin'])->prefix('rbac')->group(fun
     Route::post('permissions', [PermissionController::class, 'store']);
     Route::delete('permissions/{permission}', [PermissionController::class, 'destroy']);
 });
+
+Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
+    Route::apiResource('projects', \App\Http\Controllers\Api\V1\ProjectController::class);
+});

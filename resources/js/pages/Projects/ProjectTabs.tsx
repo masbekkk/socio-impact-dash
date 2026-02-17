@@ -41,7 +41,7 @@ export default function ProjectTabs({
     currentStatus,
     mock,
     locations,
-    userRole = usePage<SharedData>()?.props?.auth?.user?.role ?? 'user',
+    userRole = usePage<SharedData>()?.props?.auth?.user?.role_name ?? 'user',
     reportForm,
     setReportForm,
     handleReportFileChange,
@@ -87,7 +87,7 @@ export default function ProjectTabs({
             )
         );
     };
-
+    console.log(userRole)
     const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -578,7 +578,7 @@ export default function ProjectTabs({
                                         className="bg-white"
                                     />
                                 </div>
-                                <div className="space-y-2">
+                                {/* <div className="space-y-2">
                                     <Label>Status Project Saat Ini</Label>
                                     <div className="relative">
                                         <select className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none">
@@ -590,7 +590,7 @@ export default function ProjectTabs({
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down text-gray-500"><path d="m6 9 6 6 6-6" /></svg>
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
 
                             {/* Notes */}
@@ -739,21 +739,6 @@ export default function ProjectTabs({
 
                         {/* Realisasi Section */}
                         <div className="space-y-8">
-                            {/* Item: Allowance (Dummy) */}
-                            <div className="max-w-2xl">
-                                <div className="space-y-1.5 mb-2">
-                                    <Label className="text-base font-semibold">Allowance</Label>
-                                    <p className="text-sm text-muted-foreground">Dana operasional tambahan.</p>
-                                </div>
-                                <MoneyInput
-                                    value={closingForm.allowance}
-                                    onValueChange={() => { }}
-                                    disabled
-                                    placeholder="0"
-                                    prefix="Rp "
-                                    className="bg-gray-100 h-12 text-lg text-left opacity-100 cursor-not-allowed text-gray-700"
-                                />
-                            </div>
 
                             {/* Item 1: Money Input */}
                             <div className="max-w-2xl">

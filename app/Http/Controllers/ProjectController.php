@@ -4,266 +4,97 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreProjectRequest;
-use App\Http\Requests\UpdateProjectRequest;
-use App\Http\Resources\ProjectListResource;
+use App\Actions\Projects\CreateProject;
+use App\Actions\Projects\DeleteProject;
+use App\Actions\Projects\UpdateProject;
+use App\Http\Requests\Projects\StoreProjectRequest;
+use App\Http\Requests\Projects\UpdateProjectRequest;
+use App\Http\Resources\V1\Project\ProjectResource;
 use App\Models\Division;
 use App\Models\Project;
-use App\Models\ProjectCategoryBudget;
 use App\Models\User;
-use App\Services\ProjectService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Routing\Controller;
 use Inertia\Inertia;
+use Inertia\Response;
 
-final class ProjectController
+final class ProjectController extends Controller
 {
-    protected $projectService;
-
-    public function __construct(ProjectService $projectService)
+    public function index(Request $request): Response
     {
-        $this->projectService = $projectService;
-    }
+        $query = Project::with(['division', 'accountManager', 'head', 'pic']);
 
-
-
-    public function index()
-    {
-        // LOAD DATA FROM JSON (Dummy Source)
-        $jsonPath = database_path('data/projects.json');
-        if (file_exists($jsonPath)) {
-            $jsonContent = file_get_contents($jsonPath);
-            $mockProjects = json_decode($jsonContent, true);
-        } else {
-            $mockProjects = []; // Fallback empty
-        }
-
-        // --- Helper for Mock Data Flexibility (Adding fields if missing in JSON for older entries) ---
-        $mockProjects = array_map(function ($p) {
-            // Ensure basic fields exist for display
-            $p['division'] = ['name' => $p['division_name'] ?? ($p['division_code'] ?? 'General')];
-            $p['pic'] = ['name' => $p['team']['pic'] ?? 'Unassigned'];
-            $p['account_manager'] = ['name' => $p['team']['am'] ?? 'Unassigned'];
-            return $p;
-        }, $mockProjects);
-
-
-        $search = request()->get('search');
-        $status = request()->get('status');
-        $division = request()->get('division');
-        $page = (int) request()->get('page', 1);
-        $perPage = (int) request()->get('per_page', 10);
-
-        // Filter data
-        if ($search) {
-            $mockProjects = array_filter($mockProjects, function ($project) use ($search) {
-                return stripos($project['name'], $search) !== false ||
-                    stripos($project['code'], $search) !== false ||
-                    stripos($project['client'], $search) !== false;
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('client', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
-        if ($status && $status !== 'all') {
-            $mockProjects = array_filter($mockProjects, function ($project) use ($status) {
-                return $project['status'] === $status;
-            });
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
 
-        if ($division && $division !== 'all') {
-            $mockProjects = array_filter($mockProjects, function ($project) use ($division) {
-                // Check against division name or code
-                $divName = $project['division']['name'] ?? '';
-                $divCode = $project['division_code'] ?? '';
-                return stripos($divName, $division) !== false || stripos($divCode, $division) !== false;
-            });
-        }
+        $projects = $query->latest()->paginate(10)->withQueryString();
 
-        $total = count($mockProjects);
-        $lastPage = ceil($total / $perPage);
-        $page = $page > $lastPage && $lastPage > 0 ? $lastPage : $page;
-
-        $offset = ($page - 1) * $perPage;
-        $slicedData = array_slice($mockProjects, $offset, $perPage);
-
-        // Helper to build URL with query params
-        $buildUrl = function ($pageNum) use ($perPage, $search, $status, $division) {
-            $queryParams = [
-                'page' => $pageNum,
-                'per_page' => $perPage,
-            ];
-            if ($search)
-                $queryParams['search'] = $search;
-            if ($status)
-                $queryParams['status'] = $status;
-            if ($division)
-                $queryParams['division'] = $division;
-
-            return '/projects?' . http_build_query($queryParams);
-        };
-
-        $projects = [
-            'data' => $slicedData,
-            'current_page' => (int) $page,
-            'first_page_url' => $buildUrl(1),
-            'from' => $total > 0 ? $offset + 1 : 0,
-            'last_page' => $lastPage,
-            'last_page_url' => $buildUrl($lastPage),
-            'links' => [],
-            'next_page_url' => $page < $lastPage ? $buildUrl($page + 1) : null,
-            'path' => '/projects',
-            'per_page' => (int) $perPage,
-            'prev_page_url' => $page > 1 ? $buildUrl($page - 1) : null,
-            'to' => min($offset + $perPage, $total),
-            'total' => $total,
-        ];
-
-        return \Inertia\Inertia::render('Projects/Index', [
+        return Inertia::render('Projects/Index', [
             'projects' => $projects,
-            'filters' => [
-                'search' => $search,
-                'status' => $status,
-                'division' => $division
-            ],
-            'divisions' => \App\Models\Division::all(),
+            'filters' => $request->only(['search', 'status']),
+            'divisions' => Division::all(),
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function create(): Response
     {
-        $divisions = Division::orderBy('name', 'asc')->get();
-        $users = User::orderBy('name', 'asc')->get();
-        //  return view('create_project', ['divisions' => $divisions, 'users' => $users]);
-        return \Inertia\Inertia::render('Projects/Create', [
-            'divisions' => $divisions,
+        return Inertia::render('Projects/Create', [
+            'divisions' => Division::all(),
+            'employees' => User::all(),
         ]);
     }
 
-
-
-
-    /**
-     * Display the allowance page for the specified resource.
-     */
-    public function allowance($slug)
+    public function store(StoreProjectRequest $request, CreateProject $createProject)
     {
-        // LOAD DATA FROM JSON
-        $jsonPath = database_path('data/projects.json');
-        if (!file_exists($jsonPath)) {
-            abort(404, 'Project data not found.');
-        }
+        $project = $createProject->handle($request->validated(), $request->user()->id);
 
-        $projects = json_decode(file_get_contents($jsonPath), true);
-
-        // Find project by slug
-        $project = null;
-        foreach ($projects as $p) {
-            if (($p['slug'] ?? '') === $slug) {
-                $project = $p;
-                break;
-            }
-        }
-
-        if (!$project) {
-            abort(404, 'Project not found.');
-        }
-
-        return \Inertia\Inertia::render('Projects/Allowance', [
-            'project' => $project
-        ]);
+        return redirect()->route('projects.show', $project->id)
+            ->with('success', 'Project created successfully.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show($slug)
+    public function show(Project $project): Response
     {
-        // LOAD DATA FROM JSON
-        $jsonPath = database_path('data/projects.json');
-        if (!file_exists($jsonPath)) {
-            abort(404, 'Project data not found.');
-        }
-
-        $projects = json_decode(file_get_contents($jsonPath), true);
-
-        // Find project by slug
-        $project = null;
-        foreach ($projects as $p) {
-            if (($p['slug'] ?? '') === $slug) {
-                $project = $p;
-                break;
-            }
-        }
-
-        if (!$project) {
-            abort(404, 'Project not found.');
-        }
-
-        // Enrich with defaults if missing
-        $project['team'] = $project['team'] ?? ['am' => '-', 'head' => '-', 'pic' => '-'];
-        $project['issues'] = $project['issues'] ?? [];
-        $project['monitoring_history'] = $project['monitoring_history'] ?? [];
+        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'budgets', 'milestones', 'documents']);
 
         return Inertia::render('Projects/Show', [
-            'project' => $project
+            'project' => new ProjectResource($project),
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($slug)
+    public function edit(Project $project): Response
     {
-        // $project->load(['locations', 'documents', 'budgets', 'milestones', 'issues']);
-        // $divisions = Division::orderBy('name', 'asc')->get();
-        // $users = User::orderBy('name', 'asc')->get();
+        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'budgets', 'milestones', 'documents']);
 
-        // return view('update_project', [
-        //     'project' => $project,
-        //     'divisions' => $divisions,
-        //     'users' => $users
-        // ]);
-
-        // Dummy Data for Edit Form as requested
-        $project = [
-            'name' => 'Pendampingan UMKM Jahe Merah',
-            'slug' => 'pendampingan-umkm-jahe-merah',
-            'code' => 'PRJ-2025-001',
-            'client' => 'PT Sinergi Alam',
-            'type' => 'pendampingan',
-            'division_code' => '1',
-            'status' => 'active',
-            'sow' => "Melakukan pendampingan intensif kepada 50 petani jahe merah...",
-            'start_date' => '2025-01-10',
-            'end_date' => '2025-06-10',
-            'budget_total' => 150000000,
-            'team' => [
-                'am' => 'Budi Santoso',
-                'head' => 'Siti Aminah',
-                'pic' => 'Rudi Hermawan'
-            ],
-            'issues' => [],
-            'monitoring_history' => []
-        ];
-
-        // Dummy Divisions
-        $divisions = [
-            ['id' => 1, 'name' => 'Divisi Operasional'],
-            ['id' => 2, 'name' => 'Divisi IT'],
-            ['id' => 3, 'name' => 'Divisi Keuangan'],
-            ['id' => 4, 'name' => 'Divisi SDM'],
-        ];
-
-        return \Inertia\Inertia::render('Projects/Edit', [
-            'project' => $project,
-            'divisions' => $divisions,
+        return Inertia::render('Projects/Edit', [
+            'project' => new ProjectResource($project),
+            'divisions' => Division::all(),
+            'employees' => User::all(),
         ]);
     }
 
+    public function update(UpdateProjectRequest $request, Project $project, UpdateProject $updateProject)
+    {
+        $updateProject->handle($project, $request->validated(), $request->user()->id);
 
+        return redirect()->route('projects.show', $project->id)
+            ->with('success', 'Project updated successfully.');
+    }
 
+    public function destroy(Project $project, DeleteProject $deleteProject)
+    {
+        $deleteProject->handle($project);
 
-
+        return redirect()->route('projects.index')
+            ->with('success', 'Project deleted successfully.');
+    }
 }

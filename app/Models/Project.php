@@ -88,6 +88,7 @@ final class Project extends Model
         return $this->belongsTo(User::class, 'pic_id');
     }
 
+    /*
     public function milestones(): HasMany
     {
         return $this->hasMany(ProjectMilestone::class);
@@ -98,14 +99,35 @@ final class Project extends Model
         return $this->hasMany(ProjectBudget::class);
     }
 
+    public function issues(): HasMany
+    {
+        return $this->hasMany(ProjectIssue::class);
+    }
+    */
+
     public function documents(): HasMany
     {
         return $this->hasMany(ProjectDocument::class);
     }
 
-    public function issues(): HasMany
+    public function monitorings(): HasMany
     {
-        return $this->hasMany(ProjectIssue::class);
+        return $this->hasMany(ProjectMonitoring::class);
+    }
+
+    public function terminPayments(): HasMany
+    {
+        return $this->hasMany(ProjectTerminPayment::class);
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(ProjectApproval::class);
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(ProjectEvent::class);
     }
 
     public function locations(): HasMany

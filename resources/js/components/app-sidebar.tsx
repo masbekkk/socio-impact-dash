@@ -133,7 +133,7 @@ function getMenusByRole(): Record<string, NavItem[]> {
 export function AppSidebar() {
     const { props } = usePage();
     const auth = (props.auth as any) || {};
-    const userRole = auth?.user?.role || 'pegawai';
+    const userRole = auth?.user?.role_name || 'pegawai';
     const menusByRole = getMenusByRole();
     const mainNavItems = menusByRole[userRole] || menusByRole.pegawai;
 

@@ -500,24 +500,6 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                     </div>
                   </div>
 
-                  {/* Berita Acara Negosiasi (Only for Active Projects) */}
-                  {type !== 'proposal' && (
-                    <div className="space-y-2">
-                      <Label>Berita Acara Negosiasi <span className="text-red-500">*</span></Label>
-                      <div className="border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full">
-                        <div className="flex items-center gap-4">
-                          {/* <div className="p-3 bg-purple-50 rounded-full text-purple-600 border border-purple-100">
-                            <FileCheck className="h-6 w-6" />
-                          </div> */}
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-medium text-gray-900">Upload Dokumen Negosiasi</h4>
-                            <p className="text-xs text-muted-foreground">Lampirkan Berita Acara Negosiasi harga.</p>
-                          </div>
-                        </div>
-                        <FileUploadDropzone />
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Termin Pembayaran Section */}

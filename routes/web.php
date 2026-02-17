@@ -31,8 +31,6 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Projects
     Route::resource('projects', ProjectController::class);
-    Route::get('projects/{project}/allowance', [ProjectController::class, 'allowance'])->name('projects.allowance');
-    Route::post('projects/{project}/finish', [ProjectController::class, 'finish'])->name('projects.finish');
 
     // Reimbursements
     Route::get('reimbursements/create/atr', [ReimbursementController::class, 'createATR'])->name('reimbursements.create.atr');

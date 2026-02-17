@@ -486,22 +486,6 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                             <FileUploadDropzone />
                                         </div>
                                     </div>
-
-                                    {/* Berita Acara Negosiasi (Only for Active Projects) */}
-                                    {status !== 'proposal' && (
-                                        <div className="space-y-2">
-                                            <Label>Berita Acara Negosiasi <span className="text-red-500">*</span></Label>
-                                            <div className="border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="space-y-1">
-                                                        <h4 className="text-sm font-medium text-gray-900">Upload Dokumen Negosiasi</h4>
-                                                        <p className="text-xs text-muted-foreground">Lampirkan Berita Acara Negosiasi harga.</p>
-                                                    </div>
-                                                </div>
-                                                <FileUploadDropzone />
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
 
                             </CardContent>
