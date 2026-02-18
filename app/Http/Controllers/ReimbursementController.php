@@ -9,61 +9,118 @@ use App\Http\Requests\UpdateReimbursementRequest;
 use App\Models\Project;
 use App\Models\Reimbursement;
 use App\Enums\ReimbursementType;
+use App\Services\ReimbursementService;
 use Inertia\Inertia;
+use Illuminate\Http\Request;
 
 final class ReimbursementController
 {
+    public function __construct(
+        private ReimbursementService $reimbursementService
+    ) {}
+
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Reimbursements/Index');
+        $user = $request->user();
+
+        $filters = [
+            'type' => $request->get('type'),
+            'status' => $request->get('status'),
+            'search' => $request->get('search'),
+            'start_date' => $request->get('start_date'),
+            'end_date' => $request->get('end_date'),
+            'sort_by' => $request->get('sort_by', 'created_at'),
+            'sort_dir' => $request->get('sort_dir', 'desc'),
+        ];
+
+        $perPage = $request->integer('per_page', 10);
+        $reimbursements = $this->reimbursementService->listReimbursements($user, $filters, $perPage);
+
+        return Inertia::render('Reimbursements/Index', [
+            'reimbursements' => $reimbursements,
+            'filters' => [
+                'type' => $request->get('type', ''),
+                'status' => $request->get('status', ''),
+                'search' => $request->get('search', ''),
+                'start_date' => $request->get('start_date', ''),
+                'end_date' => $request->get('end_date', ''),
+                'sort_by' => $request->get('sort_by', 'created_at'),
+                'sort_dir' => $request->get('sort_dir', 'desc'),
+                'per_page' => $perPage,
+            ],
+        ]);
     }
 
     public function createATR()
     {
-        $json = file_get_contents(database_path('data/projects.json'));
-        $data = json_decode($json, true);
-
-        $projects = collect($data)->map(function ($p, $index) {
-            return (object) [
-                'id' => $index + 1,
-                'name' => $p['name'],
-                'code' => $p['code'],
-                'operational_budget' => $p['budget_total'] * 0.50,
-                'used_operational_budget' => '0' // Dummy
-            ];
-        });
+        $projects = Project::with(['division', 'pic', 'head'])
+            ->where('status', 'active')
+            ->get()
+            ->map(fn (Project $project) => [
+                'id' => $project->id,
+                'name' => $project->name,
+                'code' => $project->code,
+                'operational_budget' => (float) $project->operational_budget,
+                'used_operational_budget' => 0,
+                'division_name' => $project->division?->name ?? '-',
+                'pic_name' => $project->pic?->name ?? '-',
+                'head_name' => $project->head?->name ?? '-',
+                'head_email' => $project->head?->email ?? '-',
+                'head_role' => $project->head?->role?->value ?? '-',
+            ]);
 
         return Inertia::render('Reimbursements/CreateATR', [
-            'projects' => $projects
+            'projects' => $projects,
+        ]);
+    }
+
+
+
+    public function createEER()
+    {
+        $projects = Project::with(['division', 'pic', 'head'])
+            ->where('status', 'active')
+            ->get()
+            ->map(fn (Project $project) => [
+                'id' => $project->id,
+                'name' => $project->name,
+                'code' => $project->code,
+                'division_name' => $project->division?->name ?? '-',
+                'pic_name' => $project->pic?->name ?? '-',
+                'head_name' => $project->head?->name ?? '-',
+                'head_email' => $project->head?->email ?? '-',
+                'head_role' => $project->head?->role?->value ?? '-',
+            ]);
+
+        return Inertia::render('Reimbursements/CreateEER', [
+            'projects' => $projects,
         ]);
     }
 
     public function createAllowance()
     {
-        $json = file_get_contents(database_path('data/projects.json'));
-        $data = json_decode($json, true);
-
-        $projects = collect($data)->map(function ($p, $index) {
-            return (object) [
-                'id' => $index + 1,
-                'name' => $p['name'],
-                'code' => $p['code'],
-                'allowance_budget' => $p['budget_total'] * 0.20,
-                'used_allowance_budget' => '0' // Dummy
-            ];
-        });
+        $projects = Project::with(['division', 'pic', 'head'])
+            ->where('status', 'active')
+            ->get()
+            ->map(fn (Project $project) => [
+                'id' => $project->id,
+                'name' => $project->name,
+                'code' => $project->code,
+                'allowance_budget' => (float) $project->allowance_budget,
+                'used_allowance_budget' => 0,
+                'division_name' => $project->division?->name ?? '-',
+                'pic_name' => $project->pic?->name ?? '-',
+                'head_name' => $project->head?->name ?? '-',
+                'head_email' => $project->head?->email ?? '-',
+                'head_role' => $project->head?->role?->value ?? '-',
+            ]);
 
         return Inertia::render('Reimbursements/CreateAllowance', [
-            'projects' => $projects
+            'projects' => $projects,
         ]);
-    }
-
-    public function createEER()
-    {
-        return Inertia::render('Reimbursements/CreateEER');
     }
 
     public function approvals()
@@ -90,10 +147,10 @@ final class ReimbursementController
     /**
      * Display the specified resource.
      */
-    public function show($id)
+    public function show($code)
     {
         return Inertia::render('Reimbursements/Show', [
-            'slug' => $id
+            'code' => $code,
         ]);
     }
 

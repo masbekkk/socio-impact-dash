@@ -60,7 +60,7 @@ final class ProjectController extends Controller
 
     public function store(StoreProjectRequest $request, CreateProject $createProject): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        try {
         $user = $request->user();
         $project = $createProject->handle($request->validated(), $user->id);
 
@@ -69,6 +69,10 @@ final class ProjectController extends Controller
             'Project created successfully',
             201
         );
+        } catch (\Throwable $th) {
+            return response()->json(['err' => $th->getMessage()]);
+        }
+        
     }
 
     public function show(Project $project): JsonResponse
