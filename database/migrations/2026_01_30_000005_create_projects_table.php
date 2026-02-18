@@ -15,20 +15,14 @@ return new class extends Migration
             $table->id();
             $table->string('code')->unique();
             $table->string('name');
-            $table->string('client');
             $table->text('description')->nullable();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
             $table->foreignId('division_id')->nullable()->constrained('divisions')->nullOnDelete();
             $table->foreignId('account_manager_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('head_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('pic_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('status')->default(ProjectStatus::Draft->value)->index();
+            $table->string('status')->default(ProjectStatus::Active->value)->index();
             $table->string('project_type');
-            // SOW Document File
-            $table->string('sow_path')->nullable();
-            $table->string('sow_original_name')->nullable();
-            $table->string('sow_mime')->nullable();
-            $table->unsignedBigInteger('sow_size')->nullable();
             $table->decimal('budget_total', 15, 2)->nullable();
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();

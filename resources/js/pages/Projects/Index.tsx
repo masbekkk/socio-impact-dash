@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import StatusBadge from '@/components/StatusBadge'
-import { Link, router } from '@inertiajs/react'
+import { Head, Link, router } from '@inertiajs/react'
 import {
   Table,
   TableBody,
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Filter, MoreHorizontal, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, CheckCircle2, X } from 'lucide-react'
+import { Calendar, Search, Plus, Filter, MoreHorizontal, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, CheckCircle2, X, FileText, Cpu, BarChart3, Users, Globe, HeartHandshake, Layers, Building, Wallet } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +40,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { DateFilterPresets } from '@/components/DateFilterPresets';
 
 export default function ProjectsIndex({ projects, filters, divisions }: { projects: any, filters?: any, divisions?: any[] }) {
   const breadcrumbs = [
@@ -50,10 +54,13 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
   const projectList = projects.data || [];
   const meta = projects;
   const [search, setSearch] = React.useState(filters?.search || '');
+  const [startDate, setStartDate] = React.useState(filters?.start_date || '');
+  const [endDate, setEndDate] = React.useState(filters?.end_date || '');
 
   // Delete Dialog & Toast State
   const [projectToDelete, setProjectToDelete] = React.useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [toast, setToast] = React.useState({ show: false, message: '', type: 'success' });
 
   // Toast Timer
@@ -76,19 +83,30 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
     // In real app: router.delete(...) or reload data
   };
 
-  // Debounce search
+  // Debounce search & filters
   React.useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      if (search !== (filters?.search || '')) {
+      if (
+        search !== (filters?.search || '') ||
+        startDate !== (filters?.start_date || '') ||
+        endDate !== (filters?.end_date || '')
+      ) {
         router.get('/projects',
-          { search: search, per_page: meta.per_page, status: filters?.status, division: filters?.division },
+          {
+            search: search,
+            per_page: meta.per_page,
+            status: filters?.status,
+            division: filters?.division,
+            start_date: startDate,
+            end_date: endDate
+          },
           { preserveState: true, replace: true }
         );
       }
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search]);
+  }, [search, startDate, endDate]);
 
   const handleFilterChange = (key: string, value: string) => {
     router.get('/projects',
@@ -96,7 +114,9 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
         search: search,
         per_page: meta.per_page,
         status: key === 'status' ? value : filters?.status,
-        division: key === 'division' ? value : filters?.division
+        division: key === 'division' ? value : filters?.division,
+        start_date: startDate,
+        end_date: endDate
       },
       { preserveState: true }
     );
@@ -104,14 +124,14 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
-
+      <Head title="Proyek" />
       <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-8 py-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Proyek</h1>
           <p className="text-muted-foreground text-sm md:text-base">Kelola semua proyek, pantau progress dan budget.</p>
         </div>
-        <Link href='/projects/create' className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto gap-2">
+        <Link href="/projects/create?type=active">
+          <Button className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)] transition-transform hover:scale-105 active:scale-95 shadow-sm">
             <Plus className="h-4 w-4" />
             Proyek Baru
           </Button>
@@ -121,7 +141,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
       <Card className="mx-4 md:mx-8 mb-8 border-none rounded-xl overflow-hidden">
         <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 pb-4 px-4 md:px-8">
           <CardTitle className="text-base font-normal hidden md:block">Daftar Proyek</CardTitle>
-          <div className="flex w-full md:w-auto items-center gap-2">
+          <div className="flex w-full md:w-auto items-center gap-2 flex-wrap md:flex-nowrap">
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -132,6 +152,63 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+
+            {/* Date Range Filter */}
+            {/* Desktop View */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "justify-start text-left font-normal w-[240px] px-3 border-dashed hidden md:flex",
+                    !startDate && "text-muted-foreground",
+                    (startDate || endDate) && "border-solid bg-emerald-50/50 border-emerald-200 text-emerald-700"
+                  )}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {startDate ? (
+                    endDate ? (
+                      <>
+                        {format(new Date(startDate), "dd MMM yyyy", { locale: id })} -{" "}
+                        {format(new Date(endDate), "dd MMM yyyy", { locale: id })}
+                      </>
+                    ) : (
+                      format(new Date(startDate), "dd MMM yyyy", { locale: id })
+                    )
+                  ) : (
+                    <span>Pilih Rentang Tanggal</span>
+                  )}
+                  {(startDate || endDate) && (
+                    <div className="ml-auto hover:bg-emerald-200 rounded-full p-0.5 transition-colors" role="button" onClick={(e) => { e.stopPropagation(); setStartDate(''); setEndDate(''); }}>
+                      <X className="h-3 w-3" />
+                    </div>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-auto p-0 bg-white" align="start">
+                <DateFilterPresets
+                  startDate={startDate}
+                  endDate={endDate}
+                  onSelect={(start, end) => { setStartDate(start); setEndDate(end); }}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Mobile View Icon */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className={cn("md:hidden", (startDate || endDate) ? "bg-accent text-accent-foreground border-primary" : "")}>
+                  <Calendar className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-auto p-0 bg-white" align="end">
+                <DateFilterPresets
+                  startDate={startDate}
+                  endDate={endDate}
+                  onSelect={(start, end) => { setStartDate(start); setEndDate(end); }}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <div className="flex-none">
               <DropdownMenu>
@@ -150,14 +227,8 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                   <DropdownMenuItem onClick={() => handleFilterChange('status', 'active')}>
                     Active
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'draft')}>
-                    Draft
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'pending')}>
-                    Pending
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'completed')}>
-                    Completed
+                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'proposal')}>
+                    Proposal
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
@@ -202,7 +273,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Divisi</p>
-                        <p className="font-medium truncate">{p.division ? p.division.name : '-'}</p>
+                        <p className="font-medium truncate">{p.division_name || (p.division ? p.division.name : '-')}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Budget</p>
@@ -227,7 +298,7 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
           <div className="rounded-md border hidden md:block">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Kode</TableHead>
                   <TableHead>Nama Proyek</TableHead>
                   <TableHead>Client</TableHead>
@@ -255,19 +326,58 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
                       </TableCell>
                       <TableCell>{p.client}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{p.division ? p.division.name : '-'}</Badge>
+                        {(() => {
+                          const divName = (p.division_name || (p.division ? p.division.name : '')).toLowerCase();
+                          let badgeStyle = "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200";
+                          let Icon = Building;
+
+                          if (divName.includes('tech') || divName.includes('it') || divName.includes('dev')) {
+                            badgeStyle = "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100";
+                            Icon = Cpu;
+                          } else if (divName.includes('finance') || divName.includes('keuangan')) {
+                            badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
+                            Icon = BarChart3;
+                          } else if (divName.includes('hr') || divName.includes('human') || divName.includes('sdm')) {
+                            badgeStyle = "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100";
+                            Icon = Users;
+                          } else if (divName.includes('marketing') || divName.includes('sales') || divName.includes('cmo')) {
+                            badgeStyle = "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100";
+                            Icon = Globe;
+                          } else if (divName.includes('social') || divName.includes('sosial') || divName.includes('impact')) {
+                            badgeStyle = "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100";
+                            Icon = HeartHandshake;
+                          } else if (divName.includes('ops') || divName.includes('operasional')) {
+                            badgeStyle = "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100";
+                            Icon = Layers;
+                          }
+
+                          return (
+                            <Badge variant="outline" className={`gap-1.5 py-1 px-2.5 font-medium ${badgeStyle}`}>
+                              <Icon className="h-3.5 w-3.5" />
+                              {p.division_name || (p.division ? p.division.name : '-')}
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <span className="text-xs font-medium">PIC: {p.pic ? p.pic.name : '-'}</span>
-                          <span className="text-xs text-muted-foreground">AM: {p.account_manager ? p.account_manager.name : '-'}</span>
+                          <span className="text-xs font-medium">PIC: {p.team?.pic || (p.pic ? p.pic.name : '-')}</span>
+                          <span className="text-xs text-muted-foreground">AM: {p.team?.am || (p.account_manager ? p.account_manager.name : '-')}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={p.status} />
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {p.sow ? 'Lihat SOW' : '-'}
+                      <TableCell className="text-sm text-muted-foreground">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs">
+                            {p.start_date ? new Date(p.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}
+                          </span>
+                          <span className="text-[10px] text-gray-400">s/d</span>
+                          <span className="text-xs">
+                            {p.end_date ? new Date(p.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {p.budget_total ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(p.budget_total) : '-'}
@@ -403,6 +513,42 @@ export default function ProjectsIndex({ projects, filters, divisions }: { projec
               Hapus Permanen
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CREATE OPTION DIALOG */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Buat Proyek Baru</DialogTitle>
+            <DialogDescription>
+              Pilih jenis inisiasi proyek yang ingin Anda buat.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <Link href="/projects/create?type=proposal" onClick={() => setIsCreateDialogOpen(false)}>
+              <div className="cursor-pointer rounded-xl border-2 border-dashed border-gray-200 p-6 hover:border-black hover:bg-gray-50 transition-all text-center h-full flex flex-col items-center justify-center gap-3">
+                <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Proposal Project</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Pengajuan proposal.</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/projects/create?type=active" onClick={() => setIsCreateDialogOpen(false)}>
+              <div className="cursor-pointer rounded-xl border-2 border-dashed border-gray-200 p-6 hover:border-black hover:bg-gray-50 transition-all text-center h-full flex flex-col items-center justify-center gap-3">
+                <div className="p-3 bg-green-100 rounded-full text-green-600">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Active Project</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Yang sudah (disetujui)</p>
+                </div>
+              </div>
+            </Link>
+          </div>
         </DialogContent>
       </Dialog>
 

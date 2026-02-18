@@ -21,6 +21,7 @@ export default function StatusBadge({ status }: Props) {
     risk: { cls: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: <AlertCircle className="w-3 h-3 mr-1" /> },
 
     draft: { cls: 'bg-gray-100 text-gray-800 border-gray-200', icon: <FileText className="w-3 h-3 mr-1" /> },
+    proposal: { cls: 'bg-indigo-100 text-indigo-800 border-indigo-200', icon: <FileText className="w-3 h-3 mr-1" /> },
 
     finished: { cls: 'bg-blue-100 text-blue-800 border-blue-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
     completed: { cls: 'bg-blue-100 text-blue-800 border-blue-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
@@ -29,6 +30,10 @@ export default function StatusBadge({ status }: Props) {
 
     on_hold: { cls: 'bg-orange-100 text-orange-800 border-orange-200', icon: <PauseCircle className="w-3 h-3 mr-1" /> },
     delayed: { cls: 'bg-orange-100 text-orange-800 border-orange-200', icon: <AlertCircle className="w-3 h-3 mr-1" /> },
+
+    // Presence Statuses
+    approved: { cls: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
+    rejected: { cls: 'bg-rose-100 text-rose-800 border-rose-200', icon: <XCircle className="w-3 h-3 mr-1" /> },
   }
 
   const { cls, icon } = config[status] || { cls: 'bg-gray-100 text-gray-800', icon: null }
