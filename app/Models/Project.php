@@ -115,4 +115,9 @@ final class Project extends Model
     {
         return $this->hasMany(ProjectLocation::class);
     }
+
+    public function reimbursements(): HasMany
+    {
+        return $this->hasMany(Reimbursement::class);
+    }
 }

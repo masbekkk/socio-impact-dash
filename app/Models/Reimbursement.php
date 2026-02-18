@@ -16,9 +16,10 @@ final class Reimbursement extends Model
     use HasFactory;
 
     protected $fillable = [
-        'code', 'user_id', 'project_id', 'type', 'status',
+        'code', 'user_id', 'project_id', 'type', 'eer_type', 'status',
         'amount', 'bank_name', 'bank_account', 'account_holder',
         'transferred_at', 'transfer_proof_path', 'rejection_reason',
+        'usage_plan', 'urgency',
     ];
 
     public function casts(): array

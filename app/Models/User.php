@@ -61,6 +61,7 @@ final class User extends Authenticatable implements MustVerifyEmail
             'id' => 'integer',
             'name' => 'string',
             'email' => 'string',
+            'nip' => 'string',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'remember_token' => 'string',
