@@ -9,20 +9,20 @@ import MoneyInput from '@/components/MoneyInput'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { usePage } from '@inertiajs/react'
+import { usePage, router } from '@inertiajs/react'
 import { SharedData } from '@/types'
+import axios from 'axios'
 
 interface ProjectTabsProps {
     project: any;
     currentStatus: string;
-    mock: any;
     locations: any[];
     userRole?: string; // 'admin' | 'finance' | 'user'
 
     // Monitoring
     reportForm: any;
     setReportForm: (val: any) => void;
-    handleReportFileChange: (id: number, field: string, value: string) => void;
+    handleReportFileChange: (id: number, field: string, value: any) => void;
     addReportFileRow: () => void;
     removeReportFileRow: (id: number) => void;
     setIsSubmitReportAlertOpen: (val: boolean) => void;
@@ -39,7 +39,6 @@ interface ProjectTabsProps {
 export default function ProjectTabs({
     project,
     currentStatus,
-    mock,
     locations,
     userRole = usePage<SharedData>()?.props?.auth?.user?.role_name ?? 'user',
     reportForm,
@@ -72,22 +71,41 @@ export default function ProjectTabs({
             }
         }
     }, [activeTab]);
-    // Mock data - replace with actual project.payment_terms
-    const [paymentTerms, setPaymentTerms] = useState([
-        { id: 1, nominal: 50000000, notes: 'DP 30%', date: '2026-03-01', verified: false, proof_file: null },
-        { id: 2, nominal: 70000000, notes: 'Progress 40%', date: '2026-04-15', verified: true, proof_file: 'bukti_transfer_termin2.pdf' },
-        { id: 3, nominal: 50000000, notes: 'Pelunasan 30%', date: '2026-05-30', verified: false, proof_file: null },
-    ]);
+    // Use project.termin_payments from props if available
+    const [localPaymentTerms, setLocalPaymentTerms] = useState<any[]>(project.termin_payments || []);
+
+    useEffect(() => {
+        if (project.termin_payments) {
+            setLocalPaymentTerms(project.termin_payments);
+        }
+    }, [project.termin_payments]);
 
     // Handler to toggle verification status
-    const toggleVerification = (termId: number) => {
-        setPaymentTerms(prevTerms =>
-            prevTerms.map(term =>
-                term.id === termId ? { ...term, verified: !term.verified } : term
-            )
-        );
+    const toggleVerification = async (termId: number, currentVerified: boolean) => {
+        try {
+            await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, {
+                verified: !currentVerified
+            });
+            // Refresh via router
+            router.visit(window.location.pathname, { preserveScroll: true });
+        } catch (error) {
+            console.error("Error toggling verification:", error);
+        }
     };
-    console.log(userRole)
+
+    const handleTerminProofUpload = async (termId: number, file: File) => {
+        const formData = new FormData();
+        formData.append('proof_payment', file);
+        try {
+            await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            router.visit(window.location.pathname, { preserveScroll: true });
+        } catch (error) {
+            console.error("Error uploading proof:", error);
+        }
+    };
+
     const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -355,7 +373,7 @@ export default function ProjectTabs({
                                 </p>
                             </div>
                             <div className="text-3xl font-bold text-slate-900 tracking-tight">
-                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(mock.budget || 0)}
+                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.budget_total || 0)}
                             </div>
                             <p className="text-xs text-muted-foreground mt-2">
                                 *Anggaran yang diajukan dalam formulir project.
@@ -399,21 +417,21 @@ export default function ProjectTabs({
                             <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-blue-200 transition-colors">
                                 <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Operasional (50%)</p>
                                 <div className="text-xl font-bold text-slate-900 tracking-tight">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((mock.budget || 0) * 0.5)}
+                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((project.budget_total || 0) * 0.5)}
                                 </div>
                                 <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu operasional</p>
                             </div>
                             <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-purple-200 transition-colors">
                                 <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-1">Manajemen (30%)</p>
                                 <div className="text-xl font-bold text-slate-900 tracking-tight">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((mock.budget || 0) * 0.3)}
+                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((project.budget_total || 0) * 0.3)}
                                 </div>
                                 <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu manajemen</p>
                             </div>
                             <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-amber-200 transition-colors">
                                 <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Allowance (20%)</p>
                                 <div className="text-xl font-bold text-slate-900 tracking-tight">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((mock.budget || 0) * 0.2)}
+                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((project.budget_total || 0) * 0.2)}
                                 </div>
                                 <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu allowance</p>
                             </div>
@@ -430,101 +448,104 @@ export default function ProjectTabs({
                             </div>
                         </div>
 
-                        {/* Mock Payment Terms Data - Replace with actual data from project */}
+                        {/* Actual Payment Terms Data */}
                         {(() => {
-
-                            return paymentTerms.length > 0 ? (
+                            const terms = localPaymentTerms;
+                            return terms.length > 0 ? (
                                 <div className="space-y-3">
-                                    {paymentTerms.map((term, idx) => (
-                                        <div key={term.id} className={`border rounded-xl p-5 bg-white shadow-sm transition-all ${term.verified ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
-                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                {/* Left: Term Info */}
-                                                <div className="flex-1 space-y-2">
-                                                    <div className="flex items-center gap-3">
-                                                        <h4 className="font-semibold text-base text-gray-900">Termin #{idx + 1}</h4>
-                                                        {term.verified ? (
-                                                            <Badge className="bg-green-100 text-green-700 border-green-200 gap-1">
-                                                                <CheckCircle2 className="h-3 w-3" />
-                                                                Verified
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge variant="outline" className="text-orange-700 border-orange-200 bg-orange-50">
-                                                                Pending
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                                                        <div>
-                                                            <p className="text-xs text-muted-foreground">Nominal</p>
-                                                            <p className="font-bold text-gray-900">
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(term.nominal)}
-                                                            </p>
+                                    {terms.map((term: any, idx: number) => {
+                                        const isVerified = term.verified_at !== null;
+                                        return (
+                                            <div key={term.id} className={`border rounded-xl p-5 bg-white shadow-sm transition-all ${isVerified ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                    {/* Left: Term Info */}
+                                                    <div className="flex-1 space-y-2">
+                                                        <div className="flex items-center gap-3">
+                                                            <h4 className="font-semibold text-base text-gray-900">Termin #{idx + 1}</h4>
+                                                            {isVerified ? (
+                                                                <Badge className="bg-green-100 text-green-700 border-green-200 gap-1">
+                                                                    <CheckCircle2 className="h-3 w-3" />
+                                                                    Verified
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge variant="outline" className="text-orange-700 border-orange-200 bg-orange-50">
+                                                                    Pending
+                                                                </Badge>
+                                                            )}
                                                         </div>
-                                                        <div>
-                                                            <p className="text-xs text-muted-foreground">Jatuh Tempo</p>
-                                                            <p className="font-medium text-gray-900">
-                                                                {new Date(term.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-muted-foreground">Keterangan</p>
-                                                            <p className="font-medium text-gray-900">{term.notes}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
 
-                                                {/* Right: Verification Section (Admin/Finance Only) */}
-                                                {isAdminOrFinance && (
-                                                    <div className="flex flex-col gap-3 md:w-64 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-4">
-                                                        <div className="space-y-2">
-                                                            <Label className="text-xs font-medium text-muted-foreground">Verifikasi Pembayaran</Label>
-
-                                                            {/* Checkbox */}
-                                                            <div className="flex items-center gap-2">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    id={`verify-${term.id}`}
-                                                                    checked={term.verified}
-                                                                    onChange={() => toggleVerification(term.id)}
-                                                                    className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
-                                                                />
-                                                                <label htmlFor={`verify-${term.id}`} className="text-sm font-medium cursor-pointer">
-                                                                    {term.verified ? 'Pembayaran Terverifikasi' : 'Tandai sebagai Terverifikasi'}
-                                                                </label>
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">Nominal</p>
+                                                                <p className="font-bold text-gray-900">
+                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(term.nominal)}
+                                                                </p>
                                                             </div>
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">Jatuh Tempo</p>
+                                                                <p className="font-medium text-gray-900">
+                                                                    {new Date(term.due_date || term.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">Keterangan</p>
+                                                                <p className="font-medium text-gray-900">{term.notes}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
 
-                                                            {/* File Upload */}
-                                                            <div className="space-y-1.5">
-                                                                <Label className="text-xs font-medium text-muted-foreground">Bukti Pembayaran</Label>
-                                                                {term.proof_file ? (
-                                                                    <div className="flex items-center gap-2 p-2 bg-gray-50 border rounded-lg">
-                                                                        <FileText className="h-4 w-4 text-gray-500" />
-                                                                        <span className="text-xs font-medium text-gray-700 flex-1 truncate">{term.proof_file}</span>
-                                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600 hover:text-blue-700">
-                                                                            <Eye className="h-3.5 w-3.5" />
-                                                                        </Button>
-                                                                    </div>
-                                                                ) : (
-                                                                    <label className="block">
-                                                                        <Input
-                                                                            type="file"
-                                                                            accept=".pdf,.jpg,.jpeg,.png"
-                                                                            className="text-xs h-9 cursor-pointer file:cursor-pointer file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 file:border-0 file:rounded-sm file:px-2 file:mr-2 hover:file:bg-gray-200"
-                                                                            onChange={(e) => {
-                                                                                // Handle file upload
-                                                                                console.log('Upload proof for term', term.id, e.target.files);
-                                                                            }}
-                                                                        />
+                                                    {/* Right: Verification Section (Admin/Finance Only) */}
+                                                    {isAdminOrFinance && (
+                                                        <div className="flex flex-col gap-3 md:w-64 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-4">
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs font-medium text-muted-foreground">Verifikasi Pembayaran</Label>
+
+                                                                {/* Checkbox */}
+                                                                <div className="flex items-center gap-2">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        id={`verify-${term.id}`}
+                                                                        checked={isVerified}
+                                                                        onChange={() => toggleVerification(term.id, isVerified)}
+                                                                        className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                                                                    />
+                                                                    <label htmlFor={`verify-${term.id}`} className="text-sm font-medium cursor-pointer">
+                                                                        {isVerified ? 'Pembayaran Terverifikasi' : 'Tandai sebagai Terverifikasi'}
                                                                     </label>
-                                                                )}
+                                                                </div>
+
+                                                                {/* File Upload */}
+                                                                <div className="space-y-1.5">
+                                                                    <Label className="text-xs font-medium text-muted-foreground">Bukti Pembayaran</Label>
+                                                                    {term.proof_payment ? (
+                                                                        <div className="flex items-center gap-2 p-2 bg-gray-50 border rounded-lg">
+                                                                            <FileText className="h-4 w-4 text-gray-500" />
+                                                                            <span className="text-xs font-medium text-gray-700 flex-1 truncate">Bukti Pembayaran.pdf</span>
+                                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600 hover:text-blue-700" onClick={() => window.open(term.proof_payment, '_blank')}>
+                                                                                <Eye className="h-3.5 w-3.5" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <label className="block">
+                                                                            <Input
+                                                                                type="file"
+                                                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                                                className="text-xs h-9 cursor-pointer file:cursor-pointer file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 file:border-0 file:rounded-sm file:px-2 file:mr-2 hover:file:bg-gray-200"
+                                                                                onChange={(e) => {
+                                                                                    const file = e.target.files?.[0];
+                                                                                    if (file) handleTerminProofUpload(term.id, file);
+                                                                                }}
+                                                                            />
+                                                                        </label>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
 
                                     {/* Summary Card */}
                                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 mt-4">
@@ -532,17 +553,17 @@ export default function ProjectTabs({
                                             <div>
                                                 <p className="text-sm font-medium text-blue-900">Total Termin Pembayaran</p>
                                                 <p className="text-xs text-blue-700 mt-1">
-                                                    {paymentTerms.filter(t => t.verified).length} dari {paymentTerms.length} termin terverifikasi
+                                                    {terms.filter((t: any) => t.verified_at).length} dari {terms.length} termin terverifikasi
                                                 </p>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-2xl font-bold text-blue-900">
                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
-                                                        paymentTerms.reduce((sum, term) => sum + term.nominal, 0)
+                                                        terms.reduce((sum: number, term: any) => sum + parseFloat(term.nominal), 0)
                                                     )}
                                                 </p>
                                                 <p className="text-xs text-blue-700 mt-1">
-                                                    {paymentTerms.length} termin terjadwal
+                                                    {terms.length} termin terjadwal
                                                 </p>
                                             </div>
                                         </div>
@@ -637,6 +658,10 @@ export default function ProjectTabs({
                                                 <Input
                                                     type="file"
                                                     className="h-9 w-full text-sm bg-white cursor-pointer file:cursor-pointer file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 file:border-0 file:rounded-sm file:px-3 file:mr-3 hover:file:bg-gray-200 transition-all"
+                                                    onChange={(e) => {
+                                                        const selectedFile = e.target.files?.[0];
+                                                        if (selectedFile) handleReportFileChange(file.id, 'file', selectedFile);
+                                                    }}
                                                 />
                                             </div>
                                             <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-400 hover:text-red-600 hover:bg-red-50 shrink-0" onClick={() => removeReportFileRow(file.id)}>
@@ -675,54 +700,57 @@ export default function ProjectTabs({
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {monitoringList.map((history: any, idx: number) => (
-                                    <Card key={idx} className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
-                                        {/* Header Card */}
-                                        <div className="bg-white p-5 border-b flex flex-col md:flex-row gap-4 justify-between md:items-center">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2">
-                                                    <h4 className="font-bold text-base text-gray-900">
-                                                        {new Date(history.date).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-                                                    </h4>
-                                                    <Badge variant="secondary" className={`text-[10px] uppercase tracking-wider ${history.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                        {history.status === 'approved' ? 'Approved' : 'Pending'}
-                                                    </Badge>
+                                {monitoringList.map((history: any, idx: number) => {
+                                    const documents = history.documents || history.files || [];
+                                    return (
+                                        <Card key={idx} className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
+                                            {/* Header Card */}
+                                            <div className="bg-white p-5 border-b flex flex-col md:flex-row gap-4 justify-between md:items-center">
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-bold text-base text-gray-900">
+                                                            {new Date(history.report_date || history.date).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                                                        </h4>
+                                                        <Badge variant="secondary" className={`text-[10px] uppercase tracking-wider ${history.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                            {history.status === 'approved' ? 'Approved' : 'Pending'}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground">Dilaporkan oleh: <span className="font-medium text-gray-700">{history.uploader_name || history.uploader}</span> • {new Date(history.report_date || history.date).toLocaleDateString('id-ID')}</p>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground">Dilaporkan oleh: <span className="font-medium text-gray-700">{history.uploader}</span> • {new Date(history.date).toLocaleDateString('id-ID')}</p>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <Button variant="outline" size="sm" className="h-8 text-xs">Edit</Button>
-                                                <Button variant="outline" size="sm" className="h-8 text-xs">Detail</Button>
-                                            </div>
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="p-5 bg-gray-50/30">
-                                            <div className="mb-4">
-                                                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line border-l-2 border-gray-300 pl-3">
-                                                    {history.notes}
-                                                </p>
+                                                <div className="flex gap-2">
+                                                    <Button variant="outline" size="sm" className="h-8 text-xs">Edit</Button>
+                                                    <Button variant="outline" size="sm" className="h-8 text-xs">Detail</Button>
+                                                </div>
                                             </div>
 
-                                            {history.files && history.files.length > 0 && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                                                    {history.files.map((file: any, fIdx: number) => (
-                                                        <div key={fIdx} className="flex items-center gap-3 bg-white border rounded p-2.5 hover:border-blue-400 cursor-pointer group transition-colors">
-                                                            <div className="bg-gray-100 p-2 rounded text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600">
-                                                                <FileText className="h-4 w-4" />
-                                                            </div>
-                                                            <div className="flex-1 overflow-hidden">
-                                                                <p className="text-sm font-medium text-gray-900 truncate">{file.title}</p>
-                                                                <p className="text-[10px] text-muted-foreground truncate">{file.size || 'Document'}</p>
-                                                            </div>
-                                                            <Download className="h-4 w-4 text-gray-300 group-hover:text-blue-600" />
-                                                        </div>
-                                                    ))}
+                                            {/* Content */}
+                                            <div className="p-5 bg-gray-50/30">
+                                                <div className="mb-4">
+                                                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line border-l-2 border-gray-300 pl-3">
+                                                        {history.notes}
+                                                    </p>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </Card>
-                                ))}
+
+                                                {documents && documents.length > 0 && (
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                                                        {documents.map((file: any, fIdx: number) => (
+                                                            <div key={fIdx} className="flex items-center gap-3 bg-white border rounded p-2.5 hover:border-blue-400 cursor-pointer group transition-colors" onClick={() => window.open(file.path, '_blank')}>
+                                                                <div className="bg-gray-100 p-2 rounded text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600">
+                                                                    <FileText className="h-4 w-4" />
+                                                                </div>
+                                                                <div className="flex-1 overflow-hidden">
+                                                                    <p className="text-sm font-medium text-gray-900 truncate">{file.filename || file.title}</p>
+                                                                    <p className="text-[10px] text-muted-foreground truncate">{file.type || 'Document'}</p>
+                                                                </div>
+                                                                <Download className="h-4 w-4 text-gray-300 group-hover:text-blue-600" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </Card>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -747,8 +775,8 @@ export default function ProjectTabs({
                                     <p className="text-sm text-muted-foreground">Total pengeluaran riil selama proyek berlangsung.</p>
                                 </div>
                                 <MoneyInput
-                                    value={closingForm.realization}
-                                    onValueChange={(values: any) => setClosingForm({ ...closingForm, realization: values.floatValue || 0 })}
+                                    value={closingForm.actual_budget}
+                                    onValueChange={(values: any) => setClosingForm({ ...closingForm, actual_budget: values.floatValue || 0 })}
                                     placeholder="0"
                                     prefix="Rp "
                                     className="bg-white h-12 text-lg text-left"
@@ -766,14 +794,22 @@ export default function ProjectTabs({
                                     <div className="space-y-3">
                                         <Label className="font-medium">Laporan Kegiatan <span className="text-red-500">*</span></Label>
                                         <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
-                                            <p className="text-xs text-gray-500">Upload Laporan Kegiatan (PDF).</p>
+                                            {project.documents?.some((d: any) => d.type === 'report_activity') ? (
+                                                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
+                                                    <FileText className="h-4 w-4 text-green-600" />
+                                                    <span className="text-xs font-medium text-green-700 flex-1 truncate">Laporan Kegiatan Terupload</span>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'report_activity').path, '_blank')}>
+                                                        <Eye className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            ) : <p className="text-xs text-gray-500">Upload Laporan Kegiatan (PDF).</p>}
                                             <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
                                                 <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
                                                     <Upload className="h-5 w-5 text-gray-600" />
                                                 </div>
-                                                <p className="text-[10px] text-muted-foreground">PDF, DOCX, JPG (Max 10MB)</p>
-                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk upload atau drag & drop</p>
-                                                <Input type="file" className="hidden" />
+                                                <p className="text-[10px] text-muted-foreground">{closingForm.files.laporan ? closingForm.files.laporan.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
+                                                <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, laporan: e.target.files?.[0] } })} />
                                             </label>
                                         </div>
                                     </div>
@@ -782,14 +818,22 @@ export default function ProjectTabs({
                                     <div className="space-y-3">
                                         <Label className="font-medium">Berita Acara Serah Terima (BAST) <span className="text-red-500">*</span></Label>
                                         <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
-                                            <p className="text-xs text-gray-500">Upload BAST.</p>
+                                            {project.documents?.some((d: any) => d.type === 'bast') ? (
+                                                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
+                                                    <FileText className="h-4 w-4 text-green-600" />
+                                                    <span className="text-xs font-medium text-green-700 flex-1 truncate">BAST Terupload</span>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'bast').path, '_blank')}>
+                                                        <Eye className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            ) : <p className="text-xs text-gray-500">Upload BAST.</p>}
                                             <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
                                                 <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
                                                     <Upload className="h-5 w-5 text-gray-600" />
                                                 </div>
-                                                <p className="text-[10px] text-muted-foreground">PDF, DOCX, JPG (Max 10MB)</p>
-                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk upload atau drag & drop</p>
-                                                <Input type="file" className="hidden" />
+                                                <p className="text-[10px] text-muted-foreground">{closingForm.files.bast ? closingForm.files.bast.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
+                                                <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, bast: e.target.files?.[0] } })} />
                                             </label>
                                         </div>
                                     </div>
@@ -798,14 +842,22 @@ export default function ProjectTabs({
                                     <div className="space-y-3">
                                         <Label className="font-medium">Dokumen Penagihan <span className="text-red-500">*</span></Label>
                                         <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
-                                            <p className="text-xs text-gray-500">Invoice / Kwitansi / Bukti Transfer.</p>
+                                            {project.documents?.some((d: any) => d.type === 'invoice') ? (
+                                                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
+                                                    <FileText className="h-4 w-4 text-green-600" />
+                                                    <span className="text-xs font-medium text-green-700 flex-1 truncate">Invoice Terupload</span>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'invoice').path, '_blank')}>
+                                                        <Eye className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            ) : <p className="text-xs text-gray-500">Invoice / Kwitansi / Bukti Transfer.</p>}
                                             <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
                                                 <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
                                                     <Upload className="h-5 w-5 text-gray-600" />
                                                 </div>
-                                                <p className="text-[10px] text-muted-foreground">PDF, DOCX, JPG (Max 10MB)</p>
-                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk upload atau drag & drop</p>
-                                                <Input type="file" className="hidden" />
+                                                <p className="text-[10px] text-muted-foreground">{closingForm.files.penagihan ? closingForm.files.penagihan.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
+                                                <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, penagihan: e.target.files?.[0] } })} />
                                             </label>
                                         </div>
                                     </div>
@@ -814,14 +866,22 @@ export default function ProjectTabs({
                                     <div className="space-y-3">
                                         <Label className="font-medium">Lesson Learn <span className="text-red-500">*</span></Label>
                                         <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
-                                            <p className="text-xs text-gray-500">Catatan evaluasi dan pembelajaran project.</p>
+                                            {project.documents?.some((d: any) => d.type === 'lesson_learn') ? (
+                                                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
+                                                    <FileText className="h-4 w-4 text-green-600" />
+                                                    <span className="text-xs font-medium text-green-700 flex-1 truncate">Lesson Learn Terupload</span>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'lesson_learn').path, '_blank')}>
+                                                        <Eye className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            ) : <p className="text-xs text-gray-500">Catatan evaluasi dan pembelajaran project.</p>}
                                             <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
                                                 <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
                                                     <Upload className="h-5 w-5 text-gray-600" />
                                                 </div>
-                                                <p className="text-[10px] text-muted-foreground">PDF, DOCX, JPG (Max 10MB)</p>
-                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk upload atau drag & drop</p>
-                                                <Input type="file" className="hidden" />
+                                                <p className="text-[10px] text-muted-foreground">{closingForm.files.lesson_learn ? closingForm.files.lesson_learn.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
+                                                <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, lesson_learn: e.target.files?.[0] } })} />
                                             </label>
                                         </div>
                                     </div>

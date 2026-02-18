@@ -23,5 +23,10 @@ Route::middleware(['auth:sanctum', 'can:view-admin'])->prefix('rbac')->group(fun
 
 Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::post('projects/{project}/deal', [\App\Http\Controllers\Api\V1\ProjectController::class, 'deal']);
+    Route::post('projects/{project}/approve', [\App\Http\Controllers\Api\V1\ProjectApprovalController::class, 'approve']);
+    Route::post('projects/{project}/reject', [\App\Http\Controllers\Api\V1\ProjectApprovalController::class, 'reject']);
+    Route::post('projects/{project}/close', [\App\Http\Controllers\Api\V1\ProjectClosingController::class, 'close']);
+    Route::post('projects/{project}/monitorings', [\App\Http\Controllers\Api\V1\ProjectMonitoringController::class, 'store']);
+    Route::post('projects/{project}/termins/{termin}', [\App\Http\Controllers\Api\V1\ProjectTerminPaymentController::class, 'update']);
     Route::apiResource('projects', \App\Http\Controllers\Api\V1\ProjectController::class);
 });

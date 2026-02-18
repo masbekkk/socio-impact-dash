@@ -26,6 +26,7 @@ final class StoreProjectRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'code' => ['nullable', 'string', 'max:50', Rule::unique('projects', 'code')],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'division_id' => ['required', 'exists:divisions,id'],

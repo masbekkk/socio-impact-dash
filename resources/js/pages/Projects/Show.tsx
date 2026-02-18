@@ -26,19 +26,15 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog"
 
-export default function ProjectsShow({ project_slug }: { project_slug: string }) {
+export default function ProjectsShow({ project_slug }: { project_slug: string | number }) {
   const { auth } = usePage().props as any;
+  const permissions = auth.permissions || [];
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Mapping role backend (lowercase) ke Role Tampilan Frontend (Capitalized)
-  const rawRole = auth.user?.roles?.[0]?.name || 'Admin';
-  const roleMap: Record<string, string> = {
-    'superadmin': 'Admin',
-    'finance': 'Finance',
-    'head': 'Direktur', // Mapping Head ke Direktur untuk alur persetujuan
-  };
-  const currentUserRole = roleMap[rawRole] || rawRole;
+  const currentUserRole = auth.user?.role_name;
+  const currentUserId = auth.user?.id;
+  const canUpdateCode = permissions.includes('create-code-project');
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -80,11 +76,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string })
             address: loc.detail_address || ''
           })));
         } else {
-          setLocations([
-            { id: '1', lat: -6.175392, lng: 106.827153, address: 'Monas, Gambir, Jakarta Pusat' },
-            { id: '2', lat: -6.211544, lng: 106.845172, address: 'Tebet, Jakarta Selatan' },
-            { id: '3', lat: -6.121435, lng: 106.774124, address: 'PIK, Jakarta Utara' },
-          ]);
+          setLocations([]);
         }
       } catch (error) {
         console.error("Error fetching project:", error);
@@ -102,35 +94,59 @@ export default function ProjectsShow({ project_slug }: { project_slug: string })
       setIsProjectDealed(true);
       setCurrentStatus('active');
       setToast({ show: true, message: 'Project berhasil di-Deal! Menu Penutupan Proyek kini aktif.', type: 'success' });
+      // Refresh project data
+      router.visit(window.location.pathname, { preserveScroll: true });
     } catch (err) {
       console.error(err);
+      setToast({ show: true, message: 'Gagal melakukan deal project.', type: 'error' });
     }
   };
 
-  const handleApproveAction = () => {
-    setIsApproveAlertOpen(false);
-    setToast({ show: true, message: 'Project berhasil di-approve.', type: 'success' });
+  const handleApproveAction = async () => {
+    try {
+      await axios.post(`/api/v1/projects/${project_slug}/approve`, { notes: approvalNote });
+      setIsApproveAlertOpen(false);
+      setToast({ show: true, message: 'Project berhasil di-approve.', type: 'success' });
+      router.visit(window.location.pathname, { preserveScroll: true });
+    } catch (error) {
+      console.error("Error approving project:", error);
+      setToast({ show: true, message: 'Gagal approve project.', type: 'error' });
+    }
   };
 
-  const handleRevisionAction = () => {
-    setIsRevisionAlertOpen(false);
-    setToast({ show: true, message: 'Permintaan revisi dikirim.', type: 'success' });
+  const handleRevisionAction = async () => {
+    try {
+      await axios.post(`/api/v1/projects/${project_slug}/reject`, { notes: approvalNote });
+      setIsRevisionAlertOpen(false);
+      setToast({ show: true, message: 'Permintaan revisi dikirim.', type: 'success' });
+      router.visit(window.location.pathname, { preserveScroll: true });
+    } catch (error) {
+      console.error("Error rejecting project:", error);
+      setToast({ show: true, message: 'Gagal mengirim revisi.', type: 'error' });
+    }
   };
 
   // CLOSING STATE
   const [closingForm, setClosingForm] = useState({
-    allowance: 15000000,
-    realization: 0,
+    actual_budget: 0, // Will be set from project data or input
+    // Files will be handled by ProjectTabs or a separate state there, but we need to receive them here if we submit from here.
+    // However, the submit logic seems to be inside ProjectTabs or a function passed to it.
+    // Let's see handleCloseProject.
     files: {
       laporan: null,
       bast: null,
       penagihan: null,
       lesson_learn: null
-    }
+    } as any
   });
 
+
   // MONITORING STATE (Inline Form)
-  const [reportForm, setReportForm] = useState({
+  const [reportForm, setReportForm] = useState<{
+    date: string;
+    notes: string;
+    files: { id: number; title: string; file?: File }[];
+  }>({
     date: new Date().toISOString().split('T')[0],
     notes: '',
     files: [{ id: 1, title: '' }]
@@ -142,25 +158,38 @@ export default function ProjectsShow({ project_slug }: { project_slug: string })
   const removeReportFileRow = (id: number) => {
     setReportForm({ ...reportForm, files: reportForm.files.filter(f => f.id !== id) });
   };
-  const handleReportFileChange = (id: number, field: string, value: string) => {
+  const handleReportFileChange = (id: number, field: string, value: any) => {
     setReportForm({
       ...reportForm,
       files: reportForm.files.map(f => f.id === id ? { ...f, [field]: value } : f)
     });
   };
 
-  const submitReport = () => {
-    const newReport = {
-      id: Date.now(),
-      date: reportForm.date,
-      uploader: "Anda (Head)",
-      status: "pending", // Default pending approval
-      notes: reportForm.notes,
-      files: reportForm.files.map(f => ({ title: f.title ? `${f.title}.pdf` : 'Untitled.pdf', size: 'Unknown' }))
-    };
-    setMonitoringList([newReport, ...monitoringList]);
-    setToast({ show: true, message: 'Laporan berhasil ditambahkan.', type: 'success' });
-    setReportForm({ date: new Date().toISOString().split('T')[0], notes: '', files: [{ id: Date.now(), title: '' }] });
+  const submitReport = async () => {
+    const formData = new FormData();
+    formData.append('report_date', reportForm.date);
+    formData.append('notes', reportForm.notes);
+
+    let fileIndex = 0;
+    reportForm.files.forEach((f) => {
+      if (f.file) {
+        formData.append(`documents[${fileIndex}][file]`, f.file);
+        fileIndex++;
+      }
+    });
+
+    try {
+      await axios.post(`/api/v1/projects/${project_slug}/monitorings`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setToast({ show: true, message: 'Laporan berhasil ditambahkan.', type: 'success' });
+      setReportForm({ date: new Date().toISOString().split('T')[0], notes: '', files: [{ id: Date.now(), title: '' }] });
+      router.visit(window.location.pathname, { preserveScroll: true });
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      setToast({ show: true, message: 'Gagal mengirim laporan.', type: 'error' });
+    }
   };
 
 
@@ -171,10 +200,39 @@ export default function ProjectsShow({ project_slug }: { project_slug: string })
     }
   }, [toast.show]);
 
-  const handleCloseProject = () => {
-    setIsCloseAlertOpen(false);
-    setCurrentStatus('completed');
-    setToast({ show: true, message: 'Proyek berhasil ditutup (Closing Success).', type: 'success' });
+  const handleCloseProject = async () => {
+    const formData = new FormData();
+    formData.append('actual_budget', closingForm.actual_budget.toString());
+
+    // Map closing files to documents array with types
+    const fileTypes: Record<string, string> = {
+      laporan: 'report_activity',
+      bast: 'bast',
+      penagihan: 'invoice', // or other type
+      lesson_learn: 'lesson_learn'
+    };
+
+    let idx = 0;
+    Object.entries(closingForm.files).forEach(([key, file]) => {
+      if (file instanceof File) {
+        formData.append(`documents[${idx}][file]`, file);
+        formData.append(`documents[${idx}][type]`, fileTypes[key] || 'other');
+        idx++;
+      }
+    });
+
+    try {
+      await axios.post(`/api/v1/projects/${project_slug}/close`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setIsCloseAlertOpen(false);
+      setCurrentStatus('completed');
+      setToast({ show: true, message: 'Proyek berhasil ditutup (Closing Success).', type: 'success' });
+      router.visit(window.location.pathname, { preserveScroll: true });
+    } catch (error) {
+      console.error("Error closing project:", error);
+      setToast({ show: true, message: 'Gagal menutup proyek.', type: 'error' });
+    }
   };
 
   const handleDeleteProject = async () => {
@@ -187,6 +245,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string })
       }, 1500);
     } catch (err) {
       console.error(err);
+      setToast({ show: true, message: 'Gagal menghapus proyek.', type: 'error' });
     }
   };
 
@@ -201,33 +260,18 @@ export default function ProjectsShow({ project_slug }: { project_slug: string })
     );
   }
 
-  // Derived Values
-  const mockIssues = project.issues || [];
-  const hasOpenIssues = mockIssues.some((i: any) => i.status === 'open');
-  const isReadyForClosing = currentStatus === 'active' && !hasOpenIssues;
+  const isAssignedAdmin = project?.pic_id === currentUserId;
+  const isAssignedFinance = project?.head_id === currentUserId;
+  const isAssignedDirektur = project?.account_manager_id === currentUserId;
+  const isAssignedStakeholder = isAssignedAdmin || isAssignedFinance || isAssignedDirektur;
 
-  const mock = {
-    slug: project.slug,
-    code: project.code,
-    name: project.name,
-    // client: project.client?.name || '-', // Removed as per strict schema
-    status: currentStatus,
-    budget: project.budget_total,
-    division: project.division?.name || '-',
-    sow: project.documents?.find((d: any) => d.type === 'SOW' || d.type === 'PROPOSAL')?.path
-  };
-
-  // Approval Workflow Logic
-  const defaultWorkflows = [
-    { role: 'Admin', name: 'Admin Project', status: 'approved', date: project.start_date, note: 'Dokumen administrasi dan kelengkapan proposal sudah valid.' },
-    { role: 'Finance', name: 'Finance Team', status: currentStatus === 'draft' ? 'pending' : 'approved', date: currentStatus !== 'draft' ? project.start_date : '-', note: currentStatus !== 'draft' ? 'Budget tersedia dan sesuai dengan alokasi Q1.' : '' },
-    { role: 'Direktur', name: 'Direktur', status: (currentStatus === 'completed' || isReadyForClosing) ? 'approved' : 'waiting', date: '-', note: (currentStatus === 'completed' || isReadyForClosing) ? 'Project berjalan baik, hasil sesuai target.' : '-' },
-  ];
+  const isReadyForClosing = currentStatus === 'active';
 
   const workflows = project.approvals && project.approvals.length > 0 ? project.approvals.map((ap: any) => ({
     ...ap,
-    name: ap.role === 'Admin' ? 'Admin Project' : ap.role === 'Finance' ? 'Finance Team' : ap.role
-  })) : defaultWorkflows;
+    name: ap.role === 'Admin' ? (project.pic?.name || 'Admin Project') : ap.role === 'Finance' ? (project.head?.name || 'Finance Team') : ap.role === 'Direktur' ? (project.account_manager?.name || 'Direktur') : ap.role
+  })) : [];
+  console.log(workflows)
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -236,16 +280,16 @@ export default function ProjectsShow({ project_slug }: { project_slug: string })
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 p-4 md:p-8 pb-0">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight">{mock.name}</h1>
-            <Badge variant="outline">{mock.code}</Badge>
+            <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+            <Badge variant="outline">{project.code}</Badge>
           </div>
-          <p className="text-muted-foreground">{mock.division}</p>
+          <p className="text-muted-foreground">{project.division?.name || '-'}</p>
         </div>
         <div className="flex flex-col md:flex-row items-end md:items-center gap-2 w-full md:w-auto">
           <StatusBadge status={currentStatus} />
 
           <div className="flex gap-2 w-full md:w-auto">
-            <Link href={`/projects/${mock.slug || project.slug}/edit`} className="flex-1 md:flex-none">
+            <Link href={`/projects/${project.id}/edit`} className="flex-1 md:flex-none">
               <Button variant="outline" className="w-full gap-2">
                 <Pencil className="h-4 w-4" />
                 Edit Project
@@ -265,7 +309,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string })
           <h3 className="text-lg font-semibold mb-4">Status Persetujuan (Approval)</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {workflows.map((flow: any, index: number) => {
-              const isMyRole = currentUserRole === flow.role;
+              const isMyRole = flow.role === 'Admin' ? isAssignedAdmin : flow.role === 'Finance' ? isAssignedFinance : flow.role === 'Direktur' ? isAssignedDirektur : false;
               return (
                 <Card
                   key={index}
@@ -323,57 +367,62 @@ export default function ProjectsShow({ project_slug }: { project_slug: string })
           </div>
 
           {/* Approval Notes Input (Below Cards) */}
-          <div className="mt-6 p-4 border rounded-xl bg-white shadow-sm">
-            {/* Project Code Input - Only for Finance */}
-            {currentUserRole === 'Admin' && (
-              <div className="mb-4 space-y-2 border-b pb-4">
-                <Label htmlFor="project-code" className="text-sm font-semibold">
-                  Tetapkan Kode Proyek <span className="text-red-500">*</span>
-                </Label>
-                <div className="flex flex-col gap-1">
-                  <Input
-                    id="project-code"
-                    className="max-w-md bg-white border-gray-300 font-mono"
-                    placeholder="Contoh: PRJ-2025-001"
-                    defaultValue={mock.code !== 'PRJ-2025-001' ? mock.code : ''}
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Kode proyek wajib diisi untuk identifikasi unik sebelum menyetujui.
-                  </p>
+          {(isAssignedStakeholder || canUpdateCode) && (
+            <div className="mt-6 p-4 border rounded-xl bg-white shadow-sm">
+              {/* Project Code Input - Based on permission */}
+              {canUpdateCode && (
+                <div className="mb-4 space-y-2 border-b pb-4">
+                  <Label htmlFor="project-code" className="text-sm font-semibold">
+                    Tetapkan Kode Proyek <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="flex flex-col gap-1">
+                    <Input
+                      id="project-code"
+                      className="max-w-md bg-white border-gray-300 font-mono"
+                      placeholder="Contoh: PRJ-2025-001"
+                      defaultValue={project.code !== 'PRJ-2025-001' ? project.code : ''}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Kode proyek wajib diisi untuk identifikasi unik sebelum menyetujui.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <Label htmlFor="approval-note" className="text-sm font-semibold mb-2 block">Catatan Approval / Evaluasi Project</Label>
-            <span className="text-xs text-muted-foreground ml-1">
-              *Catatan wajib diisi jika memilih Revisi.
-            </span>
-            <Textarea
-              id="approval-note"
-              placeholder="Tulis catatan, arahan, atau evaluasi terkait persetujuan proyek ini..."
-              className="min-h-[100px] resize-y bg-gray-50 focus:bg-white transition-colors"
-              value={approvalNote}
-              onChange={(e) => setApprovalNote(e.target.value)}
-            />
-            <div className="flex justify-end items-center mt-3">
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setIsRevisionAlertOpen(true)} className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-transform hover:scale-105 active:scale-95">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  Revisi
-                </Button>
-                <Button onClick={() => setIsApproveAlertOpen(true)} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)] text-white shadow-sm transition-transform hover:scale-105 active:scale-95">
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Approve
-                </Button>
-              </div>
+              {isAssignedStakeholder && (
+                <>
+                  <Label htmlFor="approval-note" className="text-sm font-semibold mb-2 block">Catatan Approval / Evaluasi Project</Label>
+                  <span className="text-xs text-muted-foreground ml-1">
+                    *Catatan wajib diisi jika memilih Revisi.
+                  </span>
+                  <Textarea
+                    id="approval-note"
+                    placeholder="Tulis catatan, arahan, atau evaluasi terkait persetujuan proyek ini..."
+                    className="min-h-[100px] resize-y bg-gray-50 focus:bg-white transition-colors"
+                    value={approvalNote}
+                    onChange={(e) => setApprovalNote(e.target.value)}
+                  />
+                  <div className="flex justify-end items-center mt-3">
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={() => setIsRevisionAlertOpen(true)} className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-transform hover:scale-105 active:scale-95">
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        Revisi
+                      </Button>
+                      <Button onClick={() => setIsApproveAlertOpen(true)} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)] text-white shadow-sm transition-transform hover:scale-105 active:scale-95">
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Approve
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
-          </div>
+          )}
         </section>
 
         <ProjectTabs
           project={project}
           currentStatus={currentStatus}
-          mock={mock}
           locations={locations}
           reportForm={reportForm}
           setReportForm={setReportForm}

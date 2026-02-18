@@ -28,6 +28,12 @@ final class ProjectResource extends JsonResource
             'allowance_budget' => (float) $this->budget_total * 0.20,
             'start_date' => $this->start_date ? $this->start_date->toDateString() : null,
             'end_date' => $this->end_date ? $this->end_date->toDateString() : null,
+            'division_id' => $this->division_id,
+            'account_manager_id' => $this->account_manager_id,
+            'head_id' => $this->head_id,
+            'pic_id' => $this->pic_id,
+            'created_by' => $this->created_by,
+            'actual_budget' => $this->actual_budget,
             'creator' => $this->whenLoaded('creator', fn () => [
                 'id' => $this->creator->id,
                 'name' => $this->creator->name,

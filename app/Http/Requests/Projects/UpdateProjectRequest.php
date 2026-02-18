@@ -26,6 +26,7 @@ final class UpdateProjectRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'code' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('projects', 'code')->ignore($this->route('project'))],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'division_id' => ['sometimes', 'required', 'exists:divisions,id'],

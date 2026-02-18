@@ -20,7 +20,10 @@ import { cn } from '@/lib/utils'
 import axios from 'axios';
 
 export default function ProjectsCreate({ divisions, employees }: { divisions: any[], employees: any[] }) {
-  const { url } = usePage();
+  const { url, props } = usePage<any>();
+  const userRole = props.auth?.user?.role_name ?? 'user';
+  const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
+
   const queryParams = new URLSearchParams(url.split('?')[1]);
   const type = queryParams.get('type') || 'active'; // 'proposal' or 'active'
 
@@ -29,6 +32,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
 
   // Form State
   const [formData, setFormData] = useState({
+    code: '',
     name: '',
     description: '',
     division_id: '',
@@ -293,15 +297,31 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Nama Project <span className="text-red-500">*</span></Label>
-                  <Input
-                    placeholder="Nama Lengkap Proyek ..."
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    className={errors.name ? 'border-red-500' : ''}
-                  />
-                  {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {isAdminOrFinance && (
+                    <div className="space-y-2">
+                      <Label>Kode Proyek (Opsional)</Label>
+                      <Input
+                        placeholder="Auto-generated jika kosong"
+                        value={formData.code}
+                        onChange={(e) => handleInputChange('code', e.target.value)}
+                        className={errors.code ? 'border-red-500' : ''}
+                      />
+                      {errors.code && <p className="text-xs text-red-500">{errors.code}</p>}
+                      <p className="text-[10px] text-muted-foreground italic">Biarkan kosong untuk generate otomatis (PRJ-XXXXXX)</p>
+                    </div>
+                  )}
+
+                  <div className={`space-y-2 ${!isAdminOrFinance ? 'md:col-span-2' : ''}`}>
+                    <Label>Nama Project <span className="text-red-500">*</span></Label>
+                    <Input
+                      placeholder="Nama Lengkap Proyek ..."
+                      value={formData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className={errors.name ? 'border-red-500' : ''}
+                    />
+                    {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                  </div>
                 </div>
 
               </CardContent>

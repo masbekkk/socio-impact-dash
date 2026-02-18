@@ -19,7 +19,7 @@ final class ProjectFactory extends Factory
     public function definition(): array
     {
         return [
-            'code' => 'PRJ-' . strtoupper($this->faker->bothify('??####')),
+            'code' => 'PRJ-'.mb_strtoupper($this->faker->bothify('??####')),
             'name' => $this->faker->sentence(3),
             'client' => $this->faker->company(),
             'description' => $this->faker->paragraph(),

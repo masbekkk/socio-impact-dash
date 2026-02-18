@@ -8,10 +8,10 @@ use App\Actions\Projects\CreateProject;
 use App\Actions\Projects\DeleteProject;
 use App\Actions\Projects\UpdateProject;
 use App\Formatters\JsonResponseFormatter;
-use App\Http\Resources\V1\Project\ProjectCollection;
-use App\Http\Resources\V1\Project\ProjectResource;
 use App\Http\Requests\Projects\StoreProjectRequest;
 use App\Http\Requests\Projects\UpdateProjectRequest;
+use App\Http\Resources\V1\Project\ProjectCollection;
+use App\Http\Resources\V1\Project\ProjectResource;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,7 +73,7 @@ final class ProjectController extends Controller
 
     public function show(Project $project): JsonResponse
     {
-        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents']);
+        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents', 'monitorings', 'approvals']);
 
         return JsonResponseFormatter::success(
             new ProjectResource($project),

@@ -17,7 +17,11 @@ import axios from 'axios';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton'
 
-export default function ProjectsEdit({ project_slug, divisions, employees }: { project_slug: string, divisions: any[], employees: any[] }) {
+export default function ProjectsEdit({ project_slug, divisions, employees }: { project_slug: string | number, divisions: any[], employees: any[] }) {
+    const { props } = usePage<any>();
+    const permissions = props.auth?.permissions || [];
+    const canUpdateCode = permissions.includes('create-code-project');
+
     const [project, setProject] = useState<any>(null);
     const [step, setStep] = useState('basic')
     const [budget, setBudget] = useState<number>(0)
@@ -27,6 +31,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [errors, setErrors] = useState<any>({});
 
     const [formData, setFormData] = useState({
+        code: '',
         name: '',
         description: '',
         division_id: '',
@@ -72,6 +77,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                 setBudget(data.budget_total);
                 setStatus(data.status);
                 setFormData({
+                    code: data.code || '',
                     name: data.name,
                     description: data.description || '',
                     division_id: data.division?.id?.toString() || '',
@@ -270,26 +276,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                                 <CardTitle>Informasi Dasar</CardTitle>
-                                <CardDescription>Perbarui nama, jenis, dan status proyek.</CardDescription>
+                                <CardDescription>Perbarui nama dan jenis proyek.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6 p-6 md:p-8">
-                                {/* Status Proyek */}
-                                <div className="space-y-2">
-                                    <Label>Status Proyek</Label>
-                                    <Select value={status} onValueChange={setStatus}>
-                                        <SelectTrigger className={cn(
-                                            status === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                status === 'proposal' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''
-                                        )}>
-                                            <SelectValue placeholder="Pilih Status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="proposal">Proposal</SelectItem>
-                                            <SelectItem value="active">Active (Deal)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label>Jenis Project <span className="text-red-500">*</span></Label>
@@ -325,17 +314,31 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label>Nama Project</Label>
-                                    <Input
-                                        value={formData.name}
-                                        onChange={(e) => handleInputChange('name', e.target.value)}
-                                        placeholder="Contoh: Pendampingan UMKM Jahe Merah"
-                                        className={errors.name ? 'border-red-500' : ''}
-                                    />
-                                    {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
-                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {canUpdateCode && (
+                                        <div className="space-y-2">
+                                            <Label>Kode Proyek</Label>
+                                            <Input
+                                                placeholder="Contoh: PRJ-2024-001"
+                                                value={formData.code}
+                                                onChange={(e) => handleInputChange('code', e.target.value)}
+                                                className={errors.code ? 'border-red-500' : ''}
+                                            />
+                                            {errors.code && <p className="text-xs text-red-500">{errors.code}</p>}
+                                        </div>
+                                    )}
 
+                                    <div className={`space-y-2 ${!canUpdateCode ? 'md:col-span-2' : ''}`}>
+                                        <Label>Nama Project <span className="text-red-500">*</span></Label>
+                                        <Input
+                                            placeholder="Nama Lengkap Proyek ..."
+                                            value={formData.name}
+                                            onChange={(e) => handleInputChange('name', e.target.value)}
+                                            className={errors.name ? 'border-red-500' : ''}
+                                        />
+                                        {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                                    </div>
+                                </div>
                             </CardContent>
                             <CardFooter className="flex justify-end gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
                                 <Button onClick={() => setStep('stakeholders')} className="w-auto px-8">
@@ -346,7 +349,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                     </TabsContent>
 
                     {/* Step 2: Stakeholders */}
-                    <TabsContent value="stakeholders" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+                    < TabsContent value="stakeholders" className="mt-0 focus-visible:ring-0 focus-visible:outline-none" >
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                                 <CardTitle>Tim & Stakeholder</CardTitle>
@@ -407,10 +410,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                 </Button>
                             </CardFooter>
                         </Card>
-                    </TabsContent>
+                    </TabsContent >
 
                     {/* Step 3: Detail & Proposal */}
-                    <TabsContent value="detail" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+                    < TabsContent value="detail" className="mt-0 focus-visible:ring-0 focus-visible:outline-none" >
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                                 <CardTitle>Detail & Proposal Project</CardTitle>
@@ -523,10 +526,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                 </Button>
                             </CardFooter>
                         </Card>
-                    </TabsContent>
+                    </TabsContent >
 
                     {/* Step 4: Location (SEPARATE TAB) */}
-                    <TabsContent value="location" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+                    < TabsContent value="location" className="mt-0 focus-visible:ring-0 focus-visible:outline-none" >
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                                 <CardTitle>Lokasi Pelaksanaan</CardTitle>
@@ -587,10 +590,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                 </Button>
                             </CardFooter>
                         </Card>
-                    </TabsContent>
+                    </TabsContent >
 
                     {/* Step 5: Budget */}
-                    <TabsContent value="budget" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+                    < TabsContent value="budget" className="mt-0 focus-visible:ring-0 focus-visible:outline-none" >
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                                 <CardTitle>Anggaran & Keuangan</CardTitle>
@@ -668,10 +671,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                 </Button>
                             </CardFooter>
                         </Card>
-                    </TabsContent>
+                    </TabsContent >
 
-                </Tabs>
-            </div>
-        </AppSidebarLayout>
+                </Tabs >
+            </div >
+        </AppSidebarLayout >
     )
 }

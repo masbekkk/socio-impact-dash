@@ -50,15 +50,17 @@ class UpdateProject
     protected function updateProjectRecord(Project $project, array $data): void
     {
         $updateData = collect($data)->only([
-            'name', 'description', 'division_id',
+            'code', 'name', 'description', 'division_id',
             'account_manager_id', 'head_id', 'pic_id',
             'status', 'project_type', 'budget_total',
-            'start_date', 'end_date',
+            'start_date', 'end_date', 'actual_budget',
         ])->toArray();
-
 
         if (isset($updateData['budget_total'])) {
             $budgetTotal = (float) $updateData['budget_total'];
+            $updateData['operational_budget'] = $budgetTotal * 0.5;
+            $updateData['management_budget'] = $budgetTotal * 0.3;
+            $updateData['allowance_budget'] = $budgetTotal * 0.2;
         }
 
         if (!empty($updateData)) {

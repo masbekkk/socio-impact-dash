@@ -40,7 +40,7 @@ final class Project extends Model
         'code', 'name', 'description',
         'division_id', 'account_manager_id', 'head_id', 'pic_id',
         'status', 'project_type',
-        'budget_total',
+        'budget_total', 'operational_budget', 'management_budget', 'allowance_budget', 'actual_budget',
         'start_date', 'end_date', 'created_by',
     ];
 
@@ -50,16 +50,15 @@ final class Project extends Model
             'id' => 'integer',
             'status' => ProjectStatus::class,
             'budget_total' => 'decimal:2',
+            'operational_budget' => 'decimal:2',
+            'management_budget' => 'decimal:2',
+            'allowance_budget' => 'decimal:2',
+            'actual_budget' => 'decimal:2',
             'start_date' => 'date',
             'end_date' => 'date',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
-    }
-
-    public function getRouteKeyName(): string
-    {
-        return 'code';
     }
 
     public function creator(): BelongsTo
