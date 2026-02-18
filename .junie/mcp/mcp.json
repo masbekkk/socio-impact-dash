@@ -1,9 +1,9 @@
 {
     "mcpServers": {
         "laravel-boost": {
-            "command": "/Users/nunomaduro/Library/Application Support/Herd/bin/php84",
+            "command": "/opt/homebrew/Cellar/php/8.4.10/bin/php",
             "args": [
-                "/Users/nunomaduro/Work/projects/nunomaduro/laravel-starter-kit-inertia-react/artisan",
+                "/Applications/XAMPP/xamppfiles/htdocs/socio-impact-dash/artisan",
                 "boost:mcp"
             ]
         }

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { UploadCloud, FileText, X } from 'lucide-react'
 
-export default function FileUploadDropzone({ className }: { className?: string }) {
+export default function FileUploadDropzone({ className, onFilesChange }: { className?: string, onFilesChange?: (files: File[]) => void }) {
   const [files, setFiles] = useState<File[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -12,11 +12,19 @@ export default function FileUploadDropzone({ className }: { className?: string }
   }
 
   function addFiles(newFiles: File[]) {
-    setFiles((prev) => [...prev, ...newFiles])
+    setFiles((prev) => {
+      const updated = [...prev, ...newFiles];
+      if (onFilesChange) onFilesChange(updated);
+      return updated;
+    })
   }
 
   function removeFile(index: number) {
-    setFiles((prev) => prev.filter((_, i) => i !== index))
+    setFiles((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      if (onFilesChange) onFilesChange(updated);
+      return updated;
+    })
   }
 
   function formatBytes(bytes: number, decimals = 2) {

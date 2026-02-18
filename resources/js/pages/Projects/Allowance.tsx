@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import axios from 'axios';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from '@/components/ui/button';
@@ -20,15 +22,29 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 
-interface AllowancePageProps {
-    project: any;
-}
+export default function Allowance({ project_slug }: { project_slug: string }) {
+    const [project, setProject] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
-export default function Allowance({ project }: AllowancePageProps) {
+    useEffect(() => {
+        const fetchProject = async () => {
+            setLoading(true);
+            try {
+                const response = await axios.get(`/api/v1/projects/${project_slug}`);
+                setProject(response.data.data);
+            } catch (error) {
+                console.error("Error fetching project:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProject();
+    }, [project_slug]);
+
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Proyek', href: '/projects' },
-        { title: project.name, href: `/projects/${project.slug}` },
+        { title: project?.name || '...', href: `/projects/${project_slug}` },
         { title: 'Allowance', href: '#' },
     ];
 
@@ -48,6 +64,17 @@ export default function Allowance({ project }: AllowancePageProps) {
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
     };
+
+    if (loading) {
+        return (
+            <AppSidebarLayout breadcrumbs={breadcrumbs}>
+                <div className="p-8 space-y-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            </AppSidebarLayout>
+        );
+    }
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>

@@ -11,25 +11,104 @@ import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import MoneyInput from '@/components/MoneyInput'
 import { ArrowLeft, ArrowRight, X, Save, Building2 } from 'lucide-react'
-import { Head, Link, usePage } from '@inertiajs/react'
+import { Head, Link, usePage, router } from '@inertiajs/react'
 import { PROJECT_MAPPINGS } from '@/constants/project-mappings'
+import axios from 'axios';
+import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton'
 
-export default function ProjectsEdit({ project, divisions }: { project: any, divisions: any[] }) {
+export default function ProjectsEdit({ project_slug, divisions, employees }: { project_slug: string | number, divisions: any[], employees: any[] }) {
+    const { props } = usePage<any>();
+    const permissions = props.auth?.permissions || [];
+    const canUpdateCode = permissions.includes('create-code-project');
+
+    const [project, setProject] = useState<any>(null);
     const [step, setStep] = useState('basic')
-    const [budget, setBudget] = useState<number>(project.budget_total || 0)
-    const [status, setStatus] = useState(project.status || 'draft')
+    const [budget, setBudget] = useState<number>(0)
+    const [status, setStatus] = useState('draft')
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState<any>({});
 
-    // Simulate Multi-location from single if needed, or use existing array
+    const [formData, setFormData] = useState({
+        code: '',
+        name: '',
+        description: '',
+        division_id: '',
+        account_manager_id: '',
+        head_id: '',
+        pic_id: '',
+        project_type: '',
+        start_date: '',
+        end_date: '',
+        status: 'active',
+    });
+
+    const [sowFile, setSowFile] = useState<File | null>(null);
+    const [rabFile, setRabFile] = useState<File | null>(null);
+
     const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string }[]>([])
 
-    // Init locations if project has them (mock logic check)
-    useEffect(() => {
-        if (project.locations && project.locations.length > 0) {
-            setLocations(project.locations);
-        } else if (project.lat) {
-            setLocations([{ id: '1', name: 'Lokasi Utama', lat: parseFloat(project.lat), lng: parseFloat(project.lng), address: project.address || '' }])
+    // Dynamic Docs State
+    const [supportingDocs, setSupportingDocs] = useState<{ id: number, type: string, file?: File }[]>([{ id: 1, type: 'TOR' }]);
+    const addSupportingDoc = () => {
+        const usedTypes = supportingDocs.map(d => d.type);
+        const available = ['TOR', 'KAK', 'RFP'].find(t => !usedTypes.includes(t));
+        if (available) {
+            setSupportingDocs([...supportingDocs, { id: Date.now(), type: available }]);
         }
-    }, [])
+    };
+    const updateSupportingDocType = (id: number, type: string) => {
+        setSupportingDocs(supportingDocs.map(d => d.id === id ? { ...d, type } : d));
+    };
+    const removeSupportingDocLocal = (id: number) => {
+        if (supportingDocs.length > 1) {
+            setSupportingDocs(supportingDocs.filter(d => d.id !== id));
+        }
+    };
+
+    useEffect(() => {
+        const fetchProject = async () => {
+            setLoading(true);
+            try {
+                const response = await axios.get(`/api/v1/projects/${project_slug}`);
+                const data = response.data.data;
+                setProject(data);
+                setBudget(data.budget_total);
+                setStatus(data.status);
+                setFormData({
+                    code: data.code || '',
+                    name: data.name,
+                    description: data.description || '',
+                    division_id: data.division?.id?.toString() || '',
+                    account_manager_id: data.account_manager?.id?.toString() || '',
+                    head_id: data.head?.id?.toString() || '',
+                    pic_id: data.pic?.id?.toString() || '',
+                    project_type: data.project_type,
+                    start_date: data.start_date || '',
+                    end_date: data.end_date || '',
+                    status: data.status,
+                });
+
+                if (data.locations && data.locations.length > 0) {
+                    setLocations(data.locations.map((loc: any) => ({
+                        id: loc.id.toString(),
+                        name: loc.name || 'Lokasi',
+                        lat: parseFloat(loc.latitude),
+                        lng: parseFloat(loc.longitude),
+                        address: loc.detail_address || ''
+                    })));
+                }
+
+                // Handle payment terms if needed (not in basic Edit yet but good practice)
+            } catch (error) {
+                console.error("Error fetching project:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProject();
+    }, [project_slug]);
 
     const addLocation = (lat: number, lng: number, addr: string) => {
         const isDuplicate = locations.some(loc =>
@@ -44,21 +123,73 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
         setLocations(locations.filter(l => l.id !== id))
     }
 
-    // Dynamic Docs State
-    const [supportingDocs, setSupportingDocs] = useState([{ id: 1, type: 'TOR' }]);
-    const addSupportingDoc = () => {
-        const usedTypes = supportingDocs.map(d => d.type);
-        const available = ['TOR', 'KAK', 'RFP'].find(t => !usedTypes.includes(t));
-        if (available) {
-            setSupportingDocs([...supportingDocs, { id: Date.now(), type: available }]);
+    const handleInputChange = (field: string, value: any) => {
+        setFormData((prev: any) => ({ ...prev, [field]: value }));
+        if (errors[field]) {
+            setErrors((prev: any) => {
+                const newErrors = { ...prev };
+                delete newErrors[field];
+                return newErrors;
+            });
         }
     };
-    const updateSupportingDocType = (id: number, type: string) => {
-        setSupportingDocs(supportingDocs.map(d => d.id === id ? { ...d, type } : d));
-    };
-    const removeSupportingDoc = (id: number) => {
-        if (supportingDocs.length > 1) {
-            setSupportingDocs(supportingDocs.filter(d => d.id !== id));
+
+    const handleSubmit = async () => {
+        setSaving(true);
+        setErrors({});
+
+        const submitData = new FormData();
+        // Laravel method spoofing for PUT with multipart/form-data
+        submitData.append('_method', 'PUT');
+
+        Object.entries(formData).forEach(([key, value]) => {
+            submitData.append(key, value);
+        });
+
+        submitData.append('budget_total', budget.toString());
+        submitData.append('status', status);
+
+        let docIndex = 0;
+
+        if (rabFile) {
+            submitData.append(`documents[${docIndex}][file]`, rabFile);
+            submitData.append(`documents[${docIndex}][type]`, 'RAB');
+            docIndex++;
+        }
+
+        if (sowFile) {
+            submitData.append(`documents[${docIndex}][file]`, sowFile);
+            submitData.append(`documents[${docIndex}][type]`, status === 'proposal' ? 'PROPOSAL' : 'SOW');
+            docIndex++;
+        }
+
+        locations.forEach((loc, index) => {
+            submitData.append(`locations[${index}][latitude]`, loc.lat.toString());
+            submitData.append(`locations[${index}][longitude]`, loc.lng.toString());
+            submitData.append(`locations[${index}][detail_address]`, loc.address);
+        });
+
+        supportingDocs.forEach((doc: any) => {
+            if (doc.file) {
+                submitData.append(`documents[${docIndex}][file]`, doc.file);
+                submitData.append(`documents[${docIndex}][type]`, doc.type);
+                docIndex++;
+            }
+        });
+
+        try {
+            await axios.post(`/api/v1/projects/${project_slug}`, submitData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            router.visit(`/projects/${project_slug}`);
+        } catch (error: any) {
+            if (error.response?.status === 422) {
+                setErrors(error.response.data.errors);
+            } else {
+                console.error("Error updating project:", error);
+            }
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -84,6 +215,17 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
     ];
 
     const stepsList = ['basic', 'stakeholders', 'detail', 'location', 'budget'];
+
+    if (loading) {
+        return (
+            <AppSidebarLayout breadcrumbs={breadcrumbs}>
+                <div className="p-8 space-y-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            </AppSidebarLayout>
+        );
+    }
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -134,34 +276,14 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                                 <CardTitle>Informasi Dasar</CardTitle>
-                                <CardDescription>Perbarui nama, jenis, dan status proyek.</CardDescription>
+                                <CardDescription>Perbarui nama dan jenis proyek.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6 p-6 md:p-8">
-                                {/* Status Proyek */}
-                                <div className="space-y-2">
-                                    <Label>Status Proyek</Label>
-                                    <Select value={status} onValueChange={setStatus}>
-                                        <SelectTrigger className={
-                                            status === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                status === 'proposal' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''
-                                        }>
-                                            <SelectValue placeholder="Pilih Status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="proposal">Proposal</SelectItem>
-                                            <SelectItem value="active">Active (Deal)</SelectItem>
-                                            {/* <SelectItem value="draft">Draft</SelectItem> */}
-                                            {/* <SelectItem value="completed">Completed</SelectItem> */}
-                                            {/* <SelectItem value="on_hold">On Hold</SelectItem> */}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label>Jenis Project <span className="text-red-500">*</span></Label>
-                                        <Select defaultValue={project.type || "pendampingan"}>
-                                            <SelectTrigger>
+                                        <Select value={formData.project_type} onValueChange={(v) => handleInputChange('project_type', v)}>
+                                            <SelectTrigger className={errors.project_type ? 'border-red-500' : ''}>
                                                 <SelectValue placeholder="Pilih Jenis Project" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -171,30 +293,52 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                                 <SelectItem value="event">Event</SelectItem>
                                             </SelectContent>
                                         </Select>
+                                        {errors.project_type && <p className="text-xs text-red-500">{errors.project_type}</p>}
                                     </div>
 
                                     <div className="space-y-2">
                                         <Label>Divisi & Anak Perusahaan <span className="text-red-500">*</span></Label>
-                                        <Select defaultValue={project.division_mapping_value}>
-                                            <SelectTrigger>
+                                        <Select value={formData.division_id} onValueChange={(v) => handleInputChange('division_id', v)}>
+                                            <SelectTrigger className={errors.division_id ? 'border-red-500' : ''}>
                                                 <SelectValue placeholder="Pilih Divisi & Anak Perusahaan" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {PROJECT_MAPPINGS.map((mapping) => (
-                                                    <SelectItem key={mapping.value} value={mapping.value}>
-                                                        {mapping.label}
+                                                {divisions.map((div) => (
+                                                    <SelectItem key={div.id} value={div.id.toString()}>
+                                                        {div.name}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
+                                        {errors.division_id && <p className="text-xs text-red-500">{errors.division_id}</p>}
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label>Nama Project</Label>
-                                    <Input defaultValue={project.name} placeholder="Contoh: Pendampingan UMKM Jahe Merah" />
-                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {canUpdateCode && (
+                                        <div className="space-y-2">
+                                            <Label>Kode Proyek</Label>
+                                            <Input
+                                                placeholder="Contoh: PRJ-2024-001"
+                                                value={formData.code}
+                                                onChange={(e) => handleInputChange('code', e.target.value)}
+                                                className={errors.code ? 'border-red-500' : ''}
+                                            />
+                                            {errors.code && <p className="text-xs text-red-500">{errors.code}</p>}
+                                        </div>
+                                    )}
 
+                                    <div className={`space-y-2 ${!canUpdateCode ? 'md:col-span-2' : ''}`}>
+                                        <Label>Nama Project <span className="text-red-500">*</span></Label>
+                                        <Input
+                                            placeholder="Nama Lengkap Proyek ..."
+                                            value={formData.name}
+                                            onChange={(e) => handleInputChange('name', e.target.value)}
+                                            className={errors.name ? 'border-red-500' : ''}
+                                        />
+                                        {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                                    </div>
+                                </div>
                             </CardContent>
                             <CardFooter className="flex justify-end gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
                                 <Button onClick={() => setStep('stakeholders')} className="w-auto px-8">
@@ -205,7 +349,7 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                     </TabsContent>
 
                     {/* Step 2: Stakeholders */}
-                    <TabsContent value="stakeholders" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+                    < TabsContent value="stakeholders" className="mt-0 focus-visible:ring-0 focus-visible:outline-none" >
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                                 <CardTitle>Tim & Stakeholder</CardTitle>
@@ -215,41 +359,45 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="space-y-2">
                                         <Label>Account Manager</Label>
-                                        <Select defaultValue={project.team?.am}>
-                                            <SelectTrigger>
+                                        <Select value={formData.account_manager_id} onValueChange={(v) => handleInputChange('account_manager_id', v)}>
+                                            <SelectTrigger className={errors.account_manager_id ? 'border-red-500' : ''}>
                                                 <SelectValue placeholder="Pilih Account Manager" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Budi Santoso">Budi Santoso</SelectItem>
-                                                <SelectItem value="Andi Pratama">Andi Pratama</SelectItem>
-                                                <SelectItem value="Citra Kirana">Citra Kirana</SelectItem>
+                                                {employees.map((emp) => (
+                                                    <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
+                                        {errors.account_manager_id && <p className="text-xs text-red-500">{errors.account_manager_id}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Head Implementation</Label>
-                                        <Select defaultValue={project.team?.head}>
-                                            <SelectTrigger>
+                                        <Select value={formData.head_id} onValueChange={(v) => handleInputChange('head_id', v)}>
+                                            <SelectTrigger className={errors.head_id ? 'border-red-500' : ''}>
                                                 <SelectValue placeholder="Pilih Head Implementation" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Siti Aminah">Siti Aminah</SelectItem>
-                                                <SelectItem value="Dewi Lestari">Dewi Lestari</SelectItem>
+                                                {employees.map((emp) => (
+                                                    <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
+                                        {errors.head_id && <p className="text-xs text-red-500">{errors.head_id}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label>PIC Project</Label>
-                                        <Select defaultValue={project.team?.pic}>
-                                            <SelectTrigger>
+                                        <Select value={formData.pic_id} onValueChange={(v) => handleInputChange('pic_id', v)}>
+                                            <SelectTrigger className={errors.pic_id ? 'border-red-500' : ''}>
                                                 <SelectValue placeholder="Pilih PIC Project" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Rudi Hermawan">Rudi Hermawan</SelectItem>
-                                                <SelectItem value="Fajar Nugraha">Fajar Nugraha</SelectItem>
-                                                <SelectItem value="Gita Gutawa">Gita Gutawa</SelectItem>
+                                                {employees.map((emp) => (
+                                                    <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
+                                        {errors.pic_id && <p className="text-xs text-red-500">{errors.pic_id}</p>}
                                     </div>
                                 </div>
                             </CardContent>
@@ -262,10 +410,10 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                 </Button>
                             </CardFooter>
                         </Card>
-                    </TabsContent>
+                    </TabsContent >
 
                     {/* Step 3: Detail & Proposal */}
-                    <TabsContent value="detail" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+                    < TabsContent value="detail" className="mt-0 focus-visible:ring-0 focus-visible:outline-none" >
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                                 <CardTitle>Detail & Proposal Project</CardTitle>
@@ -276,13 +424,15 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label>{status === 'active' ? 'Dokumen Scope of Work (SOW)' : 'Dokumen Proposal Project'} <span className="text-red-500">*</span></Label>
-                                        <div className="border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white h-full">
+                                        <div className={cn("border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white h-full", errors.sow && 'border-red-500')}>
                                             <div className="space-y-1">
                                                 <p className="text-sm text-muted-foreground">
                                                     {status === 'active' ? 'Upload dokumen SOW yang telah disepakati (PDF).' : 'Upload dokumen Proposal lengkap (PDF).'}
                                                 </p>
+                                                {project.sow_path && <p className="text-xs text-blue-600">File saat ini: {project.sow_original_name}</p>}
                                             </div>
-                                            <FileUploadDropzone />
+                                            <FileUploadDropzone onFilesChange={(files) => setSowFile(files[0])} />
+                                            {errors.sow && <p className="text-xs text-red-500">{errors.sow}</p>}
                                         </div>
                                     </div>
                                     <div className="space-y-3">
@@ -308,12 +458,14 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                                             </Select>
                                                         </div>
                                                         {supportingDocs.length > 1 && (
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0 mt-6" onClick={() => removeSupportingDoc(doc.id)}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0 mt-6" onClick={() => removeSupportingDocLocal(doc.id)}>
                                                                 <X className="h-4 w-4" />
                                                             </Button>
                                                         )}
                                                     </div>
-                                                    <FileUploadDropzone />
+                                                    <FileUploadDropzone onFilesChange={(files) => {
+                                                        setSupportingDocs(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] } : d));
+                                                    }} />
                                                 </div>
                                             )
                                         })}
@@ -332,7 +484,8 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                     <Textarea
                                         placeholder="Tambahkan catatan..."
                                         className="min-h-[100px] bg-white"
-                                        defaultValue={project.notes}
+                                        value={formData.description}
+                                        onChange={(e) => handleInputChange('description', e.target.value)}
                                     />
                                 </div>
 
@@ -342,11 +495,23 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label className="text-xs font-normal text-muted-foreground">Tanggal Mulai</Label>
-                                            <Input type="date" className="bg-white" defaultValue={project.start_date ? new Date((project.start_date.split("T"))[0]).toISOString().split('T')[0] : ''} />
+                                            <Input
+                                                type="date"
+                                                className={cn("bg-white", errors.start_date && 'border-red-500')}
+                                                value={formData.start_date}
+                                                onChange={(e) => handleInputChange('start_date', e.target.value)}
+                                            />
+                                            {errors.start_date && <p className="text-xs text-red-500">{errors.start_date}</p>}
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="text-xs font-normal text-muted-foreground">Tanggal Selesai</Label>
-                                            <Input type="date" className="bg-white" defaultValue={project.end_date ? new Date((project.end_date.split("T"))[0]).toISOString().split('T')[0] : ''} />
+                                            <Input
+                                                type="date"
+                                                className={cn("bg-white", errors.end_date && 'border-red-500')}
+                                                value={formData.end_date}
+                                                onChange={(e) => handleInputChange('end_date', e.target.value)}
+                                            />
+                                            {errors.end_date && <p className="text-xs text-red-500">{errors.end_date}</p>}
                                         </div>
                                     </div>
                                     <p className="text-xs text-muted-foreground pt-1">Estimasi durasi pelaksanaan.</p>
@@ -361,10 +526,10 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                 </Button>
                             </CardFooter>
                         </Card>
-                    </TabsContent>
+                    </TabsContent >
 
                     {/* Step 4: Location (SEPARATE TAB) */}
-                    <TabsContent value="location" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+                    < TabsContent value="location" className="mt-0 focus-visible:ring-0 focus-visible:outline-none" >
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                                 <CardTitle>Lokasi Pelaksanaan</CardTitle>
@@ -425,10 +590,10 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                 </Button>
                             </CardFooter>
                         </Card>
-                    </TabsContent>
+                    </TabsContent >
 
                     {/* Step 5: Budget */}
-                    <TabsContent value="budget" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+                    < TabsContent value="budget" className="mt-0 focus-visible:ring-0 focus-visible:outline-none" >
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                                 <CardTitle>Anggaran & Keuangan</CardTitle>
@@ -476,14 +641,18 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                     {/* RAB */}
                                     <div className="space-y-2">
                                         <Label>Rincian Anggaran (RAB)</Label> <span className="text-red-500">*</span>
-                                        <div className="border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full">
+                                        <div className={cn("border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full", errors['documents.0.file'] && 'border-red-500')}>
                                             <div className="flex items-center gap-4">
                                                 <div className="space-y-1">
                                                     <h4 className="text-sm font-medium text-gray-900">Upload File RAB.</h4>
                                                     <p className="text-xs text-muted-foreground">Lampirkan detail Rencana Anggaran Biaya.</p>
+                                                    {project.documents?.find((d: any) => d.type === 'RAB') && (
+                                                        <p className="text-xs text-blue-600">File saat ini: {project.documents.find((d: any) => d.type === 'RAB').original_name}</p>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <FileUploadDropzone />
+                                            <FileUploadDropzone onFilesChange={(files) => setRabFile(files[0])} />
+                                            {errors['documents.0.file'] && <p className="text-xs text-red-500">{errors['documents.0.file']}</p>}
                                         </div>
                                     </div>
                                 </div>
@@ -493,15 +662,19 @@ export default function ProjectsEdit({ project, divisions }: { project: any, div
                                 <Button variant="outline" onClick={() => setStep('location')} title="Kembali">
                                     <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
                                 </Button>
-                                <Button className="w-auto px-8 min-w-32 bg-green-600 hover:bg-green-700">
-                                    Simpan Perubahan
+                                <Button
+                                    onClick={handleSubmit}
+                                    disabled={saving}
+                                    className="w-auto px-8 min-w-32 bg-green-600 hover:bg-green-700 hover:scale-105 transition-transform"
+                                >
+                                    {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
                                 </Button>
                             </CardFooter>
                         </Card>
-                    </TabsContent>
+                    </TabsContent >
 
-                </Tabs>
-            </div>
-        </AppSidebarLayout>
+                </Tabs >
+            </div >
+        </AppSidebarLayout >
     )
 }

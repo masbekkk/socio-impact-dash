@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { ArrowLeft, ArrowRight, X, FileSpreadsheet, FileCheck, Building2, Plus } from 'lucide-react'
-import { Head, Link, usePage } from '@inertiajs/react'
+import { Head, Link, usePage, router } from '@inertiajs/react'
 import { PROJECT_MAPPINGS } from '@/constants/project-mappings'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -14,21 +14,49 @@ import BudgetEditor from '@/components/BudgetEditor'
 import MoneyInput from '@/components/MoneyInput'
 import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
+import { cn } from '@/lib/utils'
 
 
-export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
-  const { url } = usePage();
+import axios from 'axios';
+
+export default function ProjectsCreate({ divisions, employees }: { divisions: any[], employees: any[] }) {
+  const { url, props } = usePage<any>();
+  const userRole = props.auth?.user?.role_name ?? 'user';
+  const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
+
   const queryParams = new URLSearchParams(url.split('?')[1]);
   const type = queryParams.get('type') || 'active'; // 'proposal' or 'active'
 
   const [step, setStep] = useState('basic')
   const [budget, setBudget] = useState<number>(0)
+
+  // Form State
+  const [formData, setFormData] = useState({
+    code: '',
+    name: '',
+    description: '',
+    division_id: '',
+    account_manager_id: '',
+    head_id: '',
+    pic_id: '',
+    project_type: '',
+    start_date: '',
+    end_date: '',
+    status: type === 'proposal' ? 'draft' : 'active',
+  });
+
+  const [sowFile, setSowFile] = useState<File | null>(null);
+  const [rabFile, setRabFile] = useState<File | null>(null);
+
   // State Lokasi Multiple
   const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string }[]>([])
   // State Termin Pembayaran
   const [paymentTerms, setPaymentTerms] = useState<{ id: string, nominal: number, notes: string, date: string }[]>([
     { id: crypto.randomUUID(), nominal: 0, notes: '', date: '' }
   ])
+
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<any>({});
 
   const addLocation = (lat: number, lng: number, addr: string) => {
     // Cek duplikasi (jika lat/lng sama persis atau sangat dekat)
@@ -60,6 +88,78 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
   const removeSupportingDoc = (id: number) => {
     if (supportingDocs.length > 1) {
       setSupportingDocs(supportingDocs.filter(d => d.id !== id));
+    }
+  };
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev: any) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    setErrors({});
+
+    const submitData = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      submitData.append(key, value);
+    });
+
+    submitData.append('budget_total', budget.toString());
+
+    let docIndex = 0;
+
+    if (rabFile) {
+      submitData.append(`documents[${docIndex}][file]`, rabFile);
+      submitData.append(`documents[${docIndex}][type]`, 'RAB');
+      docIndex++;
+    }
+
+    if (sowFile) {
+      submitData.append(`documents[${docIndex}][file]`, sowFile);
+      submitData.append(`documents[${docIndex}][type]`, type === 'proposal' ? 'PROPOSAL' : 'SOW');
+      docIndex++;
+    }
+
+    locations.forEach((loc, index) => {
+      submitData.append(`locations[${index}][latitude]`, loc.lat.toString());
+      submitData.append(`locations[${index}][longitude]`, loc.lng.toString());
+      submitData.append(`locations[${index}][detail_address]`, loc.address);
+    });
+
+    paymentTerms.forEach((term, index) => {
+      submitData.append(`termin_payments[${index}][nominal]`, term.nominal.toString());
+      submitData.append(`termin_payments[${index}][due_date]`, term.date);
+      if (term.notes) submitData.append(`termin_payments[${index}][notes]`, term.notes);
+    });
+
+    supportingDocs.forEach((doc: any) => {
+      if (doc.file) {
+        submitData.append(`documents[${docIndex}][file]`, doc.file);
+        submitData.append(`documents[${docIndex}][type]`, doc.type);
+        docIndex++;
+      }
+    });
+
+    try {
+      const response = await axios.post('/api/v1/projects', submitData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      router.visit(`/projects/${response.data.data.code}`);
+    } catch (error: any) {
+      if (error.response?.status === 422) {
+        setErrors(error.response.data.errors);
+      } else {
+        console.error("Error creating project:", error);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -165,8 +265,8 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label>Jenis Project <span className="text-red-500">*</span></Label>
-                    <Select>
-                      <SelectTrigger>
+                    <Select value={formData.project_type} onValueChange={(v) => handleInputChange('project_type', v)}>
+                      <SelectTrigger className={errors.project_type ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Pilih Jenis Project" />
                       </SelectTrigger>
                       <SelectContent>
@@ -176,30 +276,52 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                         <SelectItem value="event">Event</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.project_type && <p className="text-xs text-red-500">{errors.project_type}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label>Divisi & Anak Perusahaan <span className="text-red-500">*</span></Label>
-                    <Select>
-                      <SelectTrigger>
+                    <Select value={formData.division_id} onValueChange={(v) => handleInputChange('division_id', v)}>
+                      <SelectTrigger className={errors.division_id ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Pilih Divisi & Anak Perusahaan" />
                       </SelectTrigger>
                       <SelectContent>
-                        {PROJECT_MAPPINGS.map((mapping) => (
-                          <SelectItem key={mapping.value} value={mapping.value}>
-                            {mapping.label}
+                        {divisions.map((div) => (
+                          <SelectItem key={div.id} value={div.id.toString()}>
+                            {div.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {errors.division_id && <p className="text-xs text-red-500">{errors.division_id}</p>}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Nama Project <span className="text-red-500">*</span></Label>
-                  <Input
-                    placeholder="Nama Lengkap Proyek ..."
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {isAdminOrFinance && (
+                    <div className="space-y-2">
+                      <Label>Kode Proyek (Opsional)</Label>
+                      <Input
+                        placeholder="Auto-generated jika kosong"
+                        value={formData.code}
+                        onChange={(e) => handleInputChange('code', e.target.value)}
+                        className={errors.code ? 'border-red-500' : ''}
+                      />
+                      {errors.code && <p className="text-xs text-red-500">{errors.code}</p>}
+                      <p className="text-[10px] text-muted-foreground italic">Biarkan kosong untuk generate otomatis (PRJ-XXXXXX)</p>
+                    </div>
+                  )}
+
+                  <div className={`space-y-2 ${!isAdminOrFinance ? 'md:col-span-2' : ''}`}>
+                    <Label>Nama Project <span className="text-red-500">*</span></Label>
+                    <Input
+                      placeholder="Nama Lengkap Proyek ..."
+                      value={formData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className={errors.name ? 'border-red-500' : ''}
+                    />
+                    {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                  </div>
                 </div>
 
               </CardContent>
@@ -222,42 +344,45 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label>Account Manager <span className="text-red-500">*</span></Label>
-                    <Select>
-                      <SelectTrigger>
+                    <Select value={formData.account_manager_id} onValueChange={(v) => handleInputChange('account_manager_id', v)}>
+                      <SelectTrigger className={errors.account_manager_id ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Pilih Account Manager" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ahmad">Ahmad Fauzi</SelectItem>
-                        <SelectItem value="siti">Siti Aminah</SelectItem>
-                        <SelectItem value="budi">Budi Santoso</SelectItem>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    {errors.account_manager_id && <p className="text-xs text-red-500">{errors.account_manager_id}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Head Implementation <span className="text-red-500">*</span></Label>
-                    <Select>
-                      <SelectTrigger>
+                    <Select value={formData.head_id} onValueChange={(v) => handleInputChange('head_id', v)}>
+                      <SelectTrigger className={errors.head_id ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Pilih Head Implementation" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="dewi">Dewi Lestari</SelectItem>
-                        <SelectItem value="eko">Eko Prasetyo</SelectItem>
-                        <SelectItem value="rian">Rian Hidayat</SelectItem>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    {errors.head_id && <p className="text-xs text-red-500">{errors.head_id}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>PIC Project <span className="text-red-500">*</span></Label>
-                    <Select>
-                      <SelectTrigger>
+                    <Select value={formData.pic_id} onValueChange={(v) => handleInputChange('pic_id', v)}>
+                      <SelectTrigger className={errors.pic_id ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Pilih PIC Project" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fajar">Fajar Nugraha</SelectItem>
-                        <SelectItem value="maya">Maya Indah</SelectItem>
-                        <SelectItem value="rizky">Rizky Ramadhan</SelectItem>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    {errors.pic_id && <p className="text-xs text-red-500">{errors.pic_id}</p>}
                   </div>
                 </div>
               </CardContent>
@@ -285,13 +410,14 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label>{type === 'proposal' ? 'Dokumen Proposal Project' : 'Dokumen Scope of Work (SOW)'} <span className="text-red-500">*</span></Label>
-                    <div className="border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white h-full">
+                    <div className={cn("border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white h-full", errors.sow && 'border-red-500')}>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">
                           {type === 'proposal' ? 'Upload dokumen Proposal lengkap.' : 'Upload dokumen SOW yang disepakati.'}
                         </p>
                       </div>
-                      <FileUploadDropzone />
+                      <FileUploadDropzone onFilesChange={(files) => setSowFile(files[0])} />
+                      {errors.sow && <p className="text-xs text-red-500">{errors.sow}</p>}
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -322,7 +448,9 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                               </Button>
                             )}
                           </div>
-                          <FileUploadDropzone />
+                          <FileUploadDropzone onFilesChange={(files) => {
+                            setSupportingDocs(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] } : d));
+                          }} />
                         </div>
                       )
                     })}
@@ -341,6 +469,8 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                   <Textarea
                     placeholder="Tambahkan catatan..."
                     className="min-h-[100px] bg-white"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
                   />
                 </div>
 
@@ -350,11 +480,23 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-xs font-normal text-muted-foreground">Tanggal Mulai Kegiatan</Label>
-                      <Input type="date" className="bg-white" />
+                      <Input
+                        type="date"
+                        className={cn("bg-white", errors.start_date && 'border-red-500')}
+                        value={formData.start_date}
+                        onChange={(e) => handleInputChange('start_date', e.target.value)}
+                      />
+                      {errors.start_date && <p className="text-xs text-red-500">{errors.start_date}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-normal text-muted-foreground">Tanggal Deadline Kegiatan</Label>
-                      <Input type="date" className="bg-white" />
+                      <Input
+                        type="date"
+                        className={cn("bg-white", errors.end_date && 'border-red-500')}
+                        value={formData.end_date}
+                        onChange={(e) => handleInputChange('end_date', e.target.value)}
+                      />
+                      {errors.end_date && <p className="text-xs text-red-500">{errors.end_date}</p>}
                     </div>
                   </div>
                 </div>
@@ -486,17 +628,15 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                   {/* RAB */}
                   <div className="space-y-2">
                     <Label>Rincian Anggaran (RAB)</Label> <span className="text-red-500">*</span>
-                    <div className="border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full">
+                    <div className={cn("border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full", errors['documents.0.file'] && 'border-red-500')}>
                       <div className="flex items-center gap-4">
-                        {/* <div className="p-3 bg-blue-50 rounded-full text-blue-600 border border-blue-100">
-                          <FileSpreadsheet />
-                        </div> */}
                         <div className="space-y-1">
                           <h4 className="text-sm font-medium text-gray-900">Upload File RAB.</h4>
                           <p className="text-xs text-muted-foreground">Lampirkan detail Rencana Anggaran Biaya.</p>
                         </div>
                       </div>
-                      <FileUploadDropzone />
+                      <FileUploadDropzone onFilesChange={(files) => setRabFile(files[0])} />
+                      {errors['documents.0.file'] && <p className="text-xs text-red-500">{errors['documents.0.file']}</p>}
                     </div>
                   </div>
 
@@ -605,8 +745,12 @@ export default function ProjectsCreate({ divisions }: { divisions: any[] }) {
                 <Button variant="outline" onClick={() => setStep('location')} title="Kembali">
                   <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
                 </Button>
-                <Button className="w-auto px-8 min-w-32 bg-[var(--sidebar)] hover:bg-[var(--sidebar)] hover:scale-105">
-                  Simpan Proyek
+                <Button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="w-auto px-8 min-w-32 bg-[var(--sidebar)] hover:bg-[var(--sidebar)] hover:scale-105"
+                >
+                  {loading ? 'Menyimpan...' : 'Simpan Proyek'}
                 </Button>
               </CardFooter>
             </Card>

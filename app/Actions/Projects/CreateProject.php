@@ -9,11 +9,9 @@ use App\Services\FileUploadService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-class CreateProject
+final class CreateProject
 {
-    public function __construct(protected FileUploadService $fileUploadService)
-    {
-    }
+    public function __construct(private FileUploadService $fileUploadService) {}
 
     public function handle(array $data, int $userId): Project
     {
@@ -24,72 +22,53 @@ class CreateProject
                 $this->syncLocations($project, $data['locations']);
             }
 
-            if (isset($data['budgets'])) {
-                $this->syncBudgets($project, $data['budgets']);
-            }
-
-            if (isset($data['milestones'])) {
-                $this->syncMilestones($project, $data['milestones']);
+            if (isset($data['termin_payments'])) {
+                $this->syncTerminPayments($project, $data['termin_payments']);
             }
 
             if (isset($data['documents'])) {
                 $this->syncDocuments($project, $data['documents'], $userId);
             }
 
-            return $project->load(['locations', 'budgets', 'milestones', 'documents']);
+            return $project->load(['locations', 'terminPayments', 'documents']);
         });
     }
 
-    protected function createProjectRecord(array $data, int $userId): Project
+    private function createProjectRecord(array $data, int $userId): Project
     {
         $code = $data['code'] ?? $this->generateUniqueCode();
-        
-        $sowData = [];
-        if (isset($data['sow']) && $data['sow'] instanceof \Illuminate\Http\UploadedFile) {
-            $sowData = $this->fileUploadService->uploadFileWithPrefix(
-                $data['sow'],
-                'projects/sow',
-                'sow_'
-            );
-        }
-
-        $budgetTotal = $data['budget_total'] ?? 0;
+        $budgetTotal = (float) ($data['budget_total'] ?? 0);
 
         return Project::create([
             'code' => $code,
             'name' => $data['name'],
-            'client' => $data['client'],
             'description' => $data['description'] ?? null,
-            'user_id' => $userId,
+            'created_by' => $userId,
             'division_id' => $data['division_id'],
             'account_manager_id' => $data['account_manager_id'],
             'head_id' => $data['head_id'],
             'pic_id' => $data['pic_id'],
-            'status' => $data['status'] ?? 'draft',
+            'status' => $data['status'] ?? ProjectStatus::Active,
             'project_type' => $data['project_type'],
-            'sow_path' => $sowData['sow_path'] ?? null,
-            'sow_original_name' => $sowData['sow_original_name'] ?? null,
-            'sow_mime' => $sowData['sow_mime'] ?? null,
-            'sow_size' => $sowData['sow_size'] ?? null,
             'budget_total' => $budgetTotal,
-            'operational_budget' => $budgetTotal * 0.50,
-            'management_budget' => $budgetTotal * 0.30,
-            'allowance_budget' => $budgetTotal * 0.20,
+            'operational_budget' => $budgetTotal * 0.5,
+            'management_budget' => $budgetTotal * 0.3,
+            'allowance_budget' => $budgetTotal * 0.2,
             'start_date' => $data['start_date'],
             'end_date' => $data['end_date'],
         ]);
     }
 
-    protected function generateUniqueCode(): string
+    private function generateUniqueCode(): string
     {
         do {
-            $code = 'PRJ-' . strtoupper(Str::random(6));
+            $code = 'PRJ-'.mb_strtoupper(Str::random(6));
         } while (Project::where('code', $code)->exists());
 
         return $code;
     }
 
-    protected function syncLocations(Project $project, array $locations): void
+    private function syncLocations(Project $project, array $locations): void
     {
         foreach ($locations as $location) {
             $project->locations()->create([
@@ -100,32 +79,18 @@ class CreateProject
         }
     }
 
-    protected function syncBudgets(Project $project, array $budgets): void
+    private function syncTerminPayments(Project $project, array $terminPayments): void
     {
-        foreach ($budgets as $budget) {
-            $project->budgets()->create([
-                'item_name' => $budget['item_name'],
-                'quantity' => $budget['quantity'],
-                'unit_price' => $budget['unit_price'],
-                'planned_amount' => $budget['quantity'] * $budget['unit_price'],
-                'category_id' => $budget['category_id'] ?? null,
-                'status' => 'pending',
+        foreach ($terminPayments as $term) {
+            $project->terminPayments()->create([
+                'nominal' => $term['nominal'],
+                'due_date' => $term['due_date'],
+                'notes' => $term['notes'] ?? null,
             ]);
         }
     }
 
-    protected function syncMilestones(Project $project, array $milestones): void
-    {
-        foreach ($milestones as $milestone) {
-            $project->milestones()->create([
-                'title' => $milestone['title'],
-                'target_date' => $milestone['target_date'],
-                'status' => $milestone['status'] ?? 'pending',
-            ]);
-        }
-    }
-
-    protected function syncDocuments(Project $project, array $documents, int $userId): void
+    private function syncDocuments(Project $project, array $documents, int $userId): void
     {
         foreach ($documents as $doc) {
             if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
