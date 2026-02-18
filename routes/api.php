@@ -31,4 +31,5 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::post('projects/{project}/termins/{termin}', [\App\Http\Controllers\Api\V1\ProjectTerminPaymentController::class, 'update']);
     Route::apiResource('projects', \App\Http\Controllers\Api\V1\ProjectController::class);
     Route::apiResource('reimbursements', ReimbursementController::class)->only(['index', 'store', 'show']);
+    Route::match(['patch', 'post'], 'reimbursements/{code}/status', [ReimbursementController::class, 'updateStatus']);
 });

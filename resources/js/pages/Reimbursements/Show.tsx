@@ -1,10 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   ArrowLeft,
   CheckCircle,
@@ -20,6 +30,7 @@ import {
   AlertCircle,
   DollarSign,
   Loader2,
+  Upload,
 } from 'lucide-react';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -95,31 +106,106 @@ const URGENCY_LABELS: Record<string, { label: string; variant: 'destructive' | '
   rendah: { label: 'Rendah', variant: 'outline' },
 };
 
+const APPROVABLE_STATUSES = ['submitted', 'head_approved', 'finance_approved'];
+
 export default function Show() {
   const { code } = usePage().props as { code: string };
   const [data, setData] = useState<ReimbursementDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchDetail = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(`/api/v1/reimbursements/${code}`);
-        setData(response.data.data);
-      } catch (err: unknown) {
-        if (axios.isAxiosError(err) && err.response?.status === 404) {
-          setError('Data pengajuan tidak ditemukan.');
-        } else {
-          setError('Terjadi kesalahan saat mengambil data.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [approveNotes, setApproveNotes] = useState('');
+  const [transferProofFile, setTransferProofFile] = useState<File | null>(null);
+  const [transferProofPreview, setTransferProofPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    fetchDetail();
+  const fetchDetail = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/api/v1/reimbursements/${code}`);
+      setData(response.data.data);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        setError('Data pengajuan tidak ditemukan.');
+      } else {
+        setError('Terjadi kesalahan saat mengambil data.');
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [code]);
+
+  useEffect(() => {
+    fetchDetail();
+  }, [fetchDetail]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setTransferProofFile(file);
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setTransferProofPreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setTransferProofPreview(null);
+    }
+  };
+
+  const resetApproveDialog = () => {
+    setApproveDialogOpen(false);
+    setApproveNotes('');
+    setTransferProofFile(null);
+    setTransferProofPreview(null);
+  };
+
+  const resetRejectDialog = () => {
+    setRejectDialogOpen(false);
+    setRejectionReason('');
+  };
+
+  const handleApprove = async () => {
+    if (!data || !transferProofFile) return;
+    setActionLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('action', 'approved');
+      formData.append('transfer_proof', transferProofFile);
+      if (approveNotes.trim()) formData.append('notes', approveNotes);
+
+      await axios.post(`/api/v1/reimbursements/${data.code}/status`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      resetApproveDialog();
+      await fetchDetail();
+    } catch {
+      alert('Gagal menyetujui pengajuan. Pastikan bukti transfer sudah diupload.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!data || !rejectionReason.trim()) return;
+    setActionLoading(true);
+    try {
+      await axios.patch(`/api/v1/reimbursements/${data.code}/status`, {
+        action: 'rejected',
+        notes: rejectionReason,
+      });
+
+      resetRejectDialog();
+      await fetchDetail();
+    } catch {
+      alert('Gagal menolak pengajuan.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -160,6 +246,7 @@ export default function Show() {
 
   const statusCfg = STATUS_CONFIG[data.status] ?? { label: data.status, className: 'bg-gray-100 text-gray-600', icon: Clock };
   const StatusIcon = statusCfg.icon;
+  const canApproveReject = APPROVABLE_STATUSES.includes(data.status);
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -193,6 +280,25 @@ export default function Show() {
               </div>
             </div>
           </div>
+
+          {/* Action Buttons */}
+          {canApproveReject && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => setRejectDialogOpen(true)}
+              >
+                <XCircle className="mr-2 h-4 w-4" /> Reject
+              </Button>
+              <Button
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => setApproveDialogOpen(true)}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" /> Approve
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -339,20 +445,29 @@ export default function Show() {
                 </div>
 
                 {/* Transfer Proof */}
-                {data.transferred_at && (
+                {data.transfer_proof_path && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Bukti Transfer</label>
                       <Badge variant="outline" className="text-xs">Finance</Badge>
                     </div>
                     <div className="bg-green-50/50 p-4 rounded-lg border border-green-200 space-y-3">
-                      <div className="flex items-center gap-2 text-green-800 font-medium text-sm">
-                        <CheckCircle className="h-4 w-4" />
-                        Transfer Telah Dilakukan
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-green-800 font-medium text-sm">
+                          <CheckCircle className="h-4 w-4" />
+                          Transfer Telah Dilakukan
+                        </div>
+                        <a href={`/storage/${data.transfer_proof_path}`} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline" className="gap-1.5 text-green-700 border-green-300 hover:bg-green-100">
+                            <Download className="h-3.5 w-3.5" /> Lihat Bukti
+                          </Button>
+                        </a>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Ditransfer pada: {format(new Date(data.transferred_at), 'dd MMMM yyyy, HH:mm', { locale: localeId })}
-                      </div>
+                      {data.transferred_at && (
+                        <div className="text-xs text-muted-foreground">
+                          Ditransfer pada: {format(new Date(data.transferred_at), 'dd MMMM yyyy, HH:mm', { locale: localeId })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -472,6 +587,130 @@ export default function Show() {
           </div>
         </div>
       </div>
+
+      {/* Approve Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={(open) => { if (!open) resetApproveDialog(); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <CheckCircle className="h-5 w-5" />
+              Konfirmasi Approve
+            </DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menyetujui pengajuan <strong>{data.type.toUpperCase()}</strong> dengan kode <strong className="font-mono">{data.code}</strong>?
+              Silakan upload bukti transfer di bawah ini.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="transfer_proof">
+                Bukti Transfer <span className="text-red-500">*</span>
+              </Label>
+              <div
+                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-green-400 hover:bg-green-50/30"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {transferProofPreview ? (
+                  <div className="space-y-2">
+                    <img src={transferProofPreview} alt="Preview" className="max-h-40 mx-auto rounded-lg shadow-sm" />
+                    <p className="text-sm text-muted-foreground">{transferProofFile?.name}</p>
+                  </div>
+                ) : transferProofFile ? (
+                  <div className="space-y-2">
+                    <FileText className="h-10 w-10 mx-auto text-muted-foreground" />
+                    <p className="text-sm font-medium">{transferProofFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{(transferProofFile.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="mx-auto h-12 w-12 rounded-full bg-green-50 flex items-center justify-center">
+                      <Upload className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Klik untuk upload bukti transfer</p>
+                      <p className="text-xs text-muted-foreground">JPG, PNG, atau PDF (maks 5MB)</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                id="transfer_proof"
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,application/pdf"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="approve_notes">Catatan (opsional)</Label>
+              <Textarea
+                id="approve_notes"
+                placeholder="Tambahkan catatan jika diperlukan..."
+                className="min-h-[80px] resize-none"
+                value={approveNotes}
+                onChange={(e) => setApproveNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={resetApproveDialog} disabled={actionLoading}>Batal</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              disabled={!transferProofFile || actionLoading}
+              onClick={handleApprove}
+            >
+              {actionLoading ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
+              ) : (
+                <><CheckCircle className="mr-2 h-4 w-4" /> Ya, Approve</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open) resetRejectDialog(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <XCircle className="h-5 w-5" />
+              Konfirmasi Reject
+            </DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menolak pengajuan <strong>{data.type.toUpperCase()}</strong> dengan kode <strong className="font-mono">{data.code}</strong> dari <strong>{data.user?.name}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="rejection_reason_show">
+              Alasan Penolakan <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              id="rejection_reason_show"
+              placeholder="Jelaskan alasan penolakan pengajuan ini..."
+              className="min-h-[100px] resize-none"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Alasan penolakan akan dikirim ke pemohon</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={resetRejectDialog} disabled={actionLoading}>Batal</Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              disabled={!rejectionReason.trim() || actionLoading}
+              onClick={handleReject}
+            >
+              {actionLoading ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
+              ) : (
+                <><XCircle className="mr-2 h-4 w-4" /> Ya, Reject</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppSidebarLayout>
   );
 }

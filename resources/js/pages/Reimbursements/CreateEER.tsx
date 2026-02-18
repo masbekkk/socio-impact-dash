@@ -30,7 +30,7 @@ export default function CreateEER({ projects }: { projects: Project[] }) {
 
   const [formData, setFormData] = useState({
     name: authUser?.name ?? '',
-    nip: '',
+    nip: authUser?.nip ?? '',
     project_id: '',
     division: '',
     pic: '',
@@ -127,7 +127,7 @@ export default function CreateEER({ projects }: { projects: Project[] }) {
                   <Label htmlFor="nip">NIP</Label>
                   <div className="relative">
                     <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="nip" name="nip" placeholder="Nomor Induk Pegawai" className="pl-9 h-10" value={formData.nip} onChange={handleChange} />
+                    <Input id="nip" name="nip" placeholder="Nomor Induk Pegawai" className="pl-9 h-10 bg-muted/30" value={formData.nip} readOnly />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -267,7 +267,7 @@ export default function CreateEER({ projects }: { projects: Project[] }) {
                   <Label htmlFor="approver_position">Jabatan Approver</Label>
                   <div className="relative">
                     <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="approver_position" name="approver_position" className="pl-9 h-10 bg-muted/30" value={formData.approver_position} onChange={handleChange} readOnly={isAutoFilled} />
+                    <Input id="approver_position" name="approver_position" className="pl-9 h-10 bg-muted/30" value={'Head'} readOnly />
                   </div>
                 </div>
                 <div className="space-y-2">

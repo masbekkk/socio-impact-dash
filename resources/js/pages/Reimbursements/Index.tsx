@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
@@ -95,6 +96,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Reimbursement | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -385,7 +387,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                                     <Eye className="mr-2 h-4 w-4" /> View Detail
                                   </Link>
                                 </DropdownMenuItem>
-                                {item.status === 'submitted' && (
+                                {/* {item.status === 'submitted' && (
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
@@ -401,7 +403,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                                       <XCircle className="mr-2 h-4 w-4" /> Reject
                                     </DropdownMenuItem>
                                   </>
-                                )}
+                                )} */}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -475,7 +477,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
       </div>
 
       {/* Approve Dialog */}
-      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+      {/* <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-700">
@@ -493,25 +495,35 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)} disabled={actionLoading}>Batal</Button>
             <Button
               className="bg-green-600 hover:bg-green-700"
-              onClick={() => {
+              disabled={actionLoading}
+              onClick={async () => {
                 if (selectedItem) {
-                  router.post(`/reimbursements/${selectedItem.id}/approve`, {}, {
-                    onSuccess: () => { setApproveDialogOpen(false); setSelectedItem(null); },
-                  });
+                  setActionLoading(true);
+                  try {
+                    await axios.patch(`/api/v1/reimbursements/${selectedItem.code}/status`, { action: 'approved' });
+                    setApproveDialogOpen(false);
+                    setSelectedItem(null);
+                    router.reload({ only: ['reimbursements'] });
+                  } catch {
+                    alert('Gagal menyetujui pengajuan.');
+                  } finally {
+                    setActionLoading(false);
+                  }
                 }
               }}
             >
-              <CheckCircle className="mr-2 h-4 w-4" /> Ya, Approve
+              <CheckCircle className="mr-2 h-4 w-4" />
+              {actionLoading ? 'Memproses...' : 'Ya, Approve'}
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       {/* Reject Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+      {/* <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-700">
@@ -538,23 +550,36 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
             <p className="text-xs text-muted-foreground">Alasan penolakan akan dikirim ke pemohon</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setRejectDialogOpen(false); setRejectionReason(''); }}>Batal</Button>
+            <Button variant="outline" onClick={() => { setRejectDialogOpen(false); setRejectionReason(''); }} disabled={actionLoading}>Batal</Button>
             <Button
               className="bg-red-600 hover:bg-red-700"
-              disabled={!rejectionReason.trim()}
-              onClick={() => {
+              disabled={!rejectionReason.trim() || actionLoading}
+              onClick={async () => {
                 if (selectedItem && rejectionReason.trim()) {
-                  router.post(`/reimbursements/${selectedItem.id}/reject`, { reason: rejectionReason }, {
-                    onSuccess: () => { setRejectDialogOpen(false); setSelectedItem(null); setRejectionReason(''); },
-                  });
+                  setActionLoading(true);
+                  try {
+                    await axios.patch(`/api/v1/reimbursements/${selectedItem.code}/status`, {
+                      action: 'rejected',
+                      notes: rejectionReason,
+                    });
+                    setRejectDialogOpen(false);
+                    setSelectedItem(null);
+                    setRejectionReason('');
+                    router.reload({ only: ['reimbursements'] });
+                  } catch {
+                    alert('Gagal menolak pengajuan.');
+                  } finally {
+                    setActionLoading(false);
+                  }
                 }
               }}
             >
-              <XCircle className="mr-2 h-4 w-4" /> Ya, Reject
+              <XCircle className="mr-2 h-4 w-4" />
+              {actionLoading ? 'Memproses...' : 'Ya, Reject'}
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </AppSidebarLayout>
   );
 }

@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\CreateReimbursement;
+use App\Actions\UpdateReimbursementStatus;
 use App\Formatters\JsonResponseFormatter;
 use App\Http\Requests\StoreReimbursementRequest;
+use App\Http\Requests\UpdateReimbursementStatusRequest;
 use App\Http\Resources\V1\Reimbursement\ReimbursementResource;
+use App\Models\Reimbursement;
 use App\Services\ReimbursementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -74,6 +77,36 @@ final class ReimbursementController extends Controller
             return JsonResponseFormatter::success(
                 new ReimbursementResource($data),
                 'Detail reimbursement berhasil diambil'
+            );
+        } catch (\Throwable $e) {
+            return JsonResponseFormatter::error($e->getMessage(), 500);
+        }
+    }
+
+    public function updateStatus(
+        string $code,
+        UpdateReimbursementStatusRequest $request,
+        UpdateReimbursementStatus $action
+    ): JsonResponse {
+        try {
+            $reimbursement = Reimbursement::where('code', $code)->first();
+
+            if (!$reimbursement) {
+                return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
+            }
+
+            $result = $action->handle(
+                $reimbursement,
+                $request->validated(),
+                $request->user()->id,
+                $request->file('transfer_proof')
+            );
+
+            $actionLabel = $request->validated('action') === 'approved' ? 'disetujui' : 'ditolak';
+
+            return JsonResponseFormatter::success(
+                new ReimbursementResource($result),
+                "Reimbursement berhasil {$actionLabel}"
             );
         } catch (\Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);

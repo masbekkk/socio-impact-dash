@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ export default function CreateAllowance({ projects }: { projects: Project[] }) {
 
     const [formData, setFormData] = useState({
         nama: authUser?.name ?? '',
-        nip: '',
+        nip: authUser?.nip ?? '',
         project_id: '',
         divisi: '',
         pic_project: '',
@@ -113,6 +113,18 @@ export default function CreateAllowance({ projects }: { projects: Project[] }) {
 
     const isAutoFilled = !!formData.project_id;
 
+    const selectedProject = useMemo(() => {
+        if (!formData.project_id) return null;
+        return projects.find(p => p.id === parseInt(formData.project_id)) ?? null;
+    }, [formData.project_id, projects]);
+
+    const remainingBudget = useMemo(() => {
+        if (!selectedProject) return null;
+        return (selectedProject.allowance_budget ?? 0) - (selectedProject.used_allowance_budget ?? 0);
+    }, [selectedProject]);
+
+    const budgetExceeded = remainingBudget !== null && formData.amount > remainingBudget;
+
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
             <Head title="Buat Allowance" />
@@ -151,7 +163,7 @@ export default function CreateAllowance({ projects }: { projects: Project[] }) {
                                     <Label htmlFor="nip">NIP</Label>
                                     <div className="relative">
                                         <UserCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input id="nip" name="nip" placeholder="Nomor Induk Pegawai" className="pl-9 h-10" value={formData.nip} onChange={handleChange} />
+                                        <Input id="nip" name="nip" placeholder="Nomor Induk Pegawai" className="pl-9 h-10 bg-muted/30" value={formData.nip} readOnly />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -177,6 +189,9 @@ export default function CreateAllowance({ projects }: { projects: Project[] }) {
                                     <Label htmlFor="amount">Nominal Allowance</Label>
                                     <MoneyInput id="amount" value={formData.amount} onValueChange={handleAmountChange} className="h-10" placeholder="Masukkan nominal pengajuan" />
                                     {errors.amount && <p className="text-xs text-red-500 font-medium">{errors.amount[0]}</p>}
+                                    {budgetExceeded && (
+                                        <p className="text-xs text-red-600 font-medium mt-1">Nominal pengajuan melebihi batas pagu allowance proyek.</p>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="divisi">Divisi</Label>
@@ -275,7 +290,7 @@ export default function CreateAllowance({ projects }: { projects: Project[] }) {
                                     <Label htmlFor="approver_position">Jabatan Approver</Label>
                                     <div className="relative">
                                         <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input id="approver_position" name="approver_position" className="pl-9 h-10 bg-muted/30" value={formData.approver_position} onChange={handleChange} readOnly={isAutoFilled} />
+                                        <Input id="approver_position" name="approver_position" className="pl-9 h-10 bg-muted/30" value={'Head'} readOnly />
                                     </div>
                                 </div>
                                 <div className="space-y-2">

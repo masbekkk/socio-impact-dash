@@ -64,7 +64,10 @@ final class ReimbursementController
                 'name' => $project->name,
                 'code' => $project->code,
                 'operational_budget' => (float) $project->operational_budget,
-                'used_operational_budget' => 0,
+                'used_operational_budget' => (float) $project->reimbursements()
+                    ->where('type', 'atr')
+                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->sum('amount'),
                 'division_name' => $project->division?->name ?? '-',
                 'pic_name' => $project->pic?->name ?? '-',
                 'head_name' => $project->head?->name ?? '-',
@@ -110,7 +113,10 @@ final class ReimbursementController
                 'name' => $project->name,
                 'code' => $project->code,
                 'allowance_budget' => (float) $project->allowance_budget,
-                'used_allowance_budget' => 0,
+                'used_allowance_budget' => (float) $project->reimbursements()
+                    ->where('type', 'allowance')
+                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->sum('amount'),
                 'division_name' => $project->division?->name ?? '-',
                 'pic_name' => $project->pic?->name ?? '-',
                 'head_name' => $project->head?->name ?? '-',
