@@ -11,9 +11,10 @@ enum DocumentType: string
     case MoM = 'mom';
     case Receipt = 'receipt';
     case EER = 'eer';
-    case RAB = 'rab';
+    case RAB = 'RAB';
     case TransferProof = 'transfer_proof';
-    case SOW = 'sow';
+    case SOW = 'SOW';
+    case TOR = 'TOR';
     case ReportActivity = 'report_activity';
     case LessonLearn = 'lesson_learn';
     case BAST = 'bast';

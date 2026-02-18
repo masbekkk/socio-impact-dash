@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests\Projects;
 
+use App\Enums\ProjectStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
-class StoreProjectRequest extends FormRequest
+final class StoreProjectRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -14,43 +18,37 @@ class StoreProjectRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         return [
+            'code' => ['nullable', 'string', 'max:50', Rule::unique('projects', 'code')],
             'name' => ['required', 'string', 'max:255'],
-            'client' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'division_id' => ['required', 'exists:divisions,id'],
             'account_manager_id' => ['required', 'exists:users,id'],
             'head_id' => ['required', 'exists:users,id'],
             'pic_id' => ['required', 'exists:users,id'],
-            'status' => ['required', 'string'], // Will be validated against Enum in Action if needed, or use Rule::enum
             'project_type' => ['required', 'string'],
+            'status' => ['nullable', Rule::enum(ProjectStatus::class)],
             'budget_total' => ['required', 'numeric', 'min:0'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'sow' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:10240'],
-            
-            // Nested arrays
             'locations' => ['nullable', 'array'],
-            'locations.*.latitude' => ['required_with:locations', 'numeric'],
-            'locations.*.longitude' => ['required_with:locations', 'numeric'],
-            'locations.*.detail_address' => ['required_with:locations', 'string'],
-            
-            'budgets' => ['nullable', 'array'],
-            'budgets.*.item_name' => ['required_with:budgets', 'string'],
-            'budgets.*.quantity' => ['required_with:budgets', 'numeric', 'min:1'],
-            'budgets.*.unit_price' => ['required_with:budgets', 'numeric', 'min:0'],
-            'budgets.*.category_id' => ['nullable', 'exists:project_category_budgets,id'],
-            
+            'locations.*.latitude' => ['required', 'numeric'],
+            'locations.*.longitude' => ['required', 'numeric'],
+            'locations.*.detail_address' => ['required', 'string'],
+            'termin_payments' => ['nullable', 'array'],
+            'termin_payments.*.nominal' => ['required', 'numeric', 'min:0'],
+            'termin_payments.*.due_date' => ['required', 'date'],
+            'termin_payments.*.notes' => ['nullable', 'string'],
             'documents' => ['nullable', 'array'],
-            'documents.*.file' => ['required_with:documents', 'file', 'max:10240'],
-            'documents.*.type' => ['required_with:documents', 'string'],
-            
-            'milestones' => ['nullable', 'array'],
-            'milestones.*.title' => ['required_with:milestones', 'string'],
-            'milestones.*.target_date' => ['required_with:milestones', 'date'],
-            'milestones.*.status' => ['nullable', 'string'],
+            'documents.*.type' => ['required', 'string'],
+            'documents.*.file' => ['required', 'file', 'max:10240'], // 10MB limit
         ];
     }
 }

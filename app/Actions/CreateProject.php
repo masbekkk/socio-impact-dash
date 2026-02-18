@@ -15,17 +15,14 @@ final readonly class CreateProject
     {
         return DB::transaction(function () use ($data) {
             $project = Project::create([
-                'code' => 'PRJ-'.mb_strtoupper(uniqid()),
                 'name' => $data['name'],
-                'client' => $data['client'],
                 'description' => $data['description'] ?? null,
-                'user_id' => Auth::id(),
+                'created_by' => Auth::id(),
                 'division_id' => $data['division_id'] ?? null,
                 'account_manager_id' => $data['account_manager_id'] ?? null,
                 'head_id' => $data['head_id'] ?? null,
                 'pic_id' => $data['pic_id'] ?? null,
-                'status' => ProjectStatus::Draft,
-                'sow' => $data['sow'] ?? null,
+                'status' => ProjectStatus::Active,
                 'budget_total' => 0,
             ]);
 
