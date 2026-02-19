@@ -51,7 +51,7 @@ final class UpdateProject
     {
         $updateData = collect($data)->only([
             'code', 'name', 'description', 'division_id',
-            'status', 'project_type', 'budget_total',
+            'status', 'project_type', 'budget_total', 'head_id', 'account_manager_id', 'pic_id',
             'start_date', 'end_date', 'actual_budget',
         ])->toArray();
 

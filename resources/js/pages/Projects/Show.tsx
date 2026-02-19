@@ -277,9 +277,9 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
   const workflows = project.approvals && project.approvals.length > 0 ? project.approvals.map((ap: any) => {
     let roleName = '';
     switch (ap.approval_type) {
-      case 'finance': roleName = 'Finance'; break;
-      case 'hr': roleName = 'HR'; break;
-      case 'direktur': roleName = 'Direktur'; break;
+      case 'finance': roleName = 'ACCOUNT MANAGER'; break;
+      case 'hr': roleName = 'HEAD IMPLEMENTATION'; break;
+      case 'direktur': roleName = 'PIC PROJECT'; break;
       default: roleName = ap.approval_type;
     }
 
@@ -324,68 +324,48 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
       <div className="p-4 md:p-8 pt-0 space-y-8">
 
-        {/* APPROVAL WORKFLOW */}
+        {/* stakeholder WORKFLOW */}
         <section>
-          <h3 className="text-lg font-semibold mb-4">Status Persetujuan (Approval)</h3>
+          <h3 className="text-lg font-semibold mb-4">Stakeholders</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {workflows.map((flow: any, index: number) => {
-              const isMyRole = (flow.role === 'Finance' && isAssignedFinance) ||
-                (flow.role === 'HR' && isAssignedHR) ||
-                (flow.role === 'Direktur' && isAssignedDirektur);
-              return (
-                <Card
-                  key={index}
-                  className={`transition-all duration-200 ${isMyRole
-                    ? 'bg-[var(--sidebar)] text-white border-[var(--sidebar)] shadow-md'
-                    : flow.status === 'pending'
-                      ? 'border-yellow-500/50 bg-yellow-50/30'
-                      : ''
-                    }`}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className={`text-sm font-medium ${isMyRole ? 'text-white/80' : 'text-muted-foreground'}`}>{flow.role}</CardTitle>
-                      {flow.status === 'approved' && <CheckCircle2 className={`h-5 w-5 ${isMyRole ? 'text-white' : 'text-green-600'}`} />}
-                      {flow.status === 'pending' && <Hourglass className={`h-5 w-5 ${isMyRole ? 'text-white' : 'text-yellow-600'}`} />}
-                      {flow.status === 'waiting' && <Circle className={`h-5 w-5 ${isMyRole ? 'text-white/50' : 'text-gray-300'}`} />}
-                    </div>
-                    <div className={`text-lg font-bold mt-1 ${isMyRole ? 'text-white' : 'text-[var(--sidebar)]'}`}>{flow.name}</div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between text-sm mb-3">
-                      <span className={`capitalize px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 border
-                                      ${isMyRole
-                          ? 'bg-white/20 text-white border-white/20'
-                          : flow.status === 'approved'
-                            ? 'bg-green-100 text-green-700 border-green-200'
-                            : flow.status === 'pending'
-                              ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
-                              : 'bg-gray-100 text-gray-500 border-gray-200'
-                        }`}>
-                        {flow.status === 'approved' && <CheckCircle2 className="h-3.5 w-3.5" />}
-                        {flow.status === 'pending' && <Hourglass className="h-3.5 w-3.5" />}
-                        {flow.status === 'waiting' && <Loader className="h-3.5 w-3.5 animate-spin" />}
-                        {flow.status === 'pending' ? 'Pending' : flow.status}
-                      </span>
-                      <span className={`text-xs ${isMyRole ? 'text-white/80' : 'text-muted-foreground'}`}>{flow.date}</span>
-                    </div>
+            {[
+              { role: 'Account Manager', user: project.account_manager },
+              { role: 'Head Implementation', user: project.head },
+              { role: 'PIC Project', user: project.pic }
+            ].map((stakeholder, index) => (
+              <Card
+                key={index}
+                className="transition-all duration-200 bg-[var(--sidebar)] text-white border-[var(--sidebar)] shadow-md hover:shadow-lg"
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-sm font-medium text-white/80 uppercase tracking-wide">
+                      {stakeholder.role}
+                    </CardTitle>
+                    <CheckCircle2 className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="text-lg font-bold mt-1 text-white truncate" title={stakeholder.user?.name}>
+                    {stakeholder.user?.name || '-'}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between text-sm mb-3">
+                    <span className="capitalize px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 border bg-white/20 text-white border-white/20 backdrop-blur-sm">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Assigned
+                    </span>
+                  </div>
 
-
-                    {/* Notes Section */}
-                    <div className={`p-3 rounded-lg border text-sm mt-3 ${isMyRole ? 'bg-white/10 border-white/20' : 'bg-white/50 border-gray-100'}`}>
-                      <p className={`text-xs font-semibold mb-1 flex items-center gap-1 ${isMyRole ? 'text-white/90' : 'text-muted-foreground'}`}>
-                        <FileText className="h-3 w-3" /> Catatan:
-                      </p>
-                      {flow.note && flow.note !== '-' ? (
-                        <p className={`italic ${isMyRole ? 'text-white' : 'text-gray-700'}`}>"{flow.note}"</p>
-                      ) : (
-                        <p className={`italic text-xs ${isMyRole ? 'text-white/50' : 'text-gray-400'}`}>Belum ada catatan.</p>
-                      )}
+                  {/* Notes Section - Optional */}
+                  <div className="p-3 rounded-lg border text-sm mt-3 bg-white/10 border-white/20 backdrop-blur-sm">
+                    <div className="flex items-center gap-2 text-white/80">
+                      <User className="h-3.5 w-3.5" />
+                      <span className="text-xs truncate">{stakeholder.user?.name || '-'}</span>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {/* Approval Notes Input (Below Cards) */}
