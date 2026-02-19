@@ -29,4 +29,11 @@ final class ProjectDocument extends Model
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
+
+    protected $appends = ['url'];
+
+    public function getUrlAttribute(): string
+    {
+        return \Illuminate\Support\Facades\Storage::url($this->path);
+    }
 }

@@ -15,8 +15,15 @@ class ProjectMonitoringDocument extends Model
         'size',
     ];
 
+    protected $appends = ['url'];
+
     public function monitoring(): BelongsTo
     {
         return $this->belongsTo(ProjectMonitoring::class, 'project_monitoring_id');
+    }
+
+    public function getUrlAttribute(): string
+    {
+        return \Illuminate\Support\Facades\Storage::url($this->path);
     }
 }

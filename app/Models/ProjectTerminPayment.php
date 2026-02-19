@@ -30,4 +30,11 @@ final class ProjectTerminPayment extends Model
     {
         return $this->belongsTo(User::class, 'verified_by');
     }
+
+    protected $appends = ['proof_payment_url'];
+
+    public function getProofPaymentUrlAttribute(): ?string
+    {
+        return $this->proof_payment ? \Illuminate\Support\Facades\Storage::url($this->proof_payment) : null;
+    }
 }
