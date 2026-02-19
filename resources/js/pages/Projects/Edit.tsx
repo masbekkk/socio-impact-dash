@@ -53,7 +53,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [deletePaymentTerms, setDeletePaymentTerms] = useState<string[]>([])
 
     // Dynamic Docs State
-    const [supportingDocs, setSupportingDocs] = useState<{ id: number, type: string, file?: File }[]>([{ id: 1, type: 'TOR' }]);
+    const [supportingDocs, setSupportingDocs] = useState<{ id: number | string, type: string, file?: File, original_name?: string, path?: string, isExisting?: boolean }[]>([{ id: 1, type: 'TOR' }]);
     const addSupportingDoc = () => {
         const usedTypes = supportingDocs.map(d => d.type);
         const available = ['TOR', 'KAK', 'RFP'].find(t => !usedTypes.includes(t));
@@ -61,10 +61,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             setSupportingDocs([...supportingDocs, { id: Date.now(), type: available }]);
         }
     };
-    const updateSupportingDocType = (id: number, type: string) => {
+    const updateSupportingDocType = (id: number | string, type: string) => {
         setSupportingDocs(supportingDocs.map(d => d.id === id ? { ...d, type } : d));
     };
-    const removeSupportingDocLocal = (id: number) => {
+    const removeSupportingDocLocal = (id: number | string) => {
         if (supportingDocs.length > 1) {
             setSupportingDocs(supportingDocs.filter(d => d.id !== id));
         }
@@ -83,15 +83,30 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                     code: data.code || '',
                     name: data.name,
                     description: data.description || '',
-                    division_id: data.division?.id?.toString() || '',
-                    account_manager_id: data.account_manager?.id?.toString() || '',
-                    head_id: data.head?.id?.toString() || '',
-                    pic_id: data.pic?.id?.toString() || '',
+                    division_id: data.division_id ? data.division_id.toString() : '',
+                    account_manager_id: data.account_manager_id ? data.account_manager_id.toString() : '',
+                    head_id: data.head_id ? data.head_id.toString() : '',
+                    pic_id: data.pic_id ? data.pic_id.toString() : '',
                     project_type: data.project_type,
                     start_date: data.start_date || '',
                     end_date: data.end_date || '',
                     status: data.status,
                 });
+
+                if (data.documents && data.documents.length > 0) {
+                    const docs = data.documents.filter((d: any) => ['TOR', 'KAK', 'RFP'].includes(d.type));
+                    if (docs.length > 0) {
+                        setSupportingDocs(docs.map((d: any) => ({
+                            id: d.id, // Use actual ID for existing docs
+                            type: d.type,
+                            original_name: d.original_name, // Store original name for display
+                            path: d.path,
+                            isExisting: true
+                        })));
+                    } else {
+                        setSupportingDocs([{ id: Date.now(), type: 'TOR' }]);
+                    }
+                }
 
                 if (data.locations && data.locations.length > 0) {
                     setLocations(data.locations.map((loc: any) => ({
@@ -470,7 +485,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                 <p className="text-sm text-muted-foreground">
                                                     {status === 'active' ? 'Upload dokumen SOW yang telah disepakati (PDF).' : 'Upload dokumen Proposal lengkap (PDF).'}
                                                 </p>
-                                                {project.sow_path && <p className="text-xs text-blue-600">File saat ini: {project.sow_original_name}</p>}
+                                                {project.documents?.find((d: any) => ['SOW', 'PROPOSAL'].includes(d.type)) && (
+                                                    <p className="text-xs text-blue-600">File saat ini: {project.documents.find((d: any) => ['SOW', 'PROPOSAL'].includes(d.type))?.original_name}</p>
+                                                )}
                                             </div>
                                             <FileUploadDropzone onFilesChange={(files) => setSowFile(files[0])} />
                                             {errors.sow && <p className="text-xs text-red-500">{errors.sow}</p>}
@@ -486,7 +503,12 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                 <div key={doc.id} className="relative border rounded-lg p-5 space-y-3 hover:bg-muted/30 transition-colors bg-white group animate-in fade-in slide-in-from-top-2">
                                                     <div className="flex justify-between items-start gap-4">
                                                         <div className="space-y-2 w-full flex justify-between">
-                                                            <Label className="text-xs font-medium text-muted-foreground">Jenis Dokumen Pendukung #{idx + 1}</Label>
+                                                            <div>
+                                                                <Label className="text-xs font-medium text-muted-foreground">Jenis Dokumen Pendukung #{idx + 1}</Label>
+                                                                {doc.isExisting && !doc.file && (
+                                                                    <p className="text-xs text-blue-600 mt-1">File saat ini: {doc.original_name}</p>
+                                                                )}
+                                                            </div>
                                                             <Select value={doc.type} onValueChange={(val) => updateSupportingDocType(doc.id, val)}>
                                                                 <SelectTrigger className="h-7 w-[220px] bg-white border-gray-300">
                                                                     <SelectValue placeholder="Pilih Tipe" />
