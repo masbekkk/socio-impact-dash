@@ -390,34 +390,6 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
                   </div>
                 </div>
               )}
-
-              {isAssignedStakeholder && (
-                <>
-                  <Label htmlFor="approval-note" className="text-sm font-semibold mb-2 block">Catatan Approval / Evaluasi Project</Label>
-                  <span className="text-xs text-muted-foreground ml-1">
-                    *Catatan wajib diisi jika memilih Revisi.
-                  </span>
-                  <Textarea
-                    id="approval-note"
-                    placeholder="Tulis catatan, arahan, atau evaluasi terkait persetujuan proyek ini..."
-                    className="min-h-[100px] resize-y bg-gray-50 focus:bg-white transition-colors"
-                    value={approvalNote}
-                    onChange={(e) => setApprovalNote(e.target.value)}
-                  />
-                  <div className="flex justify-end items-center mt-3">
-                    <div className="flex gap-3">
-                      <Button variant="outline" onClick={() => setIsRevisionAlertOpen(true)} className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-transform hover:scale-105 active:scale-95">
-                        <AlertCircle className="h-4 w-4 mr-2" />
-                        Revisi
-                      </Button>
-                      <Button onClick={() => setIsApproveAlertOpen(true)} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)] text-white shadow-sm transition-transform hover:scale-105 active:scale-95">
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Approve
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           )}
         </section>

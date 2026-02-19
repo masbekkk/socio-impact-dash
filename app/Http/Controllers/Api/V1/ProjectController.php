@@ -62,8 +62,8 @@ final class ProjectController extends Controller
     public function store(StoreProjectRequest $request, CreateProject $createProject): JsonResponse
     {
         try {
-            $user = $request->user() ?? 1;
-            $project = $createProject->handle($request->validated(), 1);
+            $user = $request->user();
+            $project = $createProject->handle($request->validated(), $user->id);
 
             return JsonResponseFormatter::success(
                 new ProjectResource($project),
@@ -89,8 +89,8 @@ final class ProjectController extends Controller
     public function update(UpdateProjectRequest $request, Project $project, UpdateProject $updateProject): JsonResponse
     {
         /** @var \App\Models\User $user */
-        $user = $request->user() ?? 1;
-        $project = $updateProject->handle($project, $request->validated(), 1);
+        $user = $request->user();
+        $project = $updateProject->handle($project, $request->validated(), $user->id);
 
         return JsonResponseFormatter::success(
             new ProjectResource($project),

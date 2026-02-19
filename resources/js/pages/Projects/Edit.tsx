@@ -237,7 +237,6 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             await axios.get('/sanctum/csrf-cookie');
             await axios.post(`/api/v1/projects/${project_slug}`, submitData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 withCredentials: true

@@ -155,7 +155,6 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
       await axios.get('/sanctum/csrf-cookie'); // Ensure CSRF token is set
       const response = await axios.post('/api/v1/projects', submitData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
           'X-Requested-With': 'XMLHttpRequest'
         },
         withCredentials: true
