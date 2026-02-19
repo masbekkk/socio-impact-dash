@@ -234,11 +234,22 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         });
 
         try {
+            await axios.get('/sanctum/csrf-cookie');
             await axios.post(`/api/v1/projects/${project_slug}`, submitData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                withCredentials: true
             });
-            router.visit(`/projects/${project_slug}`);
+            // router.visit(`/projects/${project_slug}`);
+            window.location.href = `/projects/${project_slug}`;
         } catch (error: any) {
+            if (error.response?.status === 401) {
+                alert("Sesi Anda telah berakhir. Silakan refresh halaman dan login kembali.");
+                window.location.reload();
+                return;
+            }
             if (error.response?.status === 422) {
                 setErrors(error.response.data.errors);
             } else {

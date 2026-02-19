@@ -152,6 +152,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
     });
 
     try {
+      await axios.get('/sanctum/csrf-cookie'); // Ensure CSRF token is set
       const response = await axios.post('/api/v1/projects', submitData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -159,8 +160,9 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
         },
         withCredentials: true
       });
-      // Use window.location as fallback or router
-      router.visit(`/projects/${response.data.data.id}`);
+      // Redirect handled by router.visit if needed, or stick to window.location
+      // router.visit('/projects'); // changing to native redirect to ensure full reload if needed
+      window.location.href = `/projects/${response.data.data.id}`;
     } catch (error: any) {
       console.error("Error creating project:", error);
       if (error.response?.status === 422) {
