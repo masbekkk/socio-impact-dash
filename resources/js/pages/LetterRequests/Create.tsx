@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, Briefcase, Calendar as CalendarIcon, User, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Briefcase, Calendar as CalendarIcon, User, FileText, Loader2 } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -14,6 +14,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { format } from "date-fns";
+import axios from 'axios';
 
 interface Project {
     id: number;
@@ -26,13 +27,15 @@ interface Props {
 }
 
 export default function Create({ projects }: Props) {
-    const { data, setData, post, processing, errors } = useForm({
+    const [data, setData] = useState({
         project_id: '',
         letter_date: format(new Date(), 'yyyy-MM-dd'),
         recipient: '',
         subject: '',
         pic_name: '',
     });
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState<any>({});
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -40,9 +43,24 @@ export default function Create({ projects }: Props) {
         { title: 'Buat Pengajuan', href: '/letter-requests/create' },
     ];
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('letter-requests.store'));
+        setProcessing(true);
+        setErrors({});
+
+        try {
+            await axios.post('/api/v1/letter-requests', data);
+            router.visit('/letter-requests');
+        } catch (error: any) {
+            if (error.response && error.response.data.errors) {
+                setErrors(error.response.data.errors);
+            } else {
+                console.error("Error creating letter request:", error);
+                alert("Terjadi kesalahan saat mengirim pengajuan.");
+            }
+        } finally {
+            setProcessing(false);
+        }
     };
 
     return (
@@ -52,7 +70,7 @@ export default function Create({ projects }: Props) {
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild className="-ml-2">
-                        <Link href={route('letter-requests.index')}>
+                        <Link href="/letter-requests">
                             <ArrowLeft className="h-5 w-5" />
                         </Link>
                     </Button>
@@ -71,7 +89,7 @@ export default function Create({ projects }: Props) {
                         <CardContent className="space-y-6 pt-6">
                             <div className="space-y-2">
                                 <Label htmlFor="project_id">Proyek Terkait</Label>
-                                <Select onValueChange={(val) => setData('project_id', val)} value={data.project_id}>
+                                <Select onValueChange={(val) => setData({ ...data, project_id: val })} value={data.project_id}>
                                     <SelectTrigger className="h-10">
                                         <div className="flex items-center gap-2">
                                             <Briefcase className="h-4 w-4 text-muted-foreground" />
@@ -99,7 +117,7 @@ export default function Create({ projects }: Props) {
                                             type="date"
                                             className="pl-9 h-10"
                                             value={data.letter_date}
-                                            onChange={(e) => setData('letter_date', e.target.value)}
+                                            onChange={(e) => setData({ ...data, letter_date: e.target.value })}
                                         />
                                     </div>
                                     {errors.letter_date && <p className="text-sm text-destructive font-medium">{errors.letter_date}</p>}
@@ -114,7 +132,7 @@ export default function Create({ projects }: Props) {
                                             placeholder="Nama PIC"
                                             className="pl-9 h-10"
                                             value={data.pic_name}
-                                            onChange={(e) => setData('pic_name', e.target.value)}
+                                            onChange={(e) => setData({ ...data, pic_name: e.target.value })}
                                         />
                                     </div>
                                     {errors.pic_name && <p className="text-sm text-destructive font-medium">{errors.pic_name}</p>}
@@ -130,7 +148,7 @@ export default function Create({ projects }: Props) {
                                         placeholder="Contoh: Direktur PT Sinergi Alam"
                                         className="pl-9 h-10"
                                         value={data.recipient}
-                                        onChange={(e) => setData('recipient', e.target.value)}
+                                        onChange={(e) => setData({ ...data, recipient: e.target.value })}
                                     />
                                 </div>
                                 {errors.recipient && <p className="text-sm text-destructive font-medium">{errors.recipient}</p>}
@@ -145,7 +163,7 @@ export default function Create({ projects }: Props) {
                                         placeholder="Contoh: Permohonan Izin Lokasi"
                                         className="pl-9 h-10"
                                         value={data.subject}
-                                        onChange={(e) => setData('subject', e.target.value)}
+                                        onChange={(e) => setData({ ...data, subject: e.target.value })}
                                     />
                                 </div>
                                 {errors.subject && <p className="text-sm text-destructive font-medium">{errors.subject}</p>}
@@ -153,10 +171,10 @@ export default function Create({ projects }: Props) {
                         </CardContent>
                         <CardFooter className="bg-gray-50 border-t flex justify-between p-6">
                             <Button variant="outline" type="button" asChild>
-                                <Link href={route('letter-requests.index')}>Batal</Link>
+                                <Link href="/letter-requests">Batal</Link>
                             </Button>
                             <Button type="submit" disabled={processing} className="bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)]/90">
-                                <Save className="mr-2 h-4 w-4" />
+                                {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                 Kirim Pengajuan
                             </Button>
                         </CardFooter>
