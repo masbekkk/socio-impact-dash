@@ -291,7 +291,7 @@ export default function ProjectTabs({
                                                 {data.map((item: any, index: number) => {
                                                     const start = startDate.getTime();
                                                     const end = endDate.getTime();
-                                                    const current = new Date(item.date).getTime();
+                                                    const current = new Date(item.report_date || item.date).getTime();
 
                                                     // Calculate position (0-100%)
                                                     let percentage = ((current - start) / (end - start)) * 100;
@@ -328,10 +328,10 @@ export default function ProjectTabs({
 
                                                                     <div className="mb-2 pb-2 border-b border-slate-50">
                                                                         <p className="text-[var(--sidebar)] font-bold text-xl leading-none">
-                                                                            {item.date ? new Date(item.date).getDate() : '-'}
+                                                                            {(item.report_date || item.date) ? new Date(item.report_date || item.date).getDate() : '-'}
                                                                         </p>
                                                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                                                            {item.date ? new Date(item.date).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'}
+                                                                            {(item.report_date || item.date) ? new Date(item.report_date || item.date).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'}
                                                                         </p>
                                                                     </div>
 
@@ -471,7 +471,7 @@ export default function ProjectTabs({
                             return terms.length > 0 ? (
                                 <div className="space-y-3">
                                     {terms.map((term: any, idx: number) => {
-                                        const isVerified = term.verified_at !== null;
+                                        const isVerified = !!term.verified_by;
                                         return (
                                             <div key={term.id} className={`border rounded-xl p-5 bg-white shadow-sm transition-all ${isVerified ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -570,7 +570,7 @@ export default function ProjectTabs({
                                             <div>
                                                 <p className="text-sm font-medium text-blue-900">Total Termin Pembayaran</p>
                                                 <p className="text-xs text-blue-700 mt-1">
-                                                    {terms.filter((t: any) => t.verified_at).length} dari {terms.length} termin terverifikasi
+                                                    {terms.filter((t: any) => t.verified_by).length} dari {terms.length} termin terverifikasi
                                                 </p>
                                             </div>
                                             <div className="text-right">
