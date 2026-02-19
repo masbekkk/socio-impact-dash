@@ -395,7 +395,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
                       id="project-code"
                       className="max-w-md bg-white border-gray-300 font-mono"
                       placeholder="Contoh: PRJ-2025-001"
-                      defaultValue={project.code !== 'PRJ-2025-001' ? project.code : ''}
+                      defaultValue={project.code || ''}
                     />
                     <p className="text-[10px] text-muted-foreground">
                       Kode proyek wajib diisi untuk identifikasi unik sebelum menyetujui.
@@ -448,7 +448,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
           monitoringList={monitoringList}
           closingForm={closingForm}
           setClosingForm={setClosingForm}
-          isProjectDealed={isProjectDealed}
+          isProjectDealed={true}
           setIsDealAlertOpen={setIsDealAlertOpen}
           setIsCloseAlertOpen={setIsCloseAlertOpen}
         />
@@ -515,6 +515,10 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
               Apakah anda yakin data yang diinput sudah benar? Laporan ini akan dikirim ke atasan untuk approval.
             </DialogDescription>
           </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSubmitReportAlertOpen(false)}>Batal</Button>
+            <Button onClick={submitReport}>Submit Laporan</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

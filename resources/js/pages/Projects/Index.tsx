@@ -330,7 +330,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   <TableHead>Kode</TableHead>
                   <TableHead>Nama Proyek</TableHead>
                   <TableHead>Divisi</TableHead>
-                  <TableHead>PIC / AM</TableHead>
+                  <TableHead>Created By</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Timeline</TableHead>
                   <TableHead className="text-right">Budget</TableHead>
@@ -387,8 +387,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <span className="text-xs font-medium">PIC: {p.team?.pic || (p.pic ? p.pic.name : '-')}</span>
-                          <span className="text-xs text-muted-foreground">AM: {p.team?.am || (p.account_manager ? p.account_manager.name : '-')}</span>
+                          <span className="text-xs font-medium">{(p.creator ? p.creator.name : '-')}</span>
                         </div>
                       </TableCell>
                       <TableCell>
