@@ -15,12 +15,13 @@ final class UserSeeder extends Seeder
      * Run the database seeds.
      */
     public function run(): void
-    {
+   {
         // Create admin user
         $admin = User::firstOrCreate(
             ['email' => 'admin@socio-impact.test'],
             [
                 'name' => 'Admin User',
+                'nip' => '10000001',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
             ]
@@ -32,6 +33,7 @@ final class UserSeeder extends Seeder
             ['email' => 'head@socio-impact.test'],
             [
                 'name' => 'Department Head',
+                'nip' => '10000002',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
             ]
@@ -43,6 +45,7 @@ final class UserSeeder extends Seeder
             ['email' => 'finance@socio-impact.test'],
             [
                 'name' => 'Finance Officer',
+                'nip' => '10000003',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
             ]
@@ -62,14 +65,18 @@ final class UserSeeder extends Seeder
 
         // Create 10 regular employees
         for ($i = 1; $i <= 10; $i++) {
+            $nip = str_pad((string)(10000003 + $i), 8, '0', STR_PAD_LEFT);
+
             $user = User::firstOrCreate(
                 ['email' => "pegawai{$i}@socio-impact.test"],
                 [
                     'name' => "Pegawai {$i}",
+                    'nip' => $nip,
                     'password' => Hash::make('password'),
                     'email_verified_at' => now(),
                 ]
             );
+
             $user->assignRole(UserRole::Pegawai->value);
         }
 
