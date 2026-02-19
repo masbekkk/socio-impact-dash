@@ -24,7 +24,7 @@ export default function ProjectsCreate({ divisions, finance_users, hr_users, dir
   const userRole = props.auth?.user?.role_name ?? 'user';
   const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
   const permissions = props.auth?.permissions || [];
-  const canUpdateCode = permissions.includes('create-code-project');
+  const canUpdateCode = permissions.includes('create_code_project');
 
   const queryParams = new URLSearchParams(url.split('?')[1]);
   const type = queryParams.get('type') || 'active'; // 'proposal' or 'active'
@@ -155,7 +155,7 @@ export default function ProjectsCreate({ divisions, finance_users, hr_users, dir
       const response = await axios.post('/api/v1/projects', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      router.visit(`/projects/${response.data.data.code}`);
+      router.visit(`/projects/${response.data.data.id}`);
     } catch (error: any) {
       if (error.response?.status === 422) {
         setErrors(error.response.data.errors);

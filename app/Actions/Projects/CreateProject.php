@@ -38,7 +38,7 @@ final class CreateProject
 
     private function createProjectRecord(array $data, int $userId): Project
     {
-        $code = $data['code'] ?? $this->generateUniqueCode();
+        $code = $data['code'] ?? null;
         $budgetTotal = (float) ($data['budget_total'] ?? 0);
 
         return Project::create([

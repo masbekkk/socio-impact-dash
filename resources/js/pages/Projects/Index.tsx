@@ -127,7 +127,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
   const executeDelete = async () => {
     if (!projectToDelete) return;
     try {
-      await axios.delete(`/api/v1/projects/${projectToDelete.code}`);
+      await axios.delete(`/api/v1/projects/${projectToDelete.id}`);
       setToast({ show: true, message: 'Proyek berhasil dihapus.', type: 'success' });
       fetchProjects();
     } catch (error) {

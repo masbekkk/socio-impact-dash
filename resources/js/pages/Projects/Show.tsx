@@ -34,7 +34,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
   const currentUserRole = auth.user?.role_name;
   const currentUserId = auth.user?.id;
-  const canUpdateCode = permissions.includes('create-code-project');
+  const canUpdateCode = permissions.includes('create_code_project');
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },

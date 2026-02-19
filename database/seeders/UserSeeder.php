@@ -72,5 +72,15 @@ final class UserSeeder extends Seeder
             );
             $user->assignRole(UserRole::Pegawai->value);
         }
+
+        $direktur = User::firstOrCreate(
+            ['email' => 'direktur@socio-impact.test'],
+            [
+                'name' => 'Direktur User',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $direktur->assignRole(UserRole::Direktur->value);
     }
 }

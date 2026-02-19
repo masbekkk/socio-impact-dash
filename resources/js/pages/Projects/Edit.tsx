@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 export default function ProjectsEdit({ project_slug, divisions, finance_users, hr_users, director_users }: { project_slug: string | number, divisions: any[], finance_users: any[], hr_users: any[], director_users: any[] }) {
     const { props } = usePage<any>();
     const permissions = props.auth?.permissions || [];
-    const canUpdateCode = permissions.includes('create-code-project');
+    const canUpdateCode = permissions.includes('create_code_project');
 
     const [project, setProject] = useState<any>(null);
     const [step, setStep] = useState('basic')
