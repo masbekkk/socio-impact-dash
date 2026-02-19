@@ -815,7 +815,7 @@ export default function ProjectTabs({
                                                 <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
                                                     <FileText className="h-4 w-4 text-green-600" />
                                                     <span className="text-xs font-medium text-green-700 flex-1 truncate">Laporan Kegiatan Terupload</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'report_activity').path, '_blank')}>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'report_activity').url || project.documents.find((d: any) => d.type === 'report_activity').path, '_blank')}>
                                                         <Eye className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </div>
@@ -839,7 +839,7 @@ export default function ProjectTabs({
                                                 <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
                                                     <FileText className="h-4 w-4 text-green-600" />
                                                     <span className="text-xs font-medium text-green-700 flex-1 truncate">BAST Terupload</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'bast').path, '_blank')}>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'bast').url || project.documents.find((d: any) => d.type === 'bast').path, '_blank')}>
                                                         <Eye className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </div>
@@ -863,7 +863,7 @@ export default function ProjectTabs({
                                                 <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
                                                     <FileText className="h-4 w-4 text-green-600" />
                                                     <span className="text-xs font-medium text-green-700 flex-1 truncate">Invoice Terupload</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'invoice').path, '_blank')}>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'invoice').url || project.documents.find((d: any) => d.type === 'invoice').path, '_blank')}>
                                                         <Eye className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </div>
@@ -887,7 +887,7 @@ export default function ProjectTabs({
                                                 <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
                                                     <FileText className="h-4 w-4 text-green-600" />
                                                     <span className="text-xs font-medium text-green-700 flex-1 truncate">Lesson Learn Terupload</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'lesson_learn').path, '_blank')}>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'lesson_learn').url || project.documents.find((d: any) => d.type === 'lesson_learn').path, '_blank')}>
                                                         <Eye className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </div>

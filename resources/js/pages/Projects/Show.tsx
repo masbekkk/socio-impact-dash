@@ -75,9 +75,16 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
             lng: parseFloat(loc.longitude),
             address: loc.detail_address || ''
           })));
-        } else {
+        }
+        else {
           setLocations([]);
         }
+
+        // Initialize closing form with saved data
+        setClosingForm(prev => ({
+          ...prev,
+          actual_budget: data.actual_budget || 0
+        }));
       } catch (error) {
         console.error("Error fetching project:", error);
       } finally {
