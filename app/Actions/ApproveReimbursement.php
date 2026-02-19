@@ -20,7 +20,8 @@ final readonly class ApproveReimbursement
             if (! $user) {
                 throw new Exception('User not authenticated');
             }
-            $role = $user->role->value;
+            /** @var \App\Models\User $user */
+            $role = $user->getRoleNames()->first();
 
             $approval = $reimbursement->approvals()
                 ->where('role', $role)

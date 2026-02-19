@@ -1,28 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\LetterRequest;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Enums\UserRole;
 
-class LetterRequestController
+final class LetterRequestController
 {
     public function index()
     {
         $user = auth()->user();
-        $query = LetterRequest::with(['project', 'requester']);
-
-        // Finance and Superadmin can see all
-        if (!in_array($user->role, [UserRole::Finance, UserRole::Superadmin])) {
-            $query->where('requester_id', $user->id);
-        }
 
         return Inertia::render('LetterRequests/Index', [
-            'letterRequests' => $query->latest()->get(),
-            'canAssign' => in_array($user->role, [UserRole::Finance, UserRole::Superadmin]),
+            'canAssign' => $user->hasRole([UserRole::Finance, UserRole::Superadmin]),
         ]);
     }
 
@@ -55,7 +50,7 @@ class LetterRequestController
     public function assignNumber(Request $request, LetterRequest $letterRequest)
     {
         $user = auth()->user();
-        if (!in_array($user->role, [UserRole::Finance, UserRole::Superadmin])) {
+        if (! $user->hasRole([UserRole::Finance, UserRole::Superadmin])) {
             abort(403);
         }
 
@@ -74,7 +69,7 @@ class LetterRequestController
     public function reject(LetterRequest $letterRequest)
     {
         $user = auth()->user();
-        if (!in_array($user->role, [UserRole::Finance, UserRole::Superadmin])) {
+        if (! $user->hasRole([UserRole::Finance, UserRole::Superadmin])) {
             abort(403);
         }
 
