@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 
 import axios from 'axios';
 
-export default function ProjectsCreate({ divisions, finance_users, hr_users, director_users }: { divisions: any[], finance_users: any[], hr_users: any[], director_users: any[] }) {
+export default function ProjectsCreate({ divisions, employees }: { divisions: any[], employees: any[] }) {
   const { url, props } = usePage<any>();
   const userRole = props.auth?.user?.role_name ?? 'user';
   const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
@@ -338,7 +338,7 @@ export default function ProjectsCreate({ divisions, finance_users, hr_users, dir
           </TabsContent>
 
           {/* Step 2: Stakeholders */}
-          <TabsContent value="stakeholders" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+          {/* <TabsContent value="stakeholders" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
             <Card className="border-none shadow-md">
               <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
                 <CardTitle>Tim & Stakeholder</CardTitle>
@@ -382,6 +382,69 @@ export default function ProjectsCreate({ divisions, finance_users, hr_users, dir
                       </SelectTrigger>
                       <SelectContent>
                         {director_users.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.pic_id && <p className="text-xs text-red-500">{errors.pic_id}</p>}
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between gap-3 px-6 pb-6 pt-2 border-t bg-gray-50/50 rounded-b-xl">
+                <Button variant="outline" onClick={() => setStep('basic')} title="Kembali">
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Sebelumnya
+                </Button>
+                <Button onClick={() => setStep('detail')} className="w-auto px-8">
+                  Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent> */}
+
+          <TabsContent value="stakeholders" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+            <Card className="border-none shadow-md">
+              <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
+                <CardTitle>Tim & Stakeholder</CardTitle>
+                <CardDescription>Tentukan penanggung jawab dan tim pelaksana.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 p-6 md:p-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label>Account Manager <span className="text-red-500">*</span></Label>
+                    <Select value={formData.account_manager_id} onValueChange={(v) => handleInputChange('account_manager_id', v)}>
+                      <SelectTrigger className={errors.account_manager_id ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Pilih Account Manager" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.account_manager_id && <p className="text-xs text-red-500">{errors.account_manager_id}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Head Implementation <span className="text-red-500">*</span></Label>
+                    <Select value={formData.head_id} onValueChange={(v) => handleInputChange('head_id', v)}>
+                      <SelectTrigger className={errors.head_id ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Pilih Head Implementation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.head_id && <p className="text-xs text-red-500">{errors.head_id}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>PIC Project <span className="text-red-500">*</span></Label>
+                    <Select value={formData.pic_id} onValueChange={(v) => handleInputChange('pic_id', v)}>
+                      <SelectTrigger className={errors.pic_id ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Pilih PIC Project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -763,6 +826,6 @@ export default function ProjectsCreate({ divisions, finance_users, hr_users, dir
 
         </Tabs>
       </div>
-    </AppSidebarLayout>
+    </AppSidebarLayout >
   )
 }

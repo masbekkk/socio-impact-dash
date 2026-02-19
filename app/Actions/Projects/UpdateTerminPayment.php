@@ -21,11 +21,8 @@ class UpdateTerminPayment
             $updateData = [];
 
             // Handle Verification
-            if (isset($data['is_verified']) && $data['is_verified']) {
-                $updateData['verified_by'] = $userId; // Assuming logged in user is verifying
-                // verified_at is not in migration, so maybe just verified_by is enough to indicate verification?
-                // Migration limits: nominal, due_date, notes, verified_by, proof_payment.
-                // So setting verified_by means it's verified.
+            if (isset($data['is_verified'])) {
+                $updateData['verified_by'] = $data['is_verified'] ? $userId : null;
             }
 
             // Handle Proof of Payment Upload

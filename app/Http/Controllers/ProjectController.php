@@ -26,9 +26,7 @@ final class ProjectController extends Controller
     {
         return Inertia::render('Projects/Create', [
             'divisions' => Division::all(),
-            'finance_users' => User::role(\App\Enums\UserRole::Finance->value)->get(),
-            'hr_users' => User::role(\App\Enums\UserRole::HR->value)->get(),
-            'director_users' => User::role(\App\Enums\UserRole::Direktur->value)->get(),
+            'employees' => User::all(),
         ]);
     }
 
@@ -45,9 +43,7 @@ final class ProjectController extends Controller
         return Inertia::render('Projects/Edit', [
             'project_slug' => $project->id,
             'divisions' => Division::all(),
-            'finance_users' => User::role(\App\Enums\UserRole::Finance->value)->get(),
-            'hr_users' => User::role(\App\Enums\UserRole::HR->value)->get(),
-            'director_users' => User::role(\App\Enums\UserRole::Direktur->value)->get(),
+            'employees' => User::all(),
         ]);
     }
 }

@@ -17,7 +17,7 @@ import axios from 'axios';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton'
 
-export default function ProjectsEdit({ project_slug, divisions, finance_users, hr_users, director_users }: { project_slug: string | number, divisions: any[], finance_users: any[], hr_users: any[], director_users: any[] }) {
+export default function ProjectsEdit({ project_slug, divisions, employees }: { project_slug: string | number, divisions: any[], employees: any[] }) {
     const { props } = usePage<any>();
     const permissions = props.auth?.permissions || [];
     const canUpdateCode = permissions.includes('create_code_project');
@@ -399,13 +399,13 @@ export default function ProjectsEdit({ project_slug, divisions, finance_users, h
                             <CardContent className="space-y-6 p-6 md:p-8">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="space-y-2">
-                                        <Label>Finance</Label>
+                                        <Label>Account Manager <span className="text-red-500">*</span></Label>
                                         <Select value={formData.account_manager_id} onValueChange={(v) => handleInputChange('account_manager_id', v)}>
                                             <SelectTrigger className={errors.account_manager_id ? 'border-red-500' : ''}>
-                                                <SelectValue placeholder="Pilih Finance" />
+                                                <SelectValue placeholder="Pilih Account Manager" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {finance_users.map((emp) => (
+                                                {employees.map((emp) => (
                                                     <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -413,13 +413,13 @@ export default function ProjectsEdit({ project_slug, divisions, finance_users, h
                                         {errors.account_manager_id && <p className="text-xs text-red-500">{errors.account_manager_id}</p>}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>HR</Label>
+                                        <Label>Head Implementation <span className="text-red-500">*</span></Label>
                                         <Select value={formData.head_id} onValueChange={(v) => handleInputChange('head_id', v)}>
                                             <SelectTrigger className={errors.head_id ? 'border-red-500' : ''}>
-                                                <SelectValue placeholder="Pilih HR" />
+                                                <SelectValue placeholder="Pilih Head Implementation" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {hr_users.map((emp) => (
+                                                {employees.map((emp) => (
                                                     <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -427,13 +427,13 @@ export default function ProjectsEdit({ project_slug, divisions, finance_users, h
                                         {errors.head_id && <p className="text-xs text-red-500">{errors.head_id}</p>}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Direktur</Label>
+                                        <Label>PIC Project <span className="text-red-500">*</span></Label>
                                         <Select value={formData.pic_id} onValueChange={(v) => handleInputChange('pic_id', v)}>
                                             <SelectTrigger className={errors.pic_id ? 'border-red-500' : ''}>
-                                                <SelectValue placeholder="Pilih Direktur" />
+                                                <SelectValue placeholder="Pilih PIC Project" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {director_users.map((emp) => (
+                                                {employees.map((emp) => (
                                                     <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
