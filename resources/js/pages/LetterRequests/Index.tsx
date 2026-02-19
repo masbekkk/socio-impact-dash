@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -22,9 +22,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Search, CheckCircle, XCircle, Hash } from 'lucide-react';
+import { Plus, Search, CheckCircle, XCircle, Hash, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import axios from 'axios';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface LetterRequest {
     id: number;
@@ -46,17 +54,27 @@ interface LetterRequest {
 }
 
 interface Props {
-    letterRequests: LetterRequest[];
     canAssign: boolean;
 }
 
-export default function LetterRequestsIndex({ letterRequests, canAssign }: Props) {
+export default function LetterRequestsIndex({ canAssign }: Props) {
+    const [requests, setRequests] = useState<LetterRequest[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<LetterRequest | null>(null);
+    const [letterNumber, setLetterNumber] = useState('');
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState<any>({});
 
-    const { data, setData, post, processing, reset, errors } = useForm({
-        letter_number: '',
+    // Pagination State
+    const [pagination, setPagination] = useState({
+        current_page: 1,
+        last_page: 1,
+        per_page: 10,
+        total: 0,
+        from: 0,
+        to: 0
     });
 
     const breadcrumbs = [
@@ -64,34 +82,77 @@ export default function LetterRequestsIndex({ letterRequests, canAssign }: Props
         { title: 'Nomor Surat', href: '/letter-requests' },
     ];
 
-    const filteredRequests = letterRequests.filter(req =>
-        req.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        req.recipient.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        req.project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        req.project.code.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const fetchRequests = async () => {
+        setLoading(true);
+        try {
+            const response = await axios.get('/api/v1/letter-requests', {
+                params: {
+                    search: searchQuery,
+                    page: pagination.current_page,
+                    per_page: pagination.per_page,
+                }
+            });
+            setRequests(response.data.data.data);
+            setPagination({
+                current_page: response.data.data.current_page,
+                last_page: response.data.data.last_page,
+                per_page: response.data.data.per_page,
+                total: response.data.data.total,
+                from: response.data.data.from,
+                to: response.data.data.to,
+            });
+        } catch (error) {
+            console.error("Error fetching letter requests:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchRequests();
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery, pagination.current_page, pagination.per_page]);
 
     const handleAssign = (req: LetterRequest) => {
         setSelectedRequest(req);
-        setData('letter_number', '');
+        setLetterNumber('');
+        setErrors({});
         setAssignDialogOpen(true);
     };
 
-    const submitAssign = (e: React.FormEvent) => {
+    const submitAssign = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedRequest) return;
+        setProcessing(true);
+        setErrors({});
 
-        post(route('letter-requests.assign', selectedRequest.id), {
-            onSuccess: () => {
-                setAssignDialogOpen(false);
-                reset();
-            },
-        });
+        try {
+            await axios.post(`/api/v1/letter-requests/${selectedRequest.id}/assign`, {
+                letter_number: letterNumber
+            });
+            setAssignDialogOpen(false);
+            fetchRequests();
+        } catch (error: any) {
+            if (error.response && error.response.data.errors) {
+                setErrors(error.response.data.errors);
+            } else {
+                console.error("Error assigning number:", error);
+            }
+        } finally {
+            setProcessing(false);
+        }
     };
 
-    const handleReject = (req: LetterRequest) => {
+    const handleReject = async (req: LetterRequest) => {
         if (confirm('Apakah Anda yakin ingin menolak pengajuan ini?')) {
-            post(route('letter-requests.reject', req.id));
+            try {
+                await axios.post(`/api/v1/letter-requests/${req.id}/reject`);
+                fetchRequests();
+            } catch (error) {
+                console.error("Error rejecting request:", error);
+            }
         }
     };
 
@@ -106,7 +167,7 @@ export default function LetterRequestsIndex({ letterRequests, canAssign }: Props
                     </div>
 
                     <Button asChild className="gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)]">
-                        <Link href={route('letter-requests.create')}>
+                        <Link href="/letter-requests/create">
                             <Plus className="h-4 w-4" />
                             Buat Pengajuan
                         </Link>
@@ -127,7 +188,10 @@ export default function LetterRequestsIndex({ letterRequests, canAssign }: Props
                                     placeholder="Cari perihal, tujuan, proyek..."
                                     className="pl-9 h-10 w-full"
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setPagination(prev => ({ ...prev, current_page: 1 }));
+                                    }}
                                 />
                             </div>
                         </div>
@@ -147,22 +211,31 @@ export default function LetterRequestsIndex({ letterRequests, canAssign }: Props
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredRequests.length === 0 ? (
+                                    {loading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="h-24 text-center">
+                                                <div className="flex justify-center items-center gap-2 text-muted-foreground">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Loading...
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : requests.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={7} className="h-24 text-center">
                                                 Tidak ada data pengajuan.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredRequests.map((req) => (
+                                        requests.map((req) => (
                                             <TableRow key={req.id}>
                                                 <TableCell className="font-medium whitespace-nowrap">
                                                     {format(new Date(req.letter_date), 'dd MMM yyyy', { locale: id })}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col">
-                                                        <span className="font-semibold text-xs text-blue-600 uppercase tracking-wider">{req.project.code}</span>
-                                                        <span className="text-sm truncate max-w-[150px]">{req.project.name}</span>
+                                                        <span className="font-semibold text-xs text-blue-600 uppercase tracking-wider">{req.project?.code || '-'}</span>
+                                                        <span className="text-sm truncate max-w-[150px]">{req.project?.name || '-'}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -213,6 +286,73 @@ export default function LetterRequestsIndex({ letterRequests, canAssign }: Props
                                 </TableBody>
                             </Table>
                         </div>
+
+                        {/* PAGINATION CONTROLS */}
+                        <div className="flex items-center justify-between px-2 py-4">
+                            <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+                                Showing {pagination.from || 0} to {pagination.to || 0} of {pagination.total} results
+                            </div>
+                            <div className="flex w-full items-center gap-8 lg:w-fit">
+                                <div className="hidden items-center gap-2 lg:flex">
+                                    <Label htmlFor="rows-per-page" className="text-sm font-medium">Rows per page</Label>
+                                    <Select
+                                        value={`${pagination.per_page}`}
+                                        onValueChange={(value) => {
+                                            setPagination(prev => ({ ...prev, per_page: parseInt(value), current_page: 1 }));
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-20 h-8 text-xs" id="rows-per-page">
+                                            <SelectValue placeholder={pagination.per_page} />
+                                        </SelectTrigger>
+                                        <SelectContent side="top">
+                                            {[10, 20, 30, 40, 50].map((pageSize) => (
+                                                <SelectItem key={pageSize} value={`${pageSize}`}>{pageSize}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex w-fit items-center justify-center text-sm font-medium">
+                                    Page {pagination.current_page} of {pagination.last_page}
+                                </div>
+                                <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                                    <Button
+                                        variant="outline"
+                                        className="hidden h-8 w-8 p-0 lg:flex"
+                                        disabled={pagination.current_page === 1}
+                                        onClick={() => setPagination(prev => ({ ...prev, current_page: 1 }))}
+                                    >
+                                        <ChevronsLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        className="size-8"
+                                        size="icon"
+                                        disabled={pagination.current_page === 1}
+                                        onClick={() => setPagination(prev => ({ ...prev, current_page: Math.max(1, prev.current_page - 1) }))}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        className="size-8"
+                                        size="icon"
+                                        disabled={pagination.current_page === pagination.last_page}
+                                        onClick={() => setPagination(prev => ({ ...prev, current_page: Math.min(pagination.last_page, prev.current_page + 1) }))}
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        className="hidden size-8 lg:flex"
+                                        size="icon"
+                                        disabled={pagination.current_page === pagination.last_page}
+                                        onClick={() => setPagination(prev => ({ ...prev, current_page: pagination.last_page }))}
+                                    >
+                                        <ChevronsRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -233,8 +373,8 @@ export default function LetterRequestsIndex({ letterRequests, canAssign }: Props
                                 <Input
                                     id="letter_number"
                                     placeholder="Contoh: 001/SSI/II/2026"
-                                    value={data.letter_number}
-                                    onChange={(e) => setData('letter_number', e.target.value)}
+                                    value={letterNumber}
+                                    onChange={(e) => setLetterNumber(e.target.value)}
                                 />
                                 {errors.letter_number && <p className="text-sm text-destructive">{errors.letter_number}</p>}
                             </div>
@@ -244,7 +384,7 @@ export default function LetterRequestsIndex({ letterRequests, canAssign }: Props
                                 Batal
                             </Button>
                             <Button type="submit" disabled={processing} className="bg-[var(--sidebar)] text-white">
-                                Simpan Nomor
+                                {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Simpan Nomor'}
                             </Button>
                         </DialogFooter>
                     </form>

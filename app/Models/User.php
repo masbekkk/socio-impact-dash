@@ -68,7 +68,6 @@ final class User extends Authenticatable implements MustVerifyEmail
             'two_factor_secret' => 'string',
             'two_factor_recovery_codes' => 'string',
             'two_factor_confirmed_at' => 'datetime',
-            'role' => UserRole::class,
             'employee_type' => EmployeeType::class,
             'contract_start' => 'date',
             'contract_end' => 'date',

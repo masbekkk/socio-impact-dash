@@ -32,4 +32,9 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::apiResource('projects', App\Http\Controllers\Api\V1\ProjectController::class);
     Route::apiResource('reimbursements', ReimbursementController::class)->only(['index', 'store', 'show']);
     Route::match(['patch', 'post'], 'reimbursements/{code}/status', [ReimbursementController::class, 'updateStatus']);
+
+    // Letter Requests
+    Route::apiResource('letter-requests', \App\Http\Controllers\Api\V1\LetterRequestController::class);
+    Route::post('letter-requests/{letter_request}/assign', [\App\Http\Controllers\Api\V1\LetterRequestController::class, 'assignNumber']);
+    Route::post('letter-requests/{letter_request}/reject', [\App\Http\Controllers\Api\V1\LetterRequestController::class, 'reject']);
 });

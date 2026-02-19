@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Circle, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye, Download, MapPin, Plus, Calendar, User, Upload, Handshake, Archive } from 'lucide-react'
+import { CheckCircle2, Circle, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye, Download, MapPin, Plus, Calendar, User, Upload, Handshake, Archive, Loader2 } from 'lucide-react'
 import MoneyInput from '@/components/MoneyInput'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,6 +35,10 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
   const currentUserRole = auth.user?.role_name;
   const currentUserId = auth.user?.id;
   const canUpdateCode = permissions.includes('create_code_project');
+
+  // Project Code State
+  const [projectCode, setProjectCode] = useState('');
+  const [isUpdatingCode, setIsUpdatingCode] = useState(false);
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -79,6 +83,9 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
         else {
           setLocations([]);
         }
+
+        // Initialize project code
+        setProjectCode(data.code || '');
 
         // Initialize closing form with saved data
         setClosingForm(prev => ({
@@ -256,6 +263,35 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
     }
   };
 
+  const handleUpdateCode = async () => {
+    if (!projectCode || projectCode === project.code) return;
+
+    setIsUpdatingCode(true);
+    try {
+      // Use axios directly to update only the code
+      // We are using PUT/PATCH to update the project resource
+      await axios.post(`/api/v1/projects/${project_slug}`, {
+        _method: 'PUT',
+        code: projectCode
+      });
+
+      setToast({ show: true, message: 'Kode proyek berhasil diperbarui.', type: 'success' });
+
+      // Update local state to reflect change without full reload if possible, 
+      // but router.visit ensures everything is in sync
+      router.visit(window.location.pathname, { preserveScroll: true });
+    } catch (error: any) {
+      console.error("Error updating project code:", error);
+      setToast({
+        show: true,
+        message: error.response?.data?.message || 'Gagal memperbarui kode proyek.',
+        type: 'error'
+      });
+    } finally {
+      setIsUpdatingCode(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -377,13 +413,27 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
                   <Label htmlFor="project-code" className="text-sm font-semibold">
                     Tetapkan Kode Proyek <span className="text-red-500">*</span>
                   </Label>
-                  <div className="flex flex-col gap-1">
-                    <Input
-                      id="project-code"
-                      className="max-w-md bg-white border-gray-300 font-mono"
-                      placeholder="Contoh: PRJ-2025-001"
-                      defaultValue={project.code || ''}
-                    />
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        id="project-code"
+                        className="max-w-md bg-white border-gray-300 font-mono"
+                        placeholder="Contoh: PRJ-2025-001"
+                        value={projectCode}
+                        onChange={(e) => setProjectCode(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleUpdateCode}
+                        disabled={isUpdatingCode || !projectCode || projectCode === project.code}
+                      >
+                        {isUpdatingCode ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Simpan"
+                        )}
+                      </Button>
+                    </div>
                     <p className="text-[10px] text-muted-foreground">
                       Kode proyek wajib diisi untuk identifikasi unik sebelum menyetujui.
                     </p>

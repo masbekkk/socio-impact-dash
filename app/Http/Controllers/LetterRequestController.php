@@ -15,16 +15,9 @@ final class LetterRequestController
     public function index()
     {
         $user = auth()->user();
-        $query = LetterRequest::with(['project', 'requester']);
-
-        // Finance and Superadmin can see all
-        // if (!in_array($user->role, [UserRole::Finance, UserRole::Superadmin])) {
-        //     $query->where('requester_id', $user->id);
-        // }
 
         return Inertia::render('LetterRequests/Index', [
-            'letterRequests' => $query->latest()->get(),
-            'canAssign' => true,
+            'canAssign' => $user->hasRole([UserRole::Finance, UserRole::Superadmin]),
         ]);
     }
 
@@ -57,7 +50,7 @@ final class LetterRequestController
     public function assignNumber(Request $request, LetterRequest $letterRequest)
     {
         $user = auth()->user();
-        if (! in_array($user->role, [UserRole::Finance, UserRole::Superadmin])) {
+        if (! $user->hasRole([UserRole::Finance, UserRole::Superadmin])) {
             abort(403);
         }
 
@@ -76,7 +69,7 @@ final class LetterRequestController
     public function reject(LetterRequest $letterRequest)
     {
         $user = auth()->user();
-        if (! in_array($user->role, [UserRole::Finance, UserRole::Superadmin])) {
+        if (! $user->hasRole([UserRole::Finance, UserRole::Superadmin])) {
             abort(403);
         }
 
