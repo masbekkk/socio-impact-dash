@@ -84,7 +84,7 @@ export default function ProjectTabs({
     const toggleVerification = async (termId: number, currentVerified: boolean) => {
         try {
             await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, {
-                verified: !currentVerified
+                is_verified: !currentVerified
             });
             // Refresh via router
             router.visit(window.location.pathname, { preserveScroll: true });
@@ -95,7 +95,7 @@ export default function ProjectTabs({
 
     const handleTerminProofUpload = async (termId: number, file: File) => {
         const formData = new FormData();
-        formData.append('proof_payment', file);
+        formData.append('proof_file', file);
         try {
             await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
@@ -143,7 +143,10 @@ export default function ProjectTabs({
                                                     <Badge variant="secondary" className="mt-1 text-[10px] uppercase font-bold tracking-wider">{doc.type}</Badge>
                                                 </div>
                                             </div>
-                                            <Button className="gap-2 w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white h-9 text-xs shadow-sm">
+                                            <Button
+                                                className="gap-2 w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white h-9 text-xs shadow-sm"
+                                                onClick={() => window.open(doc.path, '_blank')}
+                                            >
                                                 <Eye className="h-3.5 w-3.5" />
                                                 Preview
                                             </Button>
@@ -251,7 +254,7 @@ export default function ProjectTabs({
                                 // Use monitoring list directly. If empty, it will just show start/end points.
                                 const data = monitoringList || [];
                                 const currentYear = new Date().getFullYear();
-                                const startDate = project.start_date ? new Date(project.start_date) : new Date(currentYear, 0, 1);
+                                const startDate = project.start_date ? new Date(project.start_date) : new Date(Number(currentYear), 0, 1);
                                 const endDate = project.end_date ? new Date(project.end_date) : new Date(startDate.getFullYear(), 11, 31);
 
                                 return (
@@ -325,10 +328,10 @@ export default function ProjectTabs({
 
                                                                     <div className="mb-2 pb-2 border-b border-slate-50">
                                                                         <p className="text-[var(--sidebar)] font-bold text-xl leading-none">
-                                                                            {new Date(item.date).getDate()}
+                                                                            {item.date ? new Date(item.date).getDate() : '-'}
                                                                         </p>
                                                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                                                            {new Date(item.date).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}
+                                                                            {item.date ? new Date(item.date).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'}
                                                                         </p>
                                                                     </div>
 
@@ -397,8 +400,22 @@ export default function ProjectTabs({
                                                 </div>
                                             </div>
                                             <div className="flex gap-1 shrink-0">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"><Eye className="h-4 w-4" /></Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"><Download className="h-4 w-4" /></Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                                    onClick={() => window.open(rabDoc.path, '_blank')}
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                                    onClick={() => window.open(rabDoc.path, '_blank')}
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         </div>
                                     );

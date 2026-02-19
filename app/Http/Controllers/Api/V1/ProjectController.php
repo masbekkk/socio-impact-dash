@@ -21,7 +21,7 @@ final class ProjectController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Project::with(['division', 'accountManager', 'head', 'pic']);
+        $query = Project::with(['division', 'accountManager', 'head', 'pic', 'creator']);
 
         if ($request->filled('search')) {
             $search = (string) $request->string('search');
@@ -77,7 +77,7 @@ final class ProjectController extends Controller
 
     public function show(Project $project): JsonResponse
     {
-        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents', 'monitorings', 'approvals']);
+        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents', 'monitorings.documents', 'approvals.approvedBy']);
 
         return JsonResponseFormatter::success(
             new ProjectResource($project),

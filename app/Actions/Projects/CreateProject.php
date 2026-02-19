@@ -30,13 +30,15 @@ final class CreateProject
                 $this->syncDocuments($project, $data['documents'], $userId);
             }
 
+            $this->createApprovals($project);
+
             return $project->load(['locations', 'terminPayments', 'documents']);
         });
     }
 
     private function createProjectRecord(array $data, int $userId): Project
     {
-        $code = $data['code'] ?? $this->generateUniqueCode();
+        $code = $data['code'] ?? null;
         $budgetTotal = (float) ($data['budget_total'] ?? 0);
 
         return Project::create([
@@ -45,9 +47,6 @@ final class CreateProject
             'description' => $data['description'] ?? null,
             'created_by' => $userId,
             'division_id' => $data['division_id'],
-            'account_manager_id' => $data['account_manager_id'],
-            'head_id' => $data['head_id'],
-            'pic_id' => $data['pic_id'],
             'status' => $data['status'] ?? ProjectStatus::Active,
             'project_type' => $data['project_type'],
             'budget_total' => $budgetTotal,
@@ -108,6 +107,36 @@ final class CreateProject
                     'uploaded_by' => $userId,
                 ]);
             }
+        }
+    }
+
+    private function createApprovals(Project $project): void
+    {
+        // Finance Approval
+        if ($project->account_manager_id) {
+            $project->approvals()->create([
+                'approved_by' => $project->account_manager_id,
+                'approval_type' => 'finance',
+                'approval_status' => 'pending',
+            ]);
+        }
+
+        // HR Approval
+        if ($project->head_id) {
+            $project->approvals()->create([
+                'approved_by' => $project->head_id,
+                'approval_type' => 'hr',
+                'approval_status' => 'pending',
+            ]);
+        }
+
+        // Direktur Approval
+        if ($project->pic_id) {
+            $project->approvals()->create([
+                'approved_by' => $project->pic_id,
+                'approval_type' => 'direktur',
+                'approval_status' => 'pending',
+            ]);
         }
     }
 }

@@ -34,7 +34,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
   const currentUserRole = auth.user?.role_name;
   const currentUserId = auth.user?.id;
-  const canUpdateCode = permissions.includes('create-code-project');
+  const canUpdateCode = permissions.includes('create_code_project');
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -260,18 +260,31 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
     );
   }
 
-  const isAssignedAdmin = project?.pic_id === currentUserId;
-  const isAssignedFinance = project?.head_id === currentUserId;
-  const isAssignedDirektur = project?.account_manager_id === currentUserId;
-  const isAssignedStakeholder = isAssignedAdmin || isAssignedFinance || isAssignedDirektur;
+  const isAssignedFinance = project?.account_manager_id === currentUserId;
+  const isAssignedHR = project?.head_id === currentUserId;
+  const isAssignedDirektur = project?.pic_id === currentUserId;
+  const isAssignedStakeholder = isAssignedFinance || isAssignedHR || isAssignedDirektur;
 
   const isReadyForClosing = currentStatus === 'active';
 
-  const workflows = project.approvals && project.approvals.length > 0 ? project.approvals.map((ap: any) => ({
-    ...ap,
-    name: ap.role === 'Admin' ? (project.pic?.name || 'Admin Project') : ap.role === 'Finance' ? (project.head?.name || 'Finance Team') : ap.role === 'Direktur' ? (project.account_manager?.name || 'Direktur') : ap.role
-  })) : [];
-  console.log(workflows)
+  const workflows = project.approvals && project.approvals.length > 0 ? project.approvals.map((ap: any) => {
+    let roleName = '';
+    switch (ap.approval_type) {
+      case 'finance': roleName = 'Finance'; break;
+      case 'hr': roleName = 'HR'; break;
+      case 'direktur': roleName = 'Direktur'; break;
+      default: roleName = ap.approval_type;
+    }
+
+    return {
+      ...ap,
+      role: roleName,
+      name: ap.approved_by?.name || '-',
+      status: ap.approval_status,
+      note: ap.notes,
+      date: ap.updated_at
+    };
+  }) : [];
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -309,7 +322,9 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
           <h3 className="text-lg font-semibold mb-4">Status Persetujuan (Approval)</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {workflows.map((flow: any, index: number) => {
-              const isMyRole = flow.role === 'Admin' ? isAssignedAdmin : flow.role === 'Finance' ? isAssignedFinance : flow.role === 'Direktur' ? isAssignedDirektur : false;
+              const isMyRole = (flow.role === 'Finance' && isAssignedFinance) ||
+                (flow.role === 'HR' && isAssignedHR) ||
+                (flow.role === 'Direktur' && isAssignedDirektur);
               return (
                 <Card
                   key={index}
@@ -380,7 +395,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
                       id="project-code"
                       className="max-w-md bg-white border-gray-300 font-mono"
                       placeholder="Contoh: PRJ-2025-001"
-                      defaultValue={project.code !== 'PRJ-2025-001' ? project.code : ''}
+                      defaultValue={project.code || ''}
                     />
                     <p className="text-[10px] text-muted-foreground">
                       Kode proyek wajib diisi untuk identifikasi unik sebelum menyetujui.
@@ -433,7 +448,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
           monitoringList={monitoringList}
           closingForm={closingForm}
           setClosingForm={setClosingForm}
-          isProjectDealed={isProjectDealed}
+          isProjectDealed={true}
           setIsDealAlertOpen={setIsDealAlertOpen}
           setIsCloseAlertOpen={setIsCloseAlertOpen}
         />
@@ -500,6 +515,10 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
               Apakah anda yakin data yang diinput sudah benar? Laporan ini akan dikirim ke atasan untuk approval.
             </DialogDescription>
           </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSubmitReportAlertOpen(false)}>Batal</Button>
+            <Button onClick={submitReport}>Submit Laporan</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

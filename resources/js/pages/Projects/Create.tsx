@@ -19,16 +19,20 @@ import { cn } from '@/lib/utils'
 
 import axios from 'axios';
 
-export default function ProjectsCreate({ divisions, employees }: { divisions: any[], employees: any[] }) {
+export default function ProjectsCreate({ divisions, finance_users, hr_users, director_users }: { divisions: any[], finance_users: any[], hr_users: any[], director_users: any[] }) {
   const { url, props } = usePage<any>();
   const userRole = props.auth?.user?.role_name ?? 'user';
   const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
+  const permissions = props.auth?.permissions || [];
+  const canUpdateCode = permissions.includes('create_code_project');
 
   const queryParams = new URLSearchParams(url.split('?')[1]);
   const type = queryParams.get('type') || 'active'; // 'proposal' or 'active'
 
   const [step, setStep] = useState('basic')
   const [budget, setBudget] = useState<number>(0)
+  const [status, setStatus] = useState('draft')
+  const [saving, setSaving] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -42,7 +46,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
     project_type: '',
     start_date: '',
     end_date: '',
-    status: type === 'proposal' ? 'draft' : 'active',
+    status: 'active',
   });
 
   const [sowFile, setSowFile] = useState<File | null>(null);
@@ -151,7 +155,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
       const response = await axios.post('/api/v1/projects', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      router.visit(`/projects/${response.data.data.code}`);
+      router.visit(`/projects/${response.data.data.id}`);
     } catch (error: any) {
       if (error.response?.status === 422) {
         setErrors(error.response.data.errors);
@@ -343,13 +347,13 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
               <CardContent className="space-y-6 p-6 md:p-8">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
-                    <Label>Account Manager <span className="text-red-500">*</span></Label>
+                    <Label>Finance <span className="text-red-500">*</span></Label>
                     <Select value={formData.account_manager_id} onValueChange={(v) => handleInputChange('account_manager_id', v)}>
                       <SelectTrigger className={errors.account_manager_id ? 'border-red-500' : ''}>
-                        <SelectValue placeholder="Pilih Account Manager" />
+                        <SelectValue placeholder="Pilih Finance" />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.map((emp) => (
+                        {finance_users.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -357,13 +361,13 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                     {errors.account_manager_id && <p className="text-xs text-red-500">{errors.account_manager_id}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label>Head Implementation <span className="text-red-500">*</span></Label>
+                    <Label>HR <span className="text-red-500">*</span></Label>
                     <Select value={formData.head_id} onValueChange={(v) => handleInputChange('head_id', v)}>
                       <SelectTrigger className={errors.head_id ? 'border-red-500' : ''}>
-                        <SelectValue placeholder="Pilih Head Implementation" />
+                        <SelectValue placeholder="Pilih HR" />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.map((emp) => (
+                        {hr_users.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -371,13 +375,13 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                     {errors.head_id && <p className="text-xs text-red-500">{errors.head_id}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label>PIC Project <span className="text-red-500">*</span></Label>
+                    <Label>Direktur <span className="text-red-500">*</span></Label>
                     <Select value={formData.pic_id} onValueChange={(v) => handleInputChange('pic_id', v)}>
                       <SelectTrigger className={errors.pic_id ? 'border-red-500' : ''}>
-                        <SelectValue placeholder="Pilih PIC Project" />
+                        <SelectValue placeholder="Pilih Direktur" />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.map((emp) => (
+                        {director_users.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                         ))}
                       </SelectContent>

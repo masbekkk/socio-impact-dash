@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read string $code
  * @property-read string $name
  * @property-read string|null $description
- * @property-read int $user_id
+ * @property-read int $created_by
  * @property-read int|null $division_id
  * @property-read int|null $account_manager_id
  * @property-read int|null $head_id
@@ -63,7 +63,7 @@ final class Project extends Model
 
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function division(): BelongsTo

@@ -4,17 +4,14 @@ declare(strict_types=1);
 
 namespace App\Actions\Projects;
 
-use App\Enums\DocumentType;
 use App\Models\Project;
 use App\Services\FileUploadService;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 
-class CloseProject
+final class CloseProject
 {
-    public function __construct(protected FileUploadService $fileUploadService)
-    {
-    }
+    public function __construct(private FileUploadService $fileUploadService) {}
 
     public function handle(Project $project, array $data, int $userId): Project
     {
@@ -22,7 +19,7 @@ class CloseProject
             // Update actual budget and status
             $project->update([
                 'actual_budget' => $data['actual_budget'] ?? $project->actual_budget,
-                'status' => 'completed',
+                'status' => 'finished',
             ]);
 
             // Handle Documents
@@ -33,7 +30,7 @@ class CloseProject
                         $existingDoc = $project->documents()->where('type', $doc['type'])->first();
 
                         if ($existingDoc) {
-                             $meta = $this->fileUploadService->replaceFile(
+                            $meta = $this->fileUploadService->replaceFile(
                                 $doc['file'],
                                 $existingDoc->path,
                                 "projects/{$project->id}/closing_documents"
@@ -44,7 +41,7 @@ class CloseProject
                                 $doc['file'],
                                 "projects/{$project->id}/closing_documents"
                             );
-                            
+
                             $project->documents()->create([
                                 'project_id' => $project->id,
                                 'type' => $doc['type'],
