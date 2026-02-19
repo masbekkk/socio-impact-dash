@@ -18,22 +18,24 @@ final class RoleAndPermissionSeeder extends Seeder
     {
         // Create permissions
         $permissions = [
-            'create projects',
-            'view projects',
-            'update projects',
-            'delete projects',
-            'finish projects',
-            'create reimbursements',
-            'view reimbursements',
-            'approve reimbursements',
-            'reject reimbursements',
-            'transfer reimbursements',
-            'create leaves',
-            'view leaves',
-            'approve leaves',
-            'reject leaves',
-            'manage users',
-            'manage divisions',
+            'create_projects',
+            'view_projects',
+            'update_projects',
+            'delete_projects',
+            'finish_projects',
+            'create_reimbursements',
+            'view_reimbursements',
+            'approve_reimbursements',
+            'reject_reimbursements',
+            'transfer_reimbursements',
+            'create_leaves',
+            'view_leaves',
+            'approve_leaves',
+            'reject_leaves',
+            'manage_users',
+            'manage_divisions',
+            'create_code_project',
+            'view_audit_logs',
         ];
 
         foreach ($permissions as $permission) {
@@ -43,34 +45,54 @@ final class RoleAndPermissionSeeder extends Seeder
         // Create roles and assign permissions
         $pegawaiRole = Role::firstOrCreate(['name' => UserRole::Pegawai->value]);
         $pegawaiRole->syncPermissions([
-            'create projects',
-            'view projects',
-            'create reimbursements',
-            'view reimbursements',
-            'create leaves',
-            'view leaves',
+            'create_projects',
+            'view_projects',
+            'create_reimbursements',
+            'view_reimbursements',
+            'create_leaves',
+            'view_leaves',
         ]);
 
         $headRole = Role::firstOrCreate(['name' => UserRole::Head->value]);
         $headRole->syncPermissions([
-            'create projects',
-            'view projects',
-            'update projects',
-            'approve reimbursements',
-            'approve leaves',
-            'view reimbursements',
+            'create_projects',
+            'view_projects',
+            'update_projects',
+            'approve_reimbursements',
+            'approve_leaves',
+            'view_reimbursements',
+            'view_leaves',
         ]);
 
         $financeRole = Role::firstOrCreate(['name' => UserRole::Finance->value]);
         $financeRole->syncPermissions([
-            'view reimbursements',
-            'approve reimbursements',
-            'transfer reimbursements',
-            'view projects',
-            'view leaves',
+            'view_reimbursements',
+            'approve_reimbursements',
+            'transfer_reimbursements',
+            'view_projects',
+            'view_leaves',
+            'create_code_project',
+            'view_audit_logs',
         ]);
 
         $superadminRole = Role::firstOrCreate(['name' => UserRole::Superadmin->value]);
         $superadminRole->syncPermissions($permissions);
+
+        $hrRole = Role::firstOrCreate(['name' => UserRole::HR->value]);
+        $hrRole->syncPermissions([
+            'view_leaves',
+            'approve_leaves',
+            'view_reimbursements',
+            'view_projects',
+        ]);
+
+        $direkturRole = Role::firstOrCreate(['name' => UserRole::Direktur->value]);
+        $direkturRole->syncPermissions([
+            'view_projects',
+            'view_reimbursements',
+            'approve_reimbursements',
+            'view_leaves',
+            'approve_leaves',
+        ]);
     }
 }

@@ -1,11 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Resources\V1\Project;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ProjectResource extends JsonResource
+final class ProjectResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -18,16 +19,21 @@ class ProjectResource extends JsonResource
             'id' => $this->id,
             'code' => $this->code,
             'name' => $this->name,
-            'client' => $this->client,
             'description' => $this->description,
             'status' => $this->status,
             'project_type' => $this->project_type,
             'budget_total' => (float) $this->budget_total,
-            'operational_budget' => (float) $this->operational_budget,
-            'management_budget' => (float) $this->management_budget,
-            'allowance_budget' => (float) $this->allowance_budget,
+            'operational_budget' => (float) $this->budget_total * 0.50,
+            'management_budget' => (float) $this->budget_total * 0.30,
+            'allowance_budget' => (float) $this->budget_total * 0.20,
             'start_date' => $this->start_date ? $this->start_date->toDateString() : null,
             'end_date' => $this->end_date ? $this->end_date->toDateString() : null,
+            'division_id' => $this->division_id,
+            'account_manager_id' => $this->account_manager_id,
+            'head_id' => $this->head_id,
+            'pic_id' => $this->pic_id,
+            'created_by' => $this->created_by,
+            'actual_budget' => $this->actual_budget,
             'creator' => $this->whenLoaded('creator', fn () => [
                 'id' => $this->creator->id,
                 'name' => $this->creator->name,
@@ -49,9 +55,13 @@ class ProjectResource extends JsonResource
                 'name' => $this->pic->name,
             ]),
             'locations' => $this->whenLoaded('locations'),
-            'budgets' => $this->whenLoaded('budgets'),
-            'milestones' => $this->whenLoaded('milestones'),
             'documents' => $this->whenLoaded('documents'),
+            'supporting_docs' => $this->whenLoaded('documents'),
+            'termin_payments' => $this->whenLoaded('terminPayments'),
+            'monitorings' => $this->whenLoaded('monitorings'),
+            'monitoring_history' => $this->whenLoaded('monitorings'),
+            'approvals' => ProjectApprovalResource::collection($this->whenLoaded('approvals')),
+            'events' => $this->whenLoaded('events'),
             'created_at' => $this->created_at->toDateTimeString(),
             'updated_at' => $this->updated_at->toDateTimeString(),
         ];

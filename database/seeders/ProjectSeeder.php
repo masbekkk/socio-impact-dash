@@ -11,34 +11,33 @@ final class ProjectSeeder extends Seeder
     public function run(): void
     {
         \App\Models\Project::factory()->count(25)->create()->each(function (\App\Models\Project $project) {
-            // Create some locations
             $project->locations()->createMany([
-                ['latitude' => -6.2, 'longitude' => 106.8, 'detail_address' => 'Jakarta Office'],
-                ['latitude' => -7.2, 'longitude' => 112.7, 'detail_address' => 'Surabaya Branch'],
+                ['latitude' => '-6.200000', 'longitude' => '106.816666', 'detail_address' => 'Jakarta Office'],
+                ['latitude' => '-7.257472', 'longitude' => '112.752088', 'detail_address' => 'Surabaya Branch'],
             ]);
 
-            // Create some monitorings
-            $project->monitorings()->createMany([
-                [
-                    'created_by' => $project->user_id,
-                    'report_date' => $project->start_date->addDays(15),
-                    'notes' => 'Progress report for the first two weeks.',
-                ],
+            $project->monitorings()->create([
+                'created_by' => $project->created_by,
+                'report_date' => $project->start_date?->addDays(15) ?? now()->addDays(15),
+                'notes' => 'Progress report for the first two weeks.',
             ]);
 
-            // Create some termin payments
+            $budgetTotal = (float) $project->budget_total;
+
             $project->terminPayments()->createMany([
                 [
-                    'nominal' => $project->budget_total * 0.3,
+                    'nominal' => $budgetTotal * 0.3,
                     'due_date' => $project->start_date,
                     'notes' => 'Down payment',
                     'verified_by' => $project->head_id,
+                    'proof_payment' => null,
                 ],
                 [
-                    'nominal' => $project->budget_total * 0.7,
+                    'nominal' => $budgetTotal * 0.7,
                     'due_date' => $project->end_date,
                     'notes' => 'Final payment',
                     'verified_by' => $project->head_id,
+                    'proof_payment' => null,
                 ],
             ]);
         });

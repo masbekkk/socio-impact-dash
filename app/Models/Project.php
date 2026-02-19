@@ -17,15 +17,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read int $id
  * @property-read string $code
  * @property-read string $name
- * @property-read string $client
  * @property-read string|null $description
- * @property-read int $user_id
+ * @property-read int $created_by
  * @property-read int|null $division_id
  * @property-read int|null $account_manager_id
  * @property-read int|null $head_id
  * @property-read int|null $pic_id
  * @property-read ProjectStatus $status
- * @property-read string|null $sow
  * @property-read string $project_type
  * @property-read string|null $budget_total
  * @property-read CarbonInterface $created_at
@@ -39,12 +37,11 @@ final class Project extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'code', 'name', 'client', 'description',
-        'user_id', 'division_id', 'account_manager_id', 'head_id', 'pic_id',
-        'status', 'project_type', 
-        'sow_path', 'sow_original_name', 'sow_mime', 'sow_size',
-        'budget_total', 'operational_budget', 'management_budget', 'allowance_budget',
-        'start_date', 'end_date',
+        'code', 'name', 'description',
+        'division_id', 'account_manager_id', 'head_id', 'pic_id',
+        'status', 'project_type',
+        'budget_total', 'operational_budget', 'management_budget', 'allowance_budget', 'actual_budget',
+        'start_date', 'end_date', 'created_by',
     ];
 
     public function casts(): array
@@ -56,6 +53,7 @@ final class Project extends Model
             'operational_budget' => 'decimal:2',
             'management_budget' => 'decimal:2',
             'allowance_budget' => 'decimal:2',
+            'actual_budget' => 'decimal:2',
             'start_date' => 'date',
             'end_date' => 'date',
             'created_at' => 'datetime',
@@ -65,7 +63,7 @@ final class Project extends Model
 
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function division(): BelongsTo
@@ -87,23 +85,6 @@ final class Project extends Model
     {
         return $this->belongsTo(User::class, 'pic_id');
     }
-
-    /*
-    public function milestones(): HasMany
-    {
-        return $this->hasMany(ProjectMilestone::class);
-    }
-
-    public function budgets(): HasMany
-    {
-        return $this->hasMany(ProjectBudget::class);
-    }
-
-    public function issues(): HasMany
-    {
-        return $this->hasMany(ProjectIssue::class);
-    }
-    */
 
     public function documents(): HasMany
     {
@@ -133,5 +114,10 @@ final class Project extends Model
     public function locations(): HasMany
     {
         return $this->hasMany(ProjectLocation::class);
+    }
+
+    public function reimbursements(): HasMany
+    {
+        return $this->hasMany(Reimbursement::class);
     }
 }

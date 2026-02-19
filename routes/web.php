@@ -30,7 +30,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::resource('presences', PresenceController::class)->only(['index', 'create', 'store', 'show']);
 
     // Projects
-    Route::resource('projects', ProjectController::class);
+    Route::resource('projects', ProjectController::class)->only(['index', 'create', 'show', 'edit']);
 
     // Reimbursements
     Route::get('reimbursements/create/atr', [ReimbursementController::class, 'createATR'])->name('reimbursements.create.atr');

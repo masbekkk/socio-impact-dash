@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('nominal', 15, 2)->nullable();
             $table->date('due_date')->nullable();
             $table->string('notes')->nullable();
-            $table->foreignId('verified_by')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('verified_by')->nullable()->constrained('users')->cascadeOnDelete();
             $table->string('proof_payment')->nullable();
             $table->timestamps();
         });

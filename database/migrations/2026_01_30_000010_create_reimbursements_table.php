@@ -18,14 +18,17 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('project_id')->nullable()->constrained('projects')->nullOnDelete();
             $table->string('type')->default(ReimbursementType::ATR->value);
-            $table->string('status')->default(ReimbursementStatus::Draft->value)->index();
-            $table->decimal('amount', 15, 2);
+            $table->enum('eer_type', ['refund', 'reimburse'])->nullable();
+            $table->string('status')->default('submitted')->index();
+            $table->decimal('amount', 15, 2)->nullable();
             $table->string('bank_name')->nullable();
             $table->string('bank_account')->nullable();
             $table->string('account_holder')->nullable();
             $table->timestamp('transferred_at')->nullable();
             $table->string('transfer_proof_path')->nullable();
             $table->text('rejection_reason')->nullable();
+            $table->text('usage_plan')->nullable(); 
+            $table->enum('urgency', ['rendah', 'normal', 'tinggi', 'mendesak'])->nullable();
             $table->timestamps();
         });
     }
