@@ -49,6 +49,17 @@ final class UserSeeder extends Seeder
         );
         $finance->assignRole(UserRole::Finance->value);
 
+        // Create HR user
+        $hr = User::firstOrCreate(
+            ['email' => 'hr@socio-impact.test'],
+            [
+                'name' => 'HR Manager',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $hr->assignRole(UserRole::HR->value);
+
         // Create 10 regular employees
         for ($i = 1; $i <= 10; $i++) {
             $user = User::firstOrCreate(

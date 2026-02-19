@@ -60,7 +60,7 @@ final class ProjectResource extends JsonResource
             'termin_payments' => $this->whenLoaded('terminPayments'),
             'monitorings' => $this->whenLoaded('monitorings'),
             'monitoring_history' => $this->whenLoaded('monitorings'),
-            'approvals' => $this->whenLoaded('approvals'),
+            'approvals' => ProjectApprovalResource::collection($this->whenLoaded('approvals')),
             'events' => $this->whenLoaded('events'),
             'created_at' => $this->created_at->toDateTimeString(),
             'updated_at' => $this->updated_at->toDateTimeString(),

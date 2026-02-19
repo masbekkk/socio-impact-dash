@@ -8,11 +8,9 @@ use App\Models\Project;
 use App\Services\FileUploadService;
 use Illuminate\Support\Facades\DB;
 
-class UpdateProject
+final class UpdateProject
 {
-    public function __construct(protected FileUploadService $fileUploadService)
-    {
-    }
+    public function __construct(private FileUploadService $fileUploadService) {}
 
     public function handle(Project $project, array $data, int $userId): Project
     {
@@ -31,6 +29,8 @@ class UpdateProject
                 $this->syncDocuments($project, $data['documents'], $userId);
             }
 
+            $this->syncApprovals($project);
+
             // Handle deletions
             if (isset($data['delete_locations'])) {
                 $project->locations()->whereIn('id', $data['delete_locations'])->delete();
@@ -47,11 +47,10 @@ class UpdateProject
         });
     }
 
-    protected function updateProjectRecord(Project $project, array $data): void
+    private function updateProjectRecord(Project $project, array $data): void
     {
         $updateData = collect($data)->only([
             'code', 'name', 'description', 'division_id',
-            'account_manager_id', 'head_id', 'pic_id',
             'status', 'project_type', 'budget_total',
             'start_date', 'end_date', 'actual_budget',
         ])->toArray();
@@ -63,12 +62,12 @@ class UpdateProject
             $updateData['allowance_budget'] = $budgetTotal * 0.2;
         }
 
-        if (!empty($updateData)) {
+        if (! empty($updateData)) {
             $project->update($updateData);
         }
     }
 
-    protected function syncLocations(Project $project, array $locations): void
+    private function syncLocations(Project $project, array $locations): void
     {
         // For simplicity, we'll replace all locations if they are passed as a full array
         // or we could do a more sophisticated diffing.
@@ -90,7 +89,7 @@ class UpdateProject
         }
     }
 
-    protected function syncTerminPayments(Project $project, array $terminPayments): void
+    private function syncTerminPayments(Project $project, array $terminPayments): void
     {
         foreach ($terminPayments as $term) {
             if (isset($term['id'])) {
@@ -109,7 +108,7 @@ class UpdateProject
         }
     }
 
-    protected function syncDocuments(Project $project, array $documents, int $userId): void
+    private function syncDocuments(Project $project, array $documents, int $userId): void
     {
         foreach ($documents as $doc) {
             if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
@@ -123,6 +122,7 @@ class UpdateProject
                             "projects/{$project->id}/documents"
                         );
                         $existingDoc->update(array_merge($meta, ['type' => $doc['type'] ?? $existingDoc->type]));
+
                         continue;
                     }
                 }
@@ -142,5 +142,27 @@ class UpdateProject
                 ]);
             }
         }
+    }
+
+    private function syncApprovals(Project $project): void
+    {
+        // Helper to update or create approval
+        $updateOrCreate = function ($type, $userId) use ($project) {
+            if ($userId) {
+                $project->approvals()->updateOrCreate(
+                    ['approval_type' => $type],
+                    ['approved_by' => $userId]
+                );
+            } else {
+                // If user is removed, we might want to delete the approval or keep it.
+                // For now, let's keep it but maybe it should be considered void?
+                // The current requirement implies strict mapping, so let's delete if no user.
+                $project->approvals()->where('approval_type', $type)->delete();
+            }
+        };
+
+        $updateOrCreate('finance', $project->account_manager_id);
+        $updateOrCreate('hr', $project->head_id);
+        $updateOrCreate('direktur', $project->pic_id);
     }
 }

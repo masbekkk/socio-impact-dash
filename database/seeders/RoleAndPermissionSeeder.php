@@ -72,5 +72,13 @@ final class RoleAndPermissionSeeder extends Seeder
 
         $superadminRole = Role::firstOrCreate(['name' => UserRole::Superadmin->value]);
         $superadminRole->syncPermissions($permissions);
+
+        $hrRole = Role::firstOrCreate(['name' => UserRole::HR->value]);
+        $hrRole->syncPermissions([
+            'view leaves',
+            'approve leaves',
+            'view reimbursements',
+            'view projects',
+        ]);
     }
 }

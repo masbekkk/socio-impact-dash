@@ -11,4 +11,5 @@ enum UserRole: string
     case Finance = 'finance';
     case Superadmin = 'superadmin';
     case Direktur = 'direktur';
+    case HR = 'hr';
 }

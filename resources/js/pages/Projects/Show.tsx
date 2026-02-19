@@ -260,18 +260,31 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
     );
   }
 
-  const isAssignedAdmin = project?.pic_id === currentUserId;
-  const isAssignedFinance = project?.head_id === currentUserId;
-  const isAssignedDirektur = project?.account_manager_id === currentUserId;
-  const isAssignedStakeholder = isAssignedAdmin || isAssignedFinance || isAssignedDirektur;
+  const isAssignedFinance = project?.account_manager_id === currentUserId;
+  const isAssignedHR = project?.head_id === currentUserId;
+  const isAssignedDirektur = project?.pic_id === currentUserId;
+  const isAssignedStakeholder = isAssignedFinance || isAssignedHR || isAssignedDirektur;
 
   const isReadyForClosing = currentStatus === 'active';
 
-  const workflows = project.approvals && project.approvals.length > 0 ? project.approvals.map((ap: any) => ({
-    ...ap,
-    name: ap.role === 'Admin' ? (project.pic?.name || 'Admin Project') : ap.role === 'Finance' ? (project.head?.name || 'Finance Team') : ap.role === 'Direktur' ? (project.account_manager?.name || 'Direktur') : ap.role
-  })) : [];
-  console.log(workflows)
+  const workflows = project.approvals && project.approvals.length > 0 ? project.approvals.map((ap: any) => {
+    let roleName = '';
+    switch (ap.approval_type) {
+      case 'finance': roleName = 'Finance'; break;
+      case 'hr': roleName = 'HR'; break;
+      case 'direktur': roleName = 'Direktur'; break;
+      default: roleName = ap.approval_type;
+    }
+
+    return {
+      ...ap,
+      role: roleName,
+      name: ap.approved_by?.name || '-',
+      status: ap.approval_status,
+      note: ap.notes,
+      date: ap.updated_at
+    };
+  }) : [];
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -309,7 +322,9 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
           <h3 className="text-lg font-semibold mb-4">Status Persetujuan (Approval)</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {workflows.map((flow: any, index: number) => {
-              const isMyRole = flow.role === 'Admin' ? isAssignedAdmin : flow.role === 'Finance' ? isAssignedFinance : flow.role === 'Direktur' ? isAssignedDirektur : false;
+              const isMyRole = (flow.role === 'Finance' && isAssignedFinance) ||
+                (flow.role === 'HR' && isAssignedHR) ||
+                (flow.role === 'Direktur' && isAssignedDirektur);
               return (
                 <Card
                   key={index}
