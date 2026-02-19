@@ -153,12 +153,21 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
 
     try {
       const response = await axios.post('/api/v1/projects', submitData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        withCredentials: true
       });
+      // Use window.location as fallback or router
       router.visit(`/projects/${response.data.data.id}`);
     } catch (error: any) {
+      console.error("Error creating project:", error);
       if (error.response?.status === 422) {
         setErrors(error.response.data.errors);
+      } else if (error.response?.status === 401) {
+        alert("Sesi Anda telah berakhir. Silakan refresh halaman dan login kembali.");
+        window.location.reload();
       } else {
         console.error("Error creating project:", error);
       }
@@ -312,7 +321,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                         className={errors.code ? 'border-red-500' : ''}
                       />
                       {errors.code && <p className="text-xs text-red-500">{errors.code}</p>}
-                      <p className="text-[10px] text-muted-foreground italic">Biarkan kosong untuk generate otomatis (PRJ-XXXXXX)</p>
+                      {/* <p className="text-[10px] text-muted-foreground italic">Biarkan kosong untuk generate otomatis (PRJ-XXXXXX)</p> */}
                     </div>
                   )}
 
