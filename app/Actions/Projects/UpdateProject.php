@@ -53,13 +53,18 @@ final class UpdateProject
             'code', 'name', 'description', 'division_id',
             'status', 'project_type', 'budget_total', 'head_id', 'account_manager_id', 'pic_id',
             'start_date', 'end_date', 'actual_budget',
+            'operational_budget', 'allowance_budget', 'budget_partition_status',
         ])->toArray();
 
         if (isset($updateData['budget_total'])) {
             $budgetTotal = (float) $updateData['budget_total'];
-            $updateData['operational_budget'] = $budgetTotal * 0.5;
             $updateData['management_budget'] = $budgetTotal * 0.3;
-            $updateData['allowance_budget'] = $budgetTotal * 0.2;
+            if (! isset($updateData['operational_budget'])) {
+                $updateData['operational_budget'] = $budgetTotal * 0.5;
+            }
+            if (! isset($updateData['allowance_budget'])) {
+                $updateData['allowance_budget'] = $budgetTotal * 0.2;
+            }
         }
 
         if (! empty($updateData)) {

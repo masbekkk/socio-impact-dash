@@ -18,6 +18,8 @@ interface ProjectTabsProps {
     currentStatus: string;
     locations: any[];
     userRole?: string; // 'admin' | 'finance' | 'user'
+    refetchProject?: () => void;
+    onShowToast?: (msg: string, type: 'success' | 'error') => void;
 
     // Monitoring
     reportForm: any;
@@ -40,7 +42,9 @@ export default function ProjectTabs({
     project,
     currentStatus,
     locations,
-    userRole = usePage<SharedData>()?.props?.auth?.user?.role_name ?? 'user',
+    userRole = (usePage().props as any).auth?.user?.role_name || 'user',
+    refetchProject,
+    onShowToast,
     reportForm,
     setReportForm,
     handleReportFileChange,
@@ -80,16 +84,70 @@ export default function ProjectTabs({
         }
     }, [project.termin_payments]);
 
+    // Budget Partitions State
+    const [editPartitions, setEditPartitions] = useState(false);
+    const [opsBudget, setOpsBudget] = useState<number>(project.operational_budget || 0);
+    const [allowanceBudget, setAllowanceBudget] = useState<number>(project.allowance_budget || 0);
+    const [savingBudget, setSavingBudget] = useState(false);
+    const [localBudgetStatus, setLocalBudgetStatus] = useState(project.budget_partition_status || 'draft');
+
+    // Permissions
+    const permissions = (usePage().props as any).auth?.permissions || [];
+    const canInputBudget = permissions.includes('input_budget_partition');
+    const canApproveBudget = permissions.includes('approval_budget_partition');
+
+    useEffect(() => {
+        setOpsBudget(project.operational_budget || 0);
+        setAllowanceBudget(project.allowance_budget || 0);
+        setLocalBudgetStatus(project.budget_partition_status || 'draft');
+    }, [project]);
+
+    const handleSaveBudget = async () => {
+        setSavingBudget(true);
+        try {
+            await axios.put(`/api/v1/projects/${project.id}`, {
+                operational_budget: opsBudget,
+                allowance_budget: allowanceBudget
+            });
+            setEditPartitions(false);
+            if (onShowToast) onShowToast('Pembagian anggaran berhasil disimpan', 'success');
+        } catch (error: any) {
+            console.error(error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal menyimpan anggaran', 'error');
+        } finally {
+            setSavingBudget(false);
+        }
+    };
+
+    const handleApproveBudget = async () => {
+        setSavingBudget(true);
+        try {
+            await axios.put(`/api/v1/projects/${project.id}`, {
+                budget_partition_status: 'approved'
+            });
+            setLocalBudgetStatus('approved');
+            if (onShowToast) onShowToast('Pembagian anggaran berhasil disetujui', 'success');
+        } catch (error: any) {
+            console.error(error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal menyetujui anggaran', 'error');
+        } finally {
+            setSavingBudget(false);
+        }
+    };
+
     // Handler to toggle verification status
     const toggleVerification = async (termId: number, currentVerified: boolean) => {
         try {
-            await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, {
+            const { data } = await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, {
                 is_verified: !currentVerified
             });
-            // Refresh via router
-            router.visit(window.location.pathname, { preserveScroll: true });
-        } catch (error) {
+            setLocalPaymentTerms(prev =>
+                prev.map(t => t.id === termId ? { ...t, ...data.data } : t)
+            );
+            if (onShowToast) onShowToast(!currentVerified ? 'Termin berhasil diverifikasi' : 'Verifikasi dibatalkan', 'success');
+        } catch (error: any) {
             console.error("Error toggling verification:", error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal mengubah verifikasi', 'error');
         }
     };
 
@@ -97,12 +155,16 @@ export default function ProjectTabs({
         const formData = new FormData();
         formData.append('proof_file', file);
         try {
-            await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, formData, {
+            const { data } = await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            router.visit(window.location.pathname, { preserveScroll: true });
-        } catch (error) {
+            setLocalPaymentTerms(prev =>
+                prev.map(t => t.id === termId ? { ...t, ...data.data } : t)
+            );
+            if (onShowToast) onShowToast('Bukti pembayaran berhasil diunggah', 'success');
+        } catch (error: any) {
             console.error("Error uploading proof:", error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal mengunggah bukti', 'error');
         }
     };
 
@@ -113,7 +175,7 @@ export default function ProjectTabs({
                 <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max md:w-full min-w-full md:min-w-0">
                     <TabsTrigger value="detail" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Detail & Proposal</TabsTrigger>
                     <TabsTrigger value="timeline" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Timeline</TabsTrigger>
-                    <TabsTrigger value="budget" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Budget</TabsTrigger>
+                    <TabsTrigger value="budget" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Nilai Kontrak</TabsTrigger>
                     <TabsTrigger value="monitoring" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Monitoring</TabsTrigger>
                     <TabsTrigger value="closing" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Closing</TabsTrigger>
                 </TabsList>
@@ -360,7 +422,7 @@ export default function ProjectTabs({
             <TabsContent value="budget" className="mt-4">
                 <Card className="border shadow-sm">
                     <CardHeader className="pb-2">
-                        <CardTitle>Anggaran & Keuangan</CardTitle>
+                        <CardTitle>Keuangan</CardTitle>
                         <CardDescription>Informasi nominal dan rincian anggaran biaya (RAB).</CardDescription>
                     </CardHeader>
                     <CardContent className="grid md:grid-cols-2 gap-6 pt-4">
@@ -372,14 +434,14 @@ export default function ProjectTabs({
                                     <span className="font-bold text-xs">Rp</span>
                                 </div>
                                 <p className="text-sm font-medium text-muted-foreground">
-                                    {currentStatus === 'active' ? 'Total Anggaran Project' : 'Estimasi Anggaran Pengajuan'}
+                                    Total Anggaran Project
                                 </p>
                             </div>
                             <div className="text-3xl font-bold text-slate-900 tracking-tight">
                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.budget_total || 0)}
                             </div>
                             <p className="text-xs text-muted-foreground mt-2">
-                                *Anggaran yang diajukan dalam formulir project.
+                                *Keuangan project.
                             </p>
                         </div>
 
@@ -430,27 +492,74 @@ export default function ProjectTabs({
                         </div>
 
                         {/* Budget Partitions */}
-                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-blue-200 transition-colors">
-                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Operasional (50%)</p>
-                                <div className="text-xl font-bold text-slate-900 tracking-tight">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((project.budget_total || 0) * 0.5)}
+                        <div className="md:col-span-2">
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-900">Pembagian Anggaran</h4>
+                                    <p className="text-xs text-muted-foreground">Rincian alokasi anggaran operasional, manajemen, dan allowance.</p>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu operasional</p>
+                                <div className="flex gap-2 items-center">
+                                    {localBudgetStatus === 'approved' && (
+                                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 uppercase text-[10px]">Telah Disetujui</Badge>
+                                    )}
+                                    {localBudgetStatus !== 'approved' && canInputBudget && !editPartitions && (
+                                        <Button variant="outline" size="sm" onClick={() => setEditPartitions(true)}>
+                                            <Pencil className="w-4 h-4 mr-2" /> Atur Anggaran
+                                        </Button>
+                                    )}
+                                    {editPartitions && (
+                                        <>
+                                            <Button variant="outline" size="sm" onClick={() => setEditPartitions(false)} disabled={savingBudget}>Batal</Button>
+                                            <Button size="sm" onClick={handleSaveBudget} disabled={savingBudget}>
+                                                {savingBudget ? <Loader className="w-4 h-4 animate-spin" /> : 'Simpan'}
+                                            </Button>
+                                        </>
+                                    )}
+                                    {localBudgetStatus !== 'approved' && canApproveBudget && (
+                                        <Button size="sm" onClick={handleApproveBudget} disabled={savingBudget} className="bg-green-600 hover:bg-green-700 text-white">
+                                            {savingBudget ? <Loader className="w-4 h-4 animate-spin" /> : 'Setujui Pembagian'}
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
-                            <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-purple-200 transition-colors">
-                                <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-1">Manajemen (30%)</p>
-                                <div className="text-xl font-bold text-slate-900 tracking-tight">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((project.budget_total || 0) * 0.3)}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-blue-200 transition-colors">
+                                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">Operasional</p>
+                                    {editPartitions ? (
+                                        <MoneyInput
+                                            value={opsBudget}
+                                            onValueChange={(values) => setOpsBudget(values.floatValue || 0)}
+                                            placeholder="Nilai Operasional"
+                                        />
+                                    ) : (
+                                        <div className="text-xl font-bold text-slate-900 tracking-tight">
+                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(opsBudget)}
+                                        </div>
+                                    )}
+                                    <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu operasional {(project.budget_total > 0 ? ((opsBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu manajemen</p>
-                            </div>
-                            <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-amber-200 transition-colors">
-                                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Allowance (20%)</p>
-                                <div className="text-xl font-bold text-slate-900 tracking-tight">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((project.budget_total || 0) * 0.2)}
+                                <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-purple-200 transition-colors">
+                                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-2">Manajemen (30%)</p>
+                                    <div className="text-xl font-bold text-slate-900 tracking-tight">
+                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.management_budget || 0)}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground pt-1">Fix 30% dari Total Pagu</p>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu allowance</p>
+                                <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-amber-200 transition-colors">
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">Allowance</p>
+                                    {editPartitions ? (
+                                        <MoneyInput
+                                            value={allowanceBudget}
+                                            onValueChange={(values) => setAllowanceBudget(values.floatValue || 0)}
+                                            placeholder="Nilai Allowance"
+                                        />
+                                    ) : (
+                                        <div className="text-xl font-bold text-slate-900 tracking-tight">
+                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(allowanceBudget)}
+                                        </div>
+                                    )}
+                                    <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu allowance {(project.budget_total > 0 ? ((allowanceBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
+                                </div>
                             </div>
                         </div>
 
@@ -494,8 +603,13 @@ export default function ProjectTabs({
                                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                                                             <div>
                                                                 <p className="text-xs text-muted-foreground">Nominal</p>
-                                                                <p className="font-bold text-gray-900">
+                                                                <p className="font-bold text-gray-900 flex items-center gap-2">
                                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(term.nominal)}
+                                                                    {project.budget_total > 0 && (
+                                                                        <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0 border-gray-200">
+                                                                            {((parseFloat(term.nominal) / project.budget_total) * 100).toFixed(1)}%
+                                                                        </Badge>
+                                                                    )}
                                                                 </p>
                                                             </div>
                                                             <div>
@@ -505,7 +619,7 @@ export default function ProjectTabs({
                                                                 </p>
                                                             </div>
                                                             <div>
-                                                                <p className="text-xs text-muted-foreground">Keterangan</p>
+                                                                <p className="text-xs text-muted-foreground">Deliverables</p>
                                                                 <p className="font-medium text-gray-900">{term.notes}</p>
                                                             </div>
                                                         </div>

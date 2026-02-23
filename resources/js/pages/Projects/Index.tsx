@@ -304,7 +304,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                         <p className="font-medium truncate">{p.division_name || (p.division ? p.division.name : '-')}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Budget</p>
+                        <p className="text-xs text-muted-foreground">Nilai Kontrak</p>
                         <p className="font-medium text-green-700">
                           {p.budget_total ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.budget_total) : '-'}
                         </p>
@@ -333,7 +333,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   <TableHead>Created By</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Timeline</TableHead>
-                  <TableHead className="text-right">Budget</TableHead>
+                  <TableHead className="text-right">Nilai Kontrak</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -341,7 +341,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                 {projects.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="h-24 text-center">
-                      Belum ada proyek. Silakan ajukan proyek baru.
+                      Belum ada proyek. Silakan tambah proyek baru.
                     </TableCell>
                   </TableRow>
                 ) : (

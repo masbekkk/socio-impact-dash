@@ -36,6 +36,8 @@ final class RoleAndPermissionSeeder extends Seeder
             'manage_divisions',
             'create_code_project',
             'view_audit_logs',
+            'input_budget_partition',
+            'approval_budget_partition',
         ];
 
         foreach ($permissions as $permission) {
@@ -73,6 +75,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'view_leaves',
             'create_code_project',
             'view_audit_logs',
+            'input_budget_partition',
         ]);
 
         $superadminRole = Role::firstOrCreate(['name' => UserRole::Superadmin->value]);
@@ -93,6 +96,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'approve_reimbursements',
             'view_leaves',
             'approve_leaves',
+            'approval_budget_partition',
         ]);
     }
 }

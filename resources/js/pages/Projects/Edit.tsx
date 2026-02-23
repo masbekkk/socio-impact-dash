@@ -53,12 +53,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [deletePaymentTerms, setDeletePaymentTerms] = useState<string[]>([])
 
     // Dynamic Docs State
-    const [supportingDocs, setSupportingDocs] = useState<{ id: number | string, type: string, file?: File, original_name?: string, path?: string, isExisting?: boolean }[]>([{ id: 1, type: 'TOR' }]);
+    const [supportingDocs, setSupportingDocs] = useState<{ id: number | string, type: string, file?: File, original_name?: string, path?: string, isExisting?: boolean }[]>([{ id: 1, type: '' }]);
     const addSupportingDoc = () => {
-        const usedTypes = supportingDocs.map(d => d.type);
-        const available = ['TOR', 'KAK', 'RFP'].find(t => !usedTypes.includes(t));
-        if (available) {
-            setSupportingDocs([...supportingDocs, { id: Date.now(), type: available }]);
+        if (supportingDocs.length < 5) {
+            setSupportingDocs([...supportingDocs, { id: Date.now(), type: '' }]);
         }
     };
     const updateSupportingDocType = (id: number | string, type: string) => {
@@ -94,7 +92,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                 });
 
                 if (data.documents && data.documents.length > 0) {
-                    const docs = data.documents.filter((d: any) => ['TOR', 'KAK', 'RFP'].includes(d.type));
+                    const docs = data.documents.filter((d: any) => !['SOW', 'PROPOSAL', 'KONTRAK', 'RAB'].includes(d.type));
                     if (docs.length > 0) {
                         setSupportingDocs(docs.map((d: any) => ({
                             id: d.id, // Use actual ID for existing docs
@@ -104,7 +102,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                             isExisting: true
                         })));
                     } else {
-                        setSupportingDocs([{ id: Date.now(), type: 'TOR' }]);
+                        setSupportingDocs([{ id: Date.now(), type: '' }]);
                     }
                 }
 
@@ -202,7 +200,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
         if (sowFile) {
             submitData.append(`documents[${docIndex}][file]`, sowFile);
-            submitData.append(`documents[${docIndex}][type]`, status === 'proposal' ? 'PROPOSAL' : 'SOW');
+            submitData.append(`documents[${docIndex}][type]`, status === 'proposal' ? 'PROPOSAL' : 'KONTRAK');
             docIndex++;
         }
 
@@ -472,21 +470,21 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                     < TabsContent value="detail" className="mt-0 focus-visible:ring-0 focus-visible:outline-none" >
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
-                                <CardTitle>Detail & Proposal Project</CardTitle>
-                                <CardDescription>Lingkup kerja dan durasi proyek.</CardDescription>
+                                <CardTitle>Detail & {status === 'proposal' ? 'Proposal' : 'Dokumen Kontrak'}</CardTitle>
+                                <CardDescription>Dokumen {status === 'proposal' ? 'proposal' : 'Kontrak'}, durasi, dan lingkup kerja.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6 p-6 md:p-8">
                                 {/* DOCUMENT UPLOAD SECTION */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label>{status === 'active' ? 'Dokumen Scope of Work (SOW)' : 'Dokumen Proposal Project'} <span className="text-red-500">*</span></Label>
+                                        <Label>{status === 'active' ? 'Dokumen Kontrak' : 'Dokumen Proposal Project'} <span className="text-red-500">*</span></Label>
                                         <div className={cn("border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white h-full", errors.sow && 'border-red-500')}>
                                             <div className="space-y-1">
                                                 <p className="text-sm text-muted-foreground">
-                                                    {status === 'active' ? 'Upload dokumen SOW yang telah disepakati (PDF).' : 'Upload dokumen Proposal lengkap (PDF).'}
+                                                    {status === 'active' ? 'Upload dokumen Kontrak yang telah disepakati (PDF).' : 'Upload dokumen Proposal lengkap (PDF).'}
                                                 </p>
-                                                {project.documents?.find((d: any) => ['SOW', 'PROPOSAL'].includes(d.type)) && (
-                                                    <p className="text-xs text-blue-600">File saat ini: {project.documents.find((d: any) => ['SOW', 'PROPOSAL'].includes(d.type))?.original_name}</p>
+                                                {project.documents?.find((d: any) => ['SOW', 'KONTRAK', 'PROPOSAL'].includes(d.type)) && (
+                                                    <p className="text-xs text-blue-600">File saat ini: {project.documents.find((d: any) => ['SOW', 'KONTRAK', 'PROPOSAL'].includes(d.type))?.original_name}</p>
                                                 )}
                                             </div>
                                             <FileUploadDropzone onFilesChange={(files) => setSowFile(files[0])} />
@@ -495,30 +493,25 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     </div>
                                     <div className="space-y-3">
                                         {/* Optional Doc */}
-                                        <Label>TOR / KAK / RFP <span className="text-xs font-normal text-muted-foreground ml-1">(Tidak Wajib)</span></Label>
+                                        <Label>Dokumen Lainnya <span className="text-xs font-normal text-muted-foreground ml-1">(Tidak Wajib)</span></Label>
 
                                         {supportingDocs.map((doc, idx) => {
-                                            const otherUsedTypes = supportingDocs.filter(d => d.id !== doc.id).map(d => d.type);
                                             return (
                                                 <div key={doc.id} className="relative border rounded-lg p-5 space-y-3 hover:bg-muted/30 transition-colors bg-white group animate-in fade-in slide-in-from-top-2">
                                                     <div className="flex justify-between items-start gap-4">
-                                                        <div className="space-y-2 w-full flex justify-between">
+                                                        <div className="space-y-2 w-full flex flex-col sm:flex-row justify-between sm:items-center">
                                                             <div>
-                                                                <Label className="text-xs font-medium text-muted-foreground">Jenis Dokumen Pendukung #{idx + 1}</Label>
+                                                                <Label className="text-xs font-medium text-muted-foreground">Nama Dokumen Pendukung #{idx + 1}</Label>
                                                                 {doc.isExisting && !doc.file && (
                                                                     <p className="text-xs text-blue-600 mt-1">File saat ini: {doc.original_name}</p>
                                                                 )}
                                                             </div>
-                                                            <Select value={doc.type} onValueChange={(val) => updateSupportingDocType(doc.id, val)}>
-                                                                <SelectTrigger className="h-7 w-[220px] bg-white border-gray-300">
-                                                                    <SelectValue placeholder="Pilih Tipe" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="TOR" disabled={otherUsedTypes.includes('TOR')}>TOR</SelectItem>
-                                                                    <SelectItem value="KAK" disabled={otherUsedTypes.includes('KAK')}>KAK</SelectItem>
-                                                                    <SelectItem value="RFP" disabled={otherUsedTypes.includes('RFP')}>RFP</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
+                                                            <Input
+                                                                value={doc.type}
+                                                                onChange={(e) => updateSupportingDocType(doc.id, e.target.value)}
+                                                                placeholder="Masukkan nama dokumen..."
+                                                                className="h-8 w-full sm:w-[220px] bg-white border-gray-300 text-xs"
+                                                            />
                                                         </div>
                                                         {supportingDocs.length > 1 && (
                                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0 mt-6" onClick={() => removeSupportingDocLocal(doc.id)}>
@@ -533,7 +526,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                             )
                                         })}
 
-                                        {supportingDocs.length < 3 && (
+                                        {supportingDocs.length < 5 && (
                                             <Button variant="outline" size="sm" onClick={addSupportingDoc} className="w-full border-dashed border-gray-400 text-muted-foreground hover:text-primary hover:border-primary gap-2">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
                                                 Tambah Dokumen Lainnya

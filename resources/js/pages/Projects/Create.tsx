@@ -78,12 +78,10 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
   }
 
   // Dynamic Docs State
-  const [supportingDocs, setSupportingDocs] = useState([{ id: 1, type: 'TOR' }]);
+  const [supportingDocs, setSupportingDocs] = useState([{ id: 1, type: '' }]);
   const addSupportingDoc = () => {
-    const usedTypes = supportingDocs.map(d => d.type);
-    const available = ['TOR', 'KAK', 'RFP'].find(t => !usedTypes.includes(t));
-    if (available) {
-      setSupportingDocs([...supportingDocs, { id: Date.now(), type: available }]);
+    if (supportingDocs.length < 5) {
+      setSupportingDocs([...supportingDocs, { id: Date.now(), type: '' }]);
     }
   };
   const updateSupportingDocType = (id: number, type: string) => {
@@ -127,7 +125,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
 
     if (sowFile) {
       submitData.append(`documents[${docIndex}][file]`, sowFile);
-      submitData.append(`documents[${docIndex}][type]`, type === 'proposal' ? 'PROPOSAL' : 'SOW');
+      submitData.append(`documents[${docIndex}][type]`, type === 'proposal' ? 'PROPOSAL' : 'KONTRAK');
       docIndex++;
     }
 
@@ -477,19 +475,19 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
           <TabsContent value="detail" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
             <Card className="border-none shadow-md">
               <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
-                <CardTitle>Detail & {type === 'proposal' ? 'Proposal' : 'SOW'}</CardTitle>
-                <CardDescription>Dokumen {type === 'proposal' ? 'proposal' : 'SOW'}, durasi, dan lingkup kerja.</CardDescription>
+                <CardTitle>Detail & {type === 'proposal' ? 'Proposal' : 'Dokumen Kontrak'}</CardTitle>
+                <CardDescription>Dokumen {type === 'proposal' ? 'proposal' : 'Kontrak'}, durasi, dan lingkup kerja.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-8 p-6 md:p-8">
 
                 {/* DOCUMENT UPLOAD SECTION */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>{type === 'proposal' ? 'Dokumen Proposal Project' : 'Dokumen Scope of Work (SOW)'} <span className="text-red-500">*</span></Label>
+                    <Label>{type === 'proposal' ? 'Dokumen Proposal Project' : 'Dokumen Kontrak'} <span className="text-red-500">*</span></Label>
                     <div className={cn("border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white h-full", errors.sow && 'border-red-500')}>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">
-                          {type === 'proposal' ? 'Upload dokumen Proposal lengkap.' : 'Upload dokumen SOW yang disepakati.'}
+                          {type === 'proposal' ? 'Upload dokumen Proposal lengkap.' : 'Upload dokumen Kontrak yang disepakati.'}
                         </p>
                       </div>
                       <FileUploadDropzone onFilesChange={(files) => setSowFile(files[0])} />
@@ -498,25 +496,20 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                   </div>
                   <div className="space-y-3">
                     {/* Optional Doc */}
-                    <Label>TOR / KAK / RFP <span className="text-xs font-normal text-muted-foreground ml-1">(Tidak Wajib)</span></Label>
+                    <Label>Dokumen Lainnya <span className="text-xs font-normal text-muted-foreground ml-1">(Tidak Wajib)</span></Label>
 
                     {supportingDocs.map((doc, idx) => {
-                      const otherUsedTypes = supportingDocs.filter(d => d.id !== doc.id).map(d => d.type);
                       return (
                         <div key={doc.id} className="relative border rounded-lg p-5 space-y-3 hover:bg-muted/30 transition-colors bg-white group animate-in fade-in slide-in-from-top-2">
                           <div className="flex justify-between items-start gap-4">
-                            <div className="space-y-2 w-full flex justify-between">
-                              <Label className="text-xs font-medium text-muted-foreground">Jenis Dokumen Pendukung #{idx + 1}</Label>
-                              <Select value={doc.type} onValueChange={(val) => updateSupportingDocType(doc.id, val)}>
-                                <SelectTrigger className="h-7 w-[220px] bg-white border-gray-300">
-                                  <SelectValue placeholder="Pilih Tipe" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="TOR" disabled={otherUsedTypes.includes('TOR')}>TOR</SelectItem>
-                                  <SelectItem value="KAK" disabled={otherUsedTypes.includes('KAK')}>KAK</SelectItem>
-                                  <SelectItem value="RFP" disabled={otherUsedTypes.includes('RFP')}>RFP</SelectItem>
-                                </SelectContent>
-                              </Select>
+                            <div className="space-y-2 w-full flex flex-col sm:flex-row justify-between sm:items-center">
+                              <Label className="text-xs font-medium text-muted-foreground">Nama Dokumen Pendukung #{idx + 1}</Label>
+                              <Input
+                                value={doc.type}
+                                onChange={(e) => updateSupportingDocType(doc.id, e.target.value)}
+                                placeholder="Masukkan nama dokumen..."
+                                className="h-8 w-full sm:w-[220px] bg-white border-gray-300 text-xs"
+                              />
                             </div>
                             {supportingDocs.length > 1 && (
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0 mt-6" onClick={() => removeSupportingDoc(doc.id)}>
@@ -531,7 +524,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                       )
                     })}
 
-                    {supportingDocs.length < 3 && (
+                    {supportingDocs.length < 5 && (
                       <Button variant="outline" size="sm" onClick={addSupportingDoc} className="w-full border-dashed border-gray-400 text-muted-foreground hover:text-primary hover:border-primary gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
                         Tambah Dokumen Lainnya
@@ -783,7 +776,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
 
                           {/* Notes */}
                           <div className="space-y-2 md:col-span-1">
-                            <Label className="text-xs font-medium text-muted-foreground">Keterangan</Label>
+                            <Label className="text-xs font-medium text-muted-foreground">Deliverables</Label>
                             <Input
                               type="text"
                               value={term.notes}

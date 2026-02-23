@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Enums\DocumentType;
 use App\Enums\ReimbursementType;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Enum;
 
 final class StoreReimbursementRequest extends FormRequest
 {
@@ -31,7 +29,7 @@ final class StoreReimbursementRequest extends FormRequest
 
             'documents' => ['nullable', 'array'],
             'documents.*.file' => ['required', 'file', 'max:10240'],
-            'documents.*.type' => ['nullable', 'string', new Enum(DocumentType::class)],
+            'documents.*.type' => ['nullable', 'string'],
         ];
     }
 
