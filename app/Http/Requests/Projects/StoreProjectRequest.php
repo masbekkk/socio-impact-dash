@@ -51,4 +51,18 @@ final class StoreProjectRequest extends FormRequest
             'documents.*.file' => ['required', 'file', 'max:10240'], // 10MB limit
         ];
     }
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $budgetTotal = (float) $this->input('budget_total', 0);
+            $detailBudgets = $this->input('detail_budgets', []);
+
+            if (is_array($detailBudgets) && count($detailBudgets) > 0) {
+                $detailSum = array_sum(array_column($detailBudgets, 'amount'));
+                if ($detailSum > ($budgetTotal + 0.01)) {
+                    $validator->errors()->add('detail_budgets', 'Total rincian anggaran tidak boleh melebihi total anggaran proyek.');
+                }
+            }
+        });
+    }
 }

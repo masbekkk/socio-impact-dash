@@ -13,7 +13,7 @@ final class ReimbursementDocumentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'type' => $this->type?->value,
+            'type' => $this->type,
             'original_name' => $this->original_name,
             'path' => $this->path,
             'mime' => $this->mime,

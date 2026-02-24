@@ -48,17 +48,18 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [rabFile, setRabFile] = useState<File | null>(null);
 
     const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string }[]>([])
-    // State Termin Pembayaran
     const [paymentTerms, setPaymentTerms] = useState<{ id: string, nominal: number, notes: string, date: string, isNew?: boolean }[]>([])
     const [deletePaymentTerms, setDeletePaymentTerms] = useState<string[]>([])
 
+    // State Detail Budgets
+    const [detailBudgets, setDetailBudgets] = useState<{ id: string, amount: number, notes: string, isNew?: boolean }[]>([])
+    const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([])
+
     // Dynamic Docs State
-    const [supportingDocs, setSupportingDocs] = useState<{ id: number | string, type: string, file?: File, original_name?: string, path?: string, isExisting?: boolean }[]>([{ id: 1, type: 'TOR' }]);
+    const [supportingDocs, setSupportingDocs] = useState<{ id: number | string, type: string, file?: File, original_name?: string, path?: string, isExisting?: boolean }[]>([{ id: 1, type: '' }]);
     const addSupportingDoc = () => {
-        const usedTypes = supportingDocs.map(d => d.type);
-        const available = ['TOR', 'KAK', 'RFP'].find(t => !usedTypes.includes(t));
-        if (available) {
-            setSupportingDocs([...supportingDocs, { id: Date.now(), type: available }]);
+        if (supportingDocs.length < 5) {
+            setSupportingDocs([...supportingDocs, { id: Date.now(), type: '' }]);
         }
     };
     const updateSupportingDocType = (id: number | string, type: string) => {
@@ -94,7 +95,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                 });
 
                 if (data.documents && data.documents.length > 0) {
-                    const docs = data.documents.filter((d: any) => ['TOR', 'KAK', 'RFP'].includes(d.type));
+                    const docs = data.documents.filter((d: any) => !['SOW', 'PROPOSAL', 'KONTRAK', 'RAB'].includes(d.type));
                     if (docs.length > 0) {
                         setSupportingDocs(docs.map((d: any) => ({
                             id: d.id, // Use actual ID for existing docs
@@ -104,7 +105,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                             isExisting: true
                         })));
                     } else {
-                        setSupportingDocs([{ id: Date.now(), type: 'TOR' }]);
+                        setSupportingDocs([{ id: Date.now(), type: '' }]);
                     }
                 }
 
@@ -127,6 +128,16 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                     })));
                 } else {
                     setPaymentTerms([{ id: crypto.randomUUID(), nominal: 0, notes: '', date: '', isNew: true }]);
+                }
+
+                if (data.budget_details && data.budget_details.length > 0) {
+                    setDetailBudgets(data.budget_details.map((detail: any) => ({
+                        id: detail.id.toString(),
+                        amount: parseFloat(detail.amount),
+                        notes: detail.notes || ''
+                    })));
+                } else {
+                    setDetailBudgets([{ id: crypto.randomUUID(), amount: 0, notes: '', isNew: true }]);
                 }
             } catch (error) {
                 console.error("Error fetching project:", error);
@@ -177,6 +188,23 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         setPaymentTerms(paymentTerms.map(t => t.id === id ? { ...t, [field]: value } : t));
     };
 
+    // Detail Budgets Functions
+    const addDetailBudget = () => {
+        setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), amount: 0, notes: '', isNew: true }]);
+    };
+    const removeDetailBudget = (id: string, isNew?: boolean) => {
+        if (detailBudgets.length > 1) {
+            setDetailBudgets(detailBudgets.filter(d => d.id !== id));
+            if (!isNew) {
+                setDeleteDetailBudgets([...deleteDetailBudgets, id]);
+            }
+        }
+    };
+    const updateDetailBudget = (id: string, field: 'amount' | 'notes', value: any) => {
+        setDetailBudgets(detailBudgets.map(d => d.id === id ? { ...d, [field]: value } : d));
+    };
+    const totalDetailBudget = detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
     const handleSubmit = async () => {
         setSaving(true);
         setErrors({});
@@ -202,7 +230,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
         if (sowFile) {
             submitData.append(`documents[${docIndex}][file]`, sowFile);
-            submitData.append(`documents[${docIndex}][type]`, status === 'proposal' ? 'PROPOSAL' : 'SOW');
+            submitData.append(`documents[${docIndex}][type]`, status === 'proposal' ? 'PROPOSAL' : 'KONTRAK');
             docIndex++;
         }
 
@@ -231,6 +259,18 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
         deletePaymentTerms.forEach((id, index) => {
             submitData.append(`delete_termin_payments[${index}]`, id);
+        });
+
+        detailBudgets.forEach((detail, index) => {
+            if (!detail.isNew) {
+                submitData.append(`detail_budgets[${index}][id]`, detail.id);
+            }
+            submitData.append(`detail_budgets[${index}][amount]`, detail.amount.toString());
+            if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
+        });
+
+        deleteDetailBudgets.forEach((id, index) => {
+            submitData.append(`delete_detail_budgets[${index}]`, id);
         });
 
         try {
@@ -482,21 +522,21 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                     < TabsContent value="detail" className="mt-0 focus-visible:ring-0 focus-visible:outline-none" >
                         <Card className="border-none shadow-md">
                             <CardHeader className="px-6 pt-6 bg-white rounded-t-xl border-b pb-4">
-                                <CardTitle>Detail & Proposal Project</CardTitle>
-                                <CardDescription>Lingkup kerja dan durasi proyek.</CardDescription>
+                                <CardTitle>Detail & {status === 'proposal' ? 'Proposal' : 'Dokumen Kontrak'}</CardTitle>
+                                <CardDescription>Dokumen {status === 'proposal' ? 'proposal' : 'Kontrak'}, durasi, dan lingkup kerja.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6 p-6 md:p-8">
                                 {/* DOCUMENT UPLOAD SECTION */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label>{status === 'active' ? 'Dokumen Scope of Work (SOW)' : 'Dokumen Proposal Project'} <span className="text-red-500">*</span></Label>
+                                        <Label>{status === 'active' ? 'Dokumen Kontrak' : 'Dokumen Proposal Project'} <span className="text-red-500">*</span></Label>
                                         <div className={cn("border rounded-lg p-6 space-y-4 hover:bg-muted/30 transition-colors bg-white h-full", errors.sow && 'border-red-500')}>
                                             <div className="space-y-1">
                                                 <p className="text-sm text-muted-foreground">
-                                                    {status === 'active' ? 'Upload dokumen SOW yang telah disepakati (PDF).' : 'Upload dokumen Proposal lengkap (PDF).'}
+                                                    {status === 'active' ? 'Upload dokumen Kontrak yang telah disepakati (PDF).' : 'Upload dokumen Proposal lengkap (PDF).'}
                                                 </p>
-                                                {project.documents?.find((d: any) => ['SOW', 'PROPOSAL'].includes(d.type)) && (
-                                                    <p className="text-xs text-blue-600">File saat ini: {project.documents.find((d: any) => ['SOW', 'PROPOSAL'].includes(d.type))?.original_name}</p>
+                                                {project.documents?.find((d: any) => ['SOW', 'KONTRAK', 'PROPOSAL'].includes(d.type)) && (
+                                                    <p className="text-xs text-blue-600">File saat ini: {project.documents.find((d: any) => ['SOW', 'KONTRAK', 'PROPOSAL'].includes(d.type))?.original_name}</p>
                                                 )}
                                             </div>
                                             <FileUploadDropzone onFilesChange={(files) => setSowFile(files[0])} />
@@ -505,30 +545,25 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     </div>
                                     <div className="space-y-3">
                                         {/* Optional Doc */}
-                                        <Label>TOR / KAK / RFP <span className="text-xs font-normal text-muted-foreground ml-1">(Tidak Wajib)</span></Label>
+                                        <Label>Dokumen Lainnya <span className="text-xs font-normal text-muted-foreground ml-1">(Tidak Wajib)</span></Label>
 
                                         {supportingDocs.map((doc, idx) => {
-                                            const otherUsedTypes = supportingDocs.filter(d => d.id !== doc.id).map(d => d.type);
                                             return (
                                                 <div key={doc.id} className="relative border rounded-lg p-5 space-y-3 hover:bg-muted/30 transition-colors bg-white group animate-in fade-in slide-in-from-top-2">
                                                     <div className="flex justify-between items-start gap-4">
-                                                        <div className="space-y-2 w-full flex justify-between">
+                                                        <div className="space-y-2 w-full flex flex-col sm:flex-row justify-between sm:items-center">
                                                             <div>
-                                                                <Label className="text-xs font-medium text-muted-foreground">Jenis Dokumen Pendukung #{idx + 1}</Label>
+                                                                <Label className="text-xs font-medium text-muted-foreground">Nama Dokumen Pendukung #{idx + 1}</Label>
                                                                 {doc.isExisting && !doc.file && (
                                                                     <p className="text-xs text-blue-600 mt-1">File saat ini: {doc.original_name}</p>
                                                                 )}
                                                             </div>
-                                                            <Select value={doc.type} onValueChange={(val) => updateSupportingDocType(doc.id, val)}>
-                                                                <SelectTrigger className="h-7 w-[220px] bg-white border-gray-300">
-                                                                    <SelectValue placeholder="Pilih Tipe" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="TOR" disabled={otherUsedTypes.includes('TOR')}>TOR</SelectItem>
-                                                                    <SelectItem value="KAK" disabled={otherUsedTypes.includes('KAK')}>KAK</SelectItem>
-                                                                    <SelectItem value="RFP" disabled={otherUsedTypes.includes('RFP')}>RFP</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
+                                                            <Input
+                                                                value={doc.type}
+                                                                onChange={(e) => updateSupportingDocType(doc.id, e.target.value)}
+                                                                placeholder="Masukkan nama dokumen..."
+                                                                className="h-8 w-full sm:w-[220px] bg-white border-gray-300 text-xs"
+                                                            />
                                                         </div>
                                                         {supportingDocs.length > 1 && (
                                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0 mt-6" onClick={() => removeSupportingDocLocal(doc.id)}>
@@ -543,7 +578,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                             )
                                         })}
 
-                                        {supportingDocs.length < 3 && (
+                                        {supportingDocs.length < 5 && (
                                             <Button variant="outline" size="sm" onClick={addSupportingDoc} className="w-full border-dashed border-gray-400 text-muted-foreground hover:text-primary hover:border-primary gap-2">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
                                                 Tambah Dokumen Lainnya
@@ -730,8 +765,95 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     </div>
                                 </div>
 
+                                {/* Detail Budgets (Rincian Anggaran - RAB) Section */}
+                                <div className="space-y-4 pt-4 border-t mt-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Label className="text-base font-semibold">Rincian Anggaran (RAB)</Label>
+                                            <p className="text-xs text-muted-foreground mt-1">Atur rincian pengeluaran anggaran proyek.</p>
+                                            {errors.detail_budgets && <p className="text-xs text-red-500 mt-1">{errors.detail_budgets}</p>}
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={addDetailBudget}
+                                            className="gap-2 border-dashed hover:border-solid"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Tambah Rincian
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {detailBudgets.map((detail, idx) => (
+                                            <div key={detail.id} className="border rounded-xl p-5 bg-white shadow-sm space-y-4 group hover:border-gray-300 transition-colors">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h4 className="font-semibold text-sm text-gray-900">Item #{idx + 1}</h4>
+                                                    {detailBudgets.length > 1 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => removeDetailBudget(detail.id, detail.isNew)}
+                                                            className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {/* Nominal */}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Nominal Anggaran</Label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
+                                                            <MoneyInput
+                                                                value={detail.amount}
+                                                                onValueChange={(vals) => updateDetailBudget(detail.id, 'amount', vals.floatValue || 0)}
+                                                                placeholder="0"
+                                                                className="pl-10 bg-white h-10"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Notes */}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Keterangan / Item</Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={detail.notes}
+                                                            onChange={(e) => updateDetailBudget(detail.id, 'notes', e.target.value)}
+                                                            placeholder="Contoh: Sewa Gedung, Konsumsi, dll"
+                                                            className="bg-white h-10"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Summary Detail Budget */}
+                                    <div className={cn("border rounded-lg p-4 flex items-center justify-between", totalDetailBudget > budget ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200")}>
+                                        <div>
+                                            <p className={cn("text-sm font-medium", totalDetailBudget > budget ? "text-red-900" : "text-green-900")}>Total Rincian Anggaran</p>
+                                            <p className={cn("text-xs mt-0.5", totalDetailBudget > budget ? "text-red-700" : "text-green-700")}>{detailBudgets.length} item rincian</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className={cn("text-lg font-bold", totalDetailBudget > budget ? "text-red-900" : "text-green-900")}>
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalDetailBudget)}
+                                            </p>
+                                            <p className={cn("text-xs", totalDetailBudget > budget ? "text-red-700 font-bold" : "text-green-700")}>
+                                                {budget > 0 ? `${((totalDetailBudget / budget) * 100).toFixed(1)}% dari total` : '0%'}
+                                                {totalDetailBudget > budget && " (Melebihi Total Anggaran!)"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Termin Pembayaran Section */}
-                                <div className="space-y-4 pt-4">
+                                <div className="space-y-4 pt-4 border-t mt-6">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <Label className="text-base font-semibold">Termin Pembayaran</Label>
@@ -795,7 +917,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
                                                     {/* Notes */}
                                                     <div className="space-y-2 md:col-span-1">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Keterangan</Label>
+                                                        <Label className="text-xs font-medium text-muted-foreground">Deliverables</Label>
                                                         <Input
                                                             type="text"
                                                             value={term.notes}

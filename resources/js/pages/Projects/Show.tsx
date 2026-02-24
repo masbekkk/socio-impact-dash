@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import ProjectTabs from './ProjectTabs'
 import { Link, usePage, Head, router } from '@inertiajs/react'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
@@ -62,44 +62,45 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
   const [isSubmitReportAlertOpen, setIsSubmitReportAlertOpen] = useState(false);
   const [isDealAlertOpen, setIsDealAlertOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchProject = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(`/api/v1/projects/${project_slug}`);
-        const data = response.data.data;
-        setProject(data);
-        setCurrentStatus(data.status);
-        setMonitoringList(data.monitoring_history || []);
+  const fetchProject = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const response = await axios.get(`/api/v1/projects/${project_slug}`);
+      const data = response.data.data;
+      setProject(data);
+      setCurrentStatus(data.status);
+      setMonitoringList(data.monitoring_history || []);
 
-        if (data.locations && data.locations.length > 0) {
-          setLocations(data.locations.map((loc: any) => ({
-            id: loc.id.toString(),
-            lat: parseFloat(loc.latitude),
-            lng: parseFloat(loc.longitude),
-            address: loc.detail_address || ''
-          })));
-        }
-        else {
-          setLocations([]);
-        }
-
-        // Initialize project code
-        setProjectCode(data.code || '');
-
-        // Initialize closing form with saved data
-        setClosingForm(prev => ({
-          ...prev,
-          actual_budget: data.actual_budget || 0
-        }));
-      } catch (error) {
-        console.error("Error fetching project:", error);
-      } finally {
-        setLoading(false);
+      if (data.locations && data.locations.length > 0) {
+        setLocations(data.locations.map((loc: any) => ({
+          id: loc.id.toString(),
+          lat: parseFloat(loc.latitude),
+          lng: parseFloat(loc.longitude),
+          address: loc.detail_address || ''
+        })));
       }
-    };
-    fetchProject();
+      else {
+        setLocations([]);
+      }
+
+      // Initialize project code
+      setProjectCode(data.code || '');
+
+      // Initialize closing form with saved data
+      setClosingForm(prev => ({
+        ...prev,
+        actual_budget: data.actual_budget || 0
+      }));
+    } catch (error) {
+      console.error("Error fetching project:", error);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, [project_slug]);
+
+  useEffect(() => {
+    fetchProject();
+  }, [fetchProject]);
 
   const handleDealProject = async () => {
     try {
@@ -108,8 +109,8 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
       setIsProjectDealed(true);
       setCurrentStatus('active');
       setToast({ show: true, message: 'Project berhasil di-Deal! Menu Penutupan Proyek kini aktif.', type: 'success' });
-      // Refresh project data
-      router.visit(window.location.pathname, { preserveScroll: true });
+      // Refresh project data without full reload
+      fetchProject(false);
     } catch (err) {
       console.error(err);
       setToast({ show: true, message: 'Gagal melakukan deal project.', type: 'error' });
@@ -121,7 +122,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
       await axios.post(`/api/v1/projects/${project_slug}/approve`, { notes: approvalNote });
       setIsApproveAlertOpen(false);
       setToast({ show: true, message: 'Project berhasil di-approve.', type: 'success' });
-      router.visit(window.location.pathname, { preserveScroll: true });
+      fetchProject(false);
     } catch (error) {
       console.error("Error approving project:", error);
       setToast({ show: true, message: 'Gagal approve project.', type: 'error' });
@@ -133,7 +134,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
       await axios.post(`/api/v1/projects/${project_slug}/reject`, { notes: approvalNote });
       setIsRevisionAlertOpen(false);
       setToast({ show: true, message: 'Permintaan revisi dikirim.', type: 'success' });
-      router.visit(window.location.pathname, { preserveScroll: true });
+      fetchProject(false);
     } catch (error) {
       console.error("Error rejecting project:", error);
       setToast({ show: true, message: 'Gagal mengirim revisi.', type: 'error' });
@@ -199,7 +200,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
       setToast({ show: true, message: 'Laporan berhasil ditambahkan.', type: 'success' });
       setReportForm({ date: new Date().toISOString().split('T')[0], notes: '', files: [{ id: Date.now(), title: '' }] });
-      router.visit(window.location.pathname, { preserveScroll: true });
+      fetchProject(false);
     } catch (error) {
       console.error("Error submitting report:", error);
       setToast({ show: true, message: 'Gagal mengirim laporan.', type: 'error' });
@@ -242,7 +243,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
       setIsCloseAlertOpen(false);
       setCurrentStatus('completed');
       setToast({ show: true, message: 'Proyek berhasil ditutup (Closing Success).', type: 'success' });
-      router.visit(window.location.pathname, { preserveScroll: true });
+      fetchProject(false);
     } catch (error) {
       console.error("Error closing project:", error);
       setToast({ show: true, message: 'Gagal menutup proyek.', type: 'error' });
@@ -279,7 +280,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
       // Update local state to reflect change without full reload if possible, 
       // but router.visit ensures everything is in sync
-      router.visit(window.location.pathname, { preserveScroll: true });
+      fetchProject(false);
     } catch (error: any) {
       console.error("Error updating project code:", error);
       setToast({
@@ -460,6 +461,8 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
           isProjectDealed={true}
           setIsDealAlertOpen={setIsDealAlertOpen}
           setIsCloseAlertOpen={setIsCloseAlertOpen}
+          refetchProject={() => fetchProject(false)}
+          onShowToast={(msg: string, type: 'success' | 'error') => setToast({ show: true, message: msg, type })}
         />
       </div>
 

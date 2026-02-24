@@ -78,7 +78,7 @@ final class ProjectController extends Controller
 
     public function show(Project $project): JsonResponse
     {
-        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents', 'monitorings.documents', 'approvals.approvedBy']);
+        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents', 'monitorings.documents', 'approvals.approvedBy', 'budgetDetails']);
 
         return JsonResponseFormatter::success(
             new ProjectResource($project),
