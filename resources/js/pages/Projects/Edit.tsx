@@ -48,9 +48,12 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [rabFile, setRabFile] = useState<File | null>(null);
 
     const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string }[]>([])
-    // State Termin Pembayaran
     const [paymentTerms, setPaymentTerms] = useState<{ id: string, nominal: number, notes: string, date: string, isNew?: boolean }[]>([])
     const [deletePaymentTerms, setDeletePaymentTerms] = useState<string[]>([])
+
+    // State Detail Budgets
+    const [detailBudgets, setDetailBudgets] = useState<{ id: string, amount: number, notes: string, isNew?: boolean }[]>([])
+    const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([])
 
     // Dynamic Docs State
     const [supportingDocs, setSupportingDocs] = useState<{ id: number | string, type: string, file?: File, original_name?: string, path?: string, isExisting?: boolean }[]>([{ id: 1, type: '' }]);
@@ -126,6 +129,16 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                 } else {
                     setPaymentTerms([{ id: crypto.randomUUID(), nominal: 0, notes: '', date: '', isNew: true }]);
                 }
+
+                if (data.budget_details && data.budget_details.length > 0) {
+                    setDetailBudgets(data.budget_details.map((detail: any) => ({
+                        id: detail.id.toString(),
+                        amount: parseFloat(detail.amount),
+                        notes: detail.notes || ''
+                    })));
+                } else {
+                    setDetailBudgets([{ id: crypto.randomUUID(), amount: 0, notes: '', isNew: true }]);
+                }
             } catch (error) {
                 console.error("Error fetching project:", error);
             } finally {
@@ -174,6 +187,23 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const updatePaymentTerm = (id: string, field: 'nominal' | 'notes' | 'date', value: any) => {
         setPaymentTerms(paymentTerms.map(t => t.id === id ? { ...t, [field]: value } : t));
     };
+
+    // Detail Budgets Functions
+    const addDetailBudget = () => {
+        setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), amount: 0, notes: '', isNew: true }]);
+    };
+    const removeDetailBudget = (id: string, isNew?: boolean) => {
+        if (detailBudgets.length > 1) {
+            setDetailBudgets(detailBudgets.filter(d => d.id !== id));
+            if (!isNew) {
+                setDeleteDetailBudgets([...deleteDetailBudgets, id]);
+            }
+        }
+    };
+    const updateDetailBudget = (id: string, field: 'amount' | 'notes', value: any) => {
+        setDetailBudgets(detailBudgets.map(d => d.id === id ? { ...d, [field]: value } : d));
+    };
+    const totalDetailBudget = detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
     const handleSubmit = async () => {
         setSaving(true);
@@ -229,6 +259,18 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
         deletePaymentTerms.forEach((id, index) => {
             submitData.append(`delete_termin_payments[${index}]`, id);
+        });
+
+        detailBudgets.forEach((detail, index) => {
+            if (!detail.isNew) {
+                submitData.append(`detail_budgets[${index}][id]`, detail.id);
+            }
+            submitData.append(`detail_budgets[${index}][amount]`, detail.amount.toString());
+            if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
+        });
+
+        deleteDetailBudgets.forEach((id, index) => {
+            submitData.append(`delete_detail_budgets[${index}]`, id);
         });
 
         try {
@@ -713,8 +755,95 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     </div>
                                 </div>
 
+                                {/* Detail Budgets (Rincian Anggaran - RAB) Section */}
+                                <div className="space-y-4 pt-4 border-t mt-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Label className="text-base font-semibold">Rincian Anggaran (RAB)</Label>
+                                            <p className="text-xs text-muted-foreground mt-1">Atur rincian pengeluaran anggaran proyek.</p>
+                                            {errors.detail_budgets && <p className="text-xs text-red-500 mt-1">{errors.detail_budgets}</p>}
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={addDetailBudget}
+                                            className="gap-2 border-dashed hover:border-solid"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Tambah Rincian
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {detailBudgets.map((detail, idx) => (
+                                            <div key={detail.id} className="border rounded-xl p-5 bg-white shadow-sm space-y-4 group hover:border-gray-300 transition-colors">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h4 className="font-semibold text-sm text-gray-900">Item #{idx + 1}</h4>
+                                                    {detailBudgets.length > 1 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => removeDetailBudget(detail.id, detail.isNew)}
+                                                            className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {/* Nominal */}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Nominal Anggaran</Label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
+                                                            <MoneyInput
+                                                                value={detail.amount}
+                                                                onValueChange={(vals) => updateDetailBudget(detail.id, 'amount', vals.floatValue || 0)}
+                                                                placeholder="0"
+                                                                className="pl-10 bg-white h-10"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Notes */}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Keterangan / Item</Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={detail.notes}
+                                                            onChange={(e) => updateDetailBudget(detail.id, 'notes', e.target.value)}
+                                                            placeholder="Contoh: Sewa Gedung, Konsumsi, dll"
+                                                            className="bg-white h-10"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Summary Detail Budget */}
+                                    <div className={cn("border rounded-lg p-4 flex items-center justify-between", totalDetailBudget > budget ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200")}>
+                                        <div>
+                                            <p className={cn("text-sm font-medium", totalDetailBudget > budget ? "text-red-900" : "text-green-900")}>Total Rincian Anggaran</p>
+                                            <p className={cn("text-xs mt-0.5", totalDetailBudget > budget ? "text-red-700" : "text-green-700")}>{detailBudgets.length} item rincian</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className={cn("text-lg font-bold", totalDetailBudget > budget ? "text-red-900" : "text-green-900")}>
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalDetailBudget)}
+                                            </p>
+                                            <p className={cn("text-xs", totalDetailBudget > budget ? "text-red-700 font-bold" : "text-green-700")}>
+                                                {budget > 0 ? `${((totalDetailBudget / budget) * 100).toFixed(1)}% dari total` : '0%'}
+                                                {totalDetailBudget > budget && " (Melebihi Total Anggaran!)"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Termin Pembayaran Section */}
-                                <div className="space-y-4 pt-4">
+                                <div className="space-y-4 pt-4 border-t mt-6">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <Label className="text-base font-semibold">Termin Pembayaran</Label>
@@ -778,7 +907,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
                                                     {/* Notes */}
                                                     <div className="space-y-2 md:col-span-1">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Keterangan</Label>
+                                                        <Label className="text-xs font-medium text-muted-foreground">Deliverables</Label>
                                                         <Input
                                                             type="text"
                                                             value={term.notes}

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('reimbursement_documents', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('reimbursement_id')->constrained('reimbursements')->cascadeOnDelete();
-            $table->string('type')->default(DocumentType::Other->value);
+            $table->string('type')->default('Lainnya');
             $table->string('original_name');
             $table->string('path');
             $table->string('mime')->nullable();

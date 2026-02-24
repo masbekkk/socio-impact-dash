@@ -29,6 +29,10 @@ final class UpdateProject
                 $this->syncDocuments($project, $data['documents'], $userId);
             }
 
+            if (isset($data['detail_budgets'])) {
+                $this->syncDetailBudgets($project, $data['detail_budgets'], $userId);
+            }
+
             $this->syncApprovals($project);
 
             // Handle deletions
@@ -42,8 +46,11 @@ final class UpdateProject
             if (isset($data['delete_termin_payments'])) {
                 $project->terminPayments()->whereIn('id', $data['delete_termin_payments'])->delete();
             }
+            if (isset($data['delete_detail_budgets'])) {
+                $project->budgetDetails()->whereIn('id', $data['delete_detail_budgets'])->delete();
+            }
 
-            return $project->fresh(['locations', 'terminPayments', 'documents']);
+            return $project->fresh(['locations', 'terminPayments', 'documents', 'budgetDetails']);
         });
     }
 
@@ -56,6 +63,8 @@ final class UpdateProject
             'operational_budget', 'allowance_budget', 'budget_partition_status',
         ])->toArray();
 
+        // If managing detailed budgets, this basic calculation could be preserved or adjusted,
+        // but it's kept per existing requirements unless fully overwritten.
         if (isset($updateData['budget_total'])) {
             $budgetTotal = (float) $updateData['budget_total'];
             $updateData['management_budget'] = $budgetTotal * 0.3;
@@ -72,11 +81,9 @@ final class UpdateProject
         }
     }
 
+    // ... keeping other syncing methods untouched ...
     private function syncLocations(Project $project, array $locations): void
     {
-        // For simplicity, we'll replace all locations if they are passed as a full array
-        // or we could do a more sophisticated diffing.
-        // Actually, let's just update or create based on ID
         foreach ($locations as $location) {
             if (isset($location['id'])) {
                 $project->locations()->where('id', $location['id'])->update([
@@ -149,9 +156,26 @@ final class UpdateProject
         }
     }
 
+    private function syncDetailBudgets(Project $project, array $detailBudgets, int $userId): void
+    {
+        foreach ($detailBudgets as $detail) {
+            if (isset($detail['id'])) {
+                $project->budgetDetails()->where('id', $detail['id'])->update([
+                    'amount' => $detail['amount'],
+                    'notes' => $detail['notes'] ?? null,
+                ]);
+            } else {
+                $project->budgetDetails()->create([
+                    'amount' => $detail['amount'],
+                    'notes' => $detail['notes'] ?? null,
+                    'created_by' => $userId,
+                ]);
+            }
+        }
+    }
+
     private function syncApprovals(Project $project): void
     {
-        // Helper to update or create approval
         $updateOrCreate = function ($type, $userId) use ($project) {
             if ($userId) {
                 $project->approvals()->updateOrCreate(
@@ -159,9 +183,6 @@ final class UpdateProject
                     ['approved_by' => $userId]
                 );
             } else {
-                // If user is removed, we might want to delete the approval or keep it.
-                // For now, let's keep it but maybe it should be considered void?
-                // The current requirement implies strict mapping, so let's delete if no user.
                 $project->approvals()->where('approval_type', $type)->delete();
             }
         };

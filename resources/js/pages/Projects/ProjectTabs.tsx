@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Circle, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye, Download, MapPin, Plus, Calendar, User, Upload, Handshake, Archive } from 'lucide-react'
+import { CheckCircle2, Circle, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye, Download, MapPin, Plus, Calendar, User, Upload, Handshake, Archive, Save } from 'lucide-react'
 import MoneyInput from '@/components/MoneyInput'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -95,6 +95,13 @@ export default function ProjectTabs({
     const permissions = (usePage().props as any).auth?.permissions || [];
     const canInputBudget = permissions.includes('input_budget_partition');
     const canApproveBudget = permissions.includes('approval_budget_partition');
+    const canManageDetailBudget = permissions.includes('manage_detail_budget');
+
+    // Detail Budget State
+    const [detailBudgets, setDetailBudgets] = useState<any[]>(project.budget_details || []);
+    const [editDetailBudget, setEditDetailBudget] = useState(false);
+    const [savingDetailBudget, setSavingDetailBudget] = useState(false);
+    const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([]);
 
     useEffect(() => {
         setOpsBudget(project.operational_budget || 0);
@@ -132,6 +139,39 @@ export default function ProjectTabs({
             if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal menyetujui anggaran', 'error');
         } finally {
             setSavingBudget(false);
+        }
+    };
+
+    const handleSaveDetailBudget = async () => {
+        setSavingDetailBudget(true);
+        try {
+            const submitData = new FormData();
+            submitData.append('_method', 'PUT');
+
+            detailBudgets.forEach((detail, index) => {
+                if (!detail.isNew) {
+                    submitData.append(`detail_budgets[${index}][id]`, detail.id);
+                }
+                submitData.append(`detail_budgets[${index}][amount]`, detail.amount.toString());
+                if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
+            });
+
+            deleteDetailBudgets.forEach((id, index) => {
+                submitData.append(`delete_detail_budgets[${index}]`, id);
+            });
+
+            await axios.post(`/api/v1/projects/${project.id}`, submitData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            setEditDetailBudget(false);
+            if (onShowToast) onShowToast('Rincian anggaran berhasil disimpan', 'success');
+            if (refetchProject) refetchProject();
+        } catch (error: any) {
+            console.error(error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || error?.response?.data?.errors?.detail_budgets || 'Gagal menyimpan rincian anggaran', 'error');
+        } finally {
+            setSavingDetailBudget(false);
         }
     };
 
@@ -912,6 +952,162 @@ export default function ProjectTabs({
                                     prefix="Rp "
                                     className="bg-white h-12 text-lg text-left"
                                 />
+                            </div>
+
+                            <div className="border-t border-gray-200 my-6"></div>
+
+                            {/* Rincian Anggaran (RAB) Section */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h4 className="font-semibold text-lg">Rincian Anggaran (RAB)</h4>
+                                        <p className="text-sm text-muted-foreground">Detail pengelokasian item anggaran.</p>
+                                    </div>
+                                    {canManageDetailBudget && !editDetailBudget && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setEditDetailBudget(true)}
+                                            className="h-8 gap-1.5"
+                                        >
+                                            <Pencil className="h-3.5 w-3.5" />
+                                            Edit Rincian
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {!editDetailBudget ? (
+                                    <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="bg-gray-50 border-b">
+                                                <tr>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500">Keterangan / Item</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Nominal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {detailBudgets.length > 0 ? (
+                                                    detailBudgets.map((detail, idx) => (
+                                                        <tr key={idx} className="hover:bg-gray-50/50">
+                                                            <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
+                                                            <td className="px-4 py-3 font-medium text-gray-900">{detail.notes || '-'}</td>
+                                                            <td className="px-4 py-3 text-right">
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.amount)}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground italic">
+                                                            Belum ada rincian anggaran.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                {detailBudgets.length > 0 && (
+                                                    <tr className="bg-gray-50/80 font-semibold border-t-2">
+                                                        <td colSpan={2} className="px-4 py-3 text-right text-gray-700">Total Rincian:</td>
+                                                        <td className="px-4 py-3 text-right text-primary">
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
+                                                                detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="border rounded-xl p-5 bg-gray-50/50 space-y-4">
+                                        <div className="space-y-3">
+                                            {detailBudgets.map((detail, idx) => (
+                                                <div key={detail.id} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-white p-3 rounded-lg border shadow-sm">
+                                                    <div className="flex-1 w-full space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">Keterangan / Item</Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={detail.notes}
+                                                            onChange={(e) => {
+                                                                const newDetails = [...detailBudgets];
+                                                                newDetails[idx].notes = e.target.value;
+                                                                setDetailBudgets(newDetails);
+                                                            }}
+                                                            placeholder="Nama Item..."
+                                                            className="h-9"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 w-full space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">Nominal</Label>
+                                                        <MoneyInput
+                                                            value={detail.amount}
+                                                            onValueChange={(vals) => {
+                                                                const newDetails = [...detailBudgets];
+                                                                newDetails[idx].amount = vals.floatValue || 0;
+                                                                setDetailBudgets(newDetails);
+                                                            }}
+                                                            placeholder="0"
+                                                            prefix="Rp "
+                                                            className="h-9"
+                                                        />
+                                                    </div>
+                                                    <div className="pt-5 flex-shrink-0">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-9 w-9 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                                            onClick={() => {
+                                                                const toDelete = detailBudgets[idx];
+                                                                const newDetails = detailBudgets.filter((_, i) => i !== idx);
+                                                                setDetailBudgets(newDetails);
+                                                                if (!toDelete.isNew && toDelete.id) {
+                                                                    setDeleteDetailBudgets([...deleteDetailBudgets, toDelete.id]);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), amount: 0, notes: '', isNew: true }])}
+                                                className="gap-1.5 border-dashed"
+                                            >
+                                                <Plus className="h-3.5 w-3.5" />
+                                                Tambah Item
+                                            </Button>
+
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setEditDetailBudget(false);
+                                                        // Revert changes from project props
+                                                        setDetailBudgets(project.budget_details || []);
+                                                        setDeleteDetailBudgets([]);
+                                                    }}
+                                                >
+                                                    Batal
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={handleSaveDetailBudget}
+                                                    disabled={savingDetailBudget}
+                                                    className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+                                                >
+                                                    {savingDetailBudget ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                                    Simpan Rincian
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="border-t border-gray-200 my-6"></div>

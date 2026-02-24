@@ -59,6 +59,7 @@ final class ProjectResource extends JsonResource
             'documents' => $this->whenLoaded('documents'),
             'supporting_docs' => $this->whenLoaded('documents'),
             'termin_payments' => $this->whenLoaded('terminPayments'),
+            'budget_details' => $this->whenLoaded('budgetDetails'),
             'monitorings' => $this->whenLoaded('monitorings'),
             'monitoring_history' => $this->whenLoaded('monitorings'),
             'approvals' => ProjectApprovalResource::collection($this->whenLoaded('approvals')),
