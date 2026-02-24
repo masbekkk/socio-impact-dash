@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\DocumentType;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,7 +17,7 @@ final class ReimbursementDocument extends Model
 
     public function casts(): array
     {
-        return ['id' => 'integer', 'reimbursement_id' => 'integer', 'uploaded_by' => 'integer', 'type' => DocumentType::class, 'size' => 'integer'];
+        return ['id' => 'integer', 'reimbursement_id' => 'integer', 'uploaded_by' => 'integer', 'size' => 'integer'];
     }
 
     public function reimbursement(): BelongsTo

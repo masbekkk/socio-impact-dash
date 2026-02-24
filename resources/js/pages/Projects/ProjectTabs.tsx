@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Circle, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye, Download, MapPin, Plus, Calendar, User, Upload, Handshake, Archive } from 'lucide-react'
+import { CheckCircle2, Circle, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye, Download, MapPin, Plus, Calendar, User, Upload, Handshake, Archive, Save } from 'lucide-react'
 import MoneyInput from '@/components/MoneyInput'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,6 +18,8 @@ interface ProjectTabsProps {
     currentStatus: string;
     locations: any[];
     userRole?: string; // 'admin' | 'finance' | 'user'
+    refetchProject?: () => void;
+    onShowToast?: (msg: string, type: 'success' | 'error') => void;
 
     // Monitoring
     reportForm: any;
@@ -40,7 +42,9 @@ export default function ProjectTabs({
     project,
     currentStatus,
     locations,
-    userRole = usePage<SharedData>()?.props?.auth?.user?.role_name ?? 'user',
+    userRole = (usePage().props as any).auth?.user?.role_name || 'user',
+    refetchProject,
+    onShowToast,
     reportForm,
     setReportForm,
     handleReportFileChange,
@@ -80,16 +84,110 @@ export default function ProjectTabs({
         }
     }, [project.termin_payments]);
 
+    // Budget Partitions State
+    const [editPartitions, setEditPartitions] = useState(false);
+    const [opsBudget, setOpsBudget] = useState<number>(project.operational_budget || 0);
+    const [allowanceBudget, setAllowanceBudget] = useState<number>(project.allowance_budget || 0);
+    const [savingBudget, setSavingBudget] = useState(false);
+    const [localBudgetStatus, setLocalBudgetStatus] = useState(project.budget_partition_status || 'draft');
+
+    // Permissions
+    const permissions = (usePage().props as any).auth?.permissions || [];
+    const canInputBudget = permissions.includes('input_budget_partition');
+    const canApproveBudget = permissions.includes('approval_budget_partition');
+    const canManageDetailBudget = permissions.includes('manage_detail_budget');
+
+    // Detail Budget State
+    const [detailBudgets, setDetailBudgets] = useState<any[]>(project.budget_details || []);
+    const [editDetailBudget, setEditDetailBudget] = useState(false);
+    const [savingDetailBudget, setSavingDetailBudget] = useState(false);
+    const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([]);
+
+    useEffect(() => {
+        setOpsBudget(project.operational_budget || 0);
+        setAllowanceBudget(project.allowance_budget || 0);
+        setLocalBudgetStatus(project.budget_partition_status || 'draft');
+    }, [project]);
+
+    const handleSaveBudget = async () => {
+        setSavingBudget(true);
+        try {
+            await axios.put(`/api/v1/projects/${project.id}`, {
+                operational_budget: opsBudget,
+                allowance_budget: allowanceBudget
+            });
+            setEditPartitions(false);
+            if (onShowToast) onShowToast('Pembagian anggaran berhasil disimpan', 'success');
+        } catch (error: any) {
+            console.error(error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal menyimpan anggaran', 'error');
+        } finally {
+            setSavingBudget(false);
+        }
+    };
+
+    const handleApproveBudget = async () => {
+        setSavingBudget(true);
+        try {
+            await axios.put(`/api/v1/projects/${project.id}`, {
+                budget_partition_status: 'approved'
+            });
+            setLocalBudgetStatus('approved');
+            if (onShowToast) onShowToast('Pembagian anggaran berhasil disetujui', 'success');
+        } catch (error: any) {
+            console.error(error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal menyetujui anggaran', 'error');
+        } finally {
+            setSavingBudget(false);
+        }
+    };
+
+    const handleSaveDetailBudget = async () => {
+        setSavingDetailBudget(true);
+        try {
+            const submitData = new FormData();
+            submitData.append('_method', 'PUT');
+
+            detailBudgets.forEach((detail, index) => {
+                if (!detail.isNew) {
+                    submitData.append(`detail_budgets[${index}][id]`, detail.id);
+                }
+                submitData.append(`detail_budgets[${index}][amount]`, detail.amount.toString());
+                if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
+            });
+
+            deleteDetailBudgets.forEach((id, index) => {
+                submitData.append(`delete_detail_budgets[${index}]`, id);
+            });
+
+            await axios.post(`/api/v1/projects/${project.id}`, submitData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            setEditDetailBudget(false);
+            if (onShowToast) onShowToast('Rincian anggaran berhasil disimpan', 'success');
+            if (refetchProject) refetchProject();
+        } catch (error: any) {
+            console.error(error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || error?.response?.data?.errors?.detail_budgets || 'Gagal menyimpan rincian anggaran', 'error');
+        } finally {
+            setSavingDetailBudget(false);
+        }
+    };
+
     // Handler to toggle verification status
     const toggleVerification = async (termId: number, currentVerified: boolean) => {
         try {
-            await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, {
+            const { data } = await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, {
                 is_verified: !currentVerified
             });
-            // Refresh via router
-            router.visit(window.location.pathname, { preserveScroll: true });
-        } catch (error) {
+            setLocalPaymentTerms(prev =>
+                prev.map(t => t.id === termId ? { ...t, ...data.data } : t)
+            );
+            if (onShowToast) onShowToast(!currentVerified ? 'Termin berhasil diverifikasi' : 'Verifikasi dibatalkan', 'success');
+        } catch (error: any) {
             console.error("Error toggling verification:", error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal mengubah verifikasi', 'error');
         }
     };
 
@@ -97,12 +195,16 @@ export default function ProjectTabs({
         const formData = new FormData();
         formData.append('proof_file', file);
         try {
-            await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, formData, {
+            const { data } = await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            router.visit(window.location.pathname, { preserveScroll: true });
-        } catch (error) {
+            setLocalPaymentTerms(prev =>
+                prev.map(t => t.id === termId ? { ...t, ...data.data } : t)
+            );
+            if (onShowToast) onShowToast('Bukti pembayaran berhasil diunggah', 'success');
+        } catch (error: any) {
             console.error("Error uploading proof:", error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal mengunggah bukti', 'error');
         }
     };
 
@@ -113,7 +215,7 @@ export default function ProjectTabs({
                 <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max md:w-full min-w-full md:min-w-0">
                     <TabsTrigger value="detail" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Detail & Proposal</TabsTrigger>
                     <TabsTrigger value="timeline" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Timeline</TabsTrigger>
-                    <TabsTrigger value="budget" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Budget</TabsTrigger>
+                    <TabsTrigger value="budget" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Nilai Kontrak</TabsTrigger>
                     <TabsTrigger value="monitoring" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Monitoring</TabsTrigger>
                     <TabsTrigger value="closing" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Closing</TabsTrigger>
                 </TabsList>
@@ -360,7 +462,7 @@ export default function ProjectTabs({
             <TabsContent value="budget" className="mt-4">
                 <Card className="border shadow-sm">
                     <CardHeader className="pb-2">
-                        <CardTitle>Anggaran & Keuangan</CardTitle>
+                        <CardTitle>Keuangan</CardTitle>
                         <CardDescription>Informasi nominal dan rincian anggaran biaya (RAB).</CardDescription>
                     </CardHeader>
                     <CardContent className="grid md:grid-cols-2 gap-6 pt-4">
@@ -372,14 +474,14 @@ export default function ProjectTabs({
                                     <span className="font-bold text-xs">Rp</span>
                                 </div>
                                 <p className="text-sm font-medium text-muted-foreground">
-                                    {currentStatus === 'active' ? 'Total Anggaran Project' : 'Estimasi Anggaran Pengajuan'}
+                                    Total Anggaran Project
                                 </p>
                             </div>
                             <div className="text-3xl font-bold text-slate-900 tracking-tight">
                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.budget_total || 0)}
                             </div>
                             <p className="text-xs text-muted-foreground mt-2">
-                                *Anggaran yang diajukan dalam formulir project.
+                                *Keuangan project.
                             </p>
                         </div>
 
@@ -430,27 +532,74 @@ export default function ProjectTabs({
                         </div>
 
                         {/* Budget Partitions */}
-                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-blue-200 transition-colors">
-                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Operasional (50%)</p>
-                                <div className="text-xl font-bold text-slate-900 tracking-tight">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((project.budget_total || 0) * 0.5)}
+                        <div className="md:col-span-2">
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-900">Pembagian Anggaran</h4>
+                                    <p className="text-xs text-muted-foreground">Rincian alokasi anggaran operasional, manajemen, dan allowance.</p>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu operasional</p>
+                                <div className="flex gap-2 items-center">
+                                    {localBudgetStatus === 'approved' && (
+                                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 uppercase text-[10px]">Telah Disetujui</Badge>
+                                    )}
+                                    {localBudgetStatus !== 'approved' && canInputBudget && !editPartitions && (
+                                        <Button variant="outline" size="sm" onClick={() => setEditPartitions(true)}>
+                                            <Pencil className="w-4 h-4 mr-2" /> Atur Anggaran
+                                        </Button>
+                                    )}
+                                    {editPartitions && (
+                                        <>
+                                            <Button variant="outline" size="sm" onClick={() => setEditPartitions(false)} disabled={savingBudget}>Batal</Button>
+                                            <Button size="sm" onClick={handleSaveBudget} disabled={savingBudget}>
+                                                {savingBudget ? <Loader className="w-4 h-4 animate-spin" /> : 'Simpan'}
+                                            </Button>
+                                        </>
+                                    )}
+                                    {localBudgetStatus !== 'approved' && canApproveBudget && (
+                                        <Button size="sm" onClick={handleApproveBudget} disabled={savingBudget} className="bg-green-600 hover:bg-green-700 text-white">
+                                            {savingBudget ? <Loader className="w-4 h-4 animate-spin" /> : 'Setujui Pembagian'}
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
-                            <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-purple-200 transition-colors">
-                                <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-1">Manajemen (30%)</p>
-                                <div className="text-xl font-bold text-slate-900 tracking-tight">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((project.budget_total || 0) * 0.3)}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-blue-200 transition-colors">
+                                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">Operasional</p>
+                                    {editPartitions ? (
+                                        <MoneyInput
+                                            value={opsBudget}
+                                            onValueChange={(values) => setOpsBudget(values.floatValue || 0)}
+                                            placeholder="Nilai Operasional"
+                                        />
+                                    ) : (
+                                        <div className="text-xl font-bold text-slate-900 tracking-tight">
+                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(opsBudget)}
+                                        </div>
+                                    )}
+                                    <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu operasional {(project.budget_total > 0 ? ((opsBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu manajemen</p>
-                            </div>
-                            <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-amber-200 transition-colors">
-                                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Allowance (20%)</p>
-                                <div className="text-xl font-bold text-slate-900 tracking-tight">
-                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format((project.budget_total || 0) * 0.2)}
+                                <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-purple-200 transition-colors">
+                                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-2">Manajemen (30%)</p>
+                                    <div className="text-xl font-bold text-slate-900 tracking-tight">
+                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.management_budget || 0)}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground pt-1">Fix 30% dari Total Pagu</p>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu allowance</p>
+                                <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-amber-200 transition-colors">
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">Allowance</p>
+                                    {editPartitions ? (
+                                        <MoneyInput
+                                            value={allowanceBudget}
+                                            onValueChange={(values) => setAllowanceBudget(values.floatValue || 0)}
+                                            placeholder="Nilai Allowance"
+                                        />
+                                    ) : (
+                                        <div className="text-xl font-bold text-slate-900 tracking-tight">
+                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(allowanceBudget)}
+                                        </div>
+                                    )}
+                                    <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu allowance {(project.budget_total > 0 ? ((allowanceBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
+                                </div>
                             </div>
                         </div>
 
@@ -494,8 +643,13 @@ export default function ProjectTabs({
                                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                                                             <div>
                                                                 <p className="text-xs text-muted-foreground">Nominal</p>
-                                                                <p className="font-bold text-gray-900">
+                                                                <p className="font-bold text-gray-900 flex items-center gap-2">
                                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(term.nominal)}
+                                                                    {project.budget_total > 0 && (
+                                                                        <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0 border-gray-200">
+                                                                            {((parseFloat(term.nominal) / project.budget_total) * 100).toFixed(1)}%
+                                                                        </Badge>
+                                                                    )}
                                                                 </p>
                                                             </div>
                                                             <div>
@@ -505,7 +659,7 @@ export default function ProjectTabs({
                                                                 </p>
                                                             </div>
                                                             <div>
-                                                                <p className="text-xs text-muted-foreground">Keterangan</p>
+                                                                <p className="text-xs text-muted-foreground">Deliverables</p>
                                                                 <p className="font-medium text-gray-900">{term.notes}</p>
                                                             </div>
                                                         </div>
@@ -798,6 +952,162 @@ export default function ProjectTabs({
                                     prefix="Rp "
                                     className="bg-white h-12 text-lg text-left"
                                 />
+                            </div>
+
+                            <div className="border-t border-gray-200 my-6"></div>
+
+                            {/* Rincian Anggaran (RAB) Section */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h4 className="font-semibold text-lg">Rincian Anggaran (RAB)</h4>
+                                        <p className="text-sm text-muted-foreground">Detail pengelokasian item anggaran.</p>
+                                    </div>
+                                    {canManageDetailBudget && !editDetailBudget && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setEditDetailBudget(true)}
+                                            className="h-8 gap-1.5"
+                                        >
+                                            <Pencil className="h-3.5 w-3.5" />
+                                            Edit Rincian
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {!editDetailBudget ? (
+                                    <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="bg-gray-50 border-b">
+                                                <tr>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500">Keterangan / Item</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Nominal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {detailBudgets.length > 0 ? (
+                                                    detailBudgets.map((detail, idx) => (
+                                                        <tr key={idx} className="hover:bg-gray-50/50">
+                                                            <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
+                                                            <td className="px-4 py-3 font-medium text-gray-900">{detail.notes || '-'}</td>
+                                                            <td className="px-4 py-3 text-right">
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.amount)}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground italic">
+                                                            Belum ada rincian anggaran.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                {detailBudgets.length > 0 && (
+                                                    <tr className="bg-gray-50/80 font-semibold border-t-2">
+                                                        <td colSpan={2} className="px-4 py-3 text-right text-gray-700">Total Rincian:</td>
+                                                        <td className="px-4 py-3 text-right text-primary">
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
+                                                                detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="border rounded-xl p-5 bg-gray-50/50 space-y-4">
+                                        <div className="space-y-3">
+                                            {detailBudgets.map((detail, idx) => (
+                                                <div key={detail.id} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-white p-3 rounded-lg border shadow-sm">
+                                                    <div className="flex-1 w-full space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">Keterangan / Item</Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={detail.notes}
+                                                            onChange={(e) => {
+                                                                const newDetails = [...detailBudgets];
+                                                                newDetails[idx].notes = e.target.value;
+                                                                setDetailBudgets(newDetails);
+                                                            }}
+                                                            placeholder="Nama Item..."
+                                                            className="h-9"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 w-full space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">Nominal</Label>
+                                                        <MoneyInput
+                                                            value={detail.amount}
+                                                            onValueChange={(vals) => {
+                                                                const newDetails = [...detailBudgets];
+                                                                newDetails[idx].amount = vals.floatValue || 0;
+                                                                setDetailBudgets(newDetails);
+                                                            }}
+                                                            placeholder="0"
+                                                            prefix="Rp "
+                                                            className="h-9"
+                                                        />
+                                                    </div>
+                                                    <div className="pt-5 flex-shrink-0">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-9 w-9 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                                            onClick={() => {
+                                                                const toDelete = detailBudgets[idx];
+                                                                const newDetails = detailBudgets.filter((_, i) => i !== idx);
+                                                                setDetailBudgets(newDetails);
+                                                                if (!toDelete.isNew && toDelete.id) {
+                                                                    setDeleteDetailBudgets([...deleteDetailBudgets, toDelete.id]);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), amount: 0, notes: '', isNew: true }])}
+                                                className="gap-1.5 border-dashed"
+                                            >
+                                                <Plus className="h-3.5 w-3.5" />
+                                                Tambah Item
+                                            </Button>
+
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setEditDetailBudget(false);
+                                                        // Revert changes from project props
+                                                        setDetailBudgets(project.budget_details || []);
+                                                        setDeleteDetailBudgets([]);
+                                                    }}
+                                                >
+                                                    Batal
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={handleSaveDetailBudget}
+                                                    disabled={savingDetailBudget}
+                                                    className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+                                                >
+                                                    {savingDetailBudget ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                                    Simpan Rincian
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="border-t border-gray-200 my-6"></div>

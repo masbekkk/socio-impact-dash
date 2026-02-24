@@ -40,7 +40,7 @@ final class Project extends Model
         'code', 'name', 'description',
         'division_id', 'account_manager_id', 'head_id', 'pic_id',
         'status', 'project_type',
-        'budget_total', 'operational_budget', 'management_budget', 'allowance_budget', 'actual_budget',
+        'budget_total', 'operational_budget', 'management_budget', 'allowance_budget', 'actual_budget', 'budget_partition_status',
         'start_date', 'end_date', 'created_by',
     ];
 
@@ -119,5 +119,10 @@ final class Project extends Model
     public function reimbursements(): HasMany
     {
         return $this->hasMany(Reimbursement::class);
+    }
+
+    public function budgetDetails(): HasMany
+    {
+        return $this->hasMany(ProjectBudgetDetail::class);
     }
 }

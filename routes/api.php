@@ -37,4 +37,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::apiResource('letter-requests', \App\Http\Controllers\Api\V1\LetterRequestController::class);
     Route::post('letter-requests/{letter_request}/assign', [\App\Http\Controllers\Api\V1\LetterRequestController::class, 'assignNumber']);
     Route::post('letter-requests/{letter_request}/reject', [\App\Http\Controllers\Api\V1\LetterRequestController::class, 'reject']);
+
+    // Users
+    Route::apiResource('users', \App\Http\Controllers\Api\V1\UserController::class);
 });

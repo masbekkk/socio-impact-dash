@@ -30,9 +30,14 @@ final class CreateProject
                 $this->syncDocuments($project, $data['documents'], $userId);
             }
 
+            if (isset($data['detail_budgets'])) {
+                $this->syncDetailBudgets($project, $data['detail_budgets'], $userId);
+            }
+
             $this->createApprovals($project);
 
-            return $project->load(['locations', 'terminPayments', 'documents']);
+            // Re-fetch project to load all newly created relations properly
+            return $project->fresh(['locations', 'terminPayments', 'documents', 'budgetDetails']);
         });
     }
 
@@ -139,6 +144,17 @@ final class CreateProject
                 'approved_by' => $project->pic_id,
                 'approval_type' => 'direktur',
                 'approval_status' => 'pending',
+            ]);
+        }
+    }
+
+    private function syncDetailBudgets(Project $project, array $detailBudgets, int $userId): void
+    {
+        foreach ($detailBudgets as $detail) {
+            $project->budgetDetails()->create([
+                'amount' => $detail['amount'],
+                'notes' => $detail['notes'] ?? null,
+                'created_by' => $userId,
             ]);
         }
     }
