@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('project_budget_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
+            $table->integer('quantity')->default(1);
+            $table->decimal('item_price', 20, 2)->default(0);
             $table->decimal('amount', 20, 2);
             $table->text('notes')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();

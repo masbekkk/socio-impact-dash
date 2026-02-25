@@ -152,6 +152,8 @@ final class CreateProject
     {
         foreach ($detailBudgets as $detail) {
             $project->budgetDetails()->create([
+                'quantity' => $detail['quantity'] ?? 1,
+                'item_price' => $detail['item_price'] ?? 0,
                 'amount' => $detail['amount'],
                 'notes' => $detail['notes'] ?? null,
                 'created_by' => $userId,
