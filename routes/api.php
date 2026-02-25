@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\V1\LeaveController;
 use App\Http\Controllers\Api\V1\ReimbursementController;
 use Illuminate\Support\Facades\Route;
 
@@ -40,4 +41,8 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
 
     // Users
     Route::apiResource('users', \App\Http\Controllers\Api\V1\UserController::class);
+
+    // Leaves
+    Route::apiResource('leaves', LeaveController::class)->only(['index', 'store', 'show']);
+    Route::post('leaves/{code}/status', [LeaveController::class, 'updateStatus']);
 });

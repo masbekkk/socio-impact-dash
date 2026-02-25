@@ -12,6 +12,7 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
+            $table->foreignId('division_id')->nullable()->constrained('divisions')->cascadeOnDelete();
             $table->string('name');
             $table->string('nip')->nullable();
             $table->string('email')->unique();

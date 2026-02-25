@@ -14,6 +14,7 @@ final class DatabaseSeeder extends Seeder
             RoleAndPermissionSeeder::class,
             UserSeeder::class,
             DivisionSeeder::class,
+            LeaveSeeder::class,
         ]);
     }
 }
