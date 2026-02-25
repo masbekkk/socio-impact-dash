@@ -40,4 +40,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
 
     // Users
     Route::apiResource('users', \App\Http\Controllers\Api\V1\UserController::class);
+
+    // Divisions
+    Route::apiResource('divisions', \App\Http\Controllers\Api\V1\DivisionController::class);
 });

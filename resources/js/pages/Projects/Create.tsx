@@ -334,7 +334,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                       <SelectContent>
                         {divisions.map((div) => (
                           <SelectItem key={div.id} value={div.id.toString()}>
-                            {div.name}
+                            {div.code} - {div.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

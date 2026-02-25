@@ -414,7 +414,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                             <SelectContent>
                                                 {divisions.map((div) => (
                                                     <SelectItem key={div.id} value={div.id.toString()}>
-                                                        {div.name}
+                                                        {div.code} - {div.name}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
