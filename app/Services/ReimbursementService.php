@@ -11,9 +11,14 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class ReimbursementService
 {
     public function listReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
-    {
-        $query = Reimbursement::with(['user', 'project', 'documents'])
-            ->where('user_id', $user->id);
+    {   
+
+
+        $query = Reimbursement::with(['user', 'project', 'documents']);
+
+        if (!$user->hasAnyPermission(['approve_reimbursements', 'reject_reimbursements'])) {
+            $query->where('user_id', $user->id);
+        }
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);

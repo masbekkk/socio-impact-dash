@@ -17,6 +17,9 @@ return new class extends Migration
             $table->string('code')->unique();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('replacement_pic_id')->nullable()->constrained('users')->cascadeOnDelete();
+            $table->foreignId('project_id')->nullable()->constrained('projects')->cascadeOnDelete();
+            $table->string('phone')->nullable();
+            $table->string('destination')->nullable();
             $table->string('lokasi')->nullable();
             $table->string('type')->default(LeaveType::Annual->value);
             $table->string('status')->default(LeaveStatus::Draft->value)->index();
