@@ -43,4 +43,8 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
 
     // Divisions
     Route::apiResource('divisions', \App\Http\Controllers\Api\V1\DivisionController::class);
+
+    // Letter Master Data
+    Route::apiResource('letter-codes', \App\Http\Controllers\Api\V1\LetterCodeController::class);
+    Route::apiResource('letter-divisions', \App\Http\Controllers\Api\V1\LetterDivisionController::class);
 });

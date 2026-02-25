@@ -65,6 +65,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::prefix('admin')->middleware('can:adminAccess')->group(function (): void {
         Route::resource('users', AdminUserController::class);
         Route::resource('divisions', AdminDivisionController::class);
+        Route::resource('letter-codes', \App\Http\Controllers\Admin\LetterCodeController::class)->except(['store', 'update', 'destroy']);
+        Route::resource('letter-divisions', \App\Http\Controllers\Admin\LetterDivisionController::class)->except(['store', 'update', 'destroy']);
         Route::get('rbac', fn() => Inertia::render('admin/rbac/index'))->name('admin.rbac');
     });
 });

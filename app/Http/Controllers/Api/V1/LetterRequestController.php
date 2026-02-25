@@ -10,13 +10,16 @@ use App\Models\LetterRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Carbon\Carbon;
+use App\Models\LetterCode;
+use App\Models\LetterDivision;
 
 final class LetterRequestController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = LetterRequest::with(['project', 'requester']);
+        $query = LetterRequest::with(['project', 'requester', 'pic', 'letterCode', 'letterDivision']);
 
         // Finance and Superadmin can see all
         if (! $user->hasRole([UserRole::Finance, UserRole::Superadmin])) {
@@ -25,10 +28,10 @@ final class LetterRequestController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
                 $q->where('subject', 'like', "%{$search}%")
                     ->orWhere('recipient', 'like', "%{$search}%")
-                    ->orWhereHas('project', function ($q) use ($search) {
+                    ->orWhereHas('project', function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
                         $q->where('name', 'like', "%{$search}%")
                             ->orWhere('code', 'like', "%{$search}%");
                     });
@@ -43,6 +46,20 @@ final class LetterRequestController extends Controller
         );
     }
 
+    public function show(string $id): JsonResponse
+    {
+        $letterRequest = LetterRequest::with(['project', 'requester', 'pic', 'letterCode', 'letterDivision'])->find($id);
+
+        if (!$letterRequest) {
+            return JsonResponseFormatter::notFound('Letter Request tidak ditemukan.');
+        }
+
+        return JsonResponseFormatter::success(
+            $letterRequest,
+            'Letter request retrieved successfully'
+        );
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -50,20 +67,127 @@ final class LetterRequestController extends Controller
             'letter_date' => 'required|date',
             'recipient' => 'required|string|max:255',
             'subject' => 'required|string|max:255',
-            'pic_name' => 'required|string|max:255',
+            'pic_id' => 'required|exists:users,id',
+            'letter_code_id' => 'required|exists:letter_codes,id',
+            'letter_division_id' => 'required|exists:letter_divisions,id',
+            'keterangan' => 'nullable|string',
         ]);
+
+        $letterDate = Carbon::parse($validated['letter_date']);
+        $year = $letterDate->year;
+        $month = $letterDate->month;
+
+        $kode = LetterCode::find($validated['letter_code_id'])->code;
+        $divisi = LetterDivision::find($validated['letter_division_id'])->code;
+
+        $latestRequest = LetterRequest::whereYear('letter_date', $year)
+            ->whereNotNull('letter_number')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $nextNo = 1;
+        if ($latestRequest) {
+            $parts = explode('-', $latestRequest->letter_number);
+            if (count($parts) > 0 && is_numeric($parts[0])) {
+                $nextNo = (int) $parts[0] + 1;
+            }
+        }
+
+        $formattedNo = str_pad((string)$nextNo, 3, '0', STR_PAD_LEFT);
+        $letterNumber = "{$formattedNo}-{$month}/{$kode}.{$divisi}/Lestari/{$year}";
 
         $letterRequest = LetterRequest::create([
             ...$validated,
             'requester_id' => $request->user()->id,
             'status' => 'pending',
+            'letter_number' => $letterNumber,
         ]);
+
+        return JsonResponseFormatter::created(
+            $letterRequest,
+            'Letter request created successfully'
+        );
+    }
+
+    public function update(Request $request, string $id): JsonResponse
+    {
+        $letterRequest = LetterRequest::find($id);
+
+        if (!$letterRequest) {
+            return JsonResponseFormatter::notFound('Letter Request tidak ditemukan.');
+        }
+
+        // Only allow requester or admin to update
+        $user = $request->user();
+        if ($letterRequest->requester_id !== $user->id && ! $user->hasRole([UserRole::Finance, UserRole::Superadmin])) {
+            return JsonResponseFormatter::error('Unauthorized', 403);
+        }
+
+        $validated = $request->validate([
+            'project_id' => 'required|exists:projects,id',
+            'letter_date' => 'required|date',
+            'recipient' => 'required|string|max:255',
+            'subject' => 'required|string|max:255',
+            'pic_id' => 'required|exists:users,id',
+            'letter_code_id' => 'required|exists:letter_codes,id',
+            'letter_division_id' => 'required|exists:letter_divisions,id',
+            'keterangan' => 'nullable|string',
+        ]);
+
+        // If letter date, code, or division changed, technically the letter number should change too.
+        // However, standard practice is to retain the number once generated, or regenerate it.
+        // For now, we will regenerate it if those key fields changed.
+        $needsNewNumber = false;
+        
+        $oldDate = Carbon::parse($letterRequest->letter_date);
+        $newDate = Carbon::parse($validated['letter_date']);
+
+        if ($oldDate->year !== $newDate->year || 
+            $oldDate->month !== $newDate->month ||
+            $letterRequest->letter_code_id !== $validated['letter_code_id'] ||
+            $letterRequest->letter_division_id !== $validated['letter_division_id']) {
+            $needsNewNumber = true;
+        }
+
+        if ($needsNewNumber) {
+            $year = $newDate->year;
+            $month = $newDate->month;
+            $kode = LetterCode::find($validated['letter_code_id'])->code;
+            $divisi = LetterDivision::find($validated['letter_division_id'])->code;
+
+            // Keep the same sequential number if possible, or calculate a new one?
+            // Safer to just re-use the current sequence number from the existing string
+            $currentParts = explode('-', $letterRequest->letter_number);
+            $seqNo = (count($currentParts) > 0 && is_numeric($currentParts[0])) ? $currentParts[0] : '001';
+            
+            $letterNumber = "{$seqNo}-{$month}/{$kode}.{$divisi}/Lestari/{$year}";
+            $validated['letter_number'] = $letterNumber;
+        }
+
+        $letterRequest->update($validated);
 
         return JsonResponseFormatter::success(
             $letterRequest,
-            'Letter request created successfully',
-            201
+            'Letter request updated successfully'
         );
+    }
+
+    public function destroy(Request $request, string $id): JsonResponse
+    {
+        $letterRequest = LetterRequest::find($id);
+
+        if (!$letterRequest) {
+            return JsonResponseFormatter::notFound('Letter Request tidak ditemukan.');
+        }
+
+        $user = $request->user();
+        if ($letterRequest->requester_id !== $user->id && ! $user->hasRole([UserRole::Finance, UserRole::Superadmin])) {
+            return JsonResponseFormatter::error('Unauthorized', 403);
+        }
+
+        $letterRequest->delete();
+
+        return JsonResponseFormatter::success(null, 'Letter request deleted successfully');
     }
 
     public function assignNumber(Request $request, LetterRequest $letterRequest): JsonResponse

@@ -32,12 +32,13 @@ interface MasterData {
 
 interface Props {
     projects: Project[];
+    letterRequestId: string;
 }
 
-export default function Create({ projects }: Props) {
+export default function Edit({ projects, letterRequestId }: Props) {
     const [data, setData] = useState({
         project_id: '',
-        letter_date: format(new Date(), 'yyyy-MM-dd'),
+        letter_date: '',
         recipient: '',
         subject: '',
         pic_id: '',
@@ -54,29 +55,46 @@ export default function Create({ projects }: Props) {
     const [errors, setErrors] = useState<any>({});
 
     useEffect(() => {
-        const fetchMasterData = async () => {
+        const fetchAllData = async () => {
             try {
-                const [codesRes, divisionsRes, usersRes] = await Promise.all([
+                const [codesRes, divisionsRes, usersRes, requestRes] = await Promise.all([
                     axios.get('/api/v1/letter-codes'),
                     axios.get('/api/v1/letter-divisions'),
-                    axios.get('/api/v1/users?per_page=1000')
+                    axios.get('/api/v1/users?per_page=1000'),
+                    axios.get(`/api/v1/letter-requests/${letterRequestId}`)
                 ]);
+
                 setLetterCodes(codesRes.data.data);
                 setLetterDivisions(divisionsRes.data.data);
                 setUsers(usersRes.data.data.data);
+
+                const reqData = requestRes.data.data;
+                setData({
+                    project_id: reqData.project_id?.toString() || '',
+                    letter_date: reqData.letter_date ? format(new Date(reqData.letter_date), 'yyyy-MM-dd') : '',
+                    recipient: reqData.recipient || '',
+                    subject: reqData.subject || '',
+                    pic_id: reqData.pic_id?.toString() || '',
+                    letter_code_id: reqData.letter_code_id?.toString() || '',
+                    letter_division_id: reqData.letter_division_id?.toString() || '',
+                    keterangan: reqData.keterangan || '',
+                });
+
             } catch (error) {
-                console.error("Error fetching master data:", error);
+                console.error("Error fetching data:", error);
+                alert("Gagal memuat data pengajuan.");
+                router.visit('/letter-requests');
             } finally {
                 setLoadingData(false);
             }
         };
-        fetchMasterData();
-    }, []);
+        fetchAllData();
+    }, [letterRequestId]);
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Nomor Surat', href: '/letter-requests' },
-        { title: 'Buat Pengajuan', href: '/letter-requests/create' },
+        { title: 'Edit Pengajuan', href: `/letter-requests/${letterRequestId}/edit` },
     ];
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -85,13 +103,14 @@ export default function Create({ projects }: Props) {
         setErrors({});
 
         try {
-            await axios.post('/api/v1/letter-requests', data);
+            await axios.put(`/api/v1/letter-requests/${letterRequestId}`, data);
             router.visit('/letter-requests');
         } catch (error: any) {
             if (error.response && error.response.data.errors) {
                 setErrors(error.response.data.errors);
             } else {
-                console.error("Error creating letter request:", error);
+                console.error("Error updating letter request:", error);
+                alert("Terjadi kesalahan saat memperbarui pengajuan.");
             }
         } finally {
             setProcessing(false);
@@ -100,7 +119,7 @@ export default function Create({ projects }: Props) {
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="Buat Pengajuan Nomor Surat" />
+            <Head title="Edit Pengajuan Nomor Surat" />
 
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex items-center gap-4">
@@ -110,8 +129,8 @@ export default function Create({ projects }: Props) {
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">Pengajuan Nomor Surat</h1>
-                        <p className="text-muted-foreground text-sm">Lengkapi detail surat untuk mendapatkan nomor resmi.</p>
+                        <h1 className="text-xl font-bold tracking-tight">Edit Pengajuan Nomor Surat</h1>
+                        <p className="text-muted-foreground text-sm">Perbarui detail surat untuk pengajuan Anda.</p>
                     </div>
                 </div>
 
@@ -119,7 +138,7 @@ export default function Create({ projects }: Props) {
                     <form onSubmit={handleSubmit}>
                         <CardHeader className="bg-white">
                             <CardTitle>Informasi Surat</CardTitle>
-                            <CardDescription>Detail tujuan dan perihal surat.</CardDescription>
+                            <CardDescription>Ubah tujuan dan perihal surat atau data lainnya.</CardDescription>
                         </CardHeader>
 
                         {loadingData ? (
@@ -274,7 +293,7 @@ export default function Create({ projects }: Props) {
                             </Button>
                             <Button type="submit" disabled={processing || loadingData} className="bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)]/90">
                                 {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Kirim Pengajuan
+                                Simpan Perubahan
                             </Button>
                         </CardFooter>
                     </form>
