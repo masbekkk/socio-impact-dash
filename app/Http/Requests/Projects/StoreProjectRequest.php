@@ -49,6 +49,11 @@ final class StoreProjectRequest extends FormRequest
             'documents' => ['nullable', 'array'],
             'documents.*.type' => ['required', 'string'],
             'documents.*.file' => ['required', 'file', 'max:10240'], // 10MB limit
+            'detail_budgets' => ['nullable', 'array'],
+            'detail_budgets.*.quantity' => ['required_with:detail_budgets', 'numeric', 'min:1'],
+            'detail_budgets.*.item_price' => ['required_with:detail_budgets', 'numeric', 'min:0'],
+            'detail_budgets.*.amount' => ['required', 'numeric', 'min:0'],
+            'detail_budgets.*.notes' => ['nullable', 'string'],
         ];
     }
     public function withValidator($validator)
