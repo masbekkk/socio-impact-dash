@@ -13,7 +13,7 @@ final class ProjectResource extends JsonResource
      *
      * @return array<string, mixed>
      */
-    public function toArray($request): array
+    public function toArray(\Illuminate\Http\Request $request): array
     {
         return [
             'id' => $this->id,
@@ -42,6 +42,7 @@ final class ProjectResource extends JsonResource
             'division' => $this->whenLoaded('division', fn () => [
                 'id' => $this->division->id,
                 'name' => $this->division->name,
+                'code' => $this->division->divisionCode?->code,
             ]),
             'account_manager' => $this->whenLoaded('accountManager', fn () => [
                 'id' => $this->accountManager->id,

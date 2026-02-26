@@ -19,7 +19,7 @@ final class UpdateDivisionRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array{code: array<int, string>, names: array<int, string>, 'names.*.name': array<int, string>, 'names.*.description': array<int, string|null>}
      */
     public function rules(): array
     {
@@ -28,10 +28,12 @@ final class UpdateDivisionRequest extends FormRequest
                 'required', 
                 'string', 
                 'max:255', 
-                'unique:divisions,code,' . $this->route('division')?->id
+                'unique:division_codes,code,' . $this->route('division')
             ],
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
+            'names' => ['required', 'array', 'min:1'],
+            'names.*.name' => ['required', 'string', 'max:255'],
+            'names.*.description' => ['nullable', 'string'],
         ];
     }
 }
+

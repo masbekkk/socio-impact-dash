@@ -6,15 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronLeft, Loader2 } from 'lucide-react';
+import { ChevronLeft, Loader2, Plus, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
 export default function Create() {
     const { data, setData, post, processing, errors, reset } = useForm({
         code: '',
-        name: '',
-        description: '',
+        names: [{ name: '', description: '' }],
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -35,6 +34,22 @@ export default function Create() {
                 toast.error(error.response?.data?.message || 'Gagal membuat divisi.');
             }
         }
+    };
+
+    const addName = () => {
+        setData('names', [...data.names, { name: '', description: '' }]);
+    };
+
+    const removeName = (index: number) => {
+        const newNames = [...data.names];
+        newNames.splice(index, 1);
+        setData('names', newNames);
+    };
+
+    const updateName = (index: number, field: 'name' | 'description', value: string) => {
+        const newNames = [...data.names];
+        newNames[index][field] = value;
+        setData('names', newNames);
     };
 
     const breadcrumbs = [
@@ -68,50 +83,74 @@ export default function Create() {
                             <CardTitle>Division Details</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="code">Code <span className="text-red-500">*</span></Label>
-                                    <Input
-                                        id="code"
-                                        placeholder="e.g. FIN, HR, ENG"
-                                        value={data.code}
-                                        onChange={(e) => setData('code', e.target.value)}
-                                        required
-                                    />
-                                    <p className="text-xs text-muted-foreground">Unique identifier for the division.</p>
-                                    {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">Name <span className="text-red-500">*</span></Label>
-                                    <Input
-                                        id="name"
-                                        placeholder="e.g. Finance, Human Resources"
-                                        value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                        required
-                                    />
-                                    {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-                                </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="code">Code <span className="text-red-500">*</span></Label>
+                                <Input
+                                    id="code"
+                                    placeholder="e.g. FIN, HR, ENG"
+                                    value={data.code}
+                                    onChange={(e) => setData('code', e.target.value)}
+                                    required
+                                />
+                                <p className="text-xs text-muted-foreground">Unique identifier for the division.</p>
+                                {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="description">Description (Optional)</Label>
-                                <Textarea
-                                    id="description"
-                                    placeholder="Brief description of the division's responsibilities"
-                                    value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
-                                    className="min-h-[100px]"
-                                />
-                                {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <Label>Division Names <span className="text-red-500">*</span></Label>
+                                    <Button type="button" variant="outline" size="sm" onClick={addName}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Name
+                                    </Button>
+                                </div>
+
+                                {data.names.map((nameEntry, index) => (
+                                    <Card key={index} className="p-4 border border-border">
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex-1 space-y-2">
+                                                    <Label>Name <span className="text-red-500">*</span></Label>
+                                                    <Input
+                                                        placeholder="e.g. Finance, Human Resources"
+                                                        value={nameEntry.name}
+                                                        onChange={(e) => updateName(index, 'name', e.target.value)}
+                                                        required
+                                                    />
+                                                </div>
+                                                {data.names.length > 1 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="mt-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={() => removeName(index)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label>Description (Optional)</Label>
+                                                <Textarea
+                                                    placeholder="Brief description of the division's responsibilities"
+                                                    value={nameEntry.description}
+                                                    onChange={(e) => updateName(index, 'description', e.target.value)}
+                                                    className="min-h-[80px]"
+                                                />
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                                {errors.names && <p className="text-sm text-red-500">{errors.names}</p>}
                             </div>
                         </CardContent>
                         <CardFooter className="flex items-center justify-end gap-3 border-t p-6">
                             <Button variant="outline" asChild>
                                 <Link href="/admin/divisions">Cancel</Link>
                             </Button>
-                            <Button className="bg-[#1a5f4a] hover:bg-[#154d3c]" disabled={processing}>
+                            <Button type="submit" className="bg-[#1a5f4a] hover:bg-[#154d3c]" disabled={processing}>
                                 {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Save Division
                             </Button>

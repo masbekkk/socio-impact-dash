@@ -22,7 +22,7 @@ import { MoreHorizontal, Plus, Search } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-interface Letter Divisi Suraton {
+interface LetterDivisiSurat {
     id: number;
     code: string;
     name: string;
@@ -31,11 +31,11 @@ interface Letter Divisi Suraton {
 }
 
 export default function Index() {
-    const [letter-divisi suratons, setLetter Divisi Suratons] = useState<Letter Divisi Suraton[]>([]);
+    const [letterDivisiSurats, setLetterDivisiSurats] = useState<LetterDivisiSurat[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const fetchLetter Divisi Suratons = async () => {
+    const fetchLetterDivisiSurats = async () => {
         setLoading(true);
         try {
             const res = await axios.get('/api/v1/letter-divisi suratons', {
@@ -43,7 +43,7 @@ export default function Index() {
                     search: searchQuery,
                 }
             });
-            setLetter Divisi Suratons(res.data.data.data);
+            setLetterDivisiSurats(res.data.data.data);
         } catch (error) {
             toast.error('Gagal mengambil data divisi surat.');
         } finally {
@@ -53,7 +53,7 @@ export default function Index() {
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            fetchLetter Divisi Suratons();
+            fetchLetterDivisiSurats();
         }, 300);
         return () => clearTimeout(timer);
     }, [searchQuery]);
@@ -63,7 +63,7 @@ export default function Index() {
         try {
             await axios.delete(`/api/v1/letter-divisi suratons/${id}`);
             toast.success('Divisi Surat berhasil dihapus.');
-            fetchLetter Divisi Suratons();
+            fetchLetterDivisiSurats();
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Gagal menghapus divisi surat.');
         }
@@ -127,26 +127,26 @@ export default function Index() {
                                             Loading letter-divisi suratons...
                                         </TableCell>
                                     </TableRow>
-                                ) : letter-divisi suratons.length === 0 ? (
+                                ) : letterDivisiSurats.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                                             No letter-divisi suratons found.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    letter-divisi suratons.map((divisi suraton) => (
-                                        <TableRow key={divisi suraton.id} className="hover:bg-muted/5">
+                                    letterDivisiSurats.map((divisiSurat) => (
+                                        <TableRow key={divisiSurat.id} className="hover:bg-muted/5">
                                             <TableCell className="font-medium uppercase">
-                                                {divisi suraton.code}
+                                                {divisiSurat.code}
                                             </TableCell>
                                             <TableCell>
-                                                {divisi suraton.name}
+                                                {divisiSurat.name}
                                             </TableCell>
                                             <TableCell className="max-w-xs truncate text-muted-foreground">
-                                                {divisi suraton.description || '-'}
+                                                {divisiSurat.description || '-'}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm">
-                                                {new Date(divisi suraton.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                {new Date(divisiSurat.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
@@ -158,11 +158,11 @@ export default function Index() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem asChild>
-                                                            <Link href={`/admin/letter-divisi suratons/${divisi suraton.id}/edit`}>Edit</Link>
+                                                            <Link href={`/admin/letter-divisions/${divisiSurat.id}/edit`}>Edit</Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             className="text-destructive focus:text-destructive cursor-pointer"
-                                                            onClick={() => handleDelete(divisi suraton.id)}
+                                                            onClick={() => handleDelete(divisiSurat.id)}
                                                         >
                                                             Delete
                                                         </DropdownMenuItem>

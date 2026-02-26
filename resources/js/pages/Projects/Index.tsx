@@ -269,9 +269,9 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   <DropdownMenuItem onClick={() => handleFilterChange('division', 'all')}>
                     All Division
                   </DropdownMenuItem>
-                  {(divisions || []).map((div: any) => (
-                    <DropdownMenuItem key={div.id} onClick={() => handleFilterChange('division', div.name)}>
-                      {div.name}
+                  {(divisions || []).map((divCode: any) => (
+                    <DropdownMenuItem key={divCode.id} onClick={() => handleFilterChange('division', divCode.code)}>
+                      {divCode.code}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>

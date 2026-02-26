@@ -605,6 +605,192 @@ export default function ProjectTabs({
                             </div>
                         </div>
 
+                        {/* Budget Details (Rincian Anggaran - RAB) */}
+                        <div className="md:col-span-2 pt-6 border-t mt-4">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-900">Rincian Anggaran (RAB)</h4>
+                                    <p className="text-xs text-muted-foreground">Detail pengelokasian item anggaran.</p>
+                                </div>
+                                {canManageDetailBudget && !editDetailBudget && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setEditDetailBudget(true)}
+                                        className="h-8 gap-1.5"
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                        Edit Rincian
+                                    </Button>
+                                )}
+                            </div>
+
+                            {!editDetailBudget ? (
+                                <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-gray-50 border-b">
+                                            <tr>
+                                                <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500">Keterangan / Item</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-center">Qty</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Harga Satuan</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {detailBudgets.length > 0 ? (
+                                                detailBudgets.map((detail, idx) => (
+                                                    <tr key={idx} className="hover:bg-gray-50/50">
+                                                        <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
+                                                        <td className="px-4 py-3 font-medium text-gray-900">{detail.notes || '-'}</td>
+                                                        <td className="px-4 py-3 text-center">{detail.quantity || 1}</td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.item_price || 0)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right font-medium text-gray-900">
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.amount || 0)}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground italic">
+                                                        Belum ada rincian anggaran.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {detailBudgets.length > 0 && (
+                                                <tr className="bg-gray-50/80 font-semibold border-t-2">
+                                                    <td colSpan={4} className="px-4 py-3 text-right text-gray-700">Total Rincian:</td>
+                                                    <td className="px-4 py-3 text-right text-primary">
+                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
+                                                            detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="border rounded-xl p-5 bg-gray-50/50 space-y-4">
+                                    <div className="space-y-3">
+                                        {detailBudgets.map((detail, idx) => (
+                                            <div key={detail.id} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-white p-3 rounded-lg border shadow-sm">
+                                                <div className="flex-[2] w-full space-y-1.5">
+                                                    <Label className="text-xs text-muted-foreground">Keterangan / Item</Label>
+                                                    <Input
+                                                        type="text"
+                                                        value={detail.notes}
+                                                        onChange={(e) => {
+                                                            const newDetails = [...detailBudgets];
+                                                            newDetails[idx].notes = e.target.value;
+                                                            setDetailBudgets(newDetails);
+                                                        }}
+                                                        placeholder="Nama Item..."
+                                                        className="h-9"
+                                                    />
+                                                </div>
+                                                <div className="flex-1 w-full space-y-1.5">
+                                                    <Label className="text-xs text-muted-foreground">Qty</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="1"
+                                                        value={detail.quantity || 1}
+                                                        onChange={(e) => {
+                                                            const newDetails = [...detailBudgets];
+                                                            newDetails[idx].quantity = parseInt(e.target.value) || 0;
+                                                            newDetails[idx].amount = newDetails[idx].quantity * (newDetails[idx].item_price || 0);
+                                                            setDetailBudgets(newDetails);
+                                                        }}
+                                                        placeholder="1"
+                                                        className="h-9"
+                                                    />
+                                                </div>
+                                                <div className="flex-1 w-full space-y-1.5">
+                                                    <Label className="text-xs text-muted-foreground">Harga Satuan</Label>
+                                                    <MoneyInput
+                                                        value={detail.item_price || 0}
+                                                        onValueChange={(vals) => {
+                                                            const newDetails = [...detailBudgets];
+                                                            newDetails[idx].item_price = vals.floatValue || 0;
+                                                            newDetails[idx].amount = (newDetails[idx].quantity || 0) * newDetails[idx].item_price;
+                                                            setDetailBudgets(newDetails);
+                                                        }}
+                                                        placeholder="0"
+                                                        prefix="Rp "
+                                                        className="h-9"
+                                                    />
+                                                </div>
+                                                <div className="flex-1 w-full space-y-1.5">
+                                                    <Label className="text-xs text-muted-foreground">Total</Label>
+                                                    <MoneyInput
+                                                        value={detail.amount || 0}
+                                                        disabled
+                                                        prefix="Rp "
+                                                        className="h-9 bg-gray-50 cursor-not-allowed text-gray-500"
+                                                    />
+                                                </div>
+                                                <div className="pt-5 flex-shrink-0">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-9 w-9 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                                        onClick={() => {
+                                                            const toDelete = detailBudgets[idx];
+                                                            const newDetails = detailBudgets.filter((_, i) => i !== idx);
+                                                            setDetailBudgets(newDetails);
+                                                            if (!toDelete.isNew && toDelete.id) {
+                                                                setDeleteDetailBudgets([...deleteDetailBudgets, toDelete.id]);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), quantity: 1, item_price: 0, amount: 0, notes: '', isNew: true }])}
+                                            className="gap-1.5 border-dashed"
+                                        >
+                                            <Plus className="h-3.5 w-3.5" />
+                                            Tambah Item
+                                        </Button>
+
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setEditDetailBudget(false);
+                                                    // Revert changes from project props
+                                                    setDetailBudgets(project.budget_details || []);
+                                                    setDeleteDetailBudgets([]);
+                                                }}
+                                            >
+                                                Batal
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                onClick={handleSaveDetailBudget}
+                                                disabled={savingDetailBudget}
+                                                className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+                                            >
+                                                {savingDetailBudget ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                                Simpan Rincian
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                     </CardContent>
 
                     {/* Payment Terms Section */}
@@ -961,298 +1147,111 @@ export default function ProjectTabs({
                                 />
                             </div>
 
-                            <div className="border-t border-gray-200 my-6"></div>
+                        </div>
 
-                            {/* Rincian Anggaran (RAB) Section */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h4 className="font-semibold text-lg">Rincian Anggaran (RAB)</h4>
-                                        <p className="text-sm text-muted-foreground">Detail pengelokasian item anggaran.</p>
-                                    </div>
-                                    {canManageDetailBudget && !editDetailBudget && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setEditDetailBudget(true)}
-                                            className="h-8 gap-1.5"
-                                        >
-                                            <Pencil className="h-3.5 w-3.5" />
-                                            Edit Rincian
-                                        </Button>
-                                    )}
-                                </div>
+                        <div className="border-t border-gray-200 my-6"></div>
 
-                                {!editDetailBudget ? (
-                                    <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-                                        <table className="w-full text-sm text-left">
-                                            <thead className="bg-gray-50 border-b">
-                                                <tr>
-                                                    <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
-                                                    <th className="px-4 py-3 font-medium text-gray-500">Keterangan / Item</th>
-                                                    <th className="px-4 py-3 font-medium text-gray-500 text-center">Qty</th>
-                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Harga Satuan</th>
-                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Total</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-100">
-                                                {detailBudgets.length > 0 ? (
-                                                    detailBudgets.map((detail, idx) => (
-                                                        <tr key={idx} className="hover:bg-gray-50/50">
-                                                            <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
-                                                            <td className="px-4 py-3 font-medium text-gray-900">{detail.notes || '-'}</td>
-                                                            <td className="px-4 py-3 text-center">{detail.quantity || 1}</td>
-                                                            <td className="px-4 py-3 text-right">
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.item_price || 0)}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-right font-medium text-gray-900">
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.amount || 0)}
-                                                            </td>
-                                                        </tr>
-                                                    ))
-                                                ) : (
-                                                    <tr>
-                                                        <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground italic">
-                                                            Belum ada rincian anggaran.
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                                {detailBudgets.length > 0 && (
-                                                    <tr className="bg-gray-50/80 font-semibold border-t-2">
-                                                        <td colSpan={4} className="px-4 py-3 text-right text-gray-700">Total Rincian:</td>
-                                                        <td className="px-4 py-3 text-right text-primary">
-                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
-                                                                detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ) : (
-                                    <div className="border rounded-xl p-5 bg-gray-50/50 space-y-4">
-                                        <div className="space-y-3">
-                                            {detailBudgets.map((detail, idx) => (
-                                                <div key={detail.id} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-white p-3 rounded-lg border shadow-sm">
-                                                    <div className="flex-[2] w-full space-y-1.5">
-                                                        <Label className="text-xs text-muted-foreground">Keterangan / Item</Label>
-                                                        <Input
-                                                            type="text"
-                                                            value={detail.notes}
-                                                            onChange={(e) => {
-                                                                const newDetails = [...detailBudgets];
-                                                                newDetails[idx].notes = e.target.value;
-                                                                setDetailBudgets(newDetails);
-                                                            }}
-                                                            placeholder="Nama Item..."
-                                                            className="h-9"
-                                                        />
-                                                    </div>
-                                                    <div className="flex-1 w-full space-y-1.5">
-                                                        <Label className="text-xs text-muted-foreground">Qty</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="1"
-                                                            value={detail.quantity || 1}
-                                                            onChange={(e) => {
-                                                                const newDetails = [...detailBudgets];
-                                                                newDetails[idx].quantity = parseInt(e.target.value) || 0;
-                                                                newDetails[idx].amount = newDetails[idx].quantity * (newDetails[idx].item_price || 0);
-                                                                setDetailBudgets(newDetails);
-                                                            }}
-                                                            placeholder="1"
-                                                            className="h-9"
-                                                        />
-                                                    </div>
-                                                    <div className="flex-1 w-full space-y-1.5">
-                                                        <Label className="text-xs text-muted-foreground">Harga Satuan</Label>
-                                                        <MoneyInput
-                                                            value={detail.item_price || 0}
-                                                            onValueChange={(vals) => {
-                                                                const newDetails = [...detailBudgets];
-                                                                newDetails[idx].item_price = vals.floatValue || 0;
-                                                                newDetails[idx].amount = (newDetails[idx].quantity || 0) * newDetails[idx].item_price;
-                                                                setDetailBudgets(newDetails);
-                                                            }}
-                                                            placeholder="0"
-                                                            prefix="Rp "
-                                                            className="h-9"
-                                                        />
-                                                    </div>
-                                                    <div className="flex-1 w-full space-y-1.5">
-                                                        <Label className="text-xs text-muted-foreground">Total</Label>
-                                                        <MoneyInput
-                                                            value={detail.amount || 0}
-                                                            disabled
-                                                            prefix="Rp "
-                                                            className="h-9 bg-gray-50 cursor-not-allowed text-gray-500"
-                                                        />
-                                                    </div>
-                                                    <div className="pt-5 flex-shrink-0">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-9 w-9 text-red-500 hover:bg-red-50 hover:text-red-600"
-                                                            onClick={() => {
-                                                                const toDelete = detailBudgets[idx];
-                                                                const newDetails = detailBudgets.filter((_, i) => i !== idx);
-                                                                setDetailBudgets(newDetails);
-                                                                if (!toDelete.isNew && toDelete.id) {
-                                                                    setDeleteDetailBudgets([...deleteDetailBudgets, toDelete.id]);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                        {/* Document Uploads Grid */}
+                        <div>
+                            <h4 className="font-semibold text-lg mb-4">Dokumen Kelengkapan </h4>
+                            <div className="grid md:grid-cols-2 gap-6">
 
-                                        <div className="flex items-center justify-between pt-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), quantity: 1, item_price: 0, amount: 0, notes: '', isNew: true }])}
-                                                className="gap-1.5 border-dashed"
-                                            >
-                                                <Plus className="h-3.5 w-3.5" />
-                                                Tambah Item
-                                            </Button>
-
-                                            <div className="flex items-center gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setEditDetailBudget(false);
-                                                        // Revert changes from project props
-                                                        setDetailBudgets(project.budget_details || []);
-                                                        setDeleteDetailBudgets([]);
-                                                    }}
-                                                >
-                                                    Batal
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    onClick={handleSaveDetailBudget}
-                                                    disabled={savingDetailBudget}
-                                                    className="gap-1.5 bg-blue-600 hover:bg-blue-700"
-                                                >
-                                                    {savingDetailBudget ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                                                    Simpan Rincian
+                                {/* Laporan Kegiatan */}
+                                <div className="space-y-3">
+                                    <Label className="font-medium">Laporan Kegiatan <span className="text-red-500">*</span></Label>
+                                    <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
+                                        {project.documents?.some((d: any) => d.type === 'report_activity') ? (
+                                            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
+                                                <FileText className="h-4 w-4 text-green-600" />
+                                                <span className="text-xs font-medium text-green-700 flex-1 truncate">Laporan Kegiatan Terupload</span>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'report_activity').url || project.documents.find((d: any) => d.type === 'report_activity').path, '_blank')}>
+                                                    <Eye className="h-3.5 w-3.5" />
                                                 </Button>
                                             </div>
-                                        </div>
+                                        ) : <p className="text-xs text-gray-500">Upload Laporan Kegiatan (PDF).</p>}
+                                        <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
+                                            <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
+                                                <Upload className="h-5 w-5 text-gray-600" />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.laporan ? closingForm.files.laporan.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                            <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
+                                            <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, laporan: e.target.files?.[0] } })} />
+                                        </label>
                                     </div>
-                                )}
-                            </div>
-
-                            <div className="border-t border-gray-200 my-6"></div>
-
-                            {/* Document Uploads Grid */}
-                            <div>
-                                <h4 className="font-semibold text-lg mb-4">Dokumen Kelengkapan </h4>
-                                <div className="grid md:grid-cols-2 gap-6">
-
-                                    {/* Laporan Kegiatan */}
-                                    <div className="space-y-3">
-                                        <Label className="font-medium">Laporan Kegiatan <span className="text-red-500">*</span></Label>
-                                        <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
-                                            {project.documents?.some((d: any) => d.type === 'report_activity') ? (
-                                                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
-                                                    <FileText className="h-4 w-4 text-green-600" />
-                                                    <span className="text-xs font-medium text-green-700 flex-1 truncate">Laporan Kegiatan Terupload</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'report_activity').url || project.documents.find((d: any) => d.type === 'report_activity').path, '_blank')}>
-                                                        <Eye className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
-                                            ) : <p className="text-xs text-gray-500">Upload Laporan Kegiatan (PDF).</p>}
-                                            <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
-                                                <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
-                                                    <Upload className="h-5 w-5 text-gray-600" />
-                                                </div>
-                                                <p className="text-[10px] text-muted-foreground">{closingForm.files.laporan ? closingForm.files.laporan.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
-                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
-                                                <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, laporan: e.target.files?.[0] } })} />
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* BAST */}
-                                    <div className="space-y-3">
-                                        <Label className="font-medium">Berita Acara Serah Terima (BAST) <span className="text-red-500">*</span></Label>
-                                        <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
-                                            {project.documents?.some((d: any) => d.type === 'bast') ? (
-                                                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
-                                                    <FileText className="h-4 w-4 text-green-600" />
-                                                    <span className="text-xs font-medium text-green-700 flex-1 truncate">BAST Terupload</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'bast').url || project.documents.find((d: any) => d.type === 'bast').path, '_blank')}>
-                                                        <Eye className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
-                                            ) : <p className="text-xs text-gray-500">Upload BAST.</p>}
-                                            <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
-                                                <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
-                                                    <Upload className="h-5 w-5 text-gray-600" />
-                                                </div>
-                                                <p className="text-[10px] text-muted-foreground">{closingForm.files.bast ? closingForm.files.bast.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
-                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
-                                                <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, bast: e.target.files?.[0] } })} />
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* Penagihan */}
-                                    <div className="space-y-3">
-                                        <Label className="font-medium">Dokumen Penagihan <span className="text-red-500">*</span></Label>
-                                        <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
-                                            {project.documents?.some((d: any) => d.type === 'invoice') ? (
-                                                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
-                                                    <FileText className="h-4 w-4 text-green-600" />
-                                                    <span className="text-xs font-medium text-green-700 flex-1 truncate">Invoice Terupload</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'invoice').url || project.documents.find((d: any) => d.type === 'invoice').path, '_blank')}>
-                                                        <Eye className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
-                                            ) : <p className="text-xs text-gray-500">Invoice / Kwitansi / Bukti Transfer.</p>}
-                                            <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
-                                                <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
-                                                    <Upload className="h-5 w-5 text-gray-600" />
-                                                </div>
-                                                <p className="text-[10px] text-muted-foreground">{closingForm.files.penagihan ? closingForm.files.penagihan.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
-                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
-                                                <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, penagihan: e.target.files?.[0] } })} />
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* Lesson Learned */}
-                                    <div className="space-y-3">
-                                        <Label className="font-medium">Lesson Learn <span className="text-red-500">*</span></Label>
-                                        <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
-                                            {project.documents?.some((d: any) => d.type === 'lesson_learn') ? (
-                                                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
-                                                    <FileText className="h-4 w-4 text-green-600" />
-                                                    <span className="text-xs font-medium text-green-700 flex-1 truncate">Lesson Learn Terupload</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'lesson_learn').url || project.documents.find((d: any) => d.type === 'lesson_learn').path, '_blank')}>
-                                                        <Eye className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
-                                            ) : <p className="text-xs text-gray-500">Catatan evaluasi dan pembelajaran project.</p>}
-                                            <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
-                                                <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
-                                                    <Upload className="h-5 w-5 text-gray-600" />
-                                                </div>
-                                                <p className="text-[10px] text-muted-foreground">{closingForm.files.lesson_learn ? closingForm.files.lesson_learn.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
-                                                <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
-                                                <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, lesson_learn: e.target.files?.[0] } })} />
-                                            </label>
-                                        </div>
-                                    </div>
-
                                 </div>
+
+                                {/* BAST */}
+                                <div className="space-y-3">
+                                    <Label className="font-medium">Berita Acara Serah Terima (BAST) <span className="text-red-500">*</span></Label>
+                                    <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
+                                        {project.documents?.some((d: any) => d.type === 'bast') ? (
+                                            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
+                                                <FileText className="h-4 w-4 text-green-600" />
+                                                <span className="text-xs font-medium text-green-700 flex-1 truncate">BAST Terupload</span>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'bast').url || project.documents.find((d: any) => d.type === 'bast').path, '_blank')}>
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        ) : <p className="text-xs text-gray-500">Upload BAST.</p>}
+                                        <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
+                                            <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
+                                                <Upload className="h-5 w-5 text-gray-600" />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.bast ? closingForm.files.bast.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                            <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
+                                            <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, bast: e.target.files?.[0] } })} />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Penagihan */}
+                                <div className="space-y-3">
+                                    <Label className="font-medium">Dokumen Penagihan <span className="text-red-500">*</span></Label>
+                                    <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
+                                        {project.documents?.some((d: any) => d.type === 'invoice') ? (
+                                            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
+                                                <FileText className="h-4 w-4 text-green-600" />
+                                                <span className="text-xs font-medium text-green-700 flex-1 truncate">Invoice Terupload</span>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'invoice').url || project.documents.find((d: any) => d.type === 'invoice').path, '_blank')}>
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        ) : <p className="text-xs text-gray-500">Invoice / Kwitansi / Bukti Transfer.</p>}
+                                        <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
+                                            <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
+                                                <Upload className="h-5 w-5 text-gray-600" />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.penagihan ? closingForm.files.penagihan.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                            <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
+                                            <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, penagihan: e.target.files?.[0] } })} />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Lesson Learned */}
+                                <div className="space-y-3">
+                                    <Label className="font-medium">Lesson Learn <span className="text-red-500">*</span></Label>
+                                    <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
+                                        {project.documents?.some((d: any) => d.type === 'lesson_learn') ? (
+                                            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
+                                                <FileText className="h-4 w-4 text-green-600" />
+                                                <span className="text-xs font-medium text-green-700 flex-1 truncate">Lesson Learn Terupload</span>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'lesson_learn').url || project.documents.find((d: any) => d.type === 'lesson_learn').path, '_blank')}>
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        ) : <p className="text-xs text-gray-500">Catatan evaluasi dan pembelajaran project.</p>}
+                                        <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
+                                            <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
+                                                <Upload className="h-5 w-5 text-gray-600" />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.lesson_learn ? closingForm.files.lesson_learn.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                            <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
+                                            <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, lesson_learn: e.target.files?.[0] } })} />
+                                        </label>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
 
@@ -1284,6 +1283,6 @@ export default function ProjectTabs({
                     </CardContent>
                 </Card>
             </TabsContent>
-        </Tabs>
+        </Tabs >
     )
 }

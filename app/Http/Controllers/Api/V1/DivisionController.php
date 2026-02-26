@@ -9,88 +9,97 @@ use App\Http\Requests\Divisions\StoreDivisionRequest;
 use App\Http\Requests\Divisions\UpdateDivisionRequest;
 use App\Http\Resources\V1\Division\DivisionResource;
 use App\Models\Division;
+use App\Models\DivisionCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 final class DivisionController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request): JsonResponse
     {
-        $query = Division::query();
+        $query = DivisionCode::query()->with('divisions');
 
         if ($request->filled('search')) {
             $search = $request->get('search');
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%");
+                $q->where('code', 'like', "%{$search}%")
+                  ->orWhereHas('divisions', function (\Illuminate\Database\Eloquent\Builder $nq) use ($search) {
+                      $nq->where('name', 'like', "%{$search}%");
+                  });
             });
         }
 
-        $divisions = $query->latest()->paginate($request->integer('per_page', 10));
+        $divisionCodes = $query->latest()->paginate($request->integer('per_page', 10));
 
         return JsonResponseFormatter::success(
-            DivisionResource::collection($divisions)->response()->getData(true),
+            DivisionResource::collection($divisionCodes)->response()->getData(true),
             'Divisions retrieved successfully'
         );
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(StoreDivisionRequest $request): JsonResponse
     {
-        $division = Division::create($request->validated());
+        $validated = $request->validated();
+        
+        $divisionCode = DivisionCode::create(['code' => $validated['code']]);
+        
+        foreach ($validated['names'] as $nameData) {
+            $divisionCode->divisions()->create($nameData);
+        }
 
         return JsonResponseFormatter::success(
-            new DivisionResource($division),
+            new DivisionResource($divisionCode->load('divisions')),
             'Division created successfully',
             201
         );
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Division $division): JsonResponse
+    public function show(string $id): JsonResponse
     {
+        $divisionCode = DivisionCode::with('divisions')->findOrFail($id);
+        
         return JsonResponseFormatter::success(
-            new DivisionResource($division),
+            new DivisionResource($divisionCode),
             'Division retrieved successfully'
         );
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateDivisionRequest $request, Division $division): JsonResponse
+    public function update(UpdateDivisionRequest $request, string $id): JsonResponse
     {
-        $division->update($request->validated());
+        $divisionCode = DivisionCode::findOrFail($id);
+        $validated = $request->validated();
+        
+        $divisionCode->update(['code' => $validated['code']]);
+        
+        // Replace all names with the newly provided ones
+        $divisionCode->divisions()->delete();
+        foreach ($validated['names'] as $nameData) {
+            $divisionCode->divisions()->create($nameData);
+        }
 
         return JsonResponseFormatter::success(
-            new DivisionResource($division),
+            new DivisionResource($divisionCode->load('divisions')),
             'Division updated successfully'
         );
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Division $division): JsonResponse
+    public function destroy(string $id): JsonResponse
     {
-        // Check if division has projects
-        if ($division->projects()->exists()) {
-            return JsonResponseFormatter::error(
-                null,
-                'Cannot delete division because it has associated projects.',
-                400
-            );
+        $divisionCode = DivisionCode::with('divisions')->findOrFail($id);
+
+        // Check if any of its divisions have projects
+        foreach ($divisionCode->divisions as $division) {
+            if ($division->projects()->exists()) {
+                return JsonResponseFormatter::error(
+                    null,
+                    'Cannot delete division code because it has associated projects.',
+                    400
+                );
+            }
         }
 
-        $division->delete();
+        $divisionCode->delete();
 
         return JsonResponseFormatter::success(
             null,

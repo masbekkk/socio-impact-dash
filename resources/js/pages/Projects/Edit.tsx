@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import FileUploadDropzone from '@/components/FileUploadDropzone'
 import { Button } from '@/components/ui/button'
@@ -47,7 +47,8 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [sowFile, setSowFile] = useState<File | null>(null);
     const [rabFile, setRabFile] = useState<File | null>(null);
 
-    const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string }[]>([])
+    const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string, isNew?: boolean }[]>([])
+    const [deleteLocations, setDeleteLocations] = useState<string[]>([])
     const [paymentTerms, setPaymentTerms] = useState<{ id: string, nominal: number, notes: string, date: string, isNew?: boolean }[]>([])
     const [deletePaymentTerms, setDeletePaymentTerms] = useState<string[]>([])
 
@@ -89,8 +90,8 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                     head_id: data.head_id ? data.head_id.toString() : '',
                     pic_id: data.pic_id ? data.pic_id.toString() : '',
                     project_type: data.project_type,
-                    start_date: data.start_date || '',
-                    end_date: data.end_date || '',
+                    start_date: data.start_date ? data.start_date.substring(0, 10) : '',
+                    end_date: data.end_date ? data.end_date.substring(0, 10) : '',
                     status: data.status,
                 });
 
@@ -124,7 +125,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                         id: term.id.toString(),
                         nominal: parseFloat(term.nominal),
                         notes: term.notes || '',
-                        date: term.due_date || ''
+                        date: term.due_date ? term.due_date.substring(0, 10) : ''
                     })));
                 } else {
                     setPaymentTerms([{ id: crypto.randomUUID(), nominal: 0, notes: '', date: '', isNew: true }]);
@@ -155,12 +156,15 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             Math.abs(loc.lat - lat) < 0.0001 && Math.abs(loc.lng - lng) < 0.0001
         );
         if (!isDuplicate) {
-            setLocations([...locations, { id: crypto.randomUUID(), name: `Lokasi ${locations.length + 1}`, lat, lng, address: addr }])
+            setLocations([...locations, { id: crypto.randomUUID(), name: `Lokasi ${locations.length + 1}`, lat, lng, address: addr, isNew: true }])
         }
     }
 
-    const removeLocation = (id: string) => {
+    const removeLocation = (id: string, isNew?: boolean) => {
         setLocations(locations.filter(l => l.id !== id))
+        if (!isNew) {
+            setDeleteLocations([...deleteLocations, id]);
+        }
     }
 
     const handleInputChange = (field: string, value: any) => {
@@ -246,9 +250,16 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         }
 
         locations.forEach((loc, index) => {
+            if (!loc.isNew) {
+                submitData.append(`locations[${index}][id]`, loc.id);
+            }
             submitData.append(`locations[${index}][latitude]`, loc.lat.toString());
             submitData.append(`locations[${index}][longitude]`, loc.lng.toString());
             submitData.append(`locations[${index}][detail_address]`, loc.address);
+        });
+
+        deleteLocations.forEach((id, index) => {
+            submitData.append(`delete_locations[${index}]`, id);
         });
 
         supportingDocs.forEach((doc: any) => {
@@ -408,14 +419,19 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     <div className="space-y-2">
                                         <Label>Divisi & Anak Perusahaan <span className="text-red-500">*</span></Label>
                                         <Select value={formData.division_id} onValueChange={(v) => handleInputChange('division_id', v)}>
-                                            <SelectTrigger className={errors.division_id ? 'border-red-500' : ''}>
+                                            <SelectTrigger className={errors.division_id ? 'border-red-500 h-auto' : 'h-auto'}>
                                                 <SelectValue placeholder="Pilih Divisi & Anak Perusahaan" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {divisions.map((div) => (
-                                                    <SelectItem key={div.id} value={div.id.toString()}>
-                                                        {div.code} - {div.name}
-                                                    </SelectItem>
+                                                {divisions.map((divCode) => (
+                                                    <SelectGroup key={divCode.id}>
+                                                        <SelectLabel className="text-muted-foreground">{divCode.code}</SelectLabel>
+                                                        {divCode.divisions?.map((n: any) => (
+                                                            <SelectItem key={n.id} value={n.id.toString()} className="pl-6">
+                                                                {n.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectGroup>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -666,7 +682,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                     <div key={loc.id} className="p-3 border rounded-lg bg-white shadow-sm group hover:border-primary transition-colors">
                                                         <div className="flex justify-between items-start mb-1">
                                                             <span className="font-semibold text-sm">Titik {idx + 1}</span>
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 -mt-1 -mr-1" onClick={() => removeLocation(loc.id)}>
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 -mt-1 -mr-1" onClick={() => removeLocation(loc.id, loc.isNew)}>
                                                                 <X className="h-3 w-3" />
                                                             </Button>
                                                         </div>

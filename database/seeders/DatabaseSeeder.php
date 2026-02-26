@@ -15,6 +15,8 @@ final class DatabaseSeeder extends Seeder
             UserSeeder::class,
             DivisionSeeder::class,
             LeaveSeeder::class,
+            LetterCodeSeeder::class,
+            LetterDivisionSeeder::class,
         ]);
     }
 }

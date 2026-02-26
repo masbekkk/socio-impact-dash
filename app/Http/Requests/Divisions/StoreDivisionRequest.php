@@ -19,14 +19,16 @@ final class StoreDivisionRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array{code: array<int, string>, names: array<int, string>, 'names.*.name': array<int, string>, 'names.*.description': array<int, string|null>}
      */
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:255', 'unique:divisions,code'],
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
+            'code' => ['required', 'string', 'max:255', 'unique:division_codes,code'],
+            'names' => ['required', 'array', 'min:1'],
+            'names.*.name' => ['required', 'string', 'max:255'],
+            'names.*.description' => ['nullable', 'string'],
         ];
     }
 }
+

@@ -23,14 +23,14 @@ export default function Edit({ letterCodeId }: Props) {
     });
 
     useEffect(() => {
-        const fetchLetter Code = async () => {
+        const fetchLetterCode = async () => {
             try {
                 const res = await axios.get(`/api/v1/letter-codes/${letterCodeId}`);
-                const kode suraton = res.data.data;
+                const kodeSuraton = res.data.data;
                 setData({
-                    code: kode suraton.code,
-                    name: kode suraton.name,
-                    description: kode suraton.description || '',
+                    code: kodeSuraton.code,
+                    name: kodeSuraton.name,
+                    description: kodeSuraton.description || '',
                 });
             } catch (error) {
                 toast.error('Gagal mengambil data kode surat.');
@@ -40,7 +40,7 @@ export default function Edit({ letterCodeId }: Props) {
             }
         };
 
-        fetchLetter Code();
+        fetchLetterCode();
     }, [letterCodeId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
