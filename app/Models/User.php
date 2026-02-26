@@ -29,7 +29,6 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read string|null $two_factor_secret
  * @property-read string|null $two_factor_recovery_codes
  * @property-read CarbonInterface|null $two_factor_confirmed_at
- * @property-read UserRole $role
  * @property-read EmployeeType|null $employee_type
  * @property-read CarbonInterface|null $contract_start
  * @property-read CarbonInterface|null $contract_end
@@ -52,7 +51,6 @@ final class User extends Authenticatable implements MustVerifyEmail
         'password',
         'nip',
         'division_id',
-        'role',
         'employee_type',
         'contract_start',
         'contract_end',
