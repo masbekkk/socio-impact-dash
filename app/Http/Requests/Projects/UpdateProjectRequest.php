@@ -42,18 +42,32 @@ final class UpdateProjectRequest extends FormRequest
             'start_date' => ['sometimes', 'required', 'date'],
             'end_date' => ['sometimes', 'required', 'date', 'after_or_equal:start_date'],
             'locations' => ['nullable', 'array'],
+            'locations.*.id' => ['nullable', 'integer'],
             'locations.*.latitude' => ['required', 'numeric'],
             'locations.*.longitude' => ['required', 'numeric'],
             'locations.*.detail_address' => ['required', 'string'],
             'termin_payments' => ['nullable', 'array'],
+            'termin_payments.*.id' => ['nullable', 'integer'],
             'termin_payments.*.nominal' => ['required', 'numeric', 'min:0'],
             'termin_payments.*.due_date' => ['required', 'date'],
             'termin_payments.*.notes' => ['nullable', 'string'],
+            'documents.*.id' => ['nullable', 'integer'],
             'documents.*.type' => ['required', 'string'],
-            'documents.*.file' => ['required', 'file', 'max:10240'],
+            'documents.*.file' => ['sometimes', 'file', 'max:10240'],
             'detail_budgets' => ['nullable', 'array'],
+            'detail_budgets.*.id' => ['nullable', 'integer'],
+            'detail_budgets.*.quantity' => ['required_with:detail_budgets', 'numeric', 'min:1'],
+            'detail_budgets.*.item_price' => ['required_with:detail_budgets', 'numeric', 'min:0'],
             'detail_budgets.*.amount' => ['required', 'numeric', 'min:0'],
             'detail_budgets.*.notes' => ['nullable', 'string'],
+            'delete_locations' => ['nullable', 'array'],
+            'delete_locations.*' => ['integer'],
+            'delete_termin_payments' => ['nullable', 'array'],
+            'delete_termin_payments.*' => ['integer'],
+            'delete_documents' => ['nullable', 'array'],
+            'delete_documents.*' => ['integer'],
+            'delete_detail_budgets' => ['nullable', 'array'],
+            'delete_detail_budgets.*' => ['integer'],
         ];
     }
 
@@ -102,7 +116,12 @@ final class UpdateProjectRequest extends FormRequest
                 // But typically UpdateProjectRequest is for general updates. We'll use actual_budget if > 0, else budget_total.
                 $limit = $project->actual_budget > 0 ? (float) $project->actual_budget : $budgetTotal;
 
-                $detailSum = array_sum(array_column($detailBudgets, 'amount'));
+                $detailSum = array_reduce($detailBudgets, function ($carry, $item) {
+                    $amount = isset($item['amount']) ? (float) $item['amount'] : 
+                              ((isset($item['quantity']) && isset($item['item_price'])) ? (int)$item['quantity'] * (float)$item['item_price'] : 0);
+                    return $carry + $amount;
+                }, 0);
+
                 if ($detailSum > ($limit + 0.01)) {
                     $validator->errors()->add('detail_budgets', 'Total rincian anggaran tidak boleh melebihi batas anggaran ('.number_format($limit, 0, ',', '.').').');
                 }

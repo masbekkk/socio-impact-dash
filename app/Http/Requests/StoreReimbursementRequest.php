@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Enums\ReimbursementType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 final class StoreReimbursementRequest extends FormRequest
 {

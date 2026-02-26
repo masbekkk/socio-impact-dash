@@ -65,11 +65,11 @@ function getMenusByRole(): Record<string, NavItem[]> {
             icon: LayoutGrid,
         },
 
-        // {
-        //     title: 'Divisi',
-        //     href: '/admin/divisions',
-        //     icon: FileText,
-        // },
+        {
+            title: 'Divisi',
+            href: '/admin/divisions',
+            icon: FileText,
+        },
         {
             title: 'Proyek',
             href: '/projects',

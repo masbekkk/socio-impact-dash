@@ -200,6 +200,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
       setToast({ show: true, message: 'Laporan berhasil ditambahkan.', type: 'success' });
       setReportForm({ date: new Date().toISOString().split('T')[0], notes: '', files: [{ id: Date.now(), title: '' }] });
+      setIsSubmitReportAlertOpen(false);
       fetchProject(false);
     } catch (error) {
       console.error("Error submitting report:", error);

@@ -7,6 +7,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreLeaveRequest;
 use App\Http\Requests\UpdateLeaveRequest;
 use App\Models\Leave;
+use App\Models\Project;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 final class LeaveController
@@ -22,17 +26,17 @@ final class LeaveController
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
-        return Inertia::render('Leave/CreateLeave');
+        return Inertia::render('Leave/CreateLeave', $this->getFormProps($request));
     }
 
     /**
      * Show the form for creating a new travel request.
      */
-    public function createTravel()
+    public function createTravel(Request $request)
     {
-        return Inertia::render('Leave/CreateTravel');
+        return Inertia::render('Leave/CreateTravel', $this->getFormProps($request));
     }
 
     public function approvals()
@@ -53,28 +57,17 @@ final class LeaveController
     /**
      * Display the specified resource.
      */
-    public function show(string $slug)
+    public function show(string $code)
     {
-        // Mock data for testing - replace with actual database query later
-        $mockData = json_decode(file_get_contents(resource_path('js/Pages/Leave/leave-detail.json')), true);
-
-        // Find the leave by slug
-        $leave = collect($mockData)->firstWhere('slug', $slug);
-
-        // If not found by slug, try to match by generated slug from user name
-        if (!$leave) {
-            $leave = collect($mockData)->first(function ($item) use ($slug) {
-                $generatedSlug = strtolower(str_replace(' ', '-', $item['user']['name']));
-                return $generatedSlug === $slug;
-            });
-        }
-
-        if (!$leave) {
-            abort(404, 'Leave request not found');
-        }
+        $user = Auth::user();
 
         return Inertia::render('Leave/Show', [
-            'leave' => $leave,
+            'leaveCode' => $code,
+            'authUser'  => [
+                'id'          => $user->id,
+                'can_approve' => $user->can('approve_leaves'),
+                'can_reject'  => $user->can('reject_leaves'),
+            ],
         ]);
     }
 
@@ -102,35 +95,28 @@ final class LeaveController
         //
     }
 
-    /**
-     * Approve a leave request.
-     */
-    public function approve(string $slug)
+    private function getFormProps(Request $request): array
     {
-        // Mock implementation - replace with actual database update later
-        // In real implementation:
-        // $leave = Leave::where('slug', $slug)->firstOrFail();
-        // $leave->status = 'approved';
-        // $leave->approver_id = auth()->id();
-        // $leave->approved_at = now();
-        // $leave->save();
+        $user = $request->user();
+        $user->load('division');
 
-        return redirect()->route('leaves.show', $slug)->with('success', 'Pengajuan berhasil disetujui.');
-    }
+        $projects = Project::where('status', 'active')
+            ->get(['id', 'code', 'name']);
 
-    /**
-     * Reject a leave request.
-     */
-    public function reject(string $slug)
-    {
-        // Mock implementation - replace with actual database update later
-        // In real implementation:
-        // $leave = Leave::where('slug', $slug)->firstOrFail();
-        // $leave->status = 'rejected';
-        // $leave->approver_id = auth()->id();
-        // $leave->rejection_reason = request('reason');
-        // $leave->save();
+        $users = User::where('id', '!=', $user->id)
+            ->get(['id', 'name', 'email']);
 
-        return redirect()->route('leaves.show', $slug)->with('success', 'Pengajuan berhasil ditolak.');
+        return [
+            'authUser' => [
+                'name'          => $user->name,
+                'nip'           => $user->nip ?? '-',
+                'email'         => $user->email,
+                'division_name' => $user->division?->name ?? '-',
+                'position'      => $user->getRoleNames()->first() ?? '-',
+                'join_date'     => $user->created_at?->format('Y-m-d') ?? '-',
+            ],
+            'projects' => $projects,
+            'users'    => $users,
+        ];
     }
 }

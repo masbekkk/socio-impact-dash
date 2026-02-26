@@ -58,7 +58,13 @@ final class StoreProjectRequest extends FormRequest
             $detailBudgets = $this->input('detail_budgets', []);
 
             if (is_array($detailBudgets) && count($detailBudgets) > 0) {
-                $detailSum = array_sum(array_column($detailBudgets, 'amount'));
+                // Ensure array_sum works on amount even if it is a string or not set
+                $detailSum = array_reduce($detailBudgets, function ($carry, $item) {
+                    $amount = isset($item['amount']) ? (float) $item['amount'] : 
+                              ((isset($item['quantity']) && isset($item['item_price'])) ? (int)$item['quantity'] * (float)$item['item_price'] : 0);
+                    return $carry + $amount;
+                }, 0);
+
                 if ($detailSum > ($budgetTotal + 0.01)) {
                     $validator->errors()->add('detail_budgets', 'Total rincian anggaran tidak boleh melebihi total anggaran proyek.');
                 }

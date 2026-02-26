@@ -48,7 +48,19 @@ interface LetterRequest {
     letter_date: string;
     recipient: string;
     subject: string;
-    pic_name: string;
+    pic: {
+        id: number;
+        name: string;
+    } | null;
+    letterCode: {
+        id: number;
+        code: string;
+    } | null;
+    letterDivision: {
+        id: number;
+        code: string;
+    } | null;
+    keterangan: string | null;
     letter_number: string | null;
     status: 'pending' | 'assigned' | 'rejected';
 }
@@ -204,9 +216,10 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                         <TableHead>Tanggal</TableHead>
                                         <TableHead>Proyek</TableHead>
                                         <TableHead>Perihal & Tujuan</TableHead>
-                                        <TableHead>PIC</TableHead>
+                                        <TableHead>PIC / Ket</TableHead>
+                                        <TableHead>Kode / Divisi</TableHead>
                                         <TableHead>Nomor Surat</TableHead>
-                                        <TableHead>Status</TableHead>
+                                        {/* <TableHead>Status</TableHead> */}
                                         <TableHead className="text-right">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -244,7 +257,20 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                                         <span className="text-xs text-muted-foreground">Ke: {req.recipient}</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="whitespace-nowrap">{req.pic_name}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col">
+                                                        <span className="whitespace-nowrap">{req.pic?.name || '-'}</span>
+                                                        {req.keterangan && (
+                                                            <span className="text-xs text-muted-foreground italic truncate max-w-[150px]">{req.keterangan}</span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col gap-1">
+                                                        {req.letterCode && <Badge variant="outline" className="w-fit text-xs px-1.5 py-0 bg-slate-50">{req.letterCode.code}</Badge>}
+                                                        {req.letterDivision && <Badge variant="outline" className="w-fit text-xs px-1.5 py-0 bg-slate-50">{req.letterDivision.code}</Badge>}
+                                                    </div>
+                                                </TableCell>
                                                 <TableCell>
                                                     {req.letter_number ? (
                                                         <div className="flex items-center gap-1.5 font-mono text-sm bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 w-fit whitespace-nowrap">
@@ -255,7 +281,7 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                                         <span className="text-muted-foreground text-xs italic">Belum diberikan</span>
                                                     )}
                                                 </TableCell>
-                                                <TableCell>
+                                                {/* <TableCell>
                                                     <Badge
                                                         variant={
                                                             req.status === 'assigned' ? 'default' :
@@ -267,18 +293,34 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                                             req.status === 'rejected' ? 'Ditolak' :
                                                                 'Menunggu'}
                                                     </Badge>
-                                                </TableCell>
+                                                </TableCell> */}
                                                 <TableCell className="text-right">
-                                                    {canAssign && req.status === 'pending' && (
+                                                    {/* {canAssign && (
                                                         <div className="flex justify-end gap-2">
-                                                            <Button variant="outline" size="sm" onClick={() => handleAssign(req)}>
-                                                                Beri Nomor
-                                                            </Button>
-                                                            <Button variant="ghost" size="sm" className="text-destructive h-8 w-8 p-0" onClick={() => handleReject(req)}>
-                                                                <XCircle className="h-4 w-4" />
-                                                            </Button>
+                                                            {req.status !== 'rejected' && (
+                                                                <Button variant="outline" size="sm" asChild>
+                                                                    <Link href={`/letter-requests/${req.id}/edit`}>
+                                                                        Edit
+                                                                    </Link>
+                                                                </Button>
+                                                            )}
+                                                            {req.status === 'pending' && (
+                                                                <>
+                                                                    <Button variant="default" className="bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)]/90" size="sm" onClick={() => handleAssign(req)}>
+                                                                        Beri Nomor
+                                                                    </Button>
+                                                                    <Button variant="ghost" size="sm" className="text-destructive h-8 w-8 p-0" onClick={() => handleReject(req)}>
+                                                                        <XCircle className="h-4 w-4" />
+                                                                    </Button>
+                                                                </>
+                                                            )}
                                                         </div>
-                                                    )}
+                                                    )} */}
+                                                    <Button variant="outline" size="sm" asChild>
+                                                        <Link href={`/letter-requests/${req.id}/edit`}>
+                                                            Edit
+                                                        </Link>
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))
