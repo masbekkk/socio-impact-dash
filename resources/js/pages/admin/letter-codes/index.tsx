@@ -71,17 +71,17 @@ export default function Index() {
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'LetterCodes', href: '/admin/letter-codes' },
+        { title: 'Letter Codes', href: '/admin/letter-codes' },
     ];
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="LetterCode Management" />
+            <Head title="Letter Code Management" />
 
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">LetterCodes</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Letter Codes</h1>
                         <p className="text-muted-foreground">
                             Manage your company letter-codes and departments.
                         </p>
@@ -89,7 +89,7 @@ export default function Index() {
                     <Button asChild className="bg-[#1a5f4a] hover:bg-[#154d3c]">
                         <Link href="/admin/letter-codes/create">
                             <Plus className="mr-2 h-4 w-4" />
-                            Add LetterCode
+                            Add Letter Code
                         </Link>
                     </Button>
                 </div>
@@ -134,19 +134,19 @@ export default function Index() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    letterCodes.map((letterCode) => (
-                                        <TableRow key={letterCode.id} className="hover:bg-muted/5">
+                                    letterCodes.map((kodeSurat) => (
+                                        <TableRow key={kodeSurat.id} className="hover:bg-muted/5">
                                             <TableCell className="font-medium uppercase">
-                                                {letterCode.code}
+                                                {kodeSurat.code}
                                             </TableCell>
                                             <TableCell>
-                                                {letterCode.name}
+                                                {kodeSurat.name}
                                             </TableCell>
                                             <TableCell className="max-w-xs truncate text-muted-foreground">
-                                                {letterCode.description || '-'}
+                                                {kodeSurat.description || '-'}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm">
-                                                {new Date(letterCode.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                {new Date(kodeSurat.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
@@ -158,11 +158,11 @@ export default function Index() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem asChild>
-                                                            <Link href={`/admin/letter-codes/${letterCode.id}/edit`}>Edit</Link>
+                                                            <Link href={`/admin/letter-codes/${kodeSurat.id}/edit`}>Edit</Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             className="text-destructive focus:text-destructive cursor-pointer"
-                                                            onClick={() => handleDelete(letterCode.id)}
+                                                            onClick={() => handleDelete(kodeSurat.id)}
                                                         >
                                                             Delete
                                                         </DropdownMenuItem>

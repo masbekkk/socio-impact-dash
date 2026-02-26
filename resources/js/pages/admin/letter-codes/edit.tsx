@@ -26,11 +26,11 @@ export default function Edit({ letterCodeId }: Props) {
         const fetchLetterCode = async () => {
             try {
                 const res = await axios.get(`/api/v1/letter-codes/${letterCodeId}`);
-                const letterCode = res.data.data;
+                const kodeSuraton = res.data.data;
                 setData({
-                    code: letterCode.code,
-                    name: letterCode.name,
-                    description: letterCode.description || '',
+                    code: kodeSuraton.code,
+                    name: kodeSuraton.name,
+                    description: kodeSuraton.description || '',
                 });
             } catch (error) {
                 toast.error('Gagal mengambil data kode surat.');
@@ -64,7 +64,7 @@ export default function Edit({ letterCodeId }: Props) {
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'LetterCodes', href: '/admin/letter-codes' },
+        { title: 'Letter Codes', href: '/admin/letter-codes' },
         { title: 'Edit', href: `/admin/letter-codes/${letterCodeId}/edit` },
     ];
 
@@ -80,7 +80,7 @@ export default function Edit({ letterCodeId }: Props) {
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="Edit LetterCode" />
+            <Head title="Edit Letter Code" />
 
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex items-center gap-4">
@@ -90,9 +90,9 @@ export default function Edit({ letterCodeId }: Props) {
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Edit LetterCode</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Edit Letter Code</h1>
                         <p className="text-muted-foreground">
-                            Update letter code details.
+                            Update kode suraton details.
                         </p>
                     </div>
                 </div>
@@ -100,7 +100,7 @@ export default function Edit({ letterCodeId }: Props) {
                 <form onSubmit={handleSubmit}>
                     <Card>
                         <CardHeader>
-                            <CardTitle>LetterCode Details</CardTitle>
+                            <CardTitle>Letter Code Details</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -113,7 +113,7 @@ export default function Edit({ letterCodeId }: Props) {
                                         onChange={(e) => setData('code', e.target.value)}
                                         required
                                     />
-                                    <p className="text-xs text-muted-foreground">Unique identifier for the letter code.</p>
+                                    <p className="text-xs text-muted-foreground">Unique identifier for the kode suraton.</p>
                                     {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
                                 </div>
 
@@ -134,7 +134,7 @@ export default function Edit({ letterCodeId }: Props) {
                                 <Label htmlFor="description">Description (Optional)</Label>
                                 <Textarea
                                     id="description"
-                                    placeholder="Brief description of the letter code's responsibilities"
+                                    placeholder="Brief description of the kode suraton's responsibilities"
                                     value={data.description}
                                     onChange={(e) => setData('description', e.target.value)}
                                     className="min-h-[100px]"
@@ -148,7 +148,7 @@ export default function Edit({ letterCodeId }: Props) {
                             </Button>
                             <Button className="bg-[#1a5f4a] hover:bg-[#154d3c]" disabled={processing}>
                                 {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Update LetterCode
+                                Update Letter Code
                             </Button>
                         </CardFooter>
                     </Card>

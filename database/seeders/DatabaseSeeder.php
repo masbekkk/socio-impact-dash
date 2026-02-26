@@ -11,10 +11,10 @@ final class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            // RoleAndPermissionSeeder::class,
-            // UserSeeder::class,
-            // DivisionSeeder::class,
-            // LeaveSeeder::class,
+            RoleAndPermissionSeeder::class,
+            UserSeeder::class,
+            DivisionSeeder::class,
+            LeaveSeeder::class,
             LetterCodeSeeder::class,
             LetterDivisionSeeder::class,
         ]);

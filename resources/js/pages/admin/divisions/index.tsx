@@ -22,11 +22,16 @@ import { MoreHorizontal, Plus, Search } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
+interface DivisionName {
+    id: number;
+    name: string;
+    description: string | null;
+}
+
 interface Division {
     id: number;
     code: string;
-    name: string;
-    description: string | null;
+    names: DivisionName[];
     created_at: string;
 }
 
@@ -97,7 +102,7 @@ export default function Index() {
                 <Card>
                     <CardHeader className="p-4 border-b">
                         <div className="flex items-center justify-between gap-4">
-                            <div className="relative w-full max-w-sm">
+                            <div className="relative w-full max-w-sm flex items-center">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     type="search"
@@ -114,8 +119,7 @@ export default function Index() {
                             <TableHeader>
                                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                                     <TableHead className="w-[150px]">Code</TableHead>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Description</TableHead>
+                                    <TableHead>Names</TableHead>
                                     <TableHead>Created At</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
@@ -123,32 +127,40 @@ export default function Index() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                                             Loading divisions...
                                         </TableCell>
                                     </TableRow>
                                 ) : divisions.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                                             No divisions found.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     divisions.map((division) => (
-                                        <TableRow key={division.id} className="hover:bg-muted/5">
-                                            <TableCell className="font-medium uppercase">
+                                        <TableRow key={division.id} className="hover:bg-muted/50">
+                                            <TableCell className="font-medium uppercase align-top pt-4">
                                                 {division.code}
                                             </TableCell>
-                                            <TableCell>
-                                                {division.name}
+                                            <TableCell className="py-4">
+                                                <ul className="list-disc list-inside space-y-1">
+                                                    {division.names && division.names.map((n) => (
+                                                        <li key={n.id}>
+                                                            <span className="font-medium">{n.name}</span>
+                                                            {n.description && (
+                                                                <span className="text-muted-foreground block pl-5 text-sm">
+                                                                    {n.description}
+                                                                </span>
+                                                            )}
+                                                        </li>
+                                                    ))}
+                                                </ul>
                                             </TableCell>
-                                            <TableCell className="max-w-xs truncate text-muted-foreground">
-                                                {division.description || '-'}
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-sm">
+                                            <TableCell className="text-muted-foreground text-sm align-top pt-4">
                                                 {new Date(division.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right align-top pt-4">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
