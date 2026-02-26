@@ -237,7 +237,50 @@ export default function Dashboard({
 
         {/* Charts Area - Rearranged to Full Width */}
         <div className="space-y-8">
-
+          {/* Leaderboard - Full Width */}
+          <div className="grid grid-cols-1 gap-8">
+            <Card className="border shadow-sm p-0 h-[400px] flex flex-col rounded-3xl overflow-hidden bg-white">
+              <CardHeader className="p-6 pb-2 shrink-0 border-b border-gray-50">
+                <CardTitle className="text-lg font-bold text-gray-800">Top Budget Contributors</CardTitle>
+                <CardDescription>Pengguna dengan akuisisi budget tertinggi</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 flex-1 h-full min-h-0 bg-white">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 40, left: 10, bottom: 20 }} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                    <XAxis type="number" tickFormatter={(value) => `Rp ${value / 1000000}jt`} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={100} tick={{ fontSize: 12, fontWeight: 500 }} />
+                    <RechartsTooltip formatter={(value: any) => formatIDR(Number(value || 0))} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+                    <Bar dataKey="total" fill="#1a5f4a" radius={[0, 4, 4, 0]} barSize={24} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+          {/* Map - Full Width */}
+          <div className="relative rounded-3xl overflow-hidden shadow-sm border border-gray-100 h-[450px] z-0">
+            <div className="absolute inset-0 z-0">
+              <MapContainer center={[-2.5, 118.0]} zoom={5} style={{ height: '100%', width: '100%', background: '#e5e7eb' }} zoomControl={true} scrollWheelZoom={true}>
+                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png" attribution='&copy; OpenStreetMap' />
+                {locations?.map((loc) => (
+                  <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
+                    <Popup className="custom-popup" closeButton={false}>
+                      <div className="px-2 py-1 text-center">
+                        <span className="font-bold text-gray-800 block text-sm">{loc.project?.name || 'Project'}</span>
+                        <span className="text-xs text-muted-foreground mt-0.5">{loc.detail_address}</span>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+            <div className="absolute top-0 left-0 right-0 p-6 z-[400] flex justify-center items-start pointer-events-none">
+              <h3 className="text-sm font-medium text-gray-800 tracking-tight flex items-center gap-2 drop-shadow-sm bg-white/80 backdrop-blur-[2px] px-3 py-1 rounded-full border border-gray-200">
+                <span className="w-2 h-2 rounded-full bg-[var(--sidebar)] animate-pulse"></span>
+                Persebaran Wilayah Proyek Aktif
+              </h3>
+            </div>
+          </div>
           {/* Division Chart - Full Width */}
           <div className="grid grid-cols-1 gap-8">
             <Card className="border shadow-sm p-0 h-[400px] flex flex-col rounded-3xl bg-white">
@@ -275,51 +318,6 @@ export default function Dashboard({
             </Card>
           </div>
 
-          {/* Map - Full Width */}
-          <div className="relative rounded-3xl overflow-hidden shadow-sm border border-gray-100 h-[450px] z-0">
-            <div className="absolute inset-0 z-0">
-              <MapContainer center={[-2.5, 118.0]} zoom={5} style={{ height: '100%', width: '100%', background: '#e5e7eb' }} zoomControl={true} scrollWheelZoom={true}>
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png" attribution='&copy; OpenStreetMap' />
-                {locations?.map((loc) => (
-                  <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
-                    <Popup className="custom-popup" closeButton={false}>
-                      <div className="px-2 py-1 text-center">
-                        <span className="font-bold text-gray-800 block text-sm">{loc.project?.name || 'Project'}</span>
-                        <span className="text-xs text-muted-foreground mt-0.5">{loc.detail_address}</span>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            </div>
-            <div className="absolute top-0 left-0 right-0 p-6 z-[400] flex justify-center items-start pointer-events-none">
-              <h3 className="text-sm font-medium text-gray-800 tracking-tight flex items-center gap-2 drop-shadow-sm bg-white/80 backdrop-blur-[2px] px-3 py-1 rounded-full border border-gray-200">
-                <span className="w-2 h-2 rounded-full bg-[var(--sidebar)] animate-pulse"></span>
-                Persebaran Wilayah Proyek Aktif
-              </h3>
-            </div>
-          </div>
-
-          {/* Leaderboard - Full Width */}
-          <div className="grid grid-cols-1 gap-8">
-            <Card className="border shadow-sm p-0 h-[400px] flex flex-col rounded-3xl overflow-hidden bg-white">
-              <CardHeader className="p-6 pb-2 shrink-0 border-b border-gray-50">
-                <CardTitle className="text-lg font-bold text-gray-800">Top Budget Contributors</CardTitle>
-                <CardDescription>Pengguna dengan akuisisi budget tertinggi</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 flex-1 h-full min-h-0 bg-white">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 40, left: 10, bottom: 20 }} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                    <XAxis type="number" tickFormatter={(value) => `Rp ${value / 1000000}jt`} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={100} tick={{ fontSize: 12, fontWeight: 500 }} />
-                    <RechartsTooltip formatter={(value: any) => formatIDR(Number(value || 0))} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-                    <Bar dataKey="total" fill="#1a5f4a" radius={[0, 4, 4, 0]} barSize={24} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
         </div>
 
       </div>
