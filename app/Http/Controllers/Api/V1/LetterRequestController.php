@@ -81,7 +81,7 @@ final class LetterRequestController extends Controller
 
         $kode = LetterCode::find($validated['letter_code_id'])->code;
         $divisi = LetterDivision::find($validated['letter_division_id'])->code;
-        $perusahaan = Division::find($validated['division_id'])->code;
+        $perusahaan = Division::where('id', $validated['division_id'])->with('divisionCode')->first()->divisionCode->code;
 
         $latestRequest = LetterRequest::whereYear('letter_date', $year)
             ->whereNotNull('letter_number')
@@ -90,7 +90,7 @@ final class LetterRequestController extends Controller
 
         $nextNo = 1;
         if ($latestRequest) {
-            $parts = explode('-', $latestRequest->letter_number);
+            $parts = explode('/', $latestRequest->letter_number);
             if (count($parts) > 0 && is_numeric($parts[0])) {
                 $nextNo = (int) $parts[0] + 1;
             }
@@ -159,11 +159,10 @@ final class LetterRequestController extends Controller
             $month = $newDate->month;
             $kode = LetterCode::find($validated['letter_code_id'])->code;
             $divisi = LetterDivision::find($validated['letter_division_id'])->code;
-            $perusahaan = Division::find($validated['division_id'])->code;
+            $perusahaan = Division::where('id', $validated['division_id'])->with('divisionCode')->first()->divisionCode->code;
 
-            // Keep the same sequential number if possible, or calculate a new one?
             // Safer to just re-use the current sequence number from the existing string
-            $currentParts = explode('-', $letterRequest->letter_number);
+            $currentParts = explode('/', $letterRequest->letter_number);
             $seqNo = (count($currentParts) > 0 && is_numeric($currentParts[0])) ? $currentParts[0] : '001';
 
             $letterNumber = "{$seqNo}/{$kode}.{$divisi}/{$perusahaan}/{$month}-{$year}";
