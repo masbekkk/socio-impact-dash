@@ -51,9 +51,12 @@ final class UserController extends Controller
         $data = $request->validated();
 
         $data['password'] = Hash::make($data['password']);
+        $role = $data['role'];
+
+        unset($data['role']);
         $user = User::create($data);
 
-        $user->assignRole($data['role']);
+        $user->assignRole($role);
 
         $user->load('roles');
 

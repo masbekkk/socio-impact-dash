@@ -97,7 +97,7 @@ final class LetterRequestController extends Controller
         }
 
         $formattedNo = mb_str_pad((string) $nextNo, 3, '0', STR_PAD_LEFT);
-        $letterNumber = "{$formattedNo}-{$month}/{$kode}.{$divisi}/{$perusahaan}/{$year}";
+        $letterNumber = "{$formattedNo}/{$kode}.{$divisi}/{$perusahaan}/{$month}-{$year}";
 
         $letterRequest = LetterRequest::create([
             ...$validated,
@@ -166,7 +166,7 @@ final class LetterRequestController extends Controller
             $currentParts = explode('-', $letterRequest->letter_number);
             $seqNo = (count($currentParts) > 0 && is_numeric($currentParts[0])) ? $currentParts[0] : '001';
 
-            $letterNumber = "{$seqNo}-{$month}/{$kode}.{$divisi}/{$perusahaan}/{$year}";
+            $letterNumber = "{$seqNo}/{$kode}.{$divisi}/{$perusahaan}/{$month}-{$year}";
             $validated['letter_number'] = $letterNumber;
         }
 

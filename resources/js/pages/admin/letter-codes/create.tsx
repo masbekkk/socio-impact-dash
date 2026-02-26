@@ -57,7 +57,7 @@ export default function Create() {
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">Add Letter Code</h1>
                         <p className="text-muted-foreground">
-                            Create a new kode suraton or department.
+                            Create a new kode surat or department.
                         </p>
                     </div>
                 </div>

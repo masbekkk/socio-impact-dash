@@ -11,10 +11,10 @@ import axios from 'axios';
 import { toast } from 'sonner';
 
 interface Props {
-    letterDivisi SuratonId: string;
+    letterDivisiSuratId: string;
 }
 
-export default function Edit({ letterDivisi SuratonId }: Props) {
+export default function Edit({ letterDivisiSuratId }: Props) {
     const [loading, setLoading] = useState(true);
     const { data, setData, processing, errors, reset } = useForm({
         code: '',
@@ -23,14 +23,14 @@ export default function Edit({ letterDivisi SuratonId }: Props) {
     });
 
     useEffect(() => {
-        const fetchLetter Divisi Suraton = async () => {
+        const fetchLetterDivisiSurat = async () => {
             try {
-                const res = await axios.get(`/api/v1/letter-divisi suratons/${letterDivisi SuratonId}`);
-                const divisi suraton = res.data.data;
+                const res = await axios.get(`/api/v1/letter-divisions/${letterDivisiSuratId}`);
+                const divisiSurat = res.data.data;
                 setData({
-                    code: divisi suraton.code,
-                    name: divisi suraton.name,
-                    description: divisi suraton.description || '',
+                    code: divisiSurat.code,
+                    name: divisiSurat.name,
+                    description: divisiSurat.description || '',
                 });
             } catch (error) {
                 toast.error('Gagal mengambil data divisi surat.');
@@ -40,14 +40,14 @@ export default function Edit({ letterDivisi SuratonId }: Props) {
             }
         };
 
-        fetchLetter Divisi Suraton();
-    }, [letterDivisi SuratonId]);
+        fetchLetterDivisiSurat();
+    }, [letterDivisiSuratId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         try {
-            await axios.put(`/api/v1/letter-divisi suratons/${letterDivisi SuratonId}`, data);
+            await axios.put(`/api/v1/letter-divisions/${letterDivisiSuratId}`, data);
             toast.success('Divisi Surat berhasil diperbarui.');
             window.location.href = '/admin/letter-divisi suratons';
         } catch (error: any) {
@@ -64,8 +64,8 @@ export default function Edit({ letterDivisi SuratonId }: Props) {
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Letter Divisi Suratons', href: '/admin/letter-divisi suratons' },
-        { title: 'Edit', href: `/admin/letter-divisi suratons/${letterDivisi SuratonId}/edit` },
+        { title: 'Letter Divisions', href: '/admin/letter-divisions' },
+        { title: 'Edit', href: `/admin/letter-divisions/${letterDivisiSuratId}/edit` },
     ];
 
     if (loading) {

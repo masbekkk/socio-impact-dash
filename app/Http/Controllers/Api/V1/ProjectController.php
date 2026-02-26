@@ -21,11 +21,12 @@ final class ProjectController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Project::with(['division', 'accountManager', 'head', 'pic', 'creator']);
+        $query = Project::with(['division.divisionCode', 'accountManager', 'head', 'pic', 'creator']);
 
         if ($request->filled('search')) {
             $search = (string) $request->string('search');
-            $query->where(function ($q) use ($search) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
+                /** @var \Illuminate\Database\Eloquent\Builder $q */
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%");
             });
@@ -36,8 +37,9 @@ final class ProjectController extends Controller
         }
 
         if ($request->filled('division') && $request->division !== 'all') {
-            $query->whereHas('division', function ($q) use ($request) {
-                $q->where('name', $request->division);
+            $query->whereHas('division.divisionCode', function (\Illuminate\Database\Eloquent\Builder $q) use ($request) {
+                /** @var \Illuminate\Database\Eloquent\Builder $q */
+                $q->where('code', $request->division);
             });
         }
 
@@ -77,7 +79,7 @@ final class ProjectController extends Controller
 
     public function show(Project $project): JsonResponse
     {
-        $project->load(['division', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents', 'monitorings.documents', 'approvals.approvedBy', 'budgetDetails']);
+        $project->load(['division.divisionCode', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents', 'monitorings.documents', 'approvals.approvedBy', 'budgetDetails']);
 
         return JsonResponseFormatter::success(
             new ProjectResource($project),
