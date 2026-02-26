@@ -24,6 +24,14 @@ final class ProjectController extends Controller
     {
         $query = Project::with(['division.divisionCode', 'accountManager', 'head', 'pic', 'creator']);
 
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $canViewAll = [\App\Enums\UserRole::Superadmin, \App\Enums\UserRole::Direktur, \App\Enums\UserRole::Finance];
+
+        if (! $user->hasRole($canViewAll)) {
+            $query->where('created_by', $user->id);
+        }
+
         if ($request->filled('search')) {
             $search = (string) $request->string('search');
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {

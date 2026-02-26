@@ -7,9 +7,9 @@ namespace Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Division>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\DivisionCode>
  */
-final class DivisionFactory extends Factory
+final class DivisionCodeFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -19,9 +19,7 @@ final class DivisionFactory extends Factory
     public function definition(): array
     {
         return [
-            'division_code_id' => \App\Models\DivisionCode::factory(),
-            'name' => $this->faker->company(),
-            'description' => $this->faker->paragraph(),
+            'code' => $this->faker->unique()->lexify('???'),
         ];
     }
 }

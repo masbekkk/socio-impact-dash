@@ -21,10 +21,12 @@ use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', fn () => redirect()->route('dashboard'))->name('home');
+use App\Http\Controllers\DashboardController;
+
+Route::get('/', fn() => redirect()->route('projects.index'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
-    Route::get('dashboard', fn () => Inertia::render('Dashboard/Index'))->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // Presences
     Route::resource('presences', PresenceController::class)->only(['index', 'create', 'store', 'show']);
