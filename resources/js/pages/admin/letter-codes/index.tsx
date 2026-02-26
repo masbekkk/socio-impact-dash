@@ -22,7 +22,7 @@ import { MoreHorizontal, Plus, Search } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-interface Letter Code {
+interface LetterCode {
     id: number;
     code: string;
     name: string;
@@ -31,11 +31,11 @@ interface Letter Code {
 }
 
 export default function Index() {
-    const [letter-codes, setLetter Codes] = useState<Letter Code[]>([]);
+    const [letterCodes, setLetterCodes] = useState<LetterCode[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const fetchLetter Codes = async () => {
+    const fetchLetterCodes = async () => {
         setLoading(true);
         try {
             const res = await axios.get('/api/v1/letter-codes', {
@@ -43,7 +43,7 @@ export default function Index() {
                     search: searchQuery,
                 }
             });
-            setLetter Codes(res.data.data.data);
+            setLetterCodes(res.data.data.data);
         } catch (error) {
             toast.error('Gagal mengambil data kode surat.');
         } finally {
@@ -53,7 +53,7 @@ export default function Index() {
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            fetchLetter Codes();
+            fetchLetterCodes();
         }, 300);
         return () => clearTimeout(timer);
     }, [searchQuery]);
@@ -63,7 +63,7 @@ export default function Index() {
         try {
             await axios.delete(`/api/v1/letter-codes/${id}`);
             toast.success('Kode Surat berhasil dihapus.');
-            fetchLetter Codes();
+            fetchLetterCodes();
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Gagal menghapus kode surat.');
         }
@@ -71,17 +71,17 @@ export default function Index() {
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Letter Codes', href: '/admin/letter-codes' },
+        { title: 'LetterCodes', href: '/admin/letter-codes' },
     ];
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="Letter Code Management" />
+            <Head title="LetterCode Management" />
 
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Letter Codes</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">LetterCodes</h1>
                         <p className="text-muted-foreground">
                             Manage your company letter-codes and departments.
                         </p>
@@ -89,7 +89,7 @@ export default function Index() {
                     <Button asChild className="bg-[#1a5f4a] hover:bg-[#154d3c]">
                         <Link href="/admin/letter-codes/create">
                             <Plus className="mr-2 h-4 w-4" />
-                            Add Letter Code
+                            Add LetterCode
                         </Link>
                     </Button>
                 </div>
@@ -127,26 +127,26 @@ export default function Index() {
                                             Loading letter-codes...
                                         </TableCell>
                                     </TableRow>
-                                ) : letter-codes.length === 0 ? (
+                                ) : letterCodes.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                                             No letter-codes found.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    letter-codes.map((kode suraton) => (
-                                        <TableRow key={kode suraton.id} className="hover:bg-muted/5">
+                                    letterCodes.map((letterCode) => (
+                                        <TableRow key={letterCode.id} className="hover:bg-muted/5">
                                             <TableCell className="font-medium uppercase">
-                                                {kode suraton.code}
+                                                {letterCode.code}
                                             </TableCell>
                                             <TableCell>
-                                                {kode suraton.name}
+                                                {letterCode.name}
                                             </TableCell>
                                             <TableCell className="max-w-xs truncate text-muted-foreground">
-                                                {kode suraton.description || '-'}
+                                                {letterCode.description || '-'}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm">
-                                                {new Date(kode suraton.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                {new Date(letterCode.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
@@ -158,11 +158,11 @@ export default function Index() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem asChild>
-                                                            <Link href={`/admin/letter-codes/${kode suraton.id}/edit`}>Edit</Link>
+                                                            <Link href={`/admin/letter-codes/${letterCode.id}/edit`}>Edit</Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             className="text-destructive focus:text-destructive cursor-pointer"
-                                                            onClick={() => handleDelete(kode suraton.id)}
+                                                            onClick={() => handleDelete(letterCode.id)}
                                                         >
                                                             Delete
                                                         </DropdownMenuItem>

@@ -22,7 +22,7 @@ import { MoreHorizontal, Plus, Search } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-interface Letter Divisi Suraton {
+interface LetterDivision {
     id: number;
     code: string;
     name: string;
@@ -31,19 +31,19 @@ interface Letter Divisi Suraton {
 }
 
 export default function Index() {
-    const [letter-divisi suratons, setLetter Divisi Suratons] = useState<Letter Divisi Suraton[]>([]);
+    const [letterDivisions, setLetterDivisions] = useState<LetterDivision[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const fetchLetter Divisi Suratons = async () => {
+    const fetchLetterDivisions = async () => {
         setLoading(true);
         try {
-            const res = await axios.get('/api/v1/letter-divisi suratons', {
+            const res = await axios.get('/api/v1/letter-divisions', {
                 params: {
                     search: searchQuery,
                 }
             });
-            setLetter Divisi Suratons(res.data.data.data);
+            setLetterDivisions(res.data.data.data);
         } catch (error) {
             toast.error('Gagal mengambil data divisi surat.');
         } finally {
@@ -53,7 +53,7 @@ export default function Index() {
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            fetchLetter Divisi Suratons();
+            fetchLetterDivisions();
         }, 300);
         return () => clearTimeout(timer);
     }, [searchQuery]);
@@ -61,9 +61,9 @@ export default function Index() {
     const handleDelete = async (id: number) => {
         if (!confirm('Apakah anda yakin ingin menghapus divisi surat ini?')) return;
         try {
-            await axios.delete(`/api/v1/letter-divisi suratons/${id}`);
+            await axios.delete(`/api/v1/letter-divisions/${id}`);
             toast.success('Divisi Surat berhasil dihapus.');
-            fetchLetter Divisi Suratons();
+            fetchLetterDivisions();
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Gagal menghapus divisi surat.');
         }
@@ -71,25 +71,25 @@ export default function Index() {
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Letter Divisi Suratons', href: '/admin/letter-divisi suratons' },
+        { title: 'LetterDivisions', href: '/admin/letter-divisions' },
     ];
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="Letter Divisi Suraton Management" />
+            <Head title="LetterDivision Management" />
 
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Letter Divisi Suratons</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">LetterDivisions</h1>
                         <p className="text-muted-foreground">
-                            Manage your company letter-divisi suratons and departments.
+                            Manage your company letter-divisions and departments.
                         </p>
                     </div>
                     <Button asChild className="bg-[#1a5f4a] hover:bg-[#154d3c]">
-                        <Link href="/admin/letter-divisi suratons/create">
+                        <Link href="/admin/letter-divisions/create">
                             <Plus className="mr-2 h-4 w-4" />
-                            Add Letter Divisi Suraton
+                            Add LetterDivision
                         </Link>
                     </Button>
                 </div>
@@ -101,7 +101,7 @@ export default function Index() {
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     type="search"
-                                    placeholder="Search letter-divisi suratons..."
+                                    placeholder="Search letter-divisions..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-8 w-full bg-white"
@@ -124,29 +124,29 @@ export default function Index() {
                                 {loading ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                            Loading letter-divisi suratons...
+                                            Loading letter-divisions...
                                         </TableCell>
                                     </TableRow>
-                                ) : letter-divisi suratons.length === 0 ? (
+                                ) : letterDivisions.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                            No letter-divisi suratons found.
+                                            No letter-divisions found.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    letter-divisi suratons.map((divisi suraton) => (
-                                        <TableRow key={divisi suraton.id} className="hover:bg-muted/5">
+                                    letterDivisions.map((letterDivision) => (
+                                        <TableRow key={letterDivision.id} className="hover:bg-muted/5">
                                             <TableCell className="font-medium uppercase">
-                                                {divisi suraton.code}
+                                                {letterDivision.code}
                                             </TableCell>
                                             <TableCell>
-                                                {divisi suraton.name}
+                                                {letterDivision.name}
                                             </TableCell>
                                             <TableCell className="max-w-xs truncate text-muted-foreground">
-                                                {divisi suraton.description || '-'}
+                                                {letterDivision.description || '-'}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm">
-                                                {new Date(divisi suraton.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                {new Date(letterDivision.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
@@ -158,11 +158,11 @@ export default function Index() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem asChild>
-                                                            <Link href={`/admin/letter-divisi suratons/${divisi suraton.id}/edit`}>Edit</Link>
+                                                            <Link href={`/admin/letter-divisions/${letterDivision.id}/edit`}>Edit</Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             className="text-destructive focus:text-destructive cursor-pointer"
-                                                            onClick={() => handleDelete(divisi suraton.id)}
+                                                            onClick={() => handleDelete(letterDivision.id)}
                                                         >
                                                             Delete
                                                         </DropdownMenuItem>

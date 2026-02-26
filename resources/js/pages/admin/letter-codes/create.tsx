@@ -39,13 +39,13 @@ export default function Create() {
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Letter Codes', href: '/admin/letter-codes' },
+        { title: 'LetterCodes', href: '/admin/letter-codes' },
         { title: 'Create', href: '/admin/letter-codes/create' },
     ];
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="Add Letter Code" />
+            <Head title="Add LetterCode" />
 
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex items-center gap-4">
@@ -55,9 +55,9 @@ export default function Create() {
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Add Letter Code</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Add LetterCode</h1>
                         <p className="text-muted-foreground">
-                            Create a new kode suraton or department.
+                            Create a new letterCode or department.
                         </p>
                     </div>
                 </div>
@@ -65,7 +65,7 @@ export default function Create() {
                 <form onSubmit={handleSubmit}>
                     <Card>
                         <CardHeader>
-                            <CardTitle>Letter Code Details</CardTitle>
+                            <CardTitle>LetterCode Details</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -78,7 +78,7 @@ export default function Create() {
                                         onChange={(e) => setData('code', e.target.value)}
                                         required
                                     />
-                                    <p className="text-xs text-muted-foreground">Unique identifier for the kode suraton.</p>
+                                    <p className="text-xs text-muted-foreground">Unique identifier for the letterCode.</p>
                                     {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
                                 </div>
 
@@ -99,7 +99,7 @@ export default function Create() {
                                 <Label htmlFor="description">Description (Optional)</Label>
                                 <Textarea
                                     id="description"
-                                    placeholder="Brief description of the kode suraton's responsibilities"
+                                    placeholder="Brief description of the letterCode's responsibilities"
                                     value={data.description}
                                     onChange={(e) => setData('description', e.target.value)}
                                     className="min-h-[100px]"
@@ -113,7 +113,7 @@ export default function Create() {
                             </Button>
                             <Button className="bg-[#1a5f4a] hover:bg-[#154d3c]" disabled={processing}>
                                 {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Letter Code
+                                Save LetterCode
                             </Button>
                         </CardFooter>
                     </Card>
