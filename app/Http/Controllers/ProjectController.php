@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\Division;
+use App\Models\DivisionCode;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -18,14 +18,14 @@ final class ProjectController extends Controller
     {
         return Inertia::render('Projects/Index', [
             'filters' => $request->only(['search', 'status', 'division', 'start_date', 'end_date']),
-            'divisions' => Division::all(),
+            'divisions' => DivisionCode::with('divisions')->get(),
         ]);
     }
 
     public function create(): Response
     {
         return Inertia::render('Projects/Create', [
-            'divisions' => Division::all(),
+            'divisions' => DivisionCode::with('divisions')->get(),
             'employees' => User::all(),
         ]);
     }
@@ -42,7 +42,7 @@ final class ProjectController extends Controller
     {
         return Inertia::render('Projects/Edit', [
             'project_slug' => $project->id,
-            'divisions' => Division::all(),
+            'divisions' => DivisionCode::with('divisions')->get(),
             'employees' => User::all(),
         ]);
     }

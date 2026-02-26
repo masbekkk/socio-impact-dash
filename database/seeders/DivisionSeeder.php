@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\Division;
+use App\Models\DivisionCode;
 use Illuminate\Database\Seeder;
 
 final class DivisionSeeder extends Seeder
@@ -96,11 +96,16 @@ final class DivisionSeeder extends Seeder
             ],
         ];
 
-        foreach ($divisions as $division) {
-            Division::firstOrCreate(
-                ['code' => $division['code']],
-                $division
+        foreach ($divisions as $divisionData) {
+            $divisionCode = DivisionCode::firstOrCreate(
+                ['code' => $divisionData['code']]
             );
+            
+            $divisionCode->divisions()->firstOrCreate([
+                'name' => $divisionData['name'],
+                'description' => $divisionData['description']
+            ]);
         }
     }
 }
+

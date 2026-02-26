@@ -11,10 +11,10 @@ import axios from 'axios';
 import { toast } from 'sonner';
 
 interface Props {
-    letterDivisionId: string;
+    letterDivisiSuratId: string;
 }
 
-export default function Edit({ letterDivisionId }: Props) {
+export default function Edit({ letterDivisiSuratId }: Props) {
     const [loading, setLoading] = useState(true);
     const { data, setData, processing, errors, reset } = useForm({
         code: '',
@@ -23,33 +23,33 @@ export default function Edit({ letterDivisionId }: Props) {
     });
 
     useEffect(() => {
-        const fetchLetterDivision = async () => {
+        const fetchLetterDivisiSurat = async () => {
             try {
-                const res = await axios.get(`/api/v1/letter-divisions/${letterDivisionId}`);
-                const letterDivision = res.data.data;
+                const res = await axios.get(`/api/v1/letter-divisions/${letterDivisiSuratId}`);
+                const divisiSurat = res.data.data;
                 setData({
-                    code: letterDivision.code,
-                    name: letterDivision.name,
-                    description: letterDivision.description || '',
+                    code: divisiSurat.code,
+                    name: divisiSurat.name,
+                    description: divisiSurat.description || '',
                 });
             } catch (error) {
                 toast.error('Gagal mengambil data divisi surat.');
-                window.location.href = '/admin/letter-divisions';
+                window.location.href = '/admin/letter-divisi suratons';
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchLetterDivision();
-    }, [letterDivisionId]);
+        fetchLetterDivisiSurat();
+    }, [letterDivisiSuratId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         try {
-            await axios.put(`/api/v1/letter-divisions/${letterDivisionId}`, data);
+            await axios.put(`/api/v1/letter-divisions/${letterDivisiSuratId}`, data);
             toast.success('Divisi Surat berhasil diperbarui.');
-            window.location.href = '/admin/letter-divisions';
+            window.location.href = '/admin/letter-divisi suratons';
         } catch (error: any) {
             if (error.response?.status === 422) {
                 const validationErrors = error.response.data.errors;
@@ -64,8 +64,8 @@ export default function Edit({ letterDivisionId }: Props) {
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'LetterDivisions', href: '/admin/letter-divisions' },
-        { title: 'Edit', href: `/admin/letter-divisions/${letterDivisionId}/edit` },
+        { title: 'Letter Divisions', href: '/admin/letter-divisions' },
+        { title: 'Edit', href: `/admin/letter-divisions/${letterDivisiSuratId}/edit` },
     ];
 
     if (loading) {
@@ -80,19 +80,19 @@ export default function Edit({ letterDivisionId }: Props) {
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="Edit LetterDivision" />
+            <Head title="Edit Letter Divisi Suraton" />
 
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" asChild>
-                        <Link href="/admin/letter-divisions">
+                        <Link href="/admin/letter-divisi suratons">
                             <ChevronLeft className="h-4 w-4" />
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Edit LetterDivision</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Edit Letter Divisi Suraton</h1>
                         <p className="text-muted-foreground">
-                            Update letterDivision details.
+                            Update divisi suraton details.
                         </p>
                     </div>
                 </div>
@@ -100,7 +100,7 @@ export default function Edit({ letterDivisionId }: Props) {
                 <form onSubmit={handleSubmit}>
                     <Card>
                         <CardHeader>
-                            <CardTitle>LetterDivision Details</CardTitle>
+                            <CardTitle>Letter Divisi Suraton Details</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -113,7 +113,7 @@ export default function Edit({ letterDivisionId }: Props) {
                                         onChange={(e) => setData('code', e.target.value)}
                                         required
                                     />
-                                    <p className="text-xs text-muted-foreground">Unique identifier for the letterDivision.</p>
+                                    <p className="text-xs text-muted-foreground">Unique identifier for the divisi suraton.</p>
                                     {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
                                 </div>
 
@@ -134,7 +134,7 @@ export default function Edit({ letterDivisionId }: Props) {
                                 <Label htmlFor="description">Description (Optional)</Label>
                                 <Textarea
                                     id="description"
-                                    placeholder="Brief description of the letterDivision's responsibilities"
+                                    placeholder="Brief description of the divisi suraton's responsibilities"
                                     value={data.description}
                                     onChange={(e) => setData('description', e.target.value)}
                                     className="min-h-[100px]"
@@ -144,11 +144,11 @@ export default function Edit({ letterDivisionId }: Props) {
                         </CardContent>
                         <CardFooter className="flex items-center justify-end gap-3 border-t p-6">
                             <Button variant="outline" asChild>
-                                <Link href="/admin/letter-divisions">Cancel</Link>
+                                <Link href="/admin/letter-divisi suratons">Cancel</Link>
                             </Button>
                             <Button className="bg-[#1a5f4a] hover:bg-[#154d3c]" disabled={processing}>
                                 {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Update LetterDivision
+                                Update Letter Divisi Suraton
                             </Button>
                         </CardFooter>
                     </Card>

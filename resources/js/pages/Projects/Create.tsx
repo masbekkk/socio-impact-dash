@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import FileUploadDropzone from '@/components/FileUploadDropzone'
 import BudgetEditor from '@/components/BudgetEditor'
@@ -328,14 +328,19 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                   <div className="space-y-2">
                     <Label>Divisi & Anak Perusahaan <span className="text-red-500">*</span></Label>
                     <Select value={formData.division_id} onValueChange={(v) => handleInputChange('division_id', v)}>
-                      <SelectTrigger className={errors.division_id ? 'border-red-500' : ''}>
+                      <SelectTrigger className={errors.division_id ? 'border-red-500 h-auto' : 'h-auto'}>
                         <SelectValue placeholder="Pilih Divisi & Anak Perusahaan" />
                       </SelectTrigger>
                       <SelectContent>
-                        {divisions.map((div) => (
-                          <SelectItem key={div.id} value={div.id.toString()}>
-                            {div.code} - {div.name}
-                          </SelectItem>
+                        {divisions.map((divCode) => (
+                          <SelectGroup key={divCode.id}>
+                            <SelectLabel className="text-muted-foreground">{divCode.code}</SelectLabel>
+                            {divCode.divisions?.map((n: any) => (
+                              <SelectItem key={n.id} value={n.id.toString()} className="pl-6">
+                                {n.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                         ))}
                       </SelectContent>
                     </Select>
