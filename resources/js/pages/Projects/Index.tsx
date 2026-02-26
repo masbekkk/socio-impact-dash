@@ -90,6 +90,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
           per_page: perPage,
           page: currentPage
         },
+        withCredentials: true
       });
       setProjects(response.data.data.data);
       setPagination({

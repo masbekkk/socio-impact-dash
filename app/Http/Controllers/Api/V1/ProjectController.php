@@ -16,6 +16,7 @@ use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Throwable;
 
 final class ProjectController extends Controller
 {
@@ -63,18 +64,18 @@ final class ProjectController extends Controller
     public function store(StoreProjectRequest $request, CreateProject $createProject): JsonResponse
     {
         try {
-        $user = $request->user();
-        $project = $createProject->handle($request->validated(), $user->id);
+            $user = $request->user();
+            $project = $createProject->handle($request->validated(), $user->id);
 
-        return JsonResponseFormatter::success(
-            new ProjectResource($project),
-            'Project created successfully',
-            201
-        );
-        } catch (\Throwable $th) {
+            return JsonResponseFormatter::success(
+                new ProjectResource($project),
+                'Project created successfully',
+                201
+            );
+        } catch (Throwable $th) {
             return response()->json(['err' => $th->getMessage()]);
         }
-        
+
     }
 
     public function show(Project $project): JsonResponse

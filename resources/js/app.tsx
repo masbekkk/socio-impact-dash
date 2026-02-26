@@ -8,7 +8,7 @@ import { route } from 'ziggy-js';
 
 window.route = route;
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Social Impact Dashboard';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

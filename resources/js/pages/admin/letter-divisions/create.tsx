@@ -21,9 +21,9 @@ export default function Create() {
         e.preventDefault();
 
         try {
-            await axios.post('/api/v1/letter-divisi suratons', data);
+            await axios.post('/api/v1/letter-divisions', data);
             toast.success('Divisi Surat berhasil dibuat.');
-            window.location.href = '/admin/letter-divisi suratons';
+            window.location.href = '/admin/letter-divisions';
         } catch (error: any) {
             if (error.response?.status === 422) {
                 // Handling validation errors from axios
@@ -39,25 +39,25 @@ export default function Create() {
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Letter Divisi Suratons', href: '/admin/letter-divisi suratons' },
-        { title: 'Create', href: '/admin/letter-divisi suratons/create' },
+        { title: 'LetterDivisions', href: '/admin/letter-divisions' },
+        { title: 'Create', href: '/admin/letter-divisions/create' },
     ];
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="Add Letter Divisi Suraton" />
+            <Head title="Add LetterDivision" />
 
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" asChild>
-                        <Link href="/admin/letter-divisi suratons">
+                        <Link href="/admin/letter-divisions">
                             <ChevronLeft className="h-4 w-4" />
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Add Letter Divisi Suraton</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Add LetterDivision</h1>
                         <p className="text-muted-foreground">
-                            Create a new divisi suraton or department.
+                            Create a new letterDivision or department.
                         </p>
                     </div>
                 </div>
@@ -65,7 +65,7 @@ export default function Create() {
                 <form onSubmit={handleSubmit}>
                     <Card>
                         <CardHeader>
-                            <CardTitle>Letter Divisi Suraton Details</CardTitle>
+                            <CardTitle>LetterDivision Details</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -78,7 +78,7 @@ export default function Create() {
                                         onChange={(e) => setData('code', e.target.value)}
                                         required
                                     />
-                                    <p className="text-xs text-muted-foreground">Unique identifier for the divisi suraton.</p>
+                                    <p className="text-xs text-muted-foreground">Unique identifier for the letterDivision.</p>
                                     {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
                                 </div>
 
@@ -99,7 +99,7 @@ export default function Create() {
                                 <Label htmlFor="description">Description (Optional)</Label>
                                 <Textarea
                                     id="description"
-                                    placeholder="Brief description of the divisi suraton's responsibilities"
+                                    placeholder="Brief description of the letterDivision's responsibilities"
                                     value={data.description}
                                     onChange={(e) => setData('description', e.target.value)}
                                     className="min-h-[100px]"
@@ -109,11 +109,11 @@ export default function Create() {
                         </CardContent>
                         <CardFooter className="flex items-center justify-end gap-3 border-t p-6">
                             <Button variant="outline" asChild>
-                                <Link href="/admin/letter-divisi suratons">Cancel</Link>
+                                <Link href="/admin/letter-divisions">Cancel</Link>
                             </Button>
                             <Button className="bg-[#1a5f4a] hover:bg-[#154d3c]" disabled={processing}>
                                 {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Letter Divisi Suraton
+                                Save LetterDivision
                             </Button>
                         </CardFooter>
                     </Card>
