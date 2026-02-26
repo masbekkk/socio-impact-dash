@@ -18,6 +18,7 @@ class LetterRequest extends Model
         'recipient',
         'subject',
         'pic_id',
+        'division_id',
         'letter_code_id',
         'letter_division_id',
         'keterangan',
@@ -52,5 +53,10 @@ class LetterRequest extends Model
     public function letterDivision(): BelongsTo
     {
         return $this->belongsTo(LetterDivision::class);
+    }
+
+    public function division(): BelongsTo
+    {
+        return $this->belongsTo(Division::class);
     }
 }

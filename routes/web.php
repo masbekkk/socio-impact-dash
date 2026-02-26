@@ -42,7 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('reimbursements/{reimbursement}/reject', [ReimbursementController::class, 'reject'])->name('reimbursements.reject');
 
     // Letter Requests
-    Route::resource('letter-requests', LetterRequestController::class)->only(['index', 'create', 'store']);
+    Route::resource('letter-requests', LetterRequestController::class)->only(['index', 'create', 'store', 'edit']);
     Route::post('letter-requests/{letter_request}/assign', [LetterRequestController::class, 'assignNumber'])->name('letter-requests.assign');
     Route::post('letter-requests/{letter_request}/reject', [LetterRequestController::class, 'reject'])->name('letter-requests.reject');
 

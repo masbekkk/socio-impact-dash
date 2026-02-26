@@ -219,7 +219,7 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                         <TableHead>PIC / Ket</TableHead>
                                         <TableHead>Kode / Divisi</TableHead>
                                         <TableHead>Nomor Surat</TableHead>
-                                        <TableHead>Status</TableHead>
+                                        {/* <TableHead>Status</TableHead> */}
                                         <TableHead className="text-right">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -281,7 +281,7 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                                         <span className="text-muted-foreground text-xs italic">Belum diberikan</span>
                                                     )}
                                                 </TableCell>
-                                                <TableCell>
+                                                {/* <TableCell>
                                                     <Badge
                                                         variant={
                                                             req.status === 'assigned' ? 'default' :
@@ -293,15 +293,17 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                                             req.status === 'rejected' ? 'Ditolak' :
                                                                 'Menunggu'}
                                                     </Badge>
-                                                </TableCell>
+                                                </TableCell> */}
                                                 <TableCell className="text-right">
-                                                    {canAssign && (
+                                                    {/* {canAssign && (
                                                         <div className="flex justify-end gap-2">
-                                                            <Button variant="outline" size="sm" asChild>
-                                                                <Link href={`/letter-requests/${req.id}/edit`}>
-                                                                    Edit
-                                                                </Link>
-                                                            </Button>
+                                                            {req.status !== 'rejected' && (
+                                                                <Button variant="outline" size="sm" asChild>
+                                                                    <Link href={`/letter-requests/${req.id}/edit`}>
+                                                                        Edit
+                                                                    </Link>
+                                                                </Button>
+                                                            )}
                                                             {req.status === 'pending' && (
                                                                 <>
                                                                     <Button variant="default" className="bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)]/90" size="sm" onClick={() => handleAssign(req)}>
@@ -313,7 +315,12 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                                                 </>
                                                             )}
                                                         </div>
-                                                    )}
+                                                    )} */}
+                                                    <Button variant="outline" size="sm" asChild>
+                                                        <Link href={`/letter-requests/${req.id}/edit`}>
+                                                            Edit
+                                                        </Link>
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))

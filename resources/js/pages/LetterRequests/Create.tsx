@@ -43,12 +43,14 @@ export default function Create({ projects }: Props) {
         pic_id: '',
         letter_code_id: '',
         letter_division_id: '',
+        division_id: '',
         keterangan: '',
     });
 
     const [letterCodes, setLetterCodes] = useState<MasterData[]>([]);
     const [letterDivisions, setLetterDivisions] = useState<MasterData[]>([]);
     const [users, setUsers] = useState<MasterData[]>([]);
+    const [divisions, setDivisions] = useState<MasterData[]>([]);
     const [loadingData, setLoadingData] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState<any>({});
@@ -56,14 +58,16 @@ export default function Create({ projects }: Props) {
     useEffect(() => {
         const fetchMasterData = async () => {
             try {
-                const [codesRes, divisionsRes, usersRes] = await Promise.all([
+                const [codesRes, divisionsRes, usersRes, mainDivRes] = await Promise.all([
                     axios.get('/api/v1/letter-codes'),
                     axios.get('/api/v1/letter-divisions'),
-                    axios.get('/api/v1/users?per_page=1000')
+                    axios.get('/api/v1/users?per_page=1000'),
+                    axios.get('/api/v1/divisions?per_page=1000')
                 ]);
                 setLetterCodes(codesRes.data.data);
                 setLetterDivisions(divisionsRes.data.data);
                 setUsers(usersRes.data.data.data);
+                setDivisions(mainDivRes.data.data.data);
             } catch (error) {
                 console.error("Error fetching master data:", error);
             } finally {
@@ -252,6 +256,26 @@ export default function Create({ projects }: Props) {
                                             </SelectContent>
                                         </Select>
                                         {errors.pic_id && <p className="text-sm text-destructive font-medium">{errors.pic_id}</p>}
+                                    </div>
+
+                                    <div className="space-y-2 md:col-span-1">
+                                        <Label htmlFor="division_id">Divisi Perusahaan <span className="text-red-500">*</span></Label>
+                                        <Select onValueChange={(val) => setData({ ...data, division_id: val })} value={data.division_id}>
+                                            <SelectTrigger className="h-10">
+                                                <div className="flex items-center gap-2">
+                                                    <Layers className="h-4 w-4 text-muted-foreground" />
+                                                    <SelectValue placeholder="Pilih divisi perusahaan" />
+                                                </div>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {divisions.map((div) => (
+                                                    <SelectItem key={div.id} value={div.id.toString()}>
+                                                        {div.code}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.division_id && <p className="text-sm text-destructive font-medium">{errors.division_id}</p>}
                                     </div>
 
                                     <div className="space-y-2 md:col-span-2">
