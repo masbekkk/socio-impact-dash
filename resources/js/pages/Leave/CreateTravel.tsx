@@ -1,28 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Save, Calendar, MapPin, Briefcase } from 'lucide-react';
+import { ArrowLeft, Save, Calendar, MapPin, Briefcase, FileText, Loader2 } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
+import FileUploadDropzone from '@/components/FileUploadDropzone';
+import axios from 'axios';
 
-// Mock User Data for Auto-fill
-const MOCK_USER = {
-  name: 'Budi Santoso',
-  nip: 'EMP-2023-056',
-  division: 'Divisi Operasional',
-  position: 'Field Officer',
-  location: 'Jakarta Selatan',
-  join_date: '2023-01-15'
-};
+interface SimpleProject {
+  id: number;
+  code: string;
+  name: string;
+}
 
+interface SimpleUser {
+  id: number;
+  name: string;
+  email: string;
+}
 
+interface AuthUser {
+  name: string;
+  nip: string;
+  email: string;
+  division_name: string;
+  position: string;
+  join_date: string;
+}
 
-export default function CreateTravel() {
+interface Props {
+  authUser: AuthUser;
+  projects: SimpleProject[];
+  users: SimpleUser[];
+}
+
+export default function CreateTravel({ authUser, projects, users }: Props) {
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Cuti & Dinas', href: '/leaves' },
@@ -31,25 +55,26 @@ export default function CreateTravel() {
 
   const [formData, setFormData] = useState({
     destination: '',
-    project_name: '',
-    purpose: '',
+    project_id: '',
+    reason: '',
     start_date: '',
     end_date: '',
-    pic_replacement: '',
-    phone_number: '',
-    stay_address: '',
+    replacement_pic_id: '',
+    phone: '',
+    lokasi: '',
   });
 
   const [totalDays, setTotalDays] = useState(0);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
 
-  // Calculate total days when dates change
   useEffect(() => {
     if (formData.start_date && formData.end_date) {
       const start = new Date(formData.start_date);
       const end = new Date(formData.end_date);
       if (start <= end) {
-        const diff = differenceInDays(end, start) + 1; // Inclusive
-        setTotalDays(diff);
+        setTotalDays(differenceInDays(end, start) + 1);
       } else {
         setTotalDays(0);
       }
@@ -61,14 +86,47 @@ export default function CreateTravel() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => { const next = { ...prev }; delete next[name]; return next; });
+    }
   };
 
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Data Perjalanan Dinas:\n' + JSON.stringify({ ...formData, user: MOCK_USER, total_days: totalDays }, null, 2));
-    // In real app: router.post('/travels', formData);
+    setLoading(true);
+    setErrors({});
+
+    try {
+      const fd = new FormData();
+      fd.append('type', 'travel');
+      fd.append('start_date', formData.start_date);
+      fd.append('end_date', formData.end_date);
+      if (formData.destination) fd.append('destination', formData.destination);
+      if (formData.project_id) fd.append('project_id', formData.project_id);
+      if (formData.replacement_pic_id) fd.append('replacement_pic_id', formData.replacement_pic_id);
+      if (formData.phone) fd.append('phone', formData.phone);
+      if (formData.lokasi) fd.append('lokasi', formData.lokasi);
+      if (formData.reason) fd.append('reason', formData.reason);
+      if (attachmentFile) fd.append('attachment', attachmentFile);
+
+      await axios.post('/api/v1/leaves', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      router.visit('/leaves');
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 422) {
+        setErrors(error.response.data.errors ?? {});
+      } else if (axios.isAxiosError(error)) {
+        setErrors({ _general: [error.response?.data?.message ?? 'Terjadi kesalahan.'] });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -76,13 +134,9 @@ export default function CreateTravel() {
       <Head title="Ajukan Perjalanan Dinas" />
 
       <div className="p-6 md:p-10 space-y-6">
-
-        {/* Header Section */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="-ml-2">
-            <Link href="/leaves">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
+            <Link href="/leaves"><ArrowLeft className="h-5 w-5" /></Link>
           </Button>
           <div>
             <h1 className="text-xl font-bold tracking-tight">Form Perjalanan Dinas</h1>
@@ -90,11 +144,13 @@ export default function CreateTravel() {
           </div>
         </div>
 
-        {/* Main Card Wrapper */}
+        {errors._general && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">{errors._general[0]}</div>
+        )}
+
         <Card className="border-none shadow-sm rounded-xl overflow-hidden">
           <form onSubmit={handleSubmit}>
-
-            {/* Section 1: Data Pemohon */}
+            {/* Data Pemohon */}
             <div className="p-6 md:p-8 bg-white">
               <h3 className="text-lg font-semibold mb-1">Data Pemohon</h3>
               <p className="text-sm text-muted-foreground mb-6">Informasi data diri Anda saat ini.</p>
@@ -102,34 +158,30 @@ export default function CreateTravel() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider">Nama Lengkap</Label>
-                  <Input value={MOCK_USER.name} readOnly className="bg-muted/50 border-transparent font-medium" />
+                  <Input value={authUser.name} readOnly className="bg-muted/50 border-transparent font-medium" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider">NIP</Label>
-                  <Input value={MOCK_USER.nip} readOnly className="bg-muted/50 border-transparent font-medium" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Divisi</Label>
-                  <Input value={MOCK_USER.division} readOnly className="bg-muted/50 border-transparent font-medium" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Posisi / Jabatan</Label>
-                  <Input value={MOCK_USER.position} readOnly className="bg-muted/50 border-transparent font-medium" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Lokasi Kerja</Label>
-                  <Input value={MOCK_USER.location} readOnly className="bg-muted/50 border-transparent font-medium" />
+                  <Input value={authUser.nip} readOnly className="bg-muted/50 border-transparent font-medium" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider">Tanggal Bergabung</Label>
-                  <Input value={MOCK_USER.join_date} readOnly className="bg-muted/50 border-transparent font-medium" />
+                  <Input value={authUser.join_date} readOnly className="bg-muted/50 border-transparent font-medium" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Posisi / Jabatan</Label>
+                  <Input value={authUser.position} readOnly className="bg-muted/50 border-transparent font-medium" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Divisi</Label>
+                  <Input value={authUser.division_name} readOnly className="bg-muted/50 border-transparent font-medium" />
                 </div>
               </div>
             </div>
 
             <Separator />
 
-            {/* Section 2: Detail Perjalanan */}
+            {/* Detail Perjalanan */}
             <div className="p-6 md:p-8 bg-white">
               <h3 className="text-lg font-semibold mb-1">Detail Perjalanan</h3>
               <p className="text-sm text-muted-foreground mb-6">Rencana perjalanan, tujuan, dan estimasi biaya.</p>
@@ -140,29 +192,25 @@ export default function CreateTravel() {
                     <Label htmlFor="destination">Kota / Negara Tujuan <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="destination"
-                        name="destination"
-                        placeholder="Contoh: Surabaya, Jawa Timur"
-                        className="pl-9 h-10"
-                        value={formData.destination}
-                        onChange={handleChange}
-                      />
+                      <Input id="destination" name="destination" placeholder="Contoh: Surabaya, Jawa Timur" className="pl-9 h-10" value={formData.destination} onChange={handleChange} />
                     </div>
+                    {errors.destination && <p className="text-xs text-red-500">{errors.destination[0]}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="project_name">Nama Project (Jika ada)</Label>
-                    <div className="relative">
-                      <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="project_name"
-                        name="project_name"
-                        placeholder="Nama project yang sedang aktif"
-                        className="pl-9 h-10"
-                        value={formData.project_name}
-                        onChange={handleChange}
-                      />
-                    </div>
+                    <Label htmlFor="project_id">Nama Project (Jika ada)</Label>
+                    <Select value={formData.project_id} onValueChange={(val) => handleSelectChange('project_id', val)}>
+                      <SelectTrigger className="h-10">
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Pilih project" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.map((p) => (
+                          <SelectItem key={p.id} value={p.id.toString()}>{p.code} - {p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -171,29 +219,17 @@ export default function CreateTravel() {
                     <Label htmlFor="start_date">Tanggal Berangkat <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="date"
-                        id="start_date"
-                        name="start_date"
-                        value={formData.start_date}
-                        onChange={handleChange}
-                        className="pl-9 h-10"
-                      />
+                      <Input type="date" id="start_date" name="start_date" value={formData.start_date} onChange={handleChange} className="pl-9 h-10" />
                     </div>
+                    {errors.start_date && <p className="text-xs text-red-500">{errors.start_date[0]}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="end_date">Tanggal Kembali <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="date"
-                        id="end_date"
-                        name="end_date"
-                        value={formData.end_date}
-                        onChange={handleChange}
-                        className="pl-9 h-10"
-                      />
+                      <Input type="date" id="end_date" name="end_date" value={formData.end_date} onChange={handleChange} className="pl-9 h-10" />
                     </div>
+                    {errors.end_date && <p className="text-xs text-red-500">{errors.end_date[0]}</p>}
                   </div>
                   <div className="bg-blue-50 text-blue-700 px-4 py-2.5 rounded-md flex items-center justify-between border border-blue-100 h-10">
                     <span className="text-sm font-medium">Durasi:</span>
@@ -201,66 +237,58 @@ export default function CreateTravel() {
                   </div>
                 </div>
 
-
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="pic_replacement">Pengganti PIC (Opsional)</Label>
-                    <Input
-                      id="pic_replacement"
-                      name="pic_replacement"
-                      placeholder="Nama rekan kerja pengganti"
-                      value={formData.pic_replacement}
-                      onChange={handleChange}
-                      className="h-10"
-                    />
+                    <Label htmlFor="replacement_pic_id">Pengganti PIC (Opsional)</Label>
+                    <Select value={formData.replacement_pic_id} onValueChange={(val) => handleSelectChange('replacement_pic_id', val)}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Pilih pengganti PIC" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone_number">No. HP (Dapat dihubungi) <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="phone_number"
-                      name="phone_number"
-                      placeholder="Contoh: 08123456789"
-                      value={formData.phone_number}
-                      onChange={handleChange}
-                      className="h-10"
-                    />
+                    <Label htmlFor="phone">No. HP (Dapat dihubungi) <span className="text-red-500">*</span></Label>
+                    <Input id="phone" name="phone" placeholder="Contoh: 08123456789" value={formData.phone} onChange={handleChange} className="h-10" />
+                    {errors.phone && <p className="text-xs text-red-500">{errors.phone[0]}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="stay_address">Alamat Penginapan / Tujuan</Label>
-                  <Input
-                    id="stay_address"
-                    name="stay_address"
-                    placeholder="Nama Hotel atau Alamat Lengkap"
-                    value={formData.stay_address}
-                    onChange={handleChange}
-                    className="h-10"
-                  />
+                  <Label htmlFor="lokasi">Alamat Penginapan / Tujuan</Label>
+                  <Input id="lokasi" name="lokasi" placeholder="Nama Hotel atau Alamat Lengkap" value={formData.lokasi} onChange={handleChange} className="h-10" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="purpose">Agenda / Keperluan <span className="text-red-500">*</span></Label>
-                  <Textarea
-                    id="purpose"
-                    name="purpose"
-                    placeholder="Jelaskan detail agenda dan tujuan perjalanan..."
-                    value={formData.purpose}
-                    onChange={handleChange}
-                    className="min-h-[100px] resize-y"
-                  />
+                  <Label htmlFor="reason">Agenda / Keperluan <span className="text-red-500">*</span></Label>
+                  <Textarea id="reason" name="reason" placeholder="Jelaskan detail agenda dan tujuan perjalanan..." value={formData.reason} onChange={handleChange} className="min-h-[100px] resize-y" />
+                  {errors.reason && <p className="text-xs text-red-500">{errors.reason[0]}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><FileText className="h-4 w-4" /> Dokumen Pendukung (Opsional)</Label>
+                  <FileUploadDropzone className="w-full" onFilesChange={(files: File[]) => setAttachmentFile(files[0] ?? null)} />
+                  <p className="text-xs text-muted-foreground">Format: PDF, JPG, PNG (Max 5MB). Lampirkan surat tugas/undangan jika ada.</p>
                 </div>
               </div>
             </div>
 
-            <CardFooter className="p-6 md:p-8 bg-gray-50 flex justify-end gap-3 border-t">
-              <Button variant="outline" asChild size="lg">
-                <Link href="/leaves">Batal</Link>
-              </Button>
-              <Button type="submit" size="lg" disabled={totalDays <= 0} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)]/90 min-w-[150px]">
-                <Save className="mr-2 h-4 w-4" /> Ajukan Dinas
-              </Button>
+            <CardFooter className="p-6 md:p-8 bg-gray-50 flex justify-between items-center border-t">
+              <div className="text-sm text-muted-foreground">
+                {loading && <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</span>}
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" asChild size="lg">
+                  <Link href="/leaves">Batal</Link>
+                </Button>
+                <Button type="submit" size="lg" disabled={loading || totalDays <= 0} className="bg-sidebar hover:bg-sidebar/90 min-w-[150px]">
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Ajukan Dinas</>}
+                </Button>
+              </div>
             </CardFooter>
           </form>
         </Card>

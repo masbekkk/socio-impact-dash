@@ -10,6 +10,7 @@ use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -45,6 +46,21 @@ final class User extends Authenticatable implements MustVerifyEmail
     /**
      * @var list<string>
      */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'nip',
+        'division_id',
+        'role',
+        'employee_type',
+        'contract_start',
+        'contract_end',
+    ];
+
+    /**
+     * @var list<string>
+     */
     protected $hidden = [
         'password',
         'remember_token',
@@ -59,6 +75,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'id' => 'integer',
+            'division_id' => 'integer',
             'name' => 'string',
             'email' => 'string',
             'email_verified_at' => 'datetime',
@@ -78,6 +95,11 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class, 'user_id');
+    }
+
+    public function division(): BelongsTo
+    {
+        return $this->belongsTo(Division::class, 'division_id');
     }
 
     public function reimbursements(): HasMany

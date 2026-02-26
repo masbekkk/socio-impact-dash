@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\V1\LeaveController;
 use App\Http\Controllers\Api\V1\ReimbursementController;
 use Illuminate\Support\Facades\Route;
 
@@ -47,4 +48,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     // Letter Master Data
     Route::apiResource('letter-codes', \App\Http\Controllers\Api\V1\LetterCodeController::class);
     Route::apiResource('letter-divisions', \App\Http\Controllers\Api\V1\LetterDivisionController::class);
+    // Leaves
+    Route::apiResource('leaves', LeaveController::class)->only(['index', 'store', 'show']);
+    Route::post('leaves/{code}/status', [LeaveController::class, 'updateStatus']);
 });

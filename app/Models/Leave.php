@@ -16,7 +16,7 @@ final class Leave extends Model
     use HasFactory;
 
     protected $fillable = [
-        'code', 'user_id', 'replacement_pic_id', 'lokasi',
+        'code', 'user_id', 'replacement_pic_id', 'project_id', 'phone', 'destination', 'lokasi',
         'type', 'status', 'start_date', 'end_date', 'reason', 'attachment_path',
     ];
 
@@ -26,6 +26,7 @@ final class Leave extends Model
             'id' => 'integer',
             'user_id' => 'integer',
             'replacement_pic_id' => 'integer',
+            'project_id' => 'integer',
             'type' => LeaveType::class,
             'status' => LeaveStatus::class,
             'start_date' => 'date',
@@ -43,6 +44,11 @@ final class Leave extends Model
     public function replacementPic(): BelongsTo
     {
         return $this->belongsTo(User::class, 'replacement_pic_id');
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'project_id');
     }
 
     public function approvals(): HasMany
