@@ -14,10 +14,21 @@ class ProjectBudgetDetail extends Model
 
     protected $fillable = [
         'project_id',
+        'quantity',
+        'item_price',
         'amount',
         'notes',
         'created_by',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'quantity' => 'integer',
+            'item_price' => 'float',
+            'amount' => 'float',
+        ];
+    }
 
     /**
      * Get the project that owns the budget detail.

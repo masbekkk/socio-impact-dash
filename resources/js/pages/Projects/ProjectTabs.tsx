@@ -152,6 +152,8 @@ export default function ProjectTabs({
                 if (!detail.isNew) {
                     submitData.append(`detail_budgets[${index}][id]`, detail.id);
                 }
+                submitData.append(`detail_budgets[${index}][quantity]`, (detail.quantity || 1).toString());
+                submitData.append(`detail_budgets[${index}][item_price]`, (detail.item_price || 0).toString());
                 submitData.append(`detail_budgets[${index}][amount]`, detail.amount.toString());
                 if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
             });
@@ -834,6 +836,11 @@ export default function ProjectTabs({
                                                         if (selectedFile) handleReportFileChange(file.id, 'file', selectedFile);
                                                     }}
                                                 />
+                                                {file.file && (
+                                                    <p className="text-[10px] font-medium text-green-600 mt-1 truncate px-1">
+                                                        ✓ Terpilih: {file.file.name}
+                                                    </p>
+                                                )}
                                             </div>
                                             <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-400 hover:text-red-600 hover:bg-red-50 shrink-0" onClick={() => removeReportFileRow(file.id)}>
                                                 <Trash2 className="h-4 w-4" />
@@ -983,7 +990,9 @@ export default function ProjectTabs({
                                                 <tr>
                                                     <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
                                                     <th className="px-4 py-3 font-medium text-gray-500">Keterangan / Item</th>
-                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Nominal</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-center">Qty</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Harga Satuan</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Total</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-100">
@@ -992,21 +1001,25 @@ export default function ProjectTabs({
                                                         <tr key={idx} className="hover:bg-gray-50/50">
                                                             <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
                                                             <td className="px-4 py-3 font-medium text-gray-900">{detail.notes || '-'}</td>
+                                                            <td className="px-4 py-3 text-center">{detail.quantity || 1}</td>
                                                             <td className="px-4 py-3 text-right">
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.amount)}
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.item_price || 0)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right font-medium text-gray-900">
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.amount || 0)}
                                                             </td>
                                                         </tr>
                                                     ))
                                                 ) : (
                                                     <tr>
-                                                        <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground italic">
+                                                        <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground italic">
                                                             Belum ada rincian anggaran.
                                                         </td>
                                                     </tr>
                                                 )}
                                                 {detailBudgets.length > 0 && (
                                                     <tr className="bg-gray-50/80 font-semibold border-t-2">
-                                                        <td colSpan={2} className="px-4 py-3 text-right text-gray-700">Total Rincian:</td>
+                                                        <td colSpan={4} className="px-4 py-3 text-right text-gray-700">Total Rincian:</td>
                                                         <td className="px-4 py-3 text-right text-primary">
                                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
                                                                 detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
@@ -1022,7 +1035,7 @@ export default function ProjectTabs({
                                         <div className="space-y-3">
                                             {detailBudgets.map((detail, idx) => (
                                                 <div key={detail.id} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-white p-3 rounded-lg border shadow-sm">
-                                                    <div className="flex-1 w-full space-y-1.5">
+                                                    <div className="flex-[2] w-full space-y-1.5">
                                                         <Label className="text-xs text-muted-foreground">Keterangan / Item</Label>
                                                         <Input
                                                             type="text"
@@ -1037,17 +1050,43 @@ export default function ProjectTabs({
                                                         />
                                                     </div>
                                                     <div className="flex-1 w-full space-y-1.5">
-                                                        <Label className="text-xs text-muted-foreground">Nominal</Label>
+                                                        <Label className="text-xs text-muted-foreground">Qty</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min="1"
+                                                            value={detail.quantity || 1}
+                                                            onChange={(e) => {
+                                                                const newDetails = [...detailBudgets];
+                                                                newDetails[idx].quantity = parseInt(e.target.value) || 0;
+                                                                newDetails[idx].amount = newDetails[idx].quantity * (newDetails[idx].item_price || 0);
+                                                                setDetailBudgets(newDetails);
+                                                            }}
+                                                            placeholder="1"
+                                                            className="h-9"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 w-full space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">Harga Satuan</Label>
                                                         <MoneyInput
-                                                            value={detail.amount}
+                                                            value={detail.item_price || 0}
                                                             onValueChange={(vals) => {
                                                                 const newDetails = [...detailBudgets];
-                                                                newDetails[idx].amount = vals.floatValue || 0;
+                                                                newDetails[idx].item_price = vals.floatValue || 0;
+                                                                newDetails[idx].amount = (newDetails[idx].quantity || 0) * newDetails[idx].item_price;
                                                                 setDetailBudgets(newDetails);
                                                             }}
                                                             placeholder="0"
                                                             prefix="Rp "
                                                             className="h-9"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 w-full space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">Total</Label>
+                                                        <MoneyInput
+                                                            value={detail.amount || 0}
+                                                            disabled
+                                                            prefix="Rp "
+                                                            className="h-9 bg-gray-50 cursor-not-allowed text-gray-500"
                                                         />
                                                     </div>
                                                     <div className="pt-5 flex-shrink-0">
@@ -1075,7 +1114,7 @@ export default function ProjectTabs({
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), amount: 0, notes: '', isNew: true }])}
+                                                onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), quantity: 1, item_price: 0, amount: 0, notes: '', isNew: true }])}
                                                 className="gap-1.5 border-dashed"
                                             >
                                                 <Plus className="h-3.5 w-3.5" />

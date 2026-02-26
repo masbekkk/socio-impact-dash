@@ -59,8 +59,8 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
   ])
 
   // State Detail Budgets
-  const [detailBudgets, setDetailBudgets] = useState<{ id: string, amount: number, notes: string }[]>([
-    { id: crypto.randomUUID(), amount: 0, notes: '' }
+  const [detailBudgets, setDetailBudgets] = useState<{ id: string, quantity: number, item_price: number, amount: number, notes: string }[]>([
+    { id: crypto.randomUUID(), quantity: 1, item_price: 0, amount: 0, notes: '' }
   ]);
 
   const [loading, setLoading] = useState(false);
@@ -82,7 +82,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
   }
 
   // Dynamic Docs State
-  const [supportingDocs, setSupportingDocs] = useState([{ id: 1, type: '' }]);
+  const [supportingDocs, setSupportingDocs] = useState<{ id: number, type: string, file?: File }[]>([{ id: 1, type: '' }]);
   const addSupportingDoc = () => {
     if (supportingDocs.length < 5) {
       setSupportingDocs([...supportingDocs, { id: Date.now(), type: '' }]);
@@ -99,15 +99,24 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
 
   // Detail Budgets Functions
   const addDetailBudget = () => {
-    setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), amount: 0, notes: '' }]);
+    setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), quantity: 1, item_price: 0, amount: 0, notes: '' }]);
   };
   const removeDetailBudget = (id: string) => {
     if (detailBudgets.length > 1) {
       setDetailBudgets(detailBudgets.filter(d => d.id !== id));
     }
   };
-  const updateDetailBudget = (id: string, field: 'amount' | 'notes', value: any) => {
-    setDetailBudgets(detailBudgets.map(d => d.id === id ? { ...d, [field]: value } : d));
+  const updateDetailBudget = (id: string, field: 'quantity' | 'item_price' | 'notes', value: any) => {
+    setDetailBudgets(detailBudgets.map(d => {
+      if (d.id === id) {
+        const updated = { ...d, [field]: value };
+        if (field === 'quantity' || field === 'item_price') {
+          updated.amount = (updated.quantity || 0) * (updated.item_price || 0);
+        }
+        return updated;
+      }
+      return d;
+    }));
   };
   const totalDetailBudget = detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
@@ -160,6 +169,8 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
     });
 
     detailBudgets.forEach((detail, index) => {
+      submitData.append(`detail_budgets[${index}][quantity]`, detail.quantity.toString());
+      submitData.append(`detail_budgets[${index}][item_price]`, detail.item_price.toString());
       submitData.append(`detail_budgets[${index}][amount]`, detail.amount.toString());
       if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
     });
@@ -173,15 +184,16 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
     });
 
     try {
+      await axios.get('/sanctum/csrf-cookie'); // Ensure CSRF token is set
       const response = await axios.post('/api/v1/projects', submitData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
           'X-Requested-With': 'XMLHttpRequest'
         },
         withCredentials: true
       });
-      // Use window.location as fallback or router
-      router.visit(`/projects/${response.data.data.id}`);
+      // Redirect handled by router.visit if needed, or stick to window.location
+      // router.visit('/projects'); // changing to native redirect to ensure full reload if needed
+      window.location.href = `/projects/${response.data.data.id}`;
     } catch (error: any) {
       console.error("Error creating project:", error);
       if (error.response?.status === 422) {
@@ -322,7 +334,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                       <SelectContent>
                         {divisions.map((div) => (
                           <SelectItem key={div.id} value={div.id.toString()}>
-                            {div.name}
+                            {div.code} - {div.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -514,6 +526,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                         </p>
                       </div>
                       <FileUploadDropzone onFilesChange={(files) => setSowFile(files[0])} />
+                      {sowFile && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {sowFile.name}</p>}
                       {errors.sow && <p className="text-xs text-red-500">{errors.sow}</p>}
                     </div>
                   </div>
@@ -543,6 +556,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                           <FileUploadDropzone onFilesChange={(files) => {
                             setSupportingDocs(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] } : d));
                           }} />
+                          {doc.file && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {doc.file.name}</p>}
                         </div>
                       )
                     })}
@@ -714,31 +728,11 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                   </div>
                 </div>
 
-                {/* Upload RAB */}
-                {/* Upload Section: RAB & Negotiation */}
-                <div className={`grid grid-cols-1 ${type !== 'proposal' ? 'md:grid-cols-2' : ''} gap-6 pt-2`}>
-                  {/* RAB */}
-                  <div className="space-y-2">
-                    <Label>Rincian Anggaran (RAB)</Label> <span className="text-red-500">*</span>
-                    <div className={cn("border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full", errors['documents.0.file'] && 'border-red-500')}>
-                      <div className="flex items-center gap-4">
-                        <div className="space-y-1">
-                          <h4 className="text-sm font-medium text-gray-900">Upload File RAB.</h4>
-                          <p className="text-xs text-muted-foreground">Lampirkan detail Rencana Anggaran Biaya.</p>
-                        </div>
-                      </div>
-                      <FileUploadDropzone onFilesChange={(files) => setRabFile(files[0])} />
-                      {errors['documents.0.file'] && <p className="text-xs text-red-500">{errors['documents.0.file']}</p>}
-                    </div>
-                  </div>
-
-                </div>
-
                 {/* Detail Budgets (Rincian Anggaran - RAB) Section */}
                 <div className="space-y-4 pt-4 border-t mt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-base font-semibold">Rincian Anggaran (RAB)</Label>
+                      {/* <Label className="text-base font-semibold">Rincian Anggaran (RAB)</Label> */}
                       <p className="text-xs text-muted-foreground mt-1">Atur rincian pengeluaran anggaran proyek.</p>
                       {errors.detail_budgets && <p className="text-xs text-red-500 mt-1">{errors.detail_budgets}</p>}
                     </div>
@@ -772,23 +766,9 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                           )}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Nominal */}
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium text-muted-foreground">Nominal Anggaran</Label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
-                              <MoneyInput
-                                value={detail.amount}
-                                onValueChange={(vals) => updateDetailBudget(detail.id, 'amount', vals.floatValue || 0)}
-                                placeholder="0"
-                                className="pl-10 bg-white h-10"
-                              />
-                            </div>
-                          </div>
-
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                           {/* Notes */}
-                          <div className="space-y-2">
+                          <div className="space-y-2 md:col-span-4">
                             <Label className="text-xs font-medium text-muted-foreground">Keterangan / Item</Label>
                             <Input
                               type="text"
@@ -797,6 +777,46 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                               placeholder="Contoh: Sewa Gedung, Konsumsi, dll"
                               className="bg-white h-10"
                             />
+                          </div>
+
+                          {/* Quantity */}
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-xs font-medium text-muted-foreground">Qty</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={detail.quantity}
+                              onChange={(e) => updateDetailBudget(detail.id, 'quantity', parseInt(e.target.value) || 0)}
+                              placeholder="1"
+                              className="bg-white h-10"
+                            />
+                          </div>
+
+                          {/* Item Price */}
+                          <div className="space-y-2 md:col-span-3">
+                            <Label className="text-xs font-medium text-muted-foreground">Harga Satuan</Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
+                              <MoneyInput
+                                value={detail.item_price}
+                                onValueChange={(vals) => updateDetailBudget(detail.id, 'item_price', vals.floatValue || 0)}
+                                placeholder="0"
+                                className="pl-10 bg-white h-10"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Total Amount */}
+                          <div className="space-y-2 md:col-span-3">
+                            <Label className="text-xs font-medium text-muted-foreground">Total (Qty × Harga)</Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
+                              <MoneyInput
+                                value={detail.amount}
+                                disabled
+                                className="pl-10 bg-gray-50 text-gray-500 h-10 cursor-not-allowed"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -820,6 +840,27 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                     </div>
                   </div>
                 </div>
+                {/* Upload RAB */}
+                {/* Upload Section: RAB & Negotiation */}
+                <div className={`grid grid-cols-1 md:grid-cols-1 gap-6 pt-2`}>
+                  {/* RAB */}
+                  <div className="space-y-2">
+                    <Label>Rincian Anggaran (RAB)</Label> <span className="text-red-500">*</span>
+                    <div className={cn("border border-dashed border-gray-300 rounded-lg p-6 space-y-4 hover:bg-gray-50 transition-colors bg-white h-full", errors['documents.0.file'] && 'border-red-500')}>
+                      <div className="flex items-center gap-4">
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-medium text-gray-900">Upload File RAB.</h4>
+                          <p className="text-xs text-muted-foreground">Lampirkan detail Rencana Anggaran Biaya.</p>
+                        </div>
+                      </div>
+                      <FileUploadDropzone onFilesChange={(files) => setRabFile(files[0])} />
+                      {rabFile && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {rabFile.name}</p>}
+                      {errors['documents.0.file'] && <p className="text-xs text-red-500">{errors['documents.0.file']}</p>}
+                    </div>
+                  </div>
+
+                </div>
+
 
                 {/* Termin Pembayaran Section */}
                 <div className="space-y-4 pt-4 border-t mt-6">
@@ -891,7 +932,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                               type="text"
                               value={term.notes}
                               onChange={(e) => updatePaymentTerm(term.id, 'notes', e.target.value)}
-                              placeholder="Contoh: DP 30%, Pelunasan, dll"
+                              placeholder="Contoh: Kwitansi, Invoice, Pelunasan, dll"
                               className="bg-white h-10"
                             />
                           </div>

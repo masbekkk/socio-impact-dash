@@ -8,11 +8,14 @@ use App\Enums\UserRole;
 use App\Models\LetterRequest;
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Routing\Controller;
 use Inertia\Inertia;
+use Inertia\Response;
 
-final class LetterRequestController
+class LetterRequestController extends Controller
 {
-    public function index()
+    public function index(): Response
     {
         $user = auth()->user();
 
@@ -21,14 +24,22 @@ final class LetterRequestController
         ]);
     }
 
-    public function create()
+    public function create(): Response
     {
         return Inertia::render('LetterRequests/Create', [
             'projects' => Project::select('id', 'name', 'code')->get(),
         ]);
     }
 
-    public function store(Request $request)
+    public function edit(string $id): Response
+    {
+        return Inertia::render('LetterRequests/Edit', [
+            'letterRequestId' => $id,
+            'projects' => Project::select('id', 'name', 'code')->get(),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'project_id' => 'required|exists:projects,id',
@@ -47,7 +58,7 @@ final class LetterRequestController
         return redirect()->route('letter-requests.index')->with('success', 'Pengajuan nomor surat berhasil dikirim.');
     }
 
-    public function assignNumber(Request $request, LetterRequest $letterRequest)
+    public function assignNumber(Request $request, LetterRequest $letterRequest): RedirectResponse
     {
         $user = auth()->user();
         if (! $user->hasRole([UserRole::Finance, UserRole::Superadmin])) {
@@ -66,7 +77,7 @@ final class LetterRequestController
         return back()->with('success', 'Nomor surat berhasil diberikan.');
     }
 
-    public function reject(LetterRequest $letterRequest)
+    public function reject(LetterRequest $letterRequest): RedirectResponse
     {
         $user = auth()->user();
         if (! $user->hasRole([UserRole::Finance, UserRole::Superadmin])) {

@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Requests\StoreDivisionRequest;
-use App\Http\Requests\UpdateDivisionRequest;
-use App\Models\Division;
+use Inertia\Inertia;
 
 final class DivisionController
 {
@@ -15,7 +13,7 @@ final class DivisionController
      */
     public function index()
     {
-        //
+        return Inertia::render('admin/divisions/index');
     }
 
     /**
@@ -23,46 +21,16 @@ final class DivisionController
      */
     public function create()
     {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreDivisionRequest $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Division $division)
-    {
-        //
+        return Inertia::render('admin/divisions/create');
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Division $division)
+    public function edit(string $id)
     {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateDivisionRequest $request, Division $division)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Division $division)
-    {
-        //
+        return Inertia::render('admin/divisions/edit', [
+            'divisionId' => $id,
+        ]);
     }
 }

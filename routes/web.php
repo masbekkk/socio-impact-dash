@@ -42,7 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('reimbursements/{reimbursement}/reject', [ReimbursementController::class, 'reject'])->name('reimbursements.reject');
 
     // Letter Requests
-    Route::resource('letter-requests', LetterRequestController::class)->only(['index', 'create', 'store']);
+    Route::resource('letter-requests', LetterRequestController::class)->only(['index', 'create', 'store', 'edit']);
     Route::post('letter-requests/{letter_request}/assign', [LetterRequestController::class, 'assignNumber'])->name('letter-requests.assign');
     Route::post('letter-requests/{letter_request}/reject', [LetterRequestController::class, 'reject'])->name('letter-requests.reject');
 
@@ -65,6 +65,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::prefix('admin')->middleware('can:adminAccess')->group(function (): void {
         Route::resource('users', AdminUserController::class);
         Route::resource('divisions', AdminDivisionController::class);
+        Route::resource('letter-codes', \App\Http\Controllers\Admin\LetterCodeController::class)->except(['store', 'update', 'destroy']);
+        Route::resource('letter-divisions', \App\Http\Controllers\Admin\LetterDivisionController::class)->except(['store', 'update', 'destroy']);
         Route::get('rbac', fn() => Inertia::render('admin/rbac/index'))->name('admin.rbac');
     });
 });
