@@ -17,6 +17,7 @@ final class ProjectResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'uuid' => $this->uuid,
             'code' => $this->code,
             'name' => $this->name,
             'description' => $this->description,
@@ -35,6 +36,7 @@ final class ProjectResource extends JsonResource
             'pic_id' => $this->pic_id,
             'created_by' => $this->created_by,
             'actual_budget' => $this->actual_budget,
+            'lesson_learned' => $this->lesson_learned,
             'creator' => $this->whenLoaded('creator', fn () => [
                 'id' => $this->creator->id,
                 'name' => $this->creator->name,

@@ -34,14 +34,14 @@ final class ProjectController extends Controller
     {
 
         return Inertia::render('Projects/Show', [
-            'project_slug' => $project->id,
+            'project_slug' => $project->uuid,
         ]);
     }
 
     public function edit(Project $project): Response
     {
         return Inertia::render('Projects/Edit', [
-            'project_slug' => $project->id,
+            'project_slug' => $project->uuid,
             'divisions' => DivisionCode::with('divisions')->get(),
             'employees' => User::all(),
         ]);

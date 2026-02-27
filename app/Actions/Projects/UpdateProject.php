@@ -61,6 +61,7 @@ final class UpdateProject
             'status', 'project_type', 'budget_total', 'head_id', 'account_manager_id', 'pic_id',
             'start_date', 'end_date', 'actual_budget',
             'operational_budget', 'allowance_budget', 'budget_partition_status',
+            'lesson_learned',
         ])->toArray();
 
         // If managing detailed budgets, this basic calculation could be preserved or adjusted,
