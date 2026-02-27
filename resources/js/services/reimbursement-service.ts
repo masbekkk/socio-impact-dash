@@ -26,6 +26,10 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     if (payload.usage_plan) fd.append('usage_plan', payload.usage_plan);
     if (payload.urgency) fd.append('urgency', payload.urgency);
     if (payload.eer_type) fd.append('eer_type', payload.eer_type);
+    if (payload.atr_id) fd.append('atr_id', payload.atr_id.toString());
+    if (payload.approver_head_id) fd.append('approver_head_id', payload.approver_head_id);
+    if (payload.approver_finance_id) fd.append('approver_finance_id', payload.approver_finance_id);
+    if (payload.approver_direktur_id) fd.append('approver_direktur_id', payload.approver_direktur_id);
 
     payload.documents?.forEach((doc, index) => {
         fd.append(`documents[${index}][file]`, doc.file);

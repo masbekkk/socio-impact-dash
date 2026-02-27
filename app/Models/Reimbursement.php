@@ -16,7 +16,7 @@ final class Reimbursement extends Model
     use HasFactory;
 
     protected $fillable = [
-        'code', 'user_id', 'project_id', 'type', 'eer_type', 'status',
+        'code', 'user_id', 'project_id', 'atr_id', 'type', 'eer_type', 'status',
         'amount', 'bank_name', 'bank_account', 'account_holder',
         'transferred_at', 'transfer_proof_path', 'rejection_reason',
         'usage_plan', 'urgency',
@@ -60,5 +60,15 @@ final class Reimbursement extends Model
     public function atrBudgetSelecteds(): HasMany
     {
         return $this->hasMany(AtrBudgetSelected::class);
+    }
+
+    public function atr(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'atr_id');
+    }
+
+    public function eers(): HasMany
+    {
+        return $this->hasMany(self::class, 'atr_id');
     }
 }

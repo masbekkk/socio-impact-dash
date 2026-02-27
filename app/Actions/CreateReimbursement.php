@@ -38,6 +38,7 @@ final readonly class CreateReimbursement
             'code' => $this->generateUniqueCode(),
             'user_id' => $userId,
             'project_id' => $data['project_id'] ?? null,
+            'atr_id' => $data['atr_id'] ?? null,
             'type' => $data['type'],
             'eer_type' => $data['eer_type'] ?? null,
             'status' => ReimbursementStatus::Submitted,

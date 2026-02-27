@@ -38,6 +38,10 @@ export interface ReimbursementPayload {
     usage_plan?: string;
     urgency?: string;
     eer_type?: string;
+    atr_id?: string;
+    approver_head_id?: string;
+    approver_finance_id?: string;
+    approver_direktur_id?: string;
     documents?: { file: File; type: string }[];
     selected_budget_details?: {
         project_budget_detail_id: number;
