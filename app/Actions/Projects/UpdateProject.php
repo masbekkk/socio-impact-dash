@@ -192,8 +192,8 @@ final class UpdateProject
             }
         };
 
-        $updateOrCreate('finance', $project->account_manager_id);
-        $updateOrCreate('hr', $project->head_id);
-        $updateOrCreate('direktur', $project->pic_id);
+        $updateOrCreate('finance', $project->account_manager_id !== null ? (int) $project->account_manager_id : null);
+        $updateOrCreate('hr', $project->head_id !== null ? (int) $project->head_id : null);
+        $updateOrCreate('direktur', $project->pic_id !== null ? (int) $project->pic_id : null);
     }
 }

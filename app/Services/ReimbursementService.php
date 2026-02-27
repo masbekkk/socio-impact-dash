@@ -14,7 +14,7 @@ class ReimbursementService
     {   
 
 
-        $query = Reimbursement::with(['user', 'project', 'documents']);
+        $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver']);
 
         if (!$user->hasAnyPermission(['approve_reimbursements', 'reject_reimbursements'])) {
             $query->where('user_id', $user->id);

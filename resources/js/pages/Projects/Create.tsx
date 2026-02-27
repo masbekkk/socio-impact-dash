@@ -343,7 +343,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                       <SelectContent>
                         {divisions.map((divCode) => (
                           <SelectGroup key={divCode.id}>
-                            <SelectLabel className="text-muted-foreground">{divCode.code}</SelectLabel>
+                            <SelectLabel className="text-muted-foreground">{divCode.name}</SelectLabel>
                             {divCode.divisions?.map((n: any) => (
                               <SelectItem key={n.id} value={n.id.toString()} className="pl-6">
                                 {n.name}
