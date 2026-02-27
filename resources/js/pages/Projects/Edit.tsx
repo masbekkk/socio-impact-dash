@@ -28,6 +28,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [status, setStatus] = useState('draft')
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [errors, setErrors] = useState<any>({});
 
     const [formData, setFormData] = useState({
@@ -222,6 +223,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
     const handleSubmit = async () => {
         setSaving(true);
+        setUploadProgress(0);
         setErrors({});
 
         const submitData = new FormData();
@@ -299,7 +301,13 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
         try {
             await axios.post(`/api/v1/projects/${project_slug}`, submitData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total) {
+                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        setUploadProgress(percentCompleted);
+                    }
+                },
             });
             router.visit(`/projects/${project_slug}`);
         } catch (error: any) {
@@ -310,6 +318,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             }
         } finally {
             setSaving(false);
+            setUploadProgress(0);
         }
     };
 
@@ -1006,9 +1015,15 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                 <Button
                                     onClick={handleSubmit}
                                     disabled={saving}
-                                    className="w-auto px-8 min-w-32 bg-green-600 hover:bg-green-700 hover:scale-105 transition-transform"
+                                    className="w-auto px-8 min-w-40 bg-green-600 hover:bg-green-700 hover:scale-105 transition-all relative overflow-hidden"
                                 >
-                                    {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                                    <span className="relative z-10">{saving ? (uploadProgress > 0 ? `Mengunggah... ${uploadProgress}%` : 'Menyimpan...') : 'Simpan Perubahan'}</span>
+                                    {saving && uploadProgress > 0 && (
+                                        <div
+                                            className="absolute left-0 top-0 h-full bg-green-800 transition-all duration-300 ease-in-out"
+                                            style={{ width: `${uploadProgress}%` }}
+                                        />
+                                    )}
                                 </Button>
                             </CardFooter>
                         </Card>

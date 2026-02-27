@@ -33,6 +33,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
   const [budget, setBudget] = useState<number>(0)
   const [status, setStatus] = useState('draft')
   const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -133,6 +134,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
 
   const handleSubmit = async () => {
     setLoading(true);
+    setUploadProgress(0);
     setErrors({});
 
     const submitData = new FormData();
@@ -189,11 +191,17 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
         headers: {
           'X-Requested-With': 'XMLHttpRequest'
         },
-        withCredentials: true
+        withCredentials: true,
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
+        },
       });
       // Redirect handled by router.visit if needed, or stick to window.location
       // router.visit('/projects'); // changing to native redirect to ensure full reload if needed
-      window.location.href = `/projects/${response.data.data.id}`;
+      window.location.href = `/projects/${response.data.data.uuid}`;
     } catch (error: any) {
       console.error("Error creating project:", error);
       if (error.response?.status === 422) {
@@ -206,6 +214,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
       }
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -973,9 +982,15 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                 <Button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="w-auto px-8 min-w-32 bg-[var(--sidebar)] hover:bg-[var(--sidebar)] hover:scale-105"
+                  className="w-auto px-8 min-w-40 bg-[var(--sidebar)] hover:bg-[var(--sidebar)] hover:scale-105 relative overflow-hidden"
                 >
-                  {loading ? 'Menyimpan...' : 'Simpan Proyek'}
+                  <span className="relative z-10">{loading ? (uploadProgress > 0 ? `Mengunggah... ${uploadProgress}%` : 'Menyimpan...') : 'Simpan Proyek'}</span>
+                  {loading && uploadProgress > 0 && (
+                    <div
+                      className="absolute left-0 top-0 h-full bg-green-600 transition-all duration-300 ease-in-out"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  )}
                 </Button>
               </CardFooter>
             </Card>
