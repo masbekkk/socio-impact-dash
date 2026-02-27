@@ -22,7 +22,16 @@ const URGENCY_MAP: Record<string, string> = {
     urgent: 'mendesak',
 };
 
-export default function CreateAllowance({ projects }: { projects: Project[] }) {
+interface Approver {
+    id: number;
+    name: string;
+    email: string;
+}
+
+export default function CreateAllowance({ projects, approvers }: {
+    projects: Project[],
+    approvers: Record<string, Approver[]>
+}) {
     const { authUser, loading, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
 
     const [doc1File, setDoc1File] = useState<File | null>(null);
@@ -34,9 +43,9 @@ export default function CreateAllowance({ projects }: { projects: Project[] }) {
         project_id: '',
         divisi: '',
         pic_project: '',
-        approver_name: '',
-        approver_position: '',
-        approver_email: '',
+        approver_head_id: '',
+        approver_finance_id: '',
+        approver_direktur_id: '',
         bank_name: '',
         account_number: '',
         account_name: '',
@@ -58,14 +67,16 @@ export default function CreateAllowance({ projects }: { projects: Project[] }) {
             project_id: value,
             divisi: autoFill.division,
             pic_project: autoFill.pic,
-            approver_name: autoFill.approver_name,
-            approver_position: autoFill.approver_position,
-            approver_email: autoFill.approver_email,
         }));
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+        clearFieldError(name);
+    };
+
+    const handleSelectChange = (name: string, value: string) => {
         setFormData(prev => ({ ...prev, [name]: value }));
         clearFieldError(name);
     };
@@ -77,6 +88,11 @@ export default function CreateAllowance({ projects }: { projects: Project[] }) {
     const handleSubmit = async () => {
         if (!formData.project_id) {
             setErrors({ project_id: ['Pilih proyek terlebih dahulu.'] });
+            return;
+        }
+
+        if (!formData.approver_head_id || !formData.approver_finance_id || !formData.approver_direktur_id) {
+            setErrors({ _general: ['Persetujuan (Head, Finance, Direktur) wajib dipilih.'] });
             return;
         }
 
@@ -280,25 +296,43 @@ export default function CreateAllowance({ projects }: { projects: Project[] }) {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="approver_name">Nama Approver</Label>
-                                    <div className="relative">
-                                        <UserCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input id="approver_name" name="approver_name" className="pl-9 h-10 bg-muted/30" value={formData.approver_name} onChange={handleChange} readOnly={isAutoFilled} />
-                                    </div>
+                                    <Label htmlFor="approver_head_id">Head Approver</Label>
+                                    <Select onValueChange={(val) => handleSelectChange('approver_head_id', val)} value={formData.approver_head_id}>
+                                        <SelectTrigger className="h-10">
+                                            <SelectValue placeholder="Pilih Head Divisi" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {approvers['head']?.map((user) => (
+                                                <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="approver_position">Jabatan Approver</Label>
-                                    <div className="relative">
-                                        <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input id="approver_position" name="approver_position" className="pl-9 h-10 bg-muted/30" value={'Head'} readOnly />
-                                    </div>
+                                    <Label htmlFor="approver_finance_id">Finance Approver</Label>
+                                    <Select onValueChange={(val) => handleSelectChange('approver_finance_id', val)} value={formData.approver_finance_id}>
+                                        <SelectTrigger className="h-10">
+                                            <SelectValue placeholder="Pilih Finance" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {approvers['finance']?.map((user) => (
+                                                <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="approver_email">Email Approver</Label>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input id="approver_email" name="approver_email" type="email" className="pl-9 h-10 bg-muted/30" value={formData.approver_email} onChange={handleChange} readOnly={isAutoFilled} />
-                                    </div>
+                                    <Label htmlFor="approver_direktur_id">Direktur Approver</Label>
+                                    <Select onValueChange={(val) => handleSelectChange('approver_direktur_id', val)} value={formData.approver_direktur_id}>
+                                        <SelectTrigger className="h-10">
+                                            <SelectValue placeholder="Pilih Direktur" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {approvers['direktur']?.map((user) => (
+                                                <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
                         </div>

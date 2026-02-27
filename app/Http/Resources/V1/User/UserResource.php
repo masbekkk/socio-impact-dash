@@ -18,6 +18,7 @@ final class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'position' => $this->position,
             'email' => $this->email,
             'employee_type' => $this->employee_type,
             'contract_start' => $this->contract_start ? $this->contract_start->toDateString() : null,
