@@ -40,11 +40,11 @@ const NAV_ITEMS: NavItem[] = [
         href: '/presences',
         icon: CheckSquare,
     },
-    // {
-    //     title: 'Cuti',
-    //     href: '/leaves',
-    //     icon: Calendar,
-    // },
+    {
+        title: 'Cuti',
+        href: '/leaves',
+        icon: Calendar,
+    },
     {
         title: 'Kalender',
         href: '/calendar',
@@ -55,12 +55,12 @@ const NAV_ITEMS: NavItem[] = [
         href: '/letter-requests',
         icon: FileText,
     },
-    {
-        title: 'Pengajuan Cuti',
-        href: '/leaves/approvals',
-        icon: Calendar,
-        roles: ['head', 'hr', 'direktur', 'superadmin'],
-    },
+    // {
+    //     title: 'Pengajuan Cuti',
+    //     href: '/leaves/approvals',
+    //     icon: Calendar,
+    //     roles: ['head', 'hr', 'direktur', 'superadmin'],
+    // },
     // {
     //     title: 'Transfer',
     //     href: '/reimbursements',
