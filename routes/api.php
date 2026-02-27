@@ -30,25 +30,25 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::post('projects/{project}/close', [\App\Http\Controllers\Api\V1\ProjectClosingController::class, 'close']);
     Route::post('projects/{project}/monitorings', [\App\Http\Controllers\Api\V1\ProjectMonitoringController::class, 'store']);
     Route::post('projects/{project}/termins/{termin}', [\App\Http\Controllers\Api\V1\ProjectTerminPaymentController::class, 'update']);
-    Route::apiResource('projects', \App\Http\Controllers\Api\V1\ProjectController::class);
-    Route::apiResource('reimbursements', ReimbursementController::class)->only(['index', 'store', 'show']);
+    Route::apiResource('projects', \App\Http\Controllers\Api\V1\ProjectController::class)->names('api.projects');
+    Route::apiResource('reimbursements', ReimbursementController::class)->only(['index', 'store', 'show'])->names('api.reimbursements');
     Route::match(['patch', 'post'], 'reimbursements/{code}/status', [ReimbursementController::class, 'updateStatus']);
 
     // Letter Requests
-    Route::apiResource('letter-requests', \App\Http\Controllers\Api\V1\LetterRequestController::class);
+    Route::apiResource('letter-requests', \App\Http\Controllers\Api\V1\LetterRequestController::class)->names('api.letter-requests');
     Route::post('letter-requests/{letter_request}/assign', [\App\Http\Controllers\Api\V1\LetterRequestController::class, 'assignNumber']);
     Route::post('letter-requests/{letter_request}/reject', [\App\Http\Controllers\Api\V1\LetterRequestController::class, 'reject']);
 
     // Users
-    Route::apiResource('users', \App\Http\Controllers\Api\V1\UserController::class);
+    Route::apiResource('users', \App\Http\Controllers\Api\V1\UserController::class)->names('api.users');
 
     // Divisions
-    Route::apiResource('divisions', \App\Http\Controllers\Api\V1\DivisionController::class);
+    Route::apiResource('divisions', \App\Http\Controllers\Api\V1\DivisionController::class)->names('api.divisions');
 
     // Letter Master Data
-    Route::apiResource('letter-codes', \App\Http\Controllers\Api\V1\LetterCodeController::class);
-    Route::apiResource('letter-divisions', \App\Http\Controllers\Api\V1\LetterDivisionController::class);
+    Route::apiResource('letter-codes', \App\Http\Controllers\Api\V1\LetterCodeController::class)->names('api.letter-codes');
+    Route::apiResource('letter-divisions', \App\Http\Controllers\Api\V1\LetterDivisionController::class)->names('api.letter-divisions');
     // Leaves
-    Route::apiResource('leaves', LeaveController::class)->only(['index', 'store', 'show']);
+    Route::apiResource('leaves', LeaveController::class)->only(['index', 'store', 'show'])->names('api.leaves');
     Route::post('leaves/{code}/status', [LeaveController::class, 'updateStatus']);
 });
