@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { usePage, router } from '@inertiajs/react'
 import { SharedData } from '@/types'
 import axios from 'axios'
+import Editor from '@/components/Editor';
 
 interface ProjectTabsProps {
     project: any;
@@ -62,6 +63,7 @@ export default function ProjectTabs({
     const [activeTab, setActiveTab] = useState('detail');
     const tabsListRef = useRef<HTMLDivElement>(null);
     const [selectedLocIndex, setSelectedLocIndex] = useState(0);
+    const quillRef = useRef<any>(null);
 
     useEffect(() => {
         if (tabsListRef.current) {
@@ -112,7 +114,7 @@ export default function ProjectTabs({
     const handleSaveBudget = async () => {
         setSavingBudget(true);
         try {
-            await axios.put(`/api/v1/projects/${project.id}`, {
+            await axios.put(`/api/v1/projects/${project.uuid}`, {
                 operational_budget: opsBudget,
                 allowance_budget: allowanceBudget
             });
@@ -129,7 +131,7 @@ export default function ProjectTabs({
     const handleApproveBudget = async () => {
         setSavingBudget(true);
         try {
-            await axios.put(`/api/v1/projects/${project.id}`, {
+            await axios.put(`/api/v1/projects/${project.uuid}`, {
                 budget_partition_status: 'approved'
             });
             setLocalBudgetStatus('approved');
@@ -162,7 +164,7 @@ export default function ProjectTabs({
                 submitData.append(`delete_detail_budgets[${index}]`, id);
             });
 
-            await axios.post(`/api/v1/projects/${project.id}`, submitData, {
+            await axios.post(`/api/v1/projects/${project.uuid}`, submitData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
@@ -180,7 +182,7 @@ export default function ProjectTabs({
     // Handler to toggle verification status
     const toggleVerification = async (termId: number, currentVerified: boolean) => {
         try {
-            const { data } = await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, {
+            const { data } = await axios.post(`/api/v1/projects/${project.uuid}/termins/${termId}`, {
                 is_verified: !currentVerified
             });
             setLocalPaymentTerms(prev =>
@@ -197,7 +199,7 @@ export default function ProjectTabs({
         const formData = new FormData();
         formData.append('proof_file', file);
         try {
-            const { data } = await axios.post(`/api/v1/projects/${project.id}/termins/${termId}`, formData, {
+            const { data } = await axios.post(`/api/v1/projects/${project.uuid}/termins/${termId}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             setLocalPaymentTerms(prev =>
@@ -207,6 +209,24 @@ export default function ProjectTabs({
         } catch (error: any) {
             console.error("Error uploading proof:", error);
             if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal mengunggah bukti', 'error');
+        }
+    };
+
+    const [savingClosing, setSavingClosing] = useState(false);
+
+    const handleSaveClosingChanges = async () => {
+        setSavingClosing(true);
+        try {
+            await axios.put(`/api/v1/projects/${project.uuid}`, {
+                actual_budget: closingForm.actual_budget,
+                lesson_learned: closingForm.lesson_learned
+            });
+            if (onShowToast) onShowToast('Perubahan data closing berhasil disimpan.', 'success');
+        } catch (error: any) {
+            console.error("Error saving closing changes:", error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal menyimpan perubahan.', 'error');
+        } finally {
+            setSavingClosing(false);
         }
     };
 
@@ -570,7 +590,13 @@ export default function ProjectTabs({
                                     {editPartitions ? (
                                         <MoneyInput
                                             value={opsBudget}
-                                            onValueChange={(values) => setOpsBudget(values.floatValue || 0)}
+                                            onValueChange={(values) => {
+                                                const val = values.floatValue || 0;
+                                                setOpsBudget(val);
+                                                const management = project.management_budget || 0;
+                                                const allowance = project.budget_total - val - management;
+                                                setAllowanceBudget(allowance > 0 ? allowance : 0);
+                                            }}
                                             placeholder="Nilai Operasional"
                                         />
                                     ) : (
@@ -592,7 +618,13 @@ export default function ProjectTabs({
                                     {editPartitions ? (
                                         <MoneyInput
                                             value={allowanceBudget}
-                                            onValueChange={(values) => setAllowanceBudget(values.floatValue || 0)}
+                                            onValueChange={(values) => {
+                                                const val = values.floatValue || 0;
+                                                setAllowanceBudget(val);
+                                                const management = project.management_budget || 0;
+                                                const ops = project.budget_total - val - management;
+                                                setOpsBudget(ops > 0 ? ops : 0);
+                                            }}
                                             placeholder="Nilai Allowance"
                                         />
                                     ) : (
@@ -1205,7 +1237,7 @@ export default function ProjectTabs({
                                 </div>
 
                                 {/* Penagihan */}
-                                <div className="space-y-3">
+                                <div className="space-y-3 md:col-span-2">
                                     <Label className="font-medium">Dokumen Penagihan <span className="text-red-500">*</span></Label>
                                     <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
                                         {project.documents?.some((d: any) => d.type === 'invoice') ? (
@@ -1229,26 +1261,14 @@ export default function ProjectTabs({
                                 </div>
 
                                 {/* Lesson Learned */}
-                                <div className="space-y-3">
-                                    <Label className="font-medium">Lesson Learn <span className="text-red-500">*</span></Label>
-                                    <div className="border rounded-xl p-4 bg-white shadow-sm space-y-3">
-                                        {project.documents?.some((d: any) => d.type === 'lesson_learn') ? (
-                                            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-100 rounded-lg">
-                                                <FileText className="h-4 w-4 text-green-600" />
-                                                <span className="text-xs font-medium text-green-700 flex-1 truncate">Lesson Learn Terupload</span>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => window.open(project.documents.find((d: any) => d.type === 'lesson_learn').url || project.documents.find((d: any) => d.type === 'lesson_learn').path, '_blank')}>
-                                                    <Eye className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        ) : <p className="text-xs text-gray-500">Catatan evaluasi dan pembelajaran project.</p>}
-                                        <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors w-full group">
-                                            <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
-                                                <Upload className="h-5 w-5 text-gray-600" />
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.lesson_learn ? closingForm.files.lesson_learn.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
-                                            <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
-                                            <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, lesson_learn: e.target.files?.[0] } })} />
-                                        </label>
+                                <div className="space-y-3 md:col-span-2">
+                                    <Label className="font-medium">Lesson Learned <span className="text-muted-foreground font-normal">(Catatan evaluasi dan pembelajaran proyek)</span></Label>
+                                    <div className="bg-white rounded-xl shadow-sm border p-4 resize-y overflow-auto min-h-[300px]">
+                                        <Editor
+                                            defaultValue={closingForm.lesson_learned || ''}
+                                            onTextChange={(content: string) => setClosingForm({ ...closingForm, lesson_learned: content })}
+                                            ref={quillRef}
+                                        />
                                     </div>
                                 </div>
 
@@ -1256,7 +1276,7 @@ export default function ProjectTabs({
                         </div>
 
                         {/* Footer / Actions */}
-                        <div className="flex flex-col md:flex-row items-center justify-end gap-4 border-t pt-6 transition-all duration-300">
+                        <div className="flex flex-col md:flex-row items-center justify-end gap-3 border-t pt-6 transition-all duration-300 mt-8">
                             {/* Logic: Show Deal Button first -> meaningful action -> then show Close/Delete */}
                             {!isProjectDealed ? (
                                 <Button
@@ -1268,15 +1288,27 @@ export default function ProjectTabs({
                                     Deal Project
                                 </Button>
                             ) : (
-                                <Button
-                                    variant="destructive"
-                                    size="lg"
-                                    className="gap-2 w-full md:w-auto animate-in fade-in zoom-in duration-300 shadow-md hover:scale-105 active:scale-95 transition-transform"
-                                    onClick={() => setIsCloseAlertOpen(true)}
-                                >
-                                    <Archive className="h-4 w-4" />
-                                    Tutup Proyek (Closing)
-                                </Button>
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        size="lg"
+                                        className="gap-2 w-full md:w-auto hover:bg-gray-50 shadow-sm transition-transform hover:scale-105 active:scale-95"
+                                        onClick={handleSaveClosingChanges}
+                                        disabled={savingClosing}
+                                    >
+                                        {savingClosing ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                        Simpan Perubahan
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        size="lg"
+                                        className="gap-2 w-full md:w-auto animate-in fade-in zoom-in duration-300 shadow-md hover:scale-105 active:scale-95 transition-transform"
+                                        onClick={() => setIsCloseAlertOpen(true)}
+                                    >
+                                        <Archive className="h-4 w-4" />
+                                        Tutup Proyek (Closing)
+                                    </Button>
+                                </>
                             )}
                         </div>
 

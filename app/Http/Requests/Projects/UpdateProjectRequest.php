@@ -41,6 +41,7 @@ final class UpdateProjectRequest extends FormRequest
             'budget_partition_status' => ['sometimes', 'string', 'in:draft,pending,approved,rejected'],
             'start_date' => ['sometimes', 'required', 'date'],
             'end_date' => ['sometimes', 'required', 'date', 'after_or_equal:start_date'],
+            'lesson_learned' => ['nullable'],
             'locations' => ['nullable', 'array'],
             'locations.*.id' => ['nullable', 'integer'],
             'locations.*.latitude' => ['required', 'numeric'],
@@ -117,8 +118,9 @@ final class UpdateProjectRequest extends FormRequest
                 $limit = $project->actual_budget > 0 ? (float) $project->actual_budget : $budgetTotal;
 
                 $detailSum = array_reduce($detailBudgets, function ($carry, $item) {
-                    $amount = isset($item['amount']) ? (float) $item['amount'] : 
-                              ((isset($item['quantity']) && isset($item['item_price'])) ? (int)$item['quantity'] * (float)$item['item_price'] : 0);
+                    $amount = isset($item['amount']) ? (float) $item['amount'] :
+                              ((isset($item['quantity']) && isset($item['item_price'])) ? (int) $item['quantity'] * (float) $item['item_price'] : 0);
+
                     return $carry + $amount;
                 }, 0);
 
