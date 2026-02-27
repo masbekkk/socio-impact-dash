@@ -459,11 +459,11 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
                     <div className="flex gap-3">
                       <Button variant="outline" onClick={() => setIsRevisionAlertOpen(true)} className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-transform hover:scale-105 active:scale-95">
                         <AlertCircle className="h-4 w-4 mr-2" />
-                        Revisi
+                        Minta Revisi
                       </Button>
                       <Button onClick={() => setIsApproveAlertOpen(true)} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)] text-white shadow-sm transition-transform hover:scale-105 active:scale-95">
                         <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Approve
+                        Setujui Proyek
                       </Button>
                     </div>
                   </div>
@@ -524,12 +524,12 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
       <Dialog open={isApproveAlertOpen} onOpenChange={setIsApproveAlertOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Approve Project</DialogTitle>
-            <DialogDescription>Apakah anda yakin menyetujui project ini? Status akan tercatat sebagai Approved.</DialogDescription>
+            <DialogTitle>Setujui Proyek</DialogTitle>
+            <DialogDescription>Apakah anda yakin menyetujui proyek ini? Status akan tercatat sebagai Disetujui.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsApproveAlertOpen(false)}>Batal</Button>
-            <Button className="bg-[#00763c] hover:bg-[#005f30] text-white" onClick={handleApproveAction}>Ya, Approve</Button>
+            <Button className="bg-[#00763c] hover:bg-[#005f30] text-white" onClick={handleApproveAction}>Ya, Setujui</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

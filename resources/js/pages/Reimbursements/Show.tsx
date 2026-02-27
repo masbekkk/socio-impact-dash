@@ -270,13 +270,13 @@ export default function Show() {
                 className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                 onClick={() => setRejectDialogOpen(true)}
               >
-                <XCircle className="mr-2 h-4 w-4" /> Reject
+                <XCircle className="mr-2 h-4 w-4" /> Tolak
               </Button>
               <Button
                 className="bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => setApproveDialogOpen(true)}
               >
-                <CheckCircle className="mr-2 h-4 w-4" /> Approve
+                <CheckCircle className="mr-2 h-4 w-4" /> Setujui
               </Button>
             </div>
           )}
@@ -509,14 +509,16 @@ export default function Show() {
                       <div key={approval.id} className="relative group">
                         <span className={`absolute -left-[21px] top-1.5 h-3 w-3 rounded-full ring-4 ring-background transition-all ${approval.status === 'approved' ? 'bg-green-500' : approval.status === 'rejected' ? 'bg-red-500' : 'bg-blue-500'}`} />
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-sm font-medium leading-none capitalize">{approval.status}</span>
+                          <span className="text-sm font-medium leading-none capitalize">
+                            {approval.status === 'approved' ? 'Disetujui' : approval.status === 'rejected' ? 'Ditolak' : 'Diajukan'}
+                          </span>
                           {approval.approved_at && (
                             <div className="text-xs text-muted-foreground mt-1">
                               {format(new Date(approval.approved_at), 'dd MMM yyyy, HH:mm', { locale: localeId })}
                             </div>
                           )}
                           {approval.approver && (
-                            <div className="text-xs text-muted-foreground">by {approval.approver.name}</div>
+                            <div className="text-xs text-muted-foreground">oleh {approval.approver.name}</div>
                           )}
                           {approval.notes && (
                             <div className="text-xs text-muted-foreground mt-1 italic">{approval.notes}</div>
@@ -575,7 +577,7 @@ export default function Show() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-700">
               <CheckCircle className="h-5 w-5" />
-              Konfirmasi Approve
+              Konfirmasi Persetujuan
             </DialogTitle>
             <DialogDescription>
               Apakah Anda yakin ingin menyetujui pengajuan <strong>{data.type.toUpperCase()}</strong> dengan kode <strong className="font-mono">{data.code}</strong>?
@@ -605,7 +607,7 @@ export default function Show() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-700">
               <XCircle className="h-5 w-5" />
-              Konfirmasi Reject
+              Konfirmasi Penolakan
             </DialogTitle>
             <DialogDescription>
               Apakah Anda yakin ingin menolak pengajuan <strong>{data.type.toUpperCase()}</strong> dengan kode <strong className="font-mono">{data.code}</strong> dari <strong>{data.user?.name}</strong>?
@@ -634,7 +636,7 @@ export default function Show() {
               {actionLoading ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
               ) : (
-                <><XCircle className="mr-2 h-4 w-4" /> Ya, Reject</>
+                <><XCircle className="mr-2 h-4 w-4" /> Ya, Tolak</>
               )}
             </Button>
           </DialogFooter>

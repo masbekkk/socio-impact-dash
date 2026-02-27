@@ -1108,7 +1108,7 @@ export default function ProjectTabs({
                                                             {new Date(history.report_date || history.date).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
                                                         </h4>
                                                         <Badge variant="secondary" className={`text-[10px] uppercase tracking-wider ${history.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                            {history.status === 'approved' ? 'Approved' : 'Pending'}
+                                                            {history.status === 'approved' ? 'Disetujui' : 'Menunggu'}
                                                         </Badge>
                                                     </div>
                                                     <p className="text-sm text-muted-foreground">Dilaporkan oleh: <span className="font-medium text-gray-700">{history.uploader_name || history.uploader}</span> • {new Date(history.report_date || history.date).toLocaleDateString('id-ID')}</p>

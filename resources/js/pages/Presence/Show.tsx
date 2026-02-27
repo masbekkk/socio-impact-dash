@@ -117,7 +117,7 @@ export default function PresenceShow({ presence: propPresence, auth }: Props) {
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" className="gap-2">
-                                        Action <ChevronDown className="h-4 w-4" />
+                                        Aksi <ChevronDown className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
