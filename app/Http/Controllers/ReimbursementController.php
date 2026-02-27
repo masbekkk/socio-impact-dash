@@ -22,7 +22,7 @@ final class ReimbursementController
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(Request $request): \Inertia\Response
     {
         $user = $request->user();
 
@@ -54,9 +54,9 @@ final class ReimbursementController
         ]);
     }
 
-    public function createATR()
+    public function createATR(): \Inertia\Response
     {
-        $projects = Project::with(['division', 'pic', 'head'])
+        $projects = Project::with(['division', 'pic', 'head', 'budgetDetails'])
             ->where('status', 'active')
             ->get()
             ->map(fn (Project $project) => [
@@ -73,21 +73,36 @@ final class ReimbursementController
                 'head_name' => $project->head?->name ?? '-',
                 'head_email' => $project->head?->email ?? '-',
                 'head_role' => $project->head?->role?->value ?? '-',
+                'budget_details' => $project->budgetDetails->map(fn (\App\Models\ProjectBudgetDetail $detail) => [
+                    'id' => $detail->id,
+                    'notes' => $detail->notes,
+                    'amount' => (float) $detail->amount,
+                ])->values()->all(),
             ]);
+
+        $approversGrouped = \App\Models\User::role(['head', 'finance', 'direktur'])
+            ->get()
+            ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
+            ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+            ])->values()->all());
 
         return Inertia::render('Reimbursements/CreateATR', [
             'projects' => $projects,
+            'approvers' => $approversGrouped,
         ]);
     }
 
 
 
-    public function createEER()
+    public function createEER(): \Inertia\Response
     {
         $projects = Project::with(['division', 'pic', 'head'])
             ->where('status', 'active')
             ->get()
-            ->map(fn (Project $project) => [
+            ->map(fn (\App\Models\Project $project) => [
                 'id' => $project->id,
                 'name' => $project->name,
                 'code' => $project->code,
@@ -103,12 +118,12 @@ final class ReimbursementController
         ]);
     }
 
-    public function createAllowance()
+    public function createAllowance(): \Inertia\Response
     {
         $projects = Project::with(['division', 'pic', 'head'])
             ->where('status', 'active')
             ->get()
-            ->map(fn (Project $project) => [
+            ->map(fn (\App\Models\Project $project) => [
                 'id' => $project->id,
                 'name' => $project->name,
                 'code' => $project->code,
@@ -129,7 +144,7 @@ final class ReimbursementController
         ]);
     }
 
-    public function approvals()
+    public function approvals(): \Inertia\Response
     {
         return Inertia::render('Reimbursements/Index');
     }
@@ -137,7 +152,7 @@ final class ReimbursementController
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(): void
     {
         //
     }
@@ -145,7 +160,7 @@ final class ReimbursementController
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreReimbursementRequest $request)
+    public function store(StoreReimbursementRequest $request): void
     {
         //
     }
@@ -153,7 +168,7 @@ final class ReimbursementController
     /**
      * Display the specified resource.
      */
-    public function show($code)
+    public function show(string $code): \Inertia\Response
     {
         return Inertia::render('Reimbursements/Show', [
             'code' => $code,
@@ -163,7 +178,7 @@ final class ReimbursementController
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Reimbursement $reimbursement)
+    public function edit(Reimbursement $reimbursement): void
     {
         //
     }
@@ -171,7 +186,7 @@ final class ReimbursementController
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateReimbursementRequest $request, Reimbursement $reimbursement)
+    public function update(UpdateReimbursementRequest $request, Reimbursement $reimbursement): void
     {
         //
     }
@@ -179,18 +194,18 @@ final class ReimbursementController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Reimbursement $reimbursement)
+    public function destroy(Reimbursement $reimbursement): void
     {
         //
     }
 
-    public function approve(Reimbursement $reimbursement)
+    public function approve(Reimbursement $reimbursement): \Illuminate\Http\RedirectResponse
     {
         // Logic to approve
         return back();
     }
 
-    public function reject(Reimbursement $reimbursement)
+    public function reject(Reimbursement $reimbursement): \Illuminate\Http\RedirectResponse
     {
         // Logic to reject
         return back();

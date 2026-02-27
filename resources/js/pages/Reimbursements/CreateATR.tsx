@@ -15,6 +15,8 @@ import MoneyInput from '@/components/MoneyInput';
 import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import type { Project } from '@/types/reimbursement';
 
+import { Checkbox } from '@/components/ui/checkbox';
+
 const URGENCY_MAP: Record<string, string> = {
   low: 'rendah',
   normal: 'normal',
@@ -22,11 +24,22 @@ const URGENCY_MAP: Record<string, string> = {
   urgent: 'mendesak',
 };
 
-export default function CreateATR({ projects }: { projects: Project[] }) {
+interface Approver {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export default function CreateATR({ projects, approvers }: {
+  projects: Project[],
+  approvers: Record<string, Approver[]>
+}) {
   const { authUser, loading, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
 
   const [proposalFile, setProposalFile] = useState<File | null>(null);
   const [rabFile, setRabFile] = useState<File | null>(null);
+
+  const [selectedBudgets, setSelectedBudgets] = useState<Record<number, number>>({});
 
   const [formData, setFormData] = useState({
     nama: authUser?.name ?? '',
@@ -34,14 +47,13 @@ export default function CreateATR({ projects }: { projects: Project[] }) {
     project_id: '',
     divisi: '',
     pic_project: '',
-    approver_name: '',
-    approver_position: 'Head',
-    approver_email: '',
+    approver_head_id: '',
+    approver_finance_id: '',
+    approver_direktur_id: '',
     bank_name: '',
     account_number: '',
     account_name: '',
     usage_plan: '',
-    amount: 0,
     urgency: 'normal',
   });
 
@@ -58,10 +70,8 @@ export default function CreateATR({ projects }: { projects: Project[] }) {
       project_id: value,
       divisi: autoFill.division,
       pic_project: autoFill.pic,
-      approver_name: autoFill.approver_name,
-      approver_position: autoFill.approver_position,
-      approver_email: autoFill.approver_email,
     }));
+    setSelectedBudgets({}); // Reset checks when project changes
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -70,20 +80,30 @@ export default function CreateATR({ projects }: { projects: Project[] }) {
     clearFieldError(name);
   };
 
-  const handleAmountChange = (values: any) => {
-    setFormData(prev => ({ ...prev, amount: values.floatValue || 0 }));
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    clearFieldError(name);
   };
 
+  const totalAmount = useMemo(() => {
+    return Object.values(selectedBudgets).reduce((sum, val) => sum + val, 0);
+  }, [selectedBudgets]);
+
   const handleSubmit = async () => {
-    if (formData.amount <= 0) {
-      setErrors({ amount: ['Nominal pengajuan wajib diisi.'] });
+    if (totalAmount <= 0) {
+      setErrors({ amount: ['Nominal pengajuan wajib diisi dengan memilih budget.'] });
+      return;
+    }
+
+    if (!formData.approver_head_id || !formData.approver_finance_id || !formData.approver_direktur_id) {
+      setErrors({ _general: ['Persetujuan (Head, Finance, Direktur) wajib dipilih.'] });
       return;
     }
 
     const selected = projects.find(p => p.id === parseInt(formData.project_id));
     if (selected) {
       const remaining = (selected.operational_budget ?? 0) - (selected.used_operational_budget ?? 0);
-      if (formData.amount > remaining) {
+      if (totalAmount > remaining) {
         setErrors({ amount: ['Nominal pengajuan melebihi sisa pagu operasional proyek.'] });
         return;
       }
@@ -93,16 +113,24 @@ export default function CreateATR({ projects }: { projects: Project[] }) {
     if (proposalFile) documents.push({ file: proposalFile, type: 'proposal' });
     if (rabFile) documents.push({ file: rabFile, type: 'RAB' });
 
+    const selected_budget_details = Object.entries(selectedBudgets)
+      .filter(([_, amount]) => amount > 0)
+      .map(([id, amount]) => ({
+        project_budget_detail_id: parseInt(id),
+        amount,
+      }));
+
     await submitReimbursement({
       type: 'atr',
       project_id: formData.project_id,
-      amount: formData.amount,
+      amount: totalAmount,
       bank_name: formData.bank_name,
       bank_account: formData.account_number,
       account_holder: formData.account_name,
       usage_plan: formData.usage_plan,
       urgency: URGENCY_MAP[formData.urgency] ?? 'normal',
       documents,
+      selected_budget_details,
     });
   };
 
@@ -118,7 +146,7 @@ export default function CreateATR({ projects }: { projects: Project[] }) {
     return (selectedProject.operational_budget ?? 0) - (selectedProject.used_operational_budget ?? 0);
   }, [selectedProject]);
 
-  const budgetExceeded = remainingBudget !== null && formData.amount > remainingBudget;
+  const budgetExceeded = remainingBudget !== null && totalAmount > remainingBudget;
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -180,12 +208,70 @@ export default function CreateATR({ projects }: { projects: Project[] }) {
                   </Select>
                   {errors.project_id && <p className="text-xs text-red-500 font-medium">{errors.project_id[0]}</p>}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Nominal ATR</Label>
-                  <MoneyInput id="amount" value={formData.amount} onValueChange={handleAmountChange} className="h-10" placeholder="Masukkan nominal pengajuan" />
+                <div className="space-y-4 md:col-span-2">
+                  <h4 className="text-sm font-semibold text-slate-800 border-b pb-2">Pilih Item Anggaran (RAB)</h4>
+                  {selectedProject ? (
+                    selectedProject.budget_details?.length ? (
+                      <div className="space-y-3 max-h-60 overflow-y-auto pr-2 rounded-md border p-3 bg-slate-50">
+                        {selectedProject.budget_details.map((detail) => (
+                          <div key={detail.id} className="flex items-start gap-3 p-2 bg-white rounded border shadow-sm">
+                            <Checkbox
+                              id={`budget-${detail.id}`}
+                              checked={!!selectedBudgets[detail.id]}
+                              onCheckedChange={(checked) => {
+                                setSelectedBudgets((prev) => {
+                                  const next = { ...prev };
+                                  if (checked) {
+                                    next[detail.id] = detail.amount;
+                                  } else {
+                                    delete next[detail.id];
+                                  }
+                                  return next;
+                                });
+                              }}
+                              className="mt-1"
+                            />
+                            <div className="flex-1">
+                              <label htmlFor={`budget-${detail.id}`} className="text-sm font-medium leading-none cursor-pointer">
+                                {detail.notes}
+                              </label>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(detail.amount)}
+                              </p>
+                            </div>
+                            {selectedBudgets[detail.id] !== undefined && (
+                              <div className="w-1/3">
+                                <MoneyInput
+                                  value={selectedBudgets[detail.id]}
+                                  onValueChange={(values) => {
+                                    setSelectedBudgets(prev => ({ ...prev, [detail.id]: values.floatValue || 0 }));
+                                  }}
+                                  className="h-8 text-xs"
+                                  placeholder="Nominal"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded-md border border-yellow-200">
+                        Proyek ini belum memiliki rincian anggaran (RAB).
+                      </p>
+                    )
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Pilih proyek terlebih dahulu.</p>
+                  )}
+
+                  <div className="flex justify-between items-center bg-slate-100 p-3 rounded-md border">
+                    <span className="font-semibold text-sm">Total Pengajuan:</span>
+                    <span className="text-lg font-bold text-slate-900 tracking-tight">
+                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalAmount)}
+                    </span>
+                  </div>
                   {errors.amount && <p className="text-xs text-red-500 font-medium">{errors.amount[0]}</p>}
                   {budgetExceeded && (
-                    <p className="text-xs text-red-600 font-medium mt-1">Nominal pengajuan melebihi batas pagu operasional proyek.</p>
+                    <p className="text-xs text-red-600 font-medium mt-1">Total pengajuan melebihi batas pagu operasional proyek.</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -283,25 +369,43 @@ export default function CreateATR({ projects }: { projects: Project[] }) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="approver_name">Nama Approver</Label>
-                  <div className="relative">
-                    <UserCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="approver_name" name="approver_name" className="pl-9 h-10 bg-muted/30" value={formData.approver_name} onChange={handleChange} readOnly={isAutoFilled} />
-                  </div>
+                  <Label htmlFor="approver_head_id">Head Approver</Label>
+                  <Select onValueChange={(val) => handleSelectChange('approver_head_id', val)} value={formData.approver_head_id}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Pilih Head Divisi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {approvers['head']?.map((user) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="approver_position">Jabatan Approver</Label>
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="approver_position" name="approver_position" className="pl-9 h-10 bg-muted/30" value={'Head'} readOnly />
-                  </div>
+                  <Label htmlFor="approver_finance_id">Finance Approver</Label>
+                  <Select onValueChange={(val) => handleSelectChange('approver_finance_id', val)} value={formData.approver_finance_id}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Pilih Finance" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {approvers['finance']?.map((user) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="approver_email">Email Approver</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="approver_email" name="approver_email" type="email" className="pl-9 h-10 bg-muted/30" value={formData.approver_email} onChange={handleChange} readOnly={isAutoFilled} />
-                  </div>
+                  <Label htmlFor="approver_direktur_id">Direktur Approver</Label>
+                  <Select onValueChange={(val) => handleSelectChange('approver_direktur_id', val)} value={formData.approver_direktur_id}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Pilih Direktur" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {approvers['direktur']?.map((user) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

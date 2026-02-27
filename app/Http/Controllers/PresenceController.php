@@ -14,12 +14,12 @@ final class PresenceController
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): \Inertia\Response
     {
         return Inertia::render('Presence/Index');
     }
 
-    public function checkIn()
+    public function checkIn(): void
     {
         // Placeholder
     }
@@ -27,7 +27,7 @@ final class PresenceController
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(): \Inertia\Response
     {
         return Inertia::render('Presence/Create');
     }
@@ -35,7 +35,7 @@ final class PresenceController
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePresenceRequest $request)
+    public function store(StorePresenceRequest $request): \Illuminate\Http\RedirectResponse
     {
         // Validation is handled by StorePresenceRequest
         // Logic to store presence
@@ -46,14 +46,14 @@ final class PresenceController
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(string $id): \Inertia\Response
     {
         // Mock data loading
         $json = file_get_contents(resource_path('js/Pages/Presence/presence_logs.json'));
         $logs = json_decode($json, true);
 
         // Find the log with the matching ID OR User Name (slug)
-        $presence = collect($logs)->first(function ($log) use ($id) {
+        $presence = collect($logs)->first(function (array $log) use ($id): bool {
             $slugName = \Illuminate\Support\Str::slug($log['user']['name']);
             return $log['id'] === $id || $slugName === $id || $log['user']['name'] === $id;
         });
@@ -70,7 +70,7 @@ final class PresenceController
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Presence $presence)
+    public function edit(Presence $presence): void
     {
         //
     }
@@ -78,7 +78,7 @@ final class PresenceController
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdatePresenceRequest $request, Presence $presence)
+    public function update(UpdatePresenceRequest $request, Presence $presence): void
     {
         //
     }
@@ -86,7 +86,7 @@ final class PresenceController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Presence $presence)
+    public function destroy(Presence $presence): void
     {
         //
     }

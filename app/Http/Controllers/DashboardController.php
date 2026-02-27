@@ -33,7 +33,7 @@ final class DashboardController extends Controller
 
         $locations = ProjectLocation::with('project:id,name')->get();
 
-        $projectsByDivision = Division::withCount('projects')->get()->map(fn ($d) => [
+        $projectsByDivision = Division::withCount('projects')->get()->map(fn (\App\Models\Division $d): array => [
             'division' => $d->name,
             'count' => $d->projects_count,
         ]);

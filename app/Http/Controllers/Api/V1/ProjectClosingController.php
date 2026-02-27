@@ -13,7 +13,7 @@ use Illuminate\Routing\Controller;
 
 class ProjectClosingController extends Controller
 {
-    public function close(Request $request, Project $project, CloseProject $closeProject)
+    public function close(Request $request, Project $project, CloseProject $closeProject): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validate([
             'actual_budget' => ['required', 'numeric', 'min:0'],

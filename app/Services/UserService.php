@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 
 final class UserService
 {
-    public static function loggedUser()
+    public static function loggedUser(): ?User
     {
         $cachedUser = null;
 

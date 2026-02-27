@@ -13,7 +13,7 @@ use Illuminate\Routing\Controller;
 
 final class ProjectTerminPaymentController extends Controller
 {
-    public function update(Request $request, Project $project, ProjectTerminPayment $termin, UpdateTerminPayment $updateTermin)
+    public function update(Request $request, Project $project, ProjectTerminPayment $termin, UpdateTerminPayment $updateTermin): \Illuminate\Http\JsonResponse
     {
         // Ensure termin belongs to project
         if ($termin->project_id !== $project->id) {

@@ -41,11 +41,11 @@ final class LeaveService
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(function ($q) use ($search): void {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
                 $q->where('code', 'like', "%{$search}%")
                     ->orWhere('reason', 'like', "%{$search}%")
                     ->orWhere('destination', 'like', "%{$search}%")
-                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('user', fn (\Illuminate\Database\Eloquent\Builder $u) => $u->where('name', 'like', "%{$search}%"));
             });
         }
 
