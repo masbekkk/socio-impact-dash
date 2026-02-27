@@ -40,11 +40,11 @@ const NAV_ITEMS: NavItem[] = [
         href: '/presences',
         icon: CheckSquare,
     },
-    {
-        title: 'Cuti',
-        href: '/leaves',
-        icon: Calendar,
-    },
+    // {
+    //     title: 'Cuti',
+    //     href: '/leaves',
+    //     icon: Calendar,
+    // },
     {
         title: 'Kalender',
         href: '/calendar',
