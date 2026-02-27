@@ -23,6 +23,9 @@ import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, Plus, Search, Filter } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 // Define User interface directly here to avoid import issues for now
 interface User {
@@ -40,9 +43,12 @@ interface User {
 
 export default function Index() {
     const [users, setUsers] = useState<User[]>([]);
+    const [meta, setMeta] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(10);
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -51,9 +57,12 @@ export default function Index() {
                 params: {
                     search: searchQuery,
                     role: roleFilter,
+                    page: page,
+                    per_page: perPage,
                 }
             });
             setUsers(res.data.data.data); // data.data is the payload, the nested .data is from pagination
+            setMeta(res.data.data.meta);
         } catch (error) {
             toast.error('Gagal mengambil data user.');
         } finally {
@@ -62,8 +71,13 @@ export default function Index() {
     };
 
     useEffect(() => {
-        fetchUsers();
+        // Reset page to 1 when search or filter changes
+        setPage(1);
     }, [searchQuery, roleFilter]);
+
+    useEffect(() => {
+        fetchUsers();
+    }, [searchQuery, roleFilter, page, perPage]);
 
     const handleDelete = async (id: number) => {
         if (!confirm('Apakah anda yakin ingin menghapus user ini?')) return;
@@ -155,13 +169,13 @@ export default function Index() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                                             Loading users...
                                         </TableCell>
                                     </TableRow>
                                 ) : users.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                                             No users found.
                                         </TableCell>
                                     </TableRow>
@@ -236,6 +250,43 @@ export default function Index() {
                                 )}
                             </TableBody>
                         </Table>
+
+                        {/* Pagination */}
+                        {!loading && meta && meta.total > 0 && (
+                            <div className="flex items-center justify-between px-4 py-4 border-t">
+                                <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+                                    Menampilkan {meta.from} sampai {meta.to} dari {meta.total} hasil
+                                </div>
+                                <div className="flex w-full items-center gap-8 lg:w-fit">
+                                    <div className="hidden items-center gap-2 lg:flex">
+                                        <Label className="text-sm font-medium">Baris per halaman</Label>
+                                        <Select value={`${perPage}`} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+                                            <SelectTrigger className="w-16 h-8 text-xs"><SelectValue /></SelectTrigger>
+                                            <SelectContent side="top">
+                                                {[10, 20, 30, 50].map(s => <SelectItem key={s} value={`${s}`}>{s}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="flex w-fit items-center justify-center text-sm font-medium">
+                                        Halaman {meta.current_page} dari {meta.last_page}
+                                    </div>
+                                    <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                                        <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => setPage(1)} disabled={page === 1}>
+                                            <ChevronsLeft className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="outline" className="h-8 w-8 p-0" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="outline" className="h-8 w-8 p-0" onClick={() => setPage(Math.min(meta.last_page, page + 1))} disabled={page === meta.last_page}>
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => setPage(meta.last_page)} disabled={page === meta.last_page}>
+                                            <ChevronsRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
