@@ -23,7 +23,7 @@ const headMenu: MenuItem[] = [
   { key: 'dashboard', label: 'Dashboard', icon: Home, href: '/dashboard' },
   { key: 'projects', label: 'Proyek (Divisi)', icon: Grid, href: '/projects' },
   { key: 'approvals', label: 'Persetujuan', icon: CheckSquare, href: '/reimbursements/approvals' },
-  { key: 'leaves-approval', label: 'Persetujuan Cuti', icon: Calendar, href: '/leaves/approvals' },
+  { key: 'leaves-approval', label: 'Pengajuan Cuti', icon: Calendar, href: '/leaves/approvals' },
   { key: 'reports', label: 'Laporan', icon: FileText, href: '/reports' },
 ]
 

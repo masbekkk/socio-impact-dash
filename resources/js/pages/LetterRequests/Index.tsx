@@ -332,11 +332,11 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                         {/* PAGINATION CONTROLS */}
                         <div className="flex items-center justify-between px-2 py-4">
                             <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-                                Showing {pagination.from || 0} to {pagination.to || 0} of {pagination.total} results
+                                Menampilkan {pagination.from || 0} sampai {pagination.to || 0} dari {pagination.total} hasil
                             </div>
                             <div className="flex w-full items-center gap-8 lg:w-fit">
                                 <div className="hidden items-center gap-2 lg:flex">
-                                    <Label htmlFor="rows-per-page" className="text-sm font-medium">Rows per page</Label>
+                                    <Label htmlFor="rows-per-page" className="text-sm font-medium">Baris per halaman</Label>
                                     <Select
                                         value={`${pagination.per_page}`}
                                         onValueChange={(value) => {
@@ -354,7 +354,7 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                     </Select>
                                 </div>
                                 <div className="flex w-fit items-center justify-center text-sm font-medium">
-                                    Page {pagination.current_page} of {pagination.last_page}
+                                    Halaman {pagination.current_page} dari {pagination.last_page}
                                 </div>
                                 <div className="ml-auto flex items-center gap-2 lg:ml-0">
                                     <Button
