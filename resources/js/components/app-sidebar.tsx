@@ -33,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
         title: 'Reimbursement',
         href: '/reimbursements',
         icon: DollarSign,
+        roles: ['pegawai'],
     },
     {
         title: 'Presensi',
