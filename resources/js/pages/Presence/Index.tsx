@@ -329,13 +329,13 @@ export default function PresenceIndex() {
                     Semua Status
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setFilterStatus('pending')} className={filterStatus === 'pending' ? 'bg-accent' : ''}>
-                    Menunggu (Pending)
+                    Menunggu
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setFilterStatus('approved')} className={filterStatus === 'approved' ? 'bg-accent' : ''}>
-                    Disetujui (Approved)
+                    Disetujui
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setFilterStatus('rejected')} className={filterStatus === 'rejected' ? 'bg-accent' : ''}>
-                    Ditolak (Rejected)
+                    Ditolak
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -498,12 +498,12 @@ export default function PresenceIndex() {
         {/* Pagination */}
         <div className="flex items-center justify-between px-8 py-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredLogs.length)} of {filteredLogs.length} results
+            Menampilkan {(currentPage - 1) * itemsPerPage + 1} sampai {Math.min(currentPage * itemsPerPage, filteredLogs.length)} dari {filteredLogs.length} hasil
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Rows per page
+                Baris per halaman
               </Label>
               <Select
                 value={`${itemsPerPage}`}
@@ -525,7 +525,7 @@ export default function PresenceIndex() {
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {currentPage} of {totalPages || 1}
+              Halaman {currentPage} dari {totalPages || 1}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
               <Button

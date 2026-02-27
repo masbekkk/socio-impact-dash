@@ -41,12 +41,34 @@ export default function StatusBadge({ status }: Props) {
     hr_approved: { cls: 'bg-green-100 text-green-800 border-green-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
   }
 
+  const statusLabels: Record<string, string> = {
+    active: 'Aktif',
+    on_track: 'Sesuai Rencana',
+    pending: 'Menunggu',
+    risk: 'Beresiko',
+    draft: 'Draft',
+    proposal: 'Proposal',
+    finished: 'Selesai',
+    completed: 'Selesai',
+    blocked: 'Terblokir',
+    on_hold: 'Ditangguhkan',
+    delayed: 'Terlambat',
+    approved: 'Disetujui',
+    rejected: 'Ditolak',
+    submitted: 'Diajukan',
+    head_approved: 'Disetujui Head',
+    hr_approved: 'Disetujui HR',
+    finance_approved: 'Disetujui Finance',
+    transferred: 'Sudah Ditransfer',
+  };
+
   const { cls, icon } = config[status] || { cls: 'bg-gray-100 text-gray-800', icon: null }
+  const label = statusLabels[status] || status.replace('_', ' ');
 
   return (
     <Badge variant="outline" className={`font-normal capitalize ${cls}`}>
       {icon}
-      {status.replace('_', ' ')}
+      {label}
     </Badge>
   )
 }

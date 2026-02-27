@@ -254,10 +254,10 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleFilterChange('status', 'all')}>
-                    All Status
+                    Semua Status
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleFilterChange('status', 'active')}>
-                    Active
+                    Aktif
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleFilterChange('status', 'proposal')}>
                     Proposal
@@ -267,7 +267,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   <DropdownMenuLabel>Filter by Divisi</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleFilterChange('division', 'all')}>
-                    All Division
+                    Semua Divisi
                   </DropdownMenuItem>
                   {(divisions || []).map((divCode: any) => (
                     <DropdownMenuItem key={divCode.id} onClick={() => handleFilterChange('division', divCode.code)}>
@@ -313,7 +313,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
 
                     <div className="pt-2 border-t flex justify-end gap-2">
                       <Link href={`/projects/${p.uuid}`} className="w-full">
-                        <Button variant="outline" size="sm" className="w-full">View Details</Button>
+                        <Button variant="outline" size="sm" className="w-full">Lihat Detail</Button>
                       </Link>
                     </div>
                   </CardContent>
@@ -419,12 +419,12 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                             <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                             <DropdownMenuItem asChild>
                               <Link href={`/projects/${p.uuid}`} className="flex items-center cursor-pointer">
-                                <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> View Details
+                                <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Lihat Detail
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/projects/${p.uuid}/edit`} className="flex items-center cursor-pointer">
-                                <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Project
+                                <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Proyek
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -432,7 +432,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                               className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
                               onClick={() => confirmDelete(p)}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete Project
+                              <Trash2 className="mr-2 h-4 w-4" /> Hapus Proyek
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -447,12 +447,12 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
           {/* PAGINATION CONTROLS */}
           <div className="flex items-center justify-between px-2 py-4">
             <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-              Showing {pagination.from || 0} to {pagination.to || 0} of {pagination.total} results
+              Menampilkan {pagination.from || 0} sampai {pagination.to || 0} dari {pagination.total} hasil
             </div>
             <div className="flex w-full items-center gap-8 lg:w-fit">
               <div className="hidden items-center gap-2 lg:flex">
                 <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                  Rows per page
+                  Baris per halaman
                 </Label>
                 <Select
                   value={`${pagination.per_page}`}
@@ -474,7 +474,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                 </Select>
               </div>
               <div className="flex w-fit items-center justify-center text-sm font-medium">
-                Page {pagination.current_page} of {pagination.last_page}
+                Halaman {pagination.current_page} dari {pagination.last_page}
               </div>
               <div className="ml-auto flex items-center gap-2 lg:ml-0">
                 <Button

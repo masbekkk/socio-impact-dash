@@ -76,11 +76,11 @@ const LEAVE_TYPE_LABELS: Record<string, string> = {
 
 const STATUS_OPTIONS = [
   { label: 'Semua Status', value: 'all' },
-  { label: 'Submitted', value: 'submitted' },
-  { label: 'Superadmin Approved', value: 'superadmin_approved' },
-  { label: 'Head Approved', value: 'head_approved' },
-  { label: 'HR Approved', value: 'hr_approved' },
-  { label: 'Rejected', value: 'rejected' },
+  { label: 'Diajukan', value: 'submitted' },
+  { label: 'Disetujui Superadmin', value: 'superadmin_approved' },
+  { label: 'Disetujui Head', value: 'head_approved' },
+  { label: 'Disetujui HR', value: 'hr_approved' },
+  { label: 'Ditolak', value: 'rejected' },
   { label: 'Draft', value: 'draft' },
 ];
 
@@ -449,11 +449,11 @@ function LeaveTable({ title, description, hook, isTravel }: LeaveTableProps) {
         {!loading && meta.total > 0 && (
           <div className="flex items-center justify-between px-2 py-4">
             <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-              Showing {meta.from} to {meta.to} of {meta.total} results
+              Menampilkan {meta.from} sampai {meta.to} dari {meta.total} hasil
             </div>
             <div className="flex w-full items-center gap-8 lg:w-fit">
               <div className="hidden items-center gap-2 lg:flex">
-                <Label className="text-sm font-medium">Rows per page</Label>
+                <Label className="text-sm font-medium">Baris per halaman</Label>
                 <Select value={`${perPage}`} onValueChange={(v) => setPerPage(Number(v))}>
                   <SelectTrigger className="w-16 h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent side="top">
@@ -462,7 +462,7 @@ function LeaveTable({ title, description, hook, isTravel }: LeaveTableProps) {
                 </Select>
               </div>
               <div className="flex w-fit items-center justify-center text-sm font-medium">
-                Page {meta.current_page} of {meta.last_page}
+                Halaman {meta.current_page} dari {meta.last_page}
               </div>
               <div className="ml-auto flex items-center gap-2 lg:ml-0">
                 <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => setPage(1)} disabled={page === 1}>

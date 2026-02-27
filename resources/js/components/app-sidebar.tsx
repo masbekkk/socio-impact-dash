@@ -91,7 +91,7 @@ function getMenusByRole(): Record<string, NavItem[]> {
         //     icon: CheckSquare,
         // },
         {
-            title: 'Persetujuan Cuti',
+            title: 'Pengajuan Cuti',
             href: '/leaves/approvals',
             icon: Calendar,
         },

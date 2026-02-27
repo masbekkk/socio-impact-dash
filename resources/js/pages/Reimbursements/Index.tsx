@@ -83,11 +83,11 @@ interface Props {
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200', icon: FileText },
-  submitted: { label: 'Submitted', className: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-yellow-200', icon: Clock },
-  head_approved: { label: 'Head Approved', className: 'bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200', icon: CheckCircle },
-  finance_approved: { label: 'Finance Approved', className: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200', icon: DollarSign },
-  transferred: { label: 'Transferred', className: 'bg-green-100 text-green-700 hover:bg-green-100 border-green-200', icon: CheckCircle },
-  rejected: { label: 'Rejected', className: 'bg-red-100 text-red-700 hover:bg-red-100 border-red-200', icon: XCircle },
+  submitted: { label: 'Diajukan', className: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-yellow-200', icon: Clock },
+  head_approved: { label: 'Disetujui Head', className: 'bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200', icon: CheckCircle },
+  finance_approved: { label: 'Disetujui Finance', className: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200', icon: DollarSign },
+  transferred: { label: 'Sudah Ditransfer', className: 'bg-green-100 text-green-700 hover:bg-green-100 border-green-200', icon: CheckCircle },
+  rejected: { label: 'Ditolak', className: 'bg-red-100 text-red-700 hover:bg-red-100 border-red-200', icon: XCircle },
 };
 
 export default function ReimbursementsIndex({ reimbursements, filters }: Props) {
@@ -384,7 +384,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
                                   <Link href={`/reimbursements/${item.code}`} className="cursor-pointer">
-                                    <Eye className="mr-2 h-4 w-4" /> View Detail
+                                    <Eye className="mr-2 h-4 w-4" /> Lihat Detail
                                   </Link>
                                 </DropdownMenuItem>
                                 {/* {item.status === 'submitted' && (
@@ -394,13 +394,13 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                                       className="cursor-pointer text-green-600 focus:text-green-600 focus:bg-green-50"
                                       onClick={() => { setSelectedItem(item); setApproveDialogOpen(true); }}
                                     >
-                                      <CheckCircle className="mr-2 h-4 w-4" /> Approve
+                                      <CheckCircle className="mr-2 h-4 w-4" /> Setujui
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
                                       onClick={() => { setSelectedItem(item); setRejectDialogOpen(true); }}
                                     >
-                                      <XCircle className="mr-2 h-4 w-4" /> Reject
+                                      <XCircle className="mr-2 h-4 w-4" /> Tolak
                                     </DropdownMenuItem>
                                   </>
                                 )} */}
@@ -430,11 +430,11 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
           {total > 0 && (
             <div className="flex items-center justify-between px-6 py-4">
               <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-                Showing {from} to {to} of {total} results
+                Menampilkan {from} sampai {to} dari {total} hasil
               </div>
               <div className="flex w-full items-center gap-8 lg:w-fit">
                 <div className="hidden items-center gap-2 lg:flex">
-                  <Label htmlFor="rows-per-page" className="text-sm font-medium">Rows per page</Label>
+                  <Label htmlFor="rows-per-page" className="text-sm font-medium">Baris per halaman</Label>
                   <Select
                     value={`${filters.per_page}`}
                     onValueChange={(value) => navigate({ per_page: Number(value), page: 1 })}
@@ -450,7 +450,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                   </Select>
                 </div>
                 <div className="flex w-fit items-center justify-center text-sm font-medium">
-                  Page {current_page} of {last_page}
+                  Halaman {current_page} dari {last_page}
                 </div>
                 <div className="ml-auto flex items-center gap-2 lg:ml-0">
                   <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" disabled={current_page === 1} onClick={() => navigate({ page: 1 })}>
