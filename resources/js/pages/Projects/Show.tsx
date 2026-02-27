@@ -89,7 +89,8 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
       // Initialize closing form with saved data
       setClosingForm(prev => ({
         ...prev,
-        actual_budget: data.actual_budget || 0
+        actual_budget: data.actual_budget || 0,
+        lesson_learned: data.lesson_learned || ''
       }));
     } catch (error) {
       console.error("Error fetching project:", error);
@@ -144,14 +145,11 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
   // CLOSING STATE
   const [closingForm, setClosingForm] = useState({
     actual_budget: 0, // Will be set from project data or input
-    // Files will be handled by ProjectTabs or a separate state there, but we need to receive them here if we submit from here.
-    // However, the submit logic seems to be inside ProjectTabs or a function passed to it.
-    // Let's see handleCloseProject.
+    lesson_learned: '',
     files: {
       laporan: null,
       bast: null,
-      penagihan: null,
-      lesson_learn: null
+      penagihan: null
     } as any
   });
 
@@ -224,8 +222,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
     const fileTypes: Record<string, string> = {
       laporan: 'report_activity',
       bast: 'bast',
-      penagihan: 'invoice', // or other type
-      lesson_learn: 'lesson_learn'
+      penagihan: 'invoice'
     };
 
     let idx = 0;
@@ -236,6 +233,8 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
         idx++;
       }
     });
+
+    formData.append('lesson_learned', closingForm.lesson_learned || '');
 
     try {
       await axios.post(`/api/v1/projects/${project_slug}/close`, formData, {
@@ -347,7 +346,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
           <StatusBadge status={currentStatus} />
 
           <div className="flex gap-2 w-full md:w-auto">
-            <Link href={`/projects/${project.id}/edit`} className="flex-1 md:flex-none">
+            <Link href={`/projects/${project.uuid}/edit`} className="flex-1 md:flex-none">
               <Button variant="outline" className="w-full gap-2">
                 <Pencil className="h-4 w-4" />
                 Edit Project
@@ -442,6 +441,34 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
                   </div>
                 </div>
               )}
+
+              {/* {isAssignedStakeholder && (
+                <>
+                  <Label htmlFor="approval-note" className="text-sm font-semibold mb-2 block">Catatan Approval / Evaluasi Project</Label>
+                  <span className="text-xs text-muted-foreground ml-1">
+                    *Catatan wajib diisi jika memilih Revisi.
+                  </span>
+                  <Textarea
+                    id="approval-note"
+                    placeholder="Tulis catatan, arahan, atau evaluasi terkait persetujuan proyek ini..."
+                    className="min-h-[100px] resize-y bg-gray-50 focus:bg-white transition-colors"
+                    value={approvalNote}
+                    onChange={(e) => setApprovalNote(e.target.value)}
+                  />
+                  <div className="flex justify-end items-center mt-3">
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={() => setIsRevisionAlertOpen(true)} className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-transform hover:scale-105 active:scale-95">
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        Revisi
+                      </Button>
+                      <Button onClick={() => setIsApproveAlertOpen(true)} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)] text-white shadow-sm transition-transform hover:scale-105 active:scale-95">
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Approve
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )} */}
             </div>
           )}
         </section>

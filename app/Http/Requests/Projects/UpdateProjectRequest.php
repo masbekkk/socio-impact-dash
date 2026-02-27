@@ -41,6 +41,7 @@ final class UpdateProjectRequest extends FormRequest
             'budget_partition_status' => ['sometimes', 'string', 'in:draft,pending,approved,rejected'],
             'start_date' => ['sometimes', 'required', 'date'],
             'end_date' => ['sometimes', 'required', 'date', 'after_or_equal:start_date'],
+            'lesson_learned' => ['nullable'],
             'locations' => ['nullable', 'array'],
             'locations.*.id' => ['nullable', 'integer'],
             'locations.*.latitude' => ['required', 'numeric'],
@@ -77,9 +78,9 @@ final class UpdateProjectRequest extends FormRequest
      * @param  \Illuminate\Validation\Validator  $validator
      * @return void
      */
-    public function withValidator($validator)
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
-        $validator->after(function ($validator) {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
             $user = $this->user();
 
             if ($this->has('operational_budget') || $this->has('allowance_budget')) {
@@ -116,9 +117,10 @@ final class UpdateProjectRequest extends FormRequest
                 // But typically UpdateProjectRequest is for general updates. We'll use actual_budget if > 0, else budget_total.
                 $limit = $project->actual_budget > 0 ? (float) $project->actual_budget : $budgetTotal;
 
-                $detailSum = array_reduce($detailBudgets, function ($carry, $item) {
-                    $amount = isset($item['amount']) ? (float) $item['amount'] : 
-                              ((isset($item['quantity']) && isset($item['item_price'])) ? (int)$item['quantity'] * (float)$item['item_price'] : 0);
+                $detailSum = array_reduce($detailBudgets, function (float $carry, array $item): float {
+                    $amount = isset($item['amount']) ? (float) $item['amount'] :
+                              ((isset($item['quantity']) && isset($item['item_price'])) ? (int) $item['quantity'] * (float) $item['item_price'] : 0);
+
                     return $carry + $amount;
                 }, 0);
 

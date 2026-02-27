@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 /**
  * @property-read int $id
@@ -41,8 +42,13 @@ final class Project extends Model
         'division_id', 'account_manager_id', 'head_id', 'pic_id',
         'status', 'project_type',
         'budget_total', 'operational_budget', 'management_budget', 'allowance_budget', 'actual_budget', 'budget_partition_status',
-        'start_date', 'end_date', 'created_by',
+        'start_date', 'end_date', 'created_by', 'uuid', 'lesson_learned',
     ];
+
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
 
     public function casts(): array
     {
@@ -124,5 +130,15 @@ final class Project extends Model
     public function budgetDetails(): HasMany
     {
         return $this->hasMany(ProjectBudgetDetail::class);
+    }
+
+    protected static function boot(): void
+    {
+        parent::boot();
+        self::creating(function (self $model): void {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) Str::uuid();
+            }
+        });
     }
 }

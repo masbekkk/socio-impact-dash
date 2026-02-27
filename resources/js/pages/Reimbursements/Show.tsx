@@ -118,10 +118,7 @@ export default function Show() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [approveNotes, setApproveNotes] = useState('');
-  const [transferProofFile, setTransferProofFile] = useState<File | null>(null);
-  const [transferProofPreview, setTransferProofPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const fetchDetail = useCallback(async () => {
     try {
@@ -143,23 +140,11 @@ export default function Show() {
     fetchDetail();
   }, [fetchDetail]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    setTransferProofFile(file);
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setTransferProofPreview(ev.target?.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setTransferProofPreview(null);
-    }
-  };
+  // handleFileChange removed as it is no longer needed for approval
+
 
   const resetApproveDialog = () => {
     setApproveDialogOpen(false);
-    setApproveNotes('');
-    setTransferProofFile(null);
-    setTransferProofPreview(null);
   };
 
   const resetRejectDialog = () => {
@@ -168,22 +153,18 @@ export default function Show() {
   };
 
   const handleApprove = async () => {
-    if (!data || !transferProofFile) return;
+    if (!data) return;
     setActionLoading(true);
     try {
       const formData = new FormData();
       formData.append('action', 'approved');
-      formData.append('transfer_proof', transferProofFile);
-      if (approveNotes.trim()) formData.append('notes', approveNotes);
 
-      await axios.post(`/api/v1/reimbursements/${data.code}/status`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await axios.post(`/api/v1/reimbursements/${data.code}/status`, formData);
 
       resetApproveDialog();
       await fetchDetail();
     } catch {
-      alert('Gagal menyetujui pengajuan. Pastikan bukti transfer sudah diupload.');
+      alert('Gagal menyetujui pengajuan.');
     } finally {
       setActionLoading(false);
     }
@@ -598,72 +579,20 @@ export default function Show() {
             </DialogTitle>
             <DialogDescription>
               Apakah Anda yakin ingin menyetujui pengajuan <strong>{data.type.toUpperCase()}</strong> dengan kode <strong className="font-mono">{data.code}</strong>?
-              Silakan upload bukti transfer di bawah ini.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="transfer_proof">
-                Bukti Transfer <span className="text-red-500">*</span>
-              </Label>
-              <div
-                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-green-400 hover:bg-green-50/30"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {transferProofPreview ? (
-                  <div className="space-y-2">
-                    <img src={transferProofPreview} alt="Preview" className="max-h-40 mx-auto rounded-lg shadow-sm" />
-                    <p className="text-sm text-muted-foreground">{transferProofFile?.name}</p>
-                  </div>
-                ) : transferProofFile ? (
-                  <div className="space-y-2">
-                    <FileText className="h-10 w-10 mx-auto text-muted-foreground" />
-                    <p className="text-sm font-medium">{transferProofFile.name}</p>
-                    <p className="text-xs text-muted-foreground">{(transferProofFile.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="mx-auto h-12 w-12 rounded-full bg-green-50 flex items-center justify-center">
-                      <Upload className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Klik untuk upload bukti transfer</p>
-                      <p className="text-xs text-muted-foreground">JPG, PNG, atau PDF (maks 5MB)</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <input
-                ref={fileInputRef}
-                id="transfer_proof"
-                type="file"
-                accept="image/jpeg,image/png,image/jpg,application/pdf"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="approve_notes">Catatan (opsional)</Label>
-              <Textarea
-                id="approve_notes"
-                placeholder="Tambahkan catatan jika diperlukan..."
-                className="min-h-[80px] resize-none"
-                value={approveNotes}
-                onChange={(e) => setApproveNotes(e.target.value)}
-              />
-            </div>
-          </div>
+          {/* No inputs needed for simple confirmation */}
           <DialogFooter>
-            <Button variant="outline" onClick={resetApproveDialog} disabled={actionLoading}>Batal</Button>
+            <Button variant="outline" onClick={resetApproveDialog} disabled={actionLoading}>Tidak</Button>
             <Button
               className="bg-green-600 hover:bg-green-700"
-              disabled={!transferProofFile || actionLoading}
+              disabled={actionLoading}
               onClick={handleApprove}
             >
               {actionLoading ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
               ) : (
-                <><CheckCircle className="mr-2 h-4 w-4" /> Ya, Approve</>
+                <>Ya, Setujui</>
               )}
             </Button>
           </DialogFooter>

@@ -19,9 +19,13 @@ final class StoreReimbursementRequest extends FormRequest
     {
         return [
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'atr_id' => ['nullable', 'integer', 'exists:reimbursements,id'],
             'type' => ['required', 'string', new Enum(ReimbursementType::class)],
             'eer_type' => ['nullable', 'string', 'in:refund,reimburse'],
             'amount' => ['nullable', 'numeric'],
+            'approver_head_id' => ['nullable', 'integer', 'exists:users,id'],
+            'approver_finance_id' => ['nullable', 'integer', 'exists:users,id'],
+            'approver_direktur_id' => ['nullable', 'integer', 'exists:users,id'],
             'bank_name' => ['nullable', 'string', 'max:100'],
             'bank_account' => ['nullable', 'string', 'max:50'],
             'account_holder' => ['nullable', 'string', 'max:100'],
@@ -31,6 +35,10 @@ final class StoreReimbursementRequest extends FormRequest
             'documents' => ['nullable', 'array'],
             'documents.*.file' => ['required', 'file', 'max:10240'],
             'documents.*.type' => ['nullable', 'string'],
+
+            'selected_budget_details' => ['nullable', 'array'],
+            'selected_budget_details.*.project_budget_detail_id' => ['required', 'integer', 'exists:project_budget_details,id'],
+            'selected_budget_details.*.amount' => ['required', 'numeric', 'min:0'],
         ];
     }
 

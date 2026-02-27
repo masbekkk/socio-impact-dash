@@ -11,6 +11,11 @@ export interface Project {
     head_name: string;
     head_email: string;
     head_role: string;
+    budget_details?: {
+        id: number;
+        notes: string;
+        amount: number;
+    }[];
 }
 
 export interface ProjectAutoFill {
@@ -33,5 +38,13 @@ export interface ReimbursementPayload {
     usage_plan?: string;
     urgency?: string;
     eer_type?: string;
+    atr_id?: string;
+    approver_head_id?: string;
+    approver_finance_id?: string;
+    approver_direktur_id?: string;
     documents?: { file: File; type: string }[];
+    selected_budget_details?: {
+        project_budget_detail_id: number;
+        amount: number;
+    }[];
 }

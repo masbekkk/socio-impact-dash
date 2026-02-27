@@ -9,12 +9,12 @@ use Inertia\Inertia;
 
 final class CalendarController
 {
-    public function index()
+    public function index(): \Inertia\Response
     {
         return Inertia::render('Calendar/Index');
     }
 
-    public function show(string $date)
+    public function show(string $date): \Inertia\Response
     {
         // In real app, you would:
         // 1. Validate the date format

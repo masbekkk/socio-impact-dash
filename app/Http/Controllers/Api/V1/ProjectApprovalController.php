@@ -14,7 +14,7 @@ use Illuminate\Routing\Controller;
 
 final class ProjectApprovalController extends Controller
 {
-    public function approve(Request $request, Project $project, ApproveProject $approveProject)
+    public function approve(Request $request, Project $project, ApproveProject $approveProject): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validate([
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -28,7 +28,7 @@ final class ProjectApprovalController extends Controller
         );
     }
 
-    public function reject(Request $request, Project $project, RejectProject $rejectProject)
+    public function reject(Request $request, Project $project, RejectProject $rejectProject): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validate([
             'notes' => ['required', 'string', 'max:1000'],

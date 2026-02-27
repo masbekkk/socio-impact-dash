@@ -38,6 +38,7 @@ final class StoreProjectRequest extends FormRequest
             'budget_total' => ['required', 'numeric', 'min:0'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'lesson_learned' => ['nullable', 'string'],
             'locations' => ['nullable', 'array'],
             'locations.*.latitude' => ['required', 'numeric'],
             'locations.*.longitude' => ['required', 'numeric'],
@@ -56,17 +57,19 @@ final class StoreProjectRequest extends FormRequest
             'detail_budgets.*.notes' => ['nullable', 'string'],
         ];
     }
-    public function withValidator($validator)
+
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
-        $validator->after(function ($validator) {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
             $budgetTotal = (float) $this->input('budget_total', 0);
             $detailBudgets = $this->input('detail_budgets', []);
 
             if (is_array($detailBudgets) && count($detailBudgets) > 0) {
                 // Ensure array_sum works on amount even if it is a string or not set
-                $detailSum = array_reduce($detailBudgets, function ($carry, $item) {
-                    $amount = isset($item['amount']) ? (float) $item['amount'] : 
-                              ((isset($item['quantity']) && isset($item['item_price'])) ? (int)$item['quantity'] * (float)$item['item_price'] : 0);
+                $detailSum = array_reduce($detailBudgets, function (float $carry, array $item): float {
+                    $amount = isset($item['amount']) ? (float) $item['amount'] :
+                              ((isset($item['quantity']) && isset($item['item_price'])) ? (int) $item['quantity'] * (float) $item['item_price'] : 0);
+
                     return $carry + $amount;
                 }, 0);
 

@@ -11,6 +11,7 @@ import FileUploadDropzone from '@/components/FileUploadDropzone';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import type { Project } from '@/types/reimbursement';
 
@@ -22,8 +23,17 @@ const REIMBURSE_CATEGORIES = [
   'Biaya Medis', 'Biaya Pendidikan', 'Biaya Pelatihan', 'Biaya Perjalanan Dinas', 'Biaya Operasional', 'Lain-lain',
 ];
 
-export default function CreateEER({ projects }: { projects: Project[] }) {
-  const { authUser, loading, errors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
+interface Approver {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export default function CreateEER({ atrs = [], approvers = {} }: {
+  atrs?: any[],
+  approvers?: Record<string, Approver[]>
+}) {
+  const { authUser, loading, errors, clearFieldError, submitReimbursement } = useReimbursementForm([]);
 
   const [eerFile, setEerFile] = useState<File | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -31,12 +41,14 @@ export default function CreateEER({ projects }: { projects: Project[] }) {
   const [formData, setFormData] = useState({
     name: authUser?.name ?? '',
     nip: authUser?.nip ?? '',
+    atr_id: '',
     project_id: '',
+    project_name: '',
     division: '',
     pic: '',
-    approver_name: '',
-    approver_position: '',
-    approver_email: '',
+    approver_head_id: '',
+    approver_finance_id: '',
+    approver_direktur_id: '',
     reimbursement_type: 'refund',
     financing_category: '',
     amount: 0,
@@ -52,16 +64,22 @@ export default function CreateEER({ projects }: { projects: Project[] }) {
 
   const categories = formData.reimbursement_type === 'refund' ? REFUND_CATEGORIES : REIMBURSE_CATEGORIES;
 
-  const handleProjectChange = (value: string) => {
-    const autoFill = getAutoFill(value);
+  const handleAtrChange = (value: string) => {
+    const selected = atrs.find(a => a.id.toString() === value);
+    if (!selected) return;
+
     setFormData(prev => ({
       ...prev,
-      project_id: value,
-      division: autoFill.division,
-      pic: autoFill.pic,
-      approver_name: autoFill.approver_name,
-      approver_position: autoFill.approver_position,
-      approver_email: autoFill.approver_email,
+      atr_id: value,
+      project_id: selected.project_id?.toString() ?? '',
+      project_name: selected.project_name ?? '-',
+      division: selected.division_name ?? '',
+      pic: selected.pic_name ?? '',
+      approver_head_id: selected.approver_head_id?.toString() ?? '',
+      approver_finance_id: selected.approver_finance_id?.toString() ?? '',
+      approver_direktur_id: selected.approver_direktur_id?.toString() ?? '',
+      description: selected.usage_plan ?? '',
+      amount: selected.amount ?? 0,
     }));
   };
 
@@ -81,13 +99,18 @@ export default function CreateEER({ projects }: { projects: Project[] }) {
     await submitReimbursement({
       type: 'eer',
       eer_type: formData.reimbursement_type,
+      atr_id: formData.atr_id,
       project_id: formData.project_id,
+      approver_head_id: formData.approver_head_id,
+      approver_finance_id: formData.approver_finance_id,
+      approver_direktur_id: formData.approver_direktur_id,
+      amount: formData.amount,
       usage_plan: formData.description,
       documents,
-    });
+    } as any);
   };
 
-  const isAutoFilled = !!formData.project_id;
+  const isAutoFilled = !!formData.atr_id;
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -131,23 +154,30 @@ export default function CreateEER({ projects }: { projects: Project[] }) {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="project_id">Nama Project</Label>
-                  <Select onValueChange={handleProjectChange} value={formData.project_id}>
+                  <Label htmlFor="atr_id">Pilih ATR</Label>
+                  <Select onValueChange={handleAtrChange} value={formData.atr_id}>
                     <SelectTrigger className="h-10">
                       <div className="flex items-center gap-2">
                         <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Pilih proyek terkait" />
+                        <SelectValue placeholder="Pilih ATR terkait" />
                       </div>
                     </SelectTrigger>
                     <SelectContent>
-                      {projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id.toString()}>
-                          {project.code} - {project.name}
+                      {atrs.map((atr: any) => (
+                        <SelectItem key={atr.id} value={atr.id.toString()}>
+                          {atr.code} - Rp {atr.amount?.toLocaleString('id-ID')} ({atr.project_name})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.project_id && <p className="text-xs text-red-500">{errors.project_id[0]}</p>}
+                  {errors.atr_id && <p className="text-xs text-red-500">{errors.atr_id[0]}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="project_name">Nama Project</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input id="project_name" name="project_name" className="pl-9 h-10 bg-muted/30" value={formData.project_name} readOnly />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="division">Divisi</Label>
@@ -250,63 +280,75 @@ export default function CreateEER({ projects }: { projects: Project[] }) {
 
             <Separator />
 
-            {/* Approval */}
+            {/* Persetujuan */}
             <div className="p-6 md:p-8 bg-white">
               <h3 className="text-lg font-semibold mb-1">Persetujuan</h3>
-              <p className="text-sm text-muted-foreground mb-6">Informasi pihak yang akan menyetujui pengajuan EER ini.</p>
+              <p className="text-sm text-muted-foreground mb-6">Informasi pihak yang akan menyetujui pengajuan EER ini (Diwariskan dari ATR).</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="approver_name">Nama Approver</Label>
-                  <div className="relative">
-                    <UserCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="approver_name" name="approver_name" className="pl-9 h-10 bg-muted/30" value={formData.approver_name} onChange={handleChange} readOnly={isAutoFilled} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="approver_position">Jabatan Approver</Label>
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="approver_position" name="approver_position" className="pl-9 h-10 bg-muted/30" value={'Head'} readOnly />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="approver_email">Email Approver</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="approver_email" name="approver_email" type="email" className="pl-9 h-10 bg-muted/30" value={formData.approver_email} onChange={handleChange} readOnly={isAutoFilled} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Payment Details */}
-            {/* <div className="p-6 md:p-8 bg-white">
-              <h3 className="text-lg font-semibold mb-1">Detail Pembayaran</h3>
-              <p className="text-sm text-muted-foreground mb-6">Informasi tambahan terkait pembayaran.</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="payment_method">Metode Pembayaran</Label>
-                  <Select value={formData.payment_method} onValueChange={(val) => setFormData(prev => ({ ...prev, payment_method: val }))}>
+                  <Label htmlFor="approver_head_id">Head Approver</Label>
+                  <Select
+                    onValueChange={(val) => setFormData(p => ({ ...p, approver_head_id: val }))}
+                    value={formData.approver_head_id}
+                  >
                     <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Pilih metode" />
+                      <SelectValue placeholder="Pilih Head Divisi" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Transfer Bank">Transfer Bank</SelectItem>
-                      <SelectItem value="Tunai">Tunai</SelectItem>
-                      <SelectItem value="Kartu Kredit Kantor">Kartu Kredit Kantor</SelectItem>
+                      {approvers['head']?.map((user) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Keterangan Tambahan</Label>
-                  <Input id="description" name="description" placeholder="Cth: Biaya makan siang meeting dengan klien X" value={formData.description} onChange={handleChange} className="h-10" />
+                  <Label htmlFor="approver_finance_id">Finance Approver</Label>
+                  <Select
+                    onValueChange={(val) => setFormData(p => ({ ...p, approver_finance_id: val }))}
+                    value={formData.approver_finance_id}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Pilih Finance" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {approvers['finance']?.map((user) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="approver_direktur_id">Direktur Approver</Label>
+                  <Select
+                    onValueChange={(val) => setFormData(p => ({ ...p, approver_direktur_id: val }))}
+                    value={formData.approver_direktur_id}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Pilih Direktur" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {approvers['direktur']?.map((user) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            </div> */}
+            </div>
+
+            {/* Payment & Additional Details */}
+            <div className="p-6 md:p-8 bg-white">
+              <h3 className="text-lg font-semibold mb-1">Keterangan Tambahan</h3>
+              <p className="text-sm text-muted-foreground mb-6">Informasi pemakaian EER yang merujuk pada ATR terkait.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="description">Keterangan Pemakaian (Dari ATR)</Label>
+                  <Textarea id="description" name="description" placeholder="Deskripsi pemakaian" value={formData.description} readOnly className="min-h-[100px] bg-muted/30" />
+                </div>
+              </div>
+            </div>
 
             <CardFooter className="p-6 md:p-8 bg-gray-50 flex justify-between items-center border-t">
               <div className="text-sm text-muted-foreground">

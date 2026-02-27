@@ -128,7 +128,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
   const executeDelete = async () => {
     if (!projectToDelete) return;
     try {
-      await axios.delete(`/api/v1/projects/${projectToDelete.id}`);
+      await axios.delete(`/api/v1/projects/${projectToDelete.uuid}`);
       setToast({ show: true, message: 'Proyek berhasil dihapus.', type: 'success' });
       fetchProjects();
     } catch (error) {
@@ -313,7 +313,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                     </div>
 
                     <div className="pt-2 border-t flex justify-end gap-2">
-                      <Link href={`/projects/${p.id}`} className="w-full">
+                      <Link href={`/projects/${p.uuid}`} className="w-full">
                         <Button variant="outline" size="sm" className="w-full">View Details</Button>
                       </Link>
                     </div>
@@ -419,12 +419,12 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                             <DropdownMenuItem asChild>
-                              <Link href={`/projects/${p.id}`} className="flex items-center cursor-pointer">
+                              <Link href={`/projects/${p.uuid}`} className="flex items-center cursor-pointer">
                                 <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> View Details
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link href={`/projects/${p.id}/edit`} className="flex items-center cursor-pointer">
+                              <Link href={`/projects/${p.uuid}/edit`} className="flex items-center cursor-pointer">
                                 <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Project
                               </Link>
                             </DropdownMenuItem>
