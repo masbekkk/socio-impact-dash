@@ -14,7 +14,7 @@ final class LeaveService
     {
         $query = Leave::with(['user', 'project', 'replacementPic', 'approvals.approver']);
 
-        if (! $user->hasAnyPermission(['view_all_leaves', 'view_own_leaves'])) {
+        if (! $user->hasAnyPermission(['view_all_leaves'])) {
             $query->where('user_id', $user->id);
         }
 
