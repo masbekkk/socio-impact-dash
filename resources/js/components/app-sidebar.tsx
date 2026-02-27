@@ -12,130 +12,91 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid, Users, Settings, DollarSign, Calendar, CheckSquare, FileText } from 'lucide-react';
 import AppLogo from './app-logo';
+import { usePermission } from '@/hooks/use-permission';
 
-const footerNavItems: NavItem[] = [
+const NAV_ITEMS: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
+        title: 'Dashboard',
+        href: dashboard().url,
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Divisi',
+        href: '/admin/divisions',
+        icon: FileText,
+        roles: ['superadmin'],
+    },
+    {
+        title: 'Proyek',
+        href: '/projects',
         icon: Folder,
     },
     {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        title: 'Reimbursement',
+        href: '/reimbursements',
+        icon: DollarSign,
+    },
+    {
+        title: 'Presensi',
+        href: '/presences',
+        icon: CheckSquare,
+    },
+    {
+        title: 'Cuti',
+        href: '/leaves',
+        icon: Calendar,
+    },
+    {
+        title: 'Kalender',
+        href: '/calendar',
+        icon: Calendar,
+    },
+    {
+        title: 'Nomor Surat',
+        href: '/letter-requests',
+        icon: FileText,
+    },
+    {
+        title: 'Pengajuan Cuti',
+        href: '/leaves/approvals',
+        icon: Calendar,
+        roles: ['head', 'hr', 'direktur', 'superadmin'],
+    },
+    {
+        title: 'Transfer',
+        href: '/reimbursements',
+        icon: FileText,
+        roles: ['finance', 'superadmin'],
+    },
+    {
+        title: 'Pengaturan',
+        href: '/settings/profile',
+        icon: Settings,
+    },
+    {
+        title: 'Manajemen User',
+        href: '/admin/users',
+        icon: Users,
+        roles: ['superadmin'],
+    },
+    {
+        title: 'RBAC Control',
+        href: '/admin/rbac',
+        icon: Settings,
+        roles: ['superadmin'],
     },
 ];
 
-function getMenusByRole(): Record<string, NavItem[]> {
-    const restrictedMenu: NavItem[] = [
-        {
-            title: 'Reimbursement',
-            href: '/reimbursements',
-            icon: DollarSign,
-        },
-        {
-            title: 'Presensi',
-            href: '/presences',
-            icon: CheckSquare,
-        },
-        {
-            title: 'Cuti',
-            href: '/leaves',
-            icon: Calendar,
-        },
-        {
-            title: 'Kalender',
-            href: '/calendar',
-            icon: Calendar,
-        },
-        {
-            title: 'Nomor Surat',
-            href: '/letter-requests',
-            icon: FileText,
-        },
-    ];
-
-    const fullMenu: NavItem[] = [
-        {
-            title: 'Dashboard',
-            href: dashboard().url,
-            icon: LayoutGrid,
-        },
-
-        {
-            title: 'Divisi',
-            href: '/admin/divisions',
-            icon: FileText,
-        },
-        {
-            title: 'Proyek',
-            href: '/projects',
-            icon: Folder,
-        },
-        {
-            title: 'Kalender',
-            href: '/calendar',
-            icon: Calendar,
-        },
-        {
-            title: 'Nomor Surat',
-            href: '/letter-requests',
-            icon: FileText,
-        },
-        // {
-        //     title: 'Persetujuan',
-        //     href: '/reimbursements/approvals',
-        //     icon: CheckSquare,
-        // },
-        {
-            title: 'Pengajuan Cuti',
-            href: '/leaves/approvals',
-            icon: Calendar,
-        },
-        // {
-        //     title: 'Persetujuan Reimbursement',
-        //     href: '/reimbursements/approvals',
-        //     icon: DollarSign,
-        // },
-        {
-            title: 'Transfer',
-            href: '/reimbursements',
-            icon: FileText,
-        },
-        {
-            title: 'Pengaturan',
-            href: '/settings/profile',
-            icon: Settings,
-        },
-        {
-            title: 'Manajemen User',
-            href: '/admin/users',
-            icon: Users,
-        },
-        {
-            title: 'RBAC Control',
-            href: '/admin/rbac',
-            icon: Settings,
-        },
-    ];
-
-    return {
-        pegawai: restrictedMenu,
-        head: fullMenu,
-        finance: fullMenu,
-        superadmin: fullMenu,
-    };
-}
-
 export function AppSidebar() {
-    const { props } = usePage();
-    const auth = (props.auth as any) || {};
-    const userRole = auth?.user?.role_name || 'pegawai';
-    const menusByRole = getMenusByRole();
-    const mainNavItems = menusByRole[userRole] || menusByRole.pegawai;
+    const { hasRole } = usePermission();
+
+    const mainNavItems = NAV_ITEMS.filter((item) => {
+        if (!item.roles) return true;
+        return hasRole(item.roles);
+    });
 
     return (
         <Sidebar collapsible="icon" variant="inset">
