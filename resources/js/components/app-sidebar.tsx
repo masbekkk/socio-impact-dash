@@ -61,12 +61,12 @@ const NAV_ITEMS: NavItem[] = [
         icon: Calendar,
         roles: ['head', 'hr', 'direktur', 'superadmin'],
     },
-    {
-        title: 'Transfer',
-        href: '/reimbursements',
-        icon: FileText,
-        roles: ['finance', 'superadmin', 'direktur', 'head', 'hr'],
-    },
+    // {
+    //     title: 'Transfer',
+    //     href: '/reimbursements',
+    //     icon: FileText,
+    //     roles: ['finance', 'superadmin', 'direktur', 'head', 'hr'],
+    // },
     {
         title: 'Divisi',
         href: '/admin/divisions',
