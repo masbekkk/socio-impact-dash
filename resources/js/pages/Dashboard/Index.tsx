@@ -10,6 +10,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { MapPin, TrendingUp, Clock, Users, Building2, FileText, Banknote } from 'lucide-react';
 import { type SharedData } from '@/types';
+import { usePermission } from '@/hooks/use-permission';
 
 // Fix Leaflet default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -114,6 +115,9 @@ export default function Dashboard({
   locations,
   projectsByDivision,
 }: DashboardProps) {
+  const { hasRole } = usePermission();
+  const isPegawai = hasRole('pegawai') && !hasRole('superadmin');
+
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
   ];
@@ -146,8 +150,6 @@ export default function Dashboard({
       maximumFractionDigits: 0,
     }).format(value);
   };
-
-  const { executive_summary } = DASHBOARD_DATA;
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -182,143 +184,151 @@ export default function Dashboard({
             </CardFooter>
           </Card>
 
-          <Card className="bg-white shadow-md border-0 flex flex-col justify-between">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">Total Users</CardTitle>
-              <Users className="h-5 w-5 text-gray-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-800">{totalUsers}</div>
-            </CardContent>
-            <CardFooter className="pt-0"><div className="text-xs text-muted-foreground">Aktif di sistem</div></CardFooter>
-          </Card>
+          {!isPegawai && (
+            <>
+              <Card className="bg-white shadow-md border-0 flex flex-col justify-between">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-500">Total Users</CardTitle>
+                  <Users className="h-5 w-5 text-gray-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-gray-800">{totalUsers}</div>
+                </CardContent>
+                <CardFooter className="pt-0"><div className="text-xs text-muted-foreground">Aktif di sistem</div></CardFooter>
+              </Card>
 
-          <Card className="bg-white shadow-md border-0 flex flex-col justify-between">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">Total Divisions</CardTitle>
-              <Building2 className="h-5 w-5 text-gray-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-800">{totalDivisions}</div>
-            </CardContent>
-            <CardFooter className="pt-0"><div className="text-xs text-muted-foreground">Struktur organisasi</div></CardFooter>
-          </Card>
+              <Card className="bg-white shadow-md border-0 flex flex-col justify-between">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-500">Total Divisions</CardTitle>
+                  <Building2 className="h-5 w-5 text-gray-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-gray-800">{totalDivisions}</div>
+                </CardContent>
+                <CardFooter className="pt-0"><div className="text-xs text-muted-foreground">Struktur organisasi</div></CardFooter>
+              </Card>
 
-          <Card className="bg-white shadow-md border-0 flex flex-col justify-between">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">Letter Requests</CardTitle>
-              <FileText className="h-5 w-5 text-gray-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-800">{totalLetterRequests}</div>
-            </CardContent>
-            <CardFooter className="pt-0"><div className="text-xs text-muted-foreground">Dibuat via sistem</div></CardFooter>
-          </Card>
+              <Card className="bg-white shadow-md border-0 flex flex-col justify-between">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-500">Letter Requests</CardTitle>
+                  <FileText className="h-5 w-5 text-gray-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-gray-800">{totalLetterRequests}</div>
+                </CardContent>
+                <CardFooter className="pt-0"><div className="text-xs text-muted-foreground">Dibuat via sistem</div></CardFooter>
+              </Card>
+            </>
+          )}
         </div>
 
-        {/* Budget Highlight Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 shadow-sm border-0">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-1"><CardTitle className="text-sm font-medium text-emerald-800">Total Keseluruhan Budget Projek</CardTitle></div>
-              <div className="bg-emerald-200 p-2 rounded-full"><Banknote className="h-5 w-5 text-emerald-700" /></div>
-            </CardHeader>
-            <CardContent><div className="text-2xl sm:text-3xl font-bold text-emerald-900">{formatIDR(totalBudget || 0)}</div></CardContent>
-          </Card>
+        {!isPegawai && (
+          <>
+            {/* Budget Highlight Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 shadow-sm border-0">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div className="space-y-1"><CardTitle className="text-sm font-medium text-emerald-800">Total Keseluruhan Budget Projek</CardTitle></div>
+                  <div className="bg-emerald-200 p-2 rounded-full"><Banknote className="h-5 w-5 text-emerald-700" /></div>
+                </CardHeader>
+                <CardContent><div className="text-2xl sm:text-3xl font-bold text-emerald-900">{formatIDR(totalBudget || 0)}</div></CardContent>
+              </Card>
 
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 shadow-sm border-0">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-1"><CardTitle className="text-sm font-medium text-blue-800">Total Management Budget</CardTitle></div>
-              <div className="bg-blue-200 p-2 rounded-full"><TrendingUp className="h-5 w-5 text-blue-700" /></div>
-            </CardHeader>
-            <CardContent><div className="text-2xl sm:text-3xl font-bold text-blue-900">{formatIDR(totalManagementBudget || 0)}</div></CardContent>
-          </Card>
-        </div>
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 shadow-sm border-0">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div className="space-y-1"><CardTitle className="text-sm font-medium text-blue-800">Total Management Budget</CardTitle></div>
+                  <div className="bg-blue-200 p-2 rounded-full"><TrendingUp className="h-5 w-5 text-blue-700" /></div>
+                </CardHeader>
+                <CardContent><div className="text-2xl sm:text-3xl font-bold text-blue-900">{formatIDR(totalManagementBudget || 0)}</div></CardContent>
+              </Card>
+            </div>
 
-        {/* Charts Area - Rearranged to Full Width */}
-        <div className="space-y-8">
-          {/* Leaderboard - Full Width */}
-          <div className="grid grid-cols-1 gap-8">
-            <Card className="border shadow-sm p-0 h-[400px] flex flex-col rounded-3xl overflow-hidden bg-white">
-              <CardHeader className="p-6 pb-2 shrink-0 border-b border-gray-50">
-                <CardTitle className="text-lg font-bold text-gray-800">Top Budget Contributors</CardTitle>
-                <CardDescription>Pengguna dengan akuisisi budget tertinggi</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 flex-1 h-full min-h-0 bg-white">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 40, left: 10, bottom: 20 }} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                    <XAxis type="number" tickFormatter={(value) => `Rp ${value / 1000000}jt`} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={100} tick={{ fontSize: 12, fontWeight: 500 }} />
-                    <RechartsTooltip formatter={(value: any) => formatIDR(Number(value || 0))} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-                    <Bar dataKey="total" fill="#1a5f4a" radius={[0, 4, 4, 0]} barSize={24} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-          {/* Map - Full Width */}
-          <div className="relative rounded-3xl overflow-hidden shadow-sm border border-gray-100 h-[450px] z-0">
-            <div className="absolute inset-0 z-0">
-              <MapContainer center={[-2.5, 118.0]} zoom={5} style={{ height: '100%', width: '100%', background: '#e5e7eb' }} zoomControl={true} scrollWheelZoom={true}>
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png" attribution='&copy; OpenStreetMap' />
-                {locations?.map((loc) => (
-                  <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
-                    <Popup className="custom-popup" closeButton={false}>
-                      <div className="px-2 py-1 text-center">
-                        <span className="font-bold text-gray-800 block text-sm">{loc.project?.name || 'Project'}</span>
-                        <span className="text-xs text-muted-foreground mt-0.5">{loc.detail_address}</span>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            </div>
-            <div className="absolute top-0 left-0 right-0 p-6 z-[400] flex justify-center items-start pointer-events-none">
-              <h3 className="text-sm font-medium text-gray-800 tracking-tight flex items-center gap-2 drop-shadow-sm bg-white/80 backdrop-blur-[2px] px-3 py-1 rounded-full border border-gray-200">
-                <span className="w-2 h-2 rounded-full bg-[var(--sidebar)] animate-pulse"></span>
-                Persebaran Wilayah Proyek Aktif
-              </h3>
-            </div>
-          </div>
-          {/* Division Chart - Full Width */}
-          <div className="grid grid-cols-1 gap-8">
-            <Card className="border shadow-sm p-0 h-[400px] flex flex-col rounded-3xl bg-white">
-              <CardHeader className="p-6 pb-2 shrink-0 border-b border-gray-50">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-bold text-gray-800">Projects by Division</CardTitle>
+            {/* Charts Area - Rearranged to Full Width */}
+            <div className="space-y-8">
+              {/* Leaderboard - Full Width */}
+              <div className="grid grid-cols-1 gap-8">
+                <Card className="border shadow-sm p-0 h-[400px] flex flex-col rounded-3xl overflow-hidden bg-white">
+                  <CardHeader className="p-6 pb-2 shrink-0 border-b border-gray-50">
+                    <CardTitle className="text-lg font-bold text-gray-800">Top Budget Contributors</CardTitle>
+                    <CardDescription>Pengguna dengan akuisisi budget tertinggi</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 flex-1 h-full min-h-0 bg-white">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData} margin={{ top: 10, right: 40, left: 10, bottom: 20 }} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                        <XAxis type="number" tickFormatter={(value) => `Rp ${value / 1000000}jt`} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                        <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={100} tick={{ fontSize: 12, fontWeight: 500 }} />
+                        <RechartsTooltip formatter={(value: any) => formatIDR(Number(value || 0))} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+                        <Bar dataKey="total" fill="#1a5f4a" radius={[0, 4, 4, 0]} barSize={24} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+              {/* Map - Full Width */}
+              <div className="relative rounded-3xl overflow-hidden shadow-sm border border-gray-100 h-[450px] z-0">
+                <div className="absolute inset-0 z-0">
+                  <MapContainer center={[-2.5, 118.0]} zoom={5} style={{ height: '100%', width: '100%', background: '#e5e7eb' }} zoomControl={true} scrollWheelZoom={true}>
+                    <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png" attribution='&copy; OpenStreetMap' />
+                    {locations?.map((loc: any) => (
+                      <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
+                        <Popup className="custom-popup" closeButton={false}>
+                          <div className="px-2 py-1 text-center">
+                            <span className="font-bold text-gray-800 block text-sm">{loc.project?.name || 'Project'}</span>
+                            <span className="text-xs text-muted-foreground mt-0.5">{loc.detail_address}</span>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    ))}
+                  </MapContainer>
                 </div>
-              </CardHeader>
-              <CardContent className="p-4 flex-1 min-h-0">
-                <ChartContainer config={{ percentage: { label: "Percentage" } }} className="h-full w-full aspect-auto">
-                  <BarChart data={projectsByDivisionWithPercentage} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <YAxis domain={[0, 100]} hide />
-                    <XAxis dataKey="division" tickLine={false} tickMargin={10} axisLine={false} tick={{ fontSize: 12 }} />
-                    <ChartTooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const data = payload[0].payload;
-                          return (
-                            <div className="rounded-lg border bg-white p-2 shadow-sm text-xs">
-                              <div className="font-bold text-gray-900 mb-1">{data.division}</div>
-                              <div className="text-gray-600">Total: <strong>{data.count} Projects</strong></div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Bar dataKey="percentage" radius={8} barSize={60}>
-                      <LabelList position="top" offset={12} className="fill-gray-700 font-bold" fontSize={12} formatter={(v: any) => `${v}%`} />
-                    </Bar>
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </div>
+                <div className="absolute top-0 left-0 right-0 p-6 z-[400] flex justify-center items-start pointer-events-none">
+                  <h3 className="text-sm font-medium text-gray-800 tracking-tight flex items-center gap-2 drop-shadow-sm bg-white/80 backdrop-blur-[2px] px-3 py-1 rounded-full border border-gray-200">
+                    <span className="w-2 h-2 rounded-full bg-[var(--sidebar)] animate-pulse"></span>
+                    Persebaran Wilayah Proyek Aktif
+                  </h3>
+                </div>
+              </div>
+              {/* Division Chart - Full Width */}
+              <div className="grid grid-cols-1 gap-8">
+                <Card className="border shadow-sm p-0 h-[400px] flex flex-col rounded-3xl bg-white">
+                  <CardHeader className="p-6 pb-2 shrink-0 border-b border-gray-50">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-bold text-gray-800">Projects by Division</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 flex-1 min-h-0">
+                    <ChartContainer config={{ percentage: { label: "Percentage" } }} className="h-full w-full aspect-auto">
+                      <BarChart data={projectsByDivisionWithPercentage} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <YAxis domain={[0, 100]} hide />
+                        <XAxis dataKey="division" tickLine={false} tickMargin={10} axisLine={false} tick={{ fontSize: 12 }} />
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="rounded-lg border bg-white p-2 shadow-sm text-xs">
+                                  <div className="font-bold text-gray-900 mb-1">{data.division}</div>
+                                  <div className="text-gray-600">Total: <strong>{data.count} Projects</strong></div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar dataKey="percentage" radius={8} barSize={60}>
+                          <LabelList position="top" offset={12} className="fill-gray-700 font-bold" fontSize={12} formatter={(v: any) => `${v}%`} />
+                        </Bar>
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              </div>
 
-        </div>
+            </div>
+          </>
+        )}
 
       </div>
     </AppSidebarLayout>

@@ -24,15 +24,10 @@ const NAV_ITEMS: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Divisi',
-        href: '/admin/divisions',
-        icon: FileText,
-        roles: ['superadmin'],
-    },
-    {
         title: 'Proyek',
         href: '/projects',
         icon: Folder,
+        roles: ['head', 'hr', 'direktur', 'superadmin'],
     },
     {
         title: 'Reimbursement',
@@ -69,12 +64,13 @@ const NAV_ITEMS: NavItem[] = [
         title: 'Transfer',
         href: '/reimbursements',
         icon: FileText,
-        roles: ['finance', 'superadmin'],
+        roles: ['finance', 'superadmin', 'direktur', 'head', 'hr'],
     },
     {
-        title: 'Pengaturan',
-        href: '/settings/profile',
-        icon: Settings,
+        title: 'Divisi',
+        href: '/admin/divisions',
+        icon: FileText,
+        roles: ['superadmin'],
     },
     {
         title: 'Manajemen User',
@@ -85,6 +81,12 @@ const NAV_ITEMS: NavItem[] = [
     {
         title: 'RBAC Control',
         href: '/admin/rbac',
+        icon: Settings,
+        roles: ['superadmin'],
+    },
+    {
+        title: 'Pengaturan',
+        href: '/settings/profile',
         icon: Settings,
         roles: ['superadmin'],
     },

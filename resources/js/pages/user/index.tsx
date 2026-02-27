@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 interface User {
     id: number;
     name: string;
+    position: string | null;
     email: string;
     roles: string[];
     employee_type: string | null;
@@ -145,6 +146,7 @@ export default function Index() {
                                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                                     <TableHead className="w-[300px]">User</TableHead>
                                     <TableHead>Role</TableHead>
+                                    <TableHead>Position</TableHead>
                                     <TableHead>Employment</TableHead>
                                     <TableHead>Joined</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
@@ -189,6 +191,9 @@ export default function Index() {
                                                         <span className="text-xs text-muted-foreground italic">No Role</span>
                                                     )}
                                                 </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="text-sm font-medium">{user.position || '-'}</span>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col">
