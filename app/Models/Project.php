@@ -54,6 +54,11 @@ final class Project extends Model
     {
         return [
             'id' => 'integer',
+            'division_id' => 'integer',
+            'account_manager_id' => 'integer',
+            'head_id' => 'integer',
+            'pic_id' => 'integer',
+            'created_by' => 'integer',
             'status' => ProjectStatus::class,
             'budget_total' => 'decimal:2',
             'operational_budget' => 'decimal:2',

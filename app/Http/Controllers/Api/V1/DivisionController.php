@@ -24,6 +24,7 @@ final class DivisionController extends Controller
             $search = $request->get('search');
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")
+                  ->orWhere('name', 'like', "%{$search}%")
                   ->orWhereHas('divisions', function (\Illuminate\Database\Eloquent\Builder $nq) use ($search) {
                       $nq->where('name', 'like', "%{$search}%");
                   });
@@ -42,7 +43,10 @@ final class DivisionController extends Controller
     {
         $validated = $request->validated();
         
-        $divisionCode = DivisionCode::create(['code' => $validated['code']]);
+        $divisionCode = DivisionCode::create([
+            'code' => $validated['code'],
+            'name' => $validated['name'],
+        ]);
         
         foreach ($validated['names'] as $nameData) {
             $divisionCode->divisions()->create($nameData);
@@ -70,7 +74,10 @@ final class DivisionController extends Controller
         $divisionCode = DivisionCode::findOrFail($id);
         $validated = $request->validated();
         
-        $divisionCode->update(['code' => $validated['code']]);
+        $divisionCode->update([
+            'code' => $validated['code'],
+            'name' => $validated['name'],
+        ]);
         
         // Replace all names with the newly provided ones
         $divisionCode->divisions()->delete();

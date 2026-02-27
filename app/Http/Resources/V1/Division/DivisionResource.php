@@ -29,6 +29,7 @@ final class DivisionResource extends JsonResource
         return [
             'id' => $this->id,
             'code' => $this->code,
+            'name' => $this->name,
             'names' => $this->divisions->map(fn (\App\Models\Division $div) => [
                 'id' => $div->id,
                 'name' => $div->name,

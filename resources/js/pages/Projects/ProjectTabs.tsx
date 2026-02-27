@@ -29,6 +29,7 @@ interface ProjectTabsProps {
     addReportFileRow: () => void;
     removeReportFileRow: (id: number) => void;
     setIsSubmitReportAlertOpen: (val: boolean) => void;
+    onDeleteReport?: (id: number | string) => void;
     monitoringList: any[];
 
     // Closing
@@ -52,6 +53,7 @@ export default function ProjectTabs({
     addReportFileRow,
     removeReportFileRow,
     setIsSubmitReportAlertOpen,
+    onDeleteReport,
     monitoringList,
     closingForm,
     setClosingForm,
@@ -221,6 +223,7 @@ export default function ProjectTabs({
                 actual_budget: closingForm.actual_budget,
                 lesson_learned: closingForm.lesson_learned
             });
+            if (refetchProject) refetchProject();
             if (onShowToast) onShowToast('Perubahan data closing berhasil disimpan.', 'success');
         } catch (error: any) {
             console.error("Error saving closing changes:", error);
@@ -1107,16 +1110,24 @@ export default function ProjectTabs({
                                                         <h4 className="font-bold text-base text-gray-900">
                                                             {new Date(history.report_date || history.date).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
                                                         </h4>
-                                                        <Badge variant="secondary" className={`text-[10px] uppercase tracking-wider ${history.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                            {history.status === 'approved' ? 'Disetujui' : 'Menunggu'}
-                                                        </Badge>
                                                     </div>
                                                     <p className="text-sm text-muted-foreground">Dilaporkan oleh: <span className="font-medium text-gray-700">{history.uploader_name || history.uploader}</span> • {new Date(history.report_date || history.date).toLocaleDateString('id-ID')}</p>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <Button variant="outline" size="sm" className="h-8 text-xs">Edit</Button>
-                                                    <Button variant="outline" size="sm" className="h-8 text-xs">Detail</Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-100"
+                                                        onClick={() => {
+                                                            if (window.confirm('Apakah Anda yakin ingin menghapus laporan ini?')) {
+                                                                onDeleteReport?.(history.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        Hapus
+                                                    </Button>
                                                 </div>
+
                                             </div>
 
                                             {/* Content */}
@@ -1135,8 +1146,8 @@ export default function ProjectTabs({
                                                                     <FileText className="h-4 w-4" />
                                                                 </div>
                                                                 <div className="flex-1 overflow-hidden">
-                                                                    <p className="text-sm font-medium text-gray-900 truncate">{file.filename || file.title}</p>
-                                                                    <p className="text-[10px] text-muted-foreground truncate">{file.type || 'Document'}</p>
+                                                                    <p className="text-sm font-medium text-gray-900 truncate">{file.title || file.original_name || file.filename}</p>
+                                                                    <p className="text-[10px] text-muted-foreground truncate">{file.original_name ? 'Document' : (file.type || 'Document')}</p>
                                                                 </div>
                                                                 <Download className="h-4 w-4 text-gray-300 group-hover:text-blue-600" />
                                                             </div>
@@ -1205,7 +1216,7 @@ export default function ProjectTabs({
                                             <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
                                                 <Upload className="h-5 w-5 text-gray-600" />
                                             </div>
-                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.laporan ? closingForm.files.laporan.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.laporan ? closingForm.files.laporan.name : 'PDF, DOCX, JPG (Max 50MB)'}</p>
                                             <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
                                             <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, laporan: e.target.files?.[0] } })} />
                                         </label>
@@ -1229,7 +1240,7 @@ export default function ProjectTabs({
                                             <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
                                                 <Upload className="h-5 w-5 text-gray-600" />
                                             </div>
-                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.bast ? closingForm.files.bast.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.bast ? closingForm.files.bast.name : 'PDF, DOCX, JPG (Max 50MB)'}</p>
                                             <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
                                             <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, bast: e.target.files?.[0] } })} />
                                         </label>
@@ -1253,7 +1264,7 @@ export default function ProjectTabs({
                                             <div className="p-2.5 bg-gray-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
                                                 <Upload className="h-5 w-5 text-gray-600" />
                                             </div>
-                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.penagihan ? closingForm.files.penagihan.name : 'PDF, DOCX, JPG (Max 10MB)'}</p>
+                                            <p className="text-[10px] text-muted-foreground">{closingForm.files.penagihan ? closingForm.files.penagihan.name : 'PDF, DOCX, JPG (Max 50MB)'}</p>
                                             <p className="font-medium text-xs text-gray-900 text-center">Klik untuk ganti atau upload baru</p>
                                             <Input type="file" className="hidden" onChange={(e) => setClosingForm({ ...closingForm, files: { ...closingForm.files, penagihan: e.target.files?.[0] } })} />
                                         </label>

@@ -82,6 +82,7 @@ interface ReimbursementDetail {
   } | null;
   documents: ReimbursementDocument[];
   approvals: ReimbursementApproval[];
+  can_approve: boolean;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -109,7 +110,7 @@ const URGENCY_LABELS: Record<string, { label: string; variant: 'destructive' | '
 const APPROVABLE_STATUSES = ['submitted', 'head_approved', 'finance_approved'];
 
 export default function Show() {
-  const { code } = usePage().props as { code: string };
+  const { code } = usePage().props as unknown as { code: string };
   const [data, setData] = useState<ReimbursementDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -227,7 +228,7 @@ export default function Show() {
 
   const statusCfg = STATUS_CONFIG[data.status] ?? { label: data.status, className: 'bg-gray-100 text-gray-600', icon: Clock };
   const StatusIcon = statusCfg.icon;
-  const canApproveReject = APPROVABLE_STATUSES.includes(data.status);
+  const canApproveReject = data.can_approve;
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
