@@ -187,6 +187,9 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
     reportForm.files.forEach((f) => {
       if (f.file) {
         formData.append(`documents[${fileIndex}][file]`, f.file);
+        if (f.title) {
+          formData.append(`documents[${fileIndex}][title]`, f.title);
+        }
         fileIndex++;
       }
     });
@@ -203,6 +206,17 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
     } catch (error) {
       console.error("Error submitting report:", error);
       setToast({ show: true, message: 'Gagal mengirim laporan.', type: 'error' });
+    }
+  };
+
+  const handleDeleteReport = async (monitoringId: number | string) => {
+    try {
+      await axios.delete(`/api/v1/projects/${project_slug}/monitorings/${monitoringId}`);
+      setToast({ show: true, message: 'Laporan berhasil dihapus.', type: 'success' });
+      fetchProject(false);
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      setToast({ show: true, message: 'Gagal menghapus laporan.', type: 'error' });
     }
   };
 
@@ -483,6 +497,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
           addReportFileRow={addReportFileRow}
           removeReportFileRow={removeReportFileRow}
           setIsSubmitReportAlertOpen={setIsSubmitReportAlertOpen}
+          onDeleteReport={handleDeleteReport}
           monitoringList={monitoringList}
           closingForm={closingForm}
           setClosingForm={setClosingForm}

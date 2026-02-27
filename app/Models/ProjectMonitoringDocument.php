@@ -9,6 +9,7 @@ class ProjectMonitoringDocument extends Model
 {
     protected $fillable = [
         'project_monitoring_id',
+        'title',
         'original_name',
         'path',
         'mime',

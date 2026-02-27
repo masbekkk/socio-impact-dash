@@ -41,6 +41,14 @@ import { id as localeId } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateFilterPresets } from '@/components/DateFilterPresets';
 
+interface ReimbursementApproval {
+  id: number;
+  status: string;
+  notes: string | null;
+  approved_at: string | null;
+  approver: { id: number; name: string } | null;
+}
+
 interface Reimbursement {
   id: number;
   code: string;
@@ -53,6 +61,7 @@ interface Reimbursement {
   created_at: string;
   user: { id: number; name: string } | null;
   project: { id: number; name: string; code: string } | null;
+  approvals: ReimbursementApproval[];
 }
 
 interface PaginatedData {
@@ -368,10 +377,28 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                             Rp {parseFloat(item.amount).toLocaleString('id-ID')}
                           </TableCell>
                           <TableCell>
-                            <Badge className={cn('gap-1', statusCfg.className)}>
-                              <StatusIcon className="h-3 w-3" />
-                              {statusCfg.label}
-                            </Badge>
+                            <div className="flex flex-col gap-1.5">
+                              <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
+                                <StatusIcon className="h-3 w-3" />
+                                {statusCfg.label}
+                              </Badge>
+                              {item.approvals && item.approvals.length > 0 && (
+                                <div className="flex flex-col gap-0.5">
+                                  {item.approvals.map((approval) => (
+                                    <div key={approval.id} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                      {approval.status === 'approved' ? (
+                                        <CheckCircle className="h-2.5 w-2.5 text-green-500" />
+                                      ) : (
+                                        <XCircle className="h-2.5 w-2.5 text-red-500" />
+                                      )}
+                                      <span className="font-medium whitespace-nowrap">
+                                        {approval.status === 'approved' ? 'Disetujui' : 'Ditolak'} {approval.approver?.name}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>

@@ -30,6 +30,7 @@ final class UpdateDivisionRequest extends FormRequest
                 'max:255', 
                 'unique:division_codes,code,' . $this->route('division')
             ],
+            'name' => ['required', 'string', 'max:255'],
             'names' => ['required', 'array', 'min:1'],
             'names.*.name' => ['required', 'string', 'max:255'],
             'names.*.description' => ['nullable', 'string'],

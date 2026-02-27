@@ -18,6 +18,7 @@ class ProjectMonitoringController extends Controller
             'report_date' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'documents' => ['nullable', 'array'],
+            'documents.*.title' => ['nullable', 'string', 'max:255'],
             'documents.*.file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'], // 10MB
         ]);
 
@@ -28,5 +29,28 @@ class ProjectMonitoringController extends Controller
             'Monitoring report submitted successfully',
             201
         );
+    }
+
+    public function destroy(Project $project, \App\Models\ProjectMonitoring $monitoring): \Illuminate\Http\JsonResponse
+    {
+        // Check if monitoring belongs to project
+        if ($monitoring->project_id !== $project->id) {
+            return JsonResponseFormatter::error('Monitoring report not found for this project', 404);
+        }
+
+        // Optional: Check permissions (e.g., only creator or admin can delete)
+        // For now, allow any authenticated user with project access
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($monitoring) {
+            // Delete associated files
+            $fileUploadService = app(\App\Services\FileUploadService::class);
+            foreach ($monitoring->documents as $document) {
+                $fileUploadService->deleteFile($document->path);
+            }
+
+            $monitoring->delete();
+        });
+
+        return JsonResponseFormatter::success(null, 'Monitoring report deleted successfully');
     }
 }

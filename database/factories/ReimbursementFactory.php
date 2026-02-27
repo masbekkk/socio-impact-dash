@@ -19,7 +19,15 @@ final class ReimbursementFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'code' => 'REIM-'.mb_strtoupper($this->faker->bothify('??####')),
+            'user_id' => fn () => \App\Models\User::factory(),
+            'project_id' => fn () => \App\Models\Project::factory(),
+            'type' => \App\Enums\ReimbursementType::ATR,
+            'status' => \App\Enums\ReimbursementStatus::Submitted,
+            'amount' => $this->faker->randomFloat(2, 100000, 1000000),
+            'usage_plan' => $this->faker->sentence(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
     }
 }

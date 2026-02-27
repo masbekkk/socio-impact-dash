@@ -31,6 +31,7 @@ interface DivisionName {
 interface Division {
     id: number;
     code: string;
+    name: string;
     names: DivisionName[];
     created_at: string;
 }
@@ -118,10 +119,11 @@ export default function Index() {
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                    <TableHead className="w-[150px]">Code</TableHead>
-                                    <TableHead>Names</TableHead>
-                                    <TableHead>Created At</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                    <TableHead className="w-[120px]">Code</TableHead>
+                                    <TableHead className="w-[200px]">Name</TableHead>
+                                    <TableHead>Sub-Divisions</TableHead>
+                                    <TableHead className="w-[150px]">Created At</TableHead>
+                                    <TableHead className="text-right w-[100px]">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -142,6 +144,9 @@ export default function Index() {
                                         <TableRow key={division.id} className="hover:bg-muted/50">
                                             <TableCell className="font-medium uppercase align-top pt-4">
                                                 {division.code}
+                                            </TableCell>
+                                            <TableCell className="font-medium align-top pt-4">
+                                                {division.name}
                                             </TableCell>
                                             <TableCell className="py-4">
                                                 <ul className="list-disc list-inside space-y-1">

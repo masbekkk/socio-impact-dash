@@ -34,6 +34,7 @@ final class StoreProjectMonitoring
                         );
 
                         $monitoring->documents()->create([
+                            'title' => $doc['title'] ?? null,
                             'original_name' => $meta['original_name'],
                             'path' => $meta['path'],
                             'mime' => $meta['mime'],

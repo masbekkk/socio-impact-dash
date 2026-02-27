@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 export default function Create() {
     const { data, setData, post, processing, errors, reset } = useForm({
         code: '',
+        name: '',
         names: [{ name: '', description: '' }],
     });
 
@@ -83,17 +84,32 @@ export default function Create() {
                             <CardTitle>Division Details</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="code">Code <span className="text-red-500">*</span></Label>
-                                <Input
-                                    id="code"
-                                    placeholder="e.g. FIN, HR, ENG"
-                                    value={data.code}
-                                    onChange={(e) => setData('code', e.target.value)}
-                                    required
-                                />
-                                <p className="text-xs text-muted-foreground">Unique identifier for the division.</p>
-                                {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="code">Code <span className="text-red-500">*</span></Label>
+                                    <Input
+                                        id="code"
+                                        placeholder="e.g. FIN, HR, ENG"
+                                        value={data.code}
+                                        onChange={(e) => setData('code', e.target.value)}
+                                        required
+                                    />
+                                    <p className="text-xs text-muted-foreground">Unique identifier (abbreviation).</p>
+                                    {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Name <span className="text-red-500">*</span></Label>
+                                    <Input
+                                        id="name"
+                                        placeholder="e.g. Finance, Human Resources"
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        required
+                                    />
+                                    <p className="text-xs text-muted-foreground">The full name of the division.</p>
+                                    {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+                                </div>
                             </div>
 
                             <div className="space-y-4">

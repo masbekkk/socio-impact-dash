@@ -44,6 +44,7 @@ final class ReimbursementResource extends JsonResource
                 $this->whenLoaded('documents')
             ),
             'approvals' => $this->whenLoaded('approvals'),
+            'can_approve' => $this->calculateCanApprove($request),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
             'atr_budget_selecteds' => $this->whenLoaded('atrBudgetSelecteds', function(): \Illuminate\Support\Collection {
@@ -57,5 +58,30 @@ final class ReimbursementResource extends JsonResource
                 });
             }),
         ];
+    }
+
+    private function calculateCanApprove(Request $request): bool
+    {
+        $user = $request->user();
+        if (!$user) {
+            return false;
+        }
+
+        // Requester cannot approve their own reimbursement
+        if ($this->user_id === $user->id) {
+            return false;
+        }
+
+        // Check if user has already approved/rejected
+        $hasActed = $this->approvals->where('approver_id', $user->id)->isNotEmpty();
+        if ($hasActed) {
+            return false;
+        }
+
+        return match ($this->status?->value) {
+            'submitted' => $this->project?->head_id === $user->id,
+            'head_approved', 'finance_approved' => $user->hasRole('finance'),
+            default => false,
+        };
     }
 }
