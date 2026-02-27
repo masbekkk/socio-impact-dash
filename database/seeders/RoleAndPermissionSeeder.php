@@ -30,6 +30,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'transfer_reimbursements',
             'create_leaves',
             'view_leaves',
+            'view_all_leaves',
             'approve_leaves',
             'reject_leaves',
             'manage_users',
@@ -65,6 +66,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'approve_leaves',
             'view_reimbursements',
             'view_leaves',
+            'view_all_leaves',
             'manage_detail_budget',
         ]);
 
@@ -87,6 +89,7 @@ final class RoleAndPermissionSeeder extends Seeder
         $hrRole = Role::firstOrCreate(['name' => UserRole::HR->value]);
         $hrRole->syncPermissions([
             'view_leaves',
+            'view_all_leaves',
             'approve_leaves',
             'view_reimbursements',
             'view_projects',
@@ -98,6 +101,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'view_reimbursements',
             'approve_reimbursements',
             'view_leaves',
+            'view_all_leaves',
             'approve_leaves',
             'approval_budget_partition',
         ]);

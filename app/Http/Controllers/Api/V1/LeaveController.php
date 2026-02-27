@@ -16,12 +16,13 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 final class LeaveController
 {
     public function __construct(
         private readonly LeaveService $leaveService,
-        private readonly CreateLeave  $createLeave,
+        private readonly CreateLeave $createLeave,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -62,15 +63,15 @@ final class LeaveController
         try {
             $validated = $request->validate([
                 'action' => ['required', Rule::in(['approve', 'reject'])],
-                'notes'  => ['nullable', 'string', 'max:1000'],
+                'notes' => ['nullable', 'string', 'max:1000'],
             ]);
 
-            $leave    = $this->leaveService->findByCode($code);
-            $actor    = $request->user();
+            $leave = $this->leaveService->findByCode($code);
+            $actor = $request->user();
             $isApprove = $validated['action'] === 'approve';
 
             $requiredPermission = $isApprove ? 'approve_leaves' : 'reject_leaves';
-            if (!$actor->can($requiredPermission)) {
+            if (! $actor->can($requiredPermission)) {
                 return response()->json(['message' => 'Anda tidak memiliki izin untuk melakukan aksi ini.'], 403);
             }
 
@@ -80,21 +81,21 @@ final class LeaveController
 
             return DB::transaction(function () use ($leave, $actor, $validated, $isApprove): JsonResponse {
                 LeaveApproval::create([
-                    'leave_id'    => $leave->id,
+                    'leave_id' => $leave->id,
                     'approver_id' => $actor->id,
-                    'role'        => $actor->getRoleNames()->first(),
-                    'status'      => $isApprove ? ApprovalStatus::Approved : ApprovalStatus::Rejected,
-                    'notes'       => $validated['notes'] ?? null,
+                    'role' => $actor->getRoleNames()->first(),
+                    'status' => $isApprove ? ApprovalStatus::Approved : ApprovalStatus::Rejected,
+                    'notes' => $validated['notes'] ?? null,
                     'approved_at' => now(),
                 ]);
 
                 $role = $actor->getRoleNames()->first();
 
                 $newStatus = match (true) {
-                    !$isApprove            => LeaveStatus::Rejected,
-                    $role === 'hr'         => LeaveStatus::HRApproved,
+                    ! $isApprove => LeaveStatus::Rejected,
+                    $role === 'hr' => LeaveStatus::HRApproved,
                     $role === 'superadmin' => LeaveStatus::SuperAdminApproved,
-                    default                => LeaveStatus::HeadApproved,
+                    default => LeaveStatus::HeadApproved,
                 };
 
                 $leave->update(['status' => $newStatus]);
@@ -102,7 +103,7 @@ final class LeaveController
 
                 return (new LeaveResource($leave))->response()->setStatusCode(200);
             });
-        } catch (\Throwable $th) {
+        } catch (Throwable $th) {
             return response()->json(['err' => $th->getMessage()], 500);
         }
     }
