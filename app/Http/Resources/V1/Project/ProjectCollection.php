@@ -12,7 +12,7 @@ class ProjectCollection extends ResourceCollection
      *
      * @return array<int|string, mixed>
      */
-    public function toArray($request): array
+    public function toArray(\Illuminate\Http\Request $request): array
     {
         return [
             'data' => ProjectResource::collection($this->collection),

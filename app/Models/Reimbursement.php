@@ -56,4 +56,9 @@ final class Reimbursement extends Model
     {
         return $this->hasMany(ReimbursementApproval::class);
     }
+
+    public function atrBudgetSelecteds(): HasMany
+    {
+        return $this->hasMany(AtrBudgetSelected::class);
+    }
 }

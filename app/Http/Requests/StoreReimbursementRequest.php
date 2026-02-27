@@ -31,6 +31,10 @@ final class StoreReimbursementRequest extends FormRequest
             'documents' => ['nullable', 'array'],
             'documents.*.file' => ['required', 'file', 'max:10240'],
             'documents.*.type' => ['nullable', 'string'],
+
+            'selected_budget_details' => ['nullable', 'array'],
+            'selected_budget_details.*.project_budget_detail_id' => ['required', 'integer', 'exists:project_budget_details,id'],
+            'selected_budget_details.*.amount' => ['required', 'numeric', 'min:0'],
         ];
     }
 

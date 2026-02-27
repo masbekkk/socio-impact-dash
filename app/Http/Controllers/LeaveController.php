@@ -18,7 +18,7 @@ final class LeaveController
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): \Inertia\Response
     {
         return Inertia::render('Leave/Index');
     }
@@ -26,7 +26,7 @@ final class LeaveController
     /**
      * Show the form for creating a new resource.
      */
-    public function create(Request $request)
+    public function create(Request $request): \Inertia\Response
     {
         return Inertia::render('Leave/CreateLeave', $this->getFormProps($request));
     }
@@ -34,12 +34,12 @@ final class LeaveController
     /**
      * Show the form for creating a new travel request.
      */
-    public function createTravel(Request $request)
+    public function createTravel(Request $request): \Inertia\Response
     {
         return Inertia::render('Leave/CreateTravel', $this->getFormProps($request));
     }
 
-    public function approvals()
+    public function approvals(): \Inertia\Response
     {
         return Inertia::render('Leave/Index');
     }
@@ -49,7 +49,7 @@ final class LeaveController
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreLeaveRequest $request)
+    public function store(StoreLeaveRequest $request): void
     {
         //
     }
@@ -57,7 +57,7 @@ final class LeaveController
     /**
      * Display the specified resource.
      */
-    public function show(string $code)
+    public function show(string $code): \Inertia\Response
     {
         $user = Auth::user();
 
@@ -74,7 +74,7 @@ final class LeaveController
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Leave $leave)
+    public function edit(Leave $leave): void
     {
         //
     }
@@ -82,7 +82,7 @@ final class LeaveController
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateLeaveRequest $request, Leave $leave)
+    public function update(UpdateLeaveRequest $request, Leave $leave): void
     {
         //
     }
@@ -90,7 +90,7 @@ final class LeaveController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Leave $leave)
+    public function destroy(Leave $leave): void
     {
         //
     }

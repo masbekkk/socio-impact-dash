@@ -46,6 +46,16 @@ final class ReimbursementResource extends JsonResource
             'approvals' => $this->whenLoaded('approvals'),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
+            'atr_budget_selecteds' => $this->whenLoaded('atrBudgetSelecteds', function(): \Illuminate\Support\Collection {
+                return $this->atrBudgetSelecteds->map(function (\App\Models\AtrBudgetSelected $item): array {
+                    return [
+                        'id' => $item->id,
+                        'project_budget_detail_id' => $item->project_budget_detail_id,
+                        'amount' => (float) $item->amount,
+                        'notes' => $item->budgetDetail->notes ?? '', // Load the note text
+                    ];
+                });
+            }),
         ];
     }
 }

@@ -132,10 +132,10 @@ final class Project extends Model
         return $this->hasMany(ProjectBudgetDetail::class);
     }
 
-    protected static function boot()
+    protected static function boot(): void
     {
         parent::boot();
-        self::creating(function ($model) {
+        self::creating(function (self $model): void {
             if (empty($model->uuid)) {
                 $model->uuid = (string) Str::uuid();
             }

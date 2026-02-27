@@ -12,7 +12,7 @@ use Illuminate\Routing\Controller;
 
 class ProjectMonitoringController extends Controller
 {
-    public function store(Request $request, Project $project, StoreProjectMonitoring $storeMonitoring)
+    public function store(Request $request, Project $project, StoreProjectMonitoring $storeMonitoring): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validate([
             'report_date' => ['required', 'date'],

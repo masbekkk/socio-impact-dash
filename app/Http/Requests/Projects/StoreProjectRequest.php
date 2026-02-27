@@ -58,15 +58,15 @@ final class StoreProjectRequest extends FormRequest
         ];
     }
 
-    public function withValidator($validator)
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
-        $validator->after(function ($validator) {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
             $budgetTotal = (float) $this->input('budget_total', 0);
             $detailBudgets = $this->input('detail_budgets', []);
 
             if (is_array($detailBudgets) && count($detailBudgets) > 0) {
                 // Ensure array_sum works on amount even if it is a string or not set
-                $detailSum = array_reduce($detailBudgets, function ($carry, $item) {
+                $detailSum = array_reduce($detailBudgets, function (float $carry, array $item): float {
                     $amount = isset($item['amount']) ? (float) $item['amount'] :
                               ((isset($item['quantity']) && isset($item['item_price'])) ? (int) $item['quantity'] * (float) $item['item_price'] : 0);
 

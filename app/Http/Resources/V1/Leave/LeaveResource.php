@@ -30,7 +30,7 @@ final class LeaveResource extends JsonResource
             ]),
             'replacement_pic'  => $this->whenLoaded('replacementPic', fn () => $this->replacementPic?->only(['id', 'name', 'email'])),
             'user'             => $this->whenLoaded('user', fn () => $this->user->only(['id', 'name', 'email'])),
-            'approvals'        => $this->whenLoaded('approvals', fn () => $this->approvals->map(fn ($a) => [
+            'approvals'        => $this->whenLoaded('approvals', fn () => $this->approvals->map(fn (\App\Models\LeaveApproval $a): array => [
                 'id'          => $a->id,
                 'role'        => $a->role,
                 'status'      => $a->status,

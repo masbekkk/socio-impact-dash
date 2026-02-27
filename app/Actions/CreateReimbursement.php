@@ -24,7 +24,11 @@ final readonly class CreateReimbursement
                 $this->syncDocuments($reimbursement, $data['documents'], $userId);
             }
 
-            return $reimbursement->load('documents');
+            if (!empty($data['selected_budget_details'])) {
+                $this->syncSelectedBudgets($reimbursement, $data['selected_budget_details']);
+            }
+
+            return $reimbursement->load(['documents', 'atrBudgetSelecteds.budgetDetail']);
         });
     }
 
@@ -73,6 +77,16 @@ final readonly class CreateReimbursement
                     'uploaded_by' => $userId,
                 ]);
             }
+        }
+    }
+
+    private function syncSelectedBudgets(Reimbursement $reimbursement, array $budgets): void
+    {
+        foreach ($budgets as $budget) {
+            $reimbursement->atrBudgetSelecteds()->create([
+                'project_budget_detail_id' => $budget['project_budget_detail_id'],
+                'amount' => $budget['amount'],
+            ]);
         }
     }
 }

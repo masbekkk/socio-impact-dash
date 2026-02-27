@@ -181,7 +181,7 @@ final class UpdateProject
 
     private function syncApprovals(Project $project): void
     {
-        $updateOrCreate = function ($type, $userId) use ($project) {
+        $updateOrCreate = function (string $type, ?int $userId) use ($project): void {
             if ($userId) {
                 $project->approvals()->updateOrCreate(
                     ['approval_type' => $type],
