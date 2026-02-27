@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -40,6 +40,8 @@ import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateFilterPresets } from '@/components/DateFilterPresets';
+import { usePermission } from '@/hooks/use-permission';
+import { Pencil } from 'lucide-react';
 
 interface ReimbursementApproval {
   id: number;
@@ -103,9 +105,12 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
   const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Reimbursement | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  const { hasRole } = usePermission();
+  const { auth } = usePage().props as unknown as { auth: { user: { id: number; name: string } } };
+  const user = auth.user;
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -414,23 +419,13 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                                     <Eye className="mr-2 h-4 w-4" /> Lihat Detail
                                   </Link>
                                 </DropdownMenuItem>
-                                {/* {item.status === 'submitted' && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="cursor-pointer text-green-600 focus:text-green-600 focus:bg-green-50"
-                                      onClick={() => { setSelectedItem(item); setApproveDialogOpen(true); }}
-                                    >
-                                      <CheckCircle className="mr-2 h-4 w-4" /> Setujui
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                                      onClick={() => { setSelectedItem(item); setRejectDialogOpen(true); }}
-                                    >
-                                      <XCircle className="mr-2 h-4 w-4" /> Tolak
-                                    </DropdownMenuItem>
-                                  </>
-                                )} */}
+                                {(item.user?.id === user?.id || hasRole(['superadmin', 'head', 'hr', 'finance'])) && (
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/reimbursements/${item.code}/edit`} className="cursor-pointer">
+                                      <Pencil className="mr-2 h-4 w-4" /> Edit
+                                    </Link>
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>

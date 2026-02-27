@@ -22,6 +22,7 @@ export default function Edit({ userId }: EditProps) {
     // Form State
     const [form, setForm] = useState({
         name: '',
+        position: '',
         email: '',
         password: '',
         password_confirmation: '',
@@ -46,6 +47,7 @@ export default function Edit({ userId }: EditProps) {
                 const u = userRes.data.data;
                 setForm({
                     name: u.name || '',
+                    position: u.position || '',
                     email: u.email || '',
                     password: '',
                     password_confirmation: '',
@@ -133,6 +135,16 @@ export default function Edit({ userId }: EditProps) {
                                         required
                                     />
                                     {errors.name && <p className="text-sm text-red-500">{errors.name[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="position">Position</Label>
+                                    <Input
+                                        id="position"
+                                        value={form.position}
+                                        onChange={e => setForm({ ...form, position: e.target.value })}
+                                        placeholder="e.g. Director, CID Officer"
+                                    />
+                                    {errors.position && <p className="text-sm text-red-500">{errors.position[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>

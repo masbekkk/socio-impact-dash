@@ -119,7 +119,7 @@ final class ReimbursementController
                 'approver_direktur_id' => $atr->approvals->where('role', 'direktur')->first()?->approver_id, // Potential mismatch with ApprovalRole, but aligning with UI
             ]);
 
-        $approversGrouped = \App\Models\User::role(['head', 'finance', 'direktur'])
+        $approversGrouped = \App\Models\User::role(['head', 'hr', 'finance', 'direktur'])
             ->get()
             ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
             ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u) => [
@@ -155,8 +155,18 @@ final class ReimbursementController
                 'head_role' => $project->head?->role?->value ?? '-',
             ]);
 
+        $approversGrouped = \App\Models\User::role(['head', 'finance', 'direktur'])
+            ->get()
+            ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
+            ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+            ])->values()->all());
+
         return Inertia::render('Reimbursements/CreateAllowance', [
             'projects' => $projects,
+            'approvers' => $approversGrouped,
         ]);
     }
 
