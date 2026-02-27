@@ -8,10 +8,9 @@ use App\Http\Requests\StoreReimbursementRequest;
 use App\Http\Requests\UpdateReimbursementRequest;
 use App\Models\Project;
 use App\Models\Reimbursement;
-use App\Enums\ReimbursementType;
 use App\Services\ReimbursementService;
-use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 final class ReimbursementController
 {
@@ -95,26 +94,43 @@ final class ReimbursementController
         ]);
     }
 
-
-
-    public function createEER(): \Inertia\Response
+    public function createEER(Request $request): \Inertia\Response
     {
-        $projects = Project::with(['division', 'pic', 'head'])
-            ->where('status', 'active')
+        $atrs = Reimbursement::with(['project.division', 'project.pic', 'project.head', 'approvals'])
+            ->where('user_id', $request->user()->id)
+            ->where('type', 'atr')
+            ->doesntHave('eers')
             ->get()
-            ->map(fn (\App\Models\Project $project) => [
-                'id' => $project->id,
-                'name' => $project->name,
-                'code' => $project->code,
-                'division_name' => $project->division?->name ?? '-',
-                'pic_name' => $project->pic?->name ?? '-',
-                'head_name' => $project->head?->name ?? '-',
-                'head_email' => $project->head?->email ?? '-',
-                'head_role' => $project->head?->role?->value ?? '-',
+            ->map(fn (Reimbursement $atr) => [
+                'id' => $atr->id,
+                'code' => $atr->code,
+                'amount' => (float) $atr->amount,
+                'usage_plan' => $atr->usage_plan,
+                'project_id' => $atr->project_id,
+                'project_name' => $atr->project?->name ?? '-',
+                'project_code' => $atr->project?->code ?? '-',
+                'division_name' => $atr->project?->division?->name ?? '-',
+                'pic_name' => $atr->project?->pic?->name ?? '-',
+                'head_name' => $atr->project?->head?->name ?? '-',
+                'head_email' => $atr->project?->head?->email ?? '-',
+                'head_role' => $atr->project?->head?->role?->value ?? '-',
+                'approver_head_id' => $atr->approvals->where('role', \App\Enums\ApprovalRole::Head)->first()?->approver_id,
+                'approver_finance_id' => $atr->approvals->where('role', \App\Enums\ApprovalRole::Finance)->first()?->approver_id,
+                'approver_direktur_id' => $atr->approvals->where('role', 'direktur')->first()?->approver_id, // Potential mismatch with ApprovalRole, but aligning with UI
             ]);
 
+        $approversGrouped = \App\Models\User::role(['head', 'finance', 'direktur'])
+            ->get()
+            ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
+            ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+            ])->values()->all());
+
         return Inertia::render('Reimbursements/CreateEER', [
-            'projects' => $projects,
+            'atrs' => $atrs,
+            'approvers' => $approversGrouped,
         ]);
     }
 
@@ -123,7 +139,7 @@ final class ReimbursementController
         $projects = Project::with(['division', 'pic', 'head'])
             ->where('status', 'active')
             ->get()
-            ->map(fn (\App\Models\Project $project) => [
+            ->map(fn (Project $project) => [
                 'id' => $project->id,
                 'name' => $project->name,
                 'code' => $project->code,
