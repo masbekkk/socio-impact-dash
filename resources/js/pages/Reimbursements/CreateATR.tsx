@@ -294,27 +294,6 @@ export default function CreateATR({ projects, approvers }: {
               </div>
             </div>
 
-            <Separator />
-
-            {/* Dokumen Pendukung */}
-            <div className="p-6 md:p-8 bg-white">
-              <h3 className="text-lg font-semibold mb-1">Dokumen Pendukung</h3>
-              <p className="text-sm text-muted-foreground mb-6">Unggah proposal dan RAB proyek.</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><FileText className="h-4 w-4" /> Proposal Proyek</Label>
-                  <FileUploadDropzone className="w-full" onFilesChange={(files: File[]) => setProposalFile(files[0] ?? null)} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><FileText className="h-4 w-4" /> Rencana Anggaran Biaya (RAB)</Label>
-                  <FileUploadDropzone className="w-full" onFilesChange={(files: File[]) => setRabFile(files[0] ?? null)} />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
             {/* Rencana Penggunaan */}
             <div className="p-6 md:p-8 bg-white">
               <h3 className="text-lg font-semibold mb-1">Rencana Penggunaan</h3>
