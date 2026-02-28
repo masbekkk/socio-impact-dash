@@ -99,6 +99,7 @@ final readonly class CreateReimbursement
             'head' => $data['approver_head_id'] ?? null,
             'finance' => $data['approver_finance_id'] ?? null,
             'direktur' => $data['approver_direktur_id'] ?? null,
+            'hr' => $data['approver_hr_id'] ?? null,
         ];
 
         foreach ($roles as $role => $approverId) {
