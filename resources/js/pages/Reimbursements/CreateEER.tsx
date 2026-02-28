@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Save, FileText, CreditCard, User, Briefcase, Building2, Loader2, UserCheck } from 'lucide-react';
+import { ArrowLeft, Save, FileText, CreditCard, User, Briefcase, Building2, Loader2, UserCheck, Plus, Trash2 } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
+import MoneyInput from '@/components/MoneyInput';
 
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -35,8 +36,10 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
 }) {
   const { authUser, loading, errors, clearFieldError, submitReimbursement } = useReimbursementForm([]);
 
-  const [eerFile, setEerFile] = useState<File | null>(null);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [documents, setDocuments] = useState<{ id: string; type: string; file: File | null }[]>([
+    { id: Date.now().toString(), type: '', file: null }
+  ]);
+  const [selectedAtrAmount, setSelectedAtrAmount] = useState<number>(0);
 
   const [formData, setFormData] = useState({
     name: authUser?.name ?? '',
@@ -68,6 +71,9 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
     const selected = atrs.find(a => a.id.toString() === value);
     if (!selected) return;
 
+    setSelectedAtrAmount(selected.amount ?? 0);
+    clearFieldError('amount');
+
     setFormData(prev => ({
       ...prev,
       atr_id: value,
@@ -92,9 +98,9 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
 
 
   const handleSubmit = async () => {
-    const documents: { file: File; type: string }[] = [];
-    if (eerFile) documents.push({ file: eerFile, type: 'eer' });
-    if (receiptFile) documents.push({ file: receiptFile, type: 'receipt' });
+    const validDocuments = documents
+      .filter(doc => doc.file != null && doc.type.trim() !== '')
+      .map(doc => ({ file: doc.file!, type: doc.type }));
 
     await submitReimbursement({
       type: 'eer',
@@ -106,7 +112,7 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
       approver_direktur_id: formData.approver_direktur_id,
       amount: formData.amount,
       usage_plan: formData.description,
-      documents,
+      documents: validDocuments,
     } as any);
   };
 
@@ -229,54 +235,110 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
 
             {/* Upload Documents */}
             <div className="p-6 md:p-8 bg-white">
-              <h3 className="text-lg font-semibold mb-1">Upload Dokumen EER & Receipt</h3>
-              <p className="text-sm text-muted-foreground mb-6">Unggah dokumen EER dan bukti pembayaran (kuitansi/struk).</p>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Dokumen Pendukung EER</h3>
+                  <p className="text-sm text-muted-foreground">Unggah berbagai dokumen EER dan kuitansi.</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDocuments([...documents, { id: Date.now().toString(), type: '', file: null }])}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Tambah Dokumen
+                </Button>
+              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><FileText className="h-4 w-4" /> Dokumen EER</Label>
-                  <FileUploadDropzone className="w-full" onFilesChange={(files: File[]) => setEerFile(files[0] ?? null)} />
-                  <p className="text-xs text-muted-foreground">Format: PDF, Excel, Word (Max 5MB)</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><CreditCard className="h-4 w-4" /> Receipt / Kuitansi</Label>
-                  <FileUploadDropzone className="w-full" onFilesChange={(files: File[]) => setReceiptFile(files[0] ?? null)} />
-                  <p className="text-xs text-muted-foreground">Format: PDF, JPG, PNG (Max 5MB)</p>
-                </div>
+              <div className="space-y-4">
+                {documents.map((doc, index) => (
+                  <div key={doc.id} className="flex flex-col md:flex-row gap-4 items-start p-4 border rounded-lg bg-slate-50 relative group">
+                    {documents.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 shadow-sm"
+                        onClick={() => setDocuments(documents.filter(d => d.id !== doc.id))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <div className="w-full md:w-1/3 space-y-2">
+                      <Label>Nama Dokumen <span className="text-red-500">*</span></Label>
+                      <Input
+                        placeholder="Contoh: Kuitansi Hotel"
+                        value={doc.type}
+                        onChange={(e) => {
+                          const newDocs = [...documents];
+                          newDocs[index].type = e.target.value;
+                          setDocuments(newDocs);
+                        }}
+                      />
+                    </div>
+                    <div className="w-full md:flex-1 space-y-2">
+                      <Label>File Dokumen <span className="text-red-500">*</span></Label>
+                      <FileUploadDropzone
+                        className="w-full bg-white"
+                        onFilesChange={(files: File[]) => {
+                          const newDocs = [...documents];
+                          newDocs[index].file = files[0] ?? null;
+                          setDocuments(newDocs);
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
             <Separator />
 
-            {/* Financing Details */}
-            {/* <div className="p-6 md:p-8 bg-white">
-              <h3 className="text-lg font-semibold mb-1">Pembiayaan di TF</h3>
+            {/* Financing Details & Amount */}
+            <div className="p-6 md:p-8 bg-white">
+              <h3 className="text-lg font-semibold mb-1">Nominal Pengajuan EER</h3>
               <p className="text-sm text-muted-foreground mb-6">
-                Kategori pembiayaan disesuaikan dengan tipe {formData.reimbursement_type === 'refund' ? 'Refund' : 'Reimburse'}.
+                Tentukan jumlah nominal pengajuan EER aktual.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="financing_category">Kategori Pembiayaan</Label>
-                  <Select value={formData.financing_category} onValueChange={(val) => setFormData(prev => ({ ...prev, financing_category: val }))}>
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Pilih kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>{category}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">Kategori akan berubah sesuai tipe {formData.reimbursement_type === 'refund' ? 'Refund' : 'Reimburse'}</p>
-                </div>
-                <div className="space-y-2">
+                <div className="space-y-4 md:col-span-2 max-w-xl">
                   <Label htmlFor="amount">Total Biaya (IDR)</Label>
-                  <MoneyInput id="amount" value={formData.amount} onValueChange={handleAmountChange} placeholder="0" className="h-10" />
-                  {errors.amount && <p className="text-xs text-red-500">{errors.amount[0]}</p>}
+                  <MoneyInput
+                    id="amount"
+                    value={formData.amount}
+                    onValueChange={(v) => {
+                      setFormData(prev => ({ ...prev, amount: v.floatValue ?? 0 }));
+                      clearFieldError('amount');
+                    }}
+                    placeholder="0"
+                    className="h-10"
+                  />
+                  {errors.amount && <p className="text-xs text-red-500 font-medium">{errors.amount[0]}</p>}
+
+                  {formData.atr_id && selectedAtrAmount > 0 && (
+                    <div className="space-y-2 mt-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${formData.amount > selectedAtrAmount ? 'bg-red-500' : 'bg-primary'}`}
+                            style={{ width: `${Math.min((formData.amount / selectedAtrAmount) * 100, 100)}%` }}
+                          />
+                        </div>
+                        <span className={`text-xs font-medium ${formData.amount > selectedAtrAmount ? 'text-red-600' : 'text-muted-foreground'}`}>
+                          {((formData.amount / selectedAtrAmount) * 100).toFixed(1)}% dari ATR
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Pemakaian maksimal berdasarkan ATR: <strong>Rp {selectedAtrAmount.toLocaleString('id-ID')}</strong>
+                      </p>
+                      {formData.amount > selectedAtrAmount && (
+                        <p className="text-xs text-red-600 font-medium mt-1">Nominal EER melebihi limit ATR yang dipilih!</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div> */}
+            </div>
 
             <Separator />
 
@@ -340,12 +402,20 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
             {/* Payment & Additional Details */}
             <div className="p-6 md:p-8 bg-white">
               <h3 className="text-lg font-semibold mb-1">Keterangan Tambahan</h3>
-              <p className="text-sm text-muted-foreground mb-6">Informasi pemakaian EER yang merujuk pada ATR terkait.</p>
+              <p className="text-sm text-muted-foreground mb-6">Informasi detail mengenai klaim penggunaan EER.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="description">Keterangan Pemakaian (Dari ATR)</Label>
-                  <Textarea id="description" name="description" placeholder="Deskripsi pemakaian" value={formData.description} readOnly className="min-h-[100px] bg-muted/30" />
+                  <Label htmlFor="description">Keterangan Pemakaian</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    placeholder="Detail pemakaian dana lengkap dengan rinciannya..."
+                    value={formData.description}
+                    onChange={handleChange}
+                    className="min-h-[100px]"
+                  />
+                  {errors.usage_plan && <p className="text-xs text-red-500 font-medium">{errors.usage_plan[0]}</p>}
                 </div>
               </div>
             </div>
