@@ -75,7 +75,18 @@ const LEAVE_TYPE_LABELS: Record<string, string> = {
 function durationDays(start: string, end: string): number {
     const s = new Date(start);
     const e = new Date(end);
-    return Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (s > e) return 0;
+
+    let days = 0;
+    let curr = new Date(s);
+    while (curr <= e) {
+        const day = curr.getDay();
+        if (day !== 0 && day !== 6) {
+            days++;
+        }
+        curr.setDate(curr.getDate() + 1);
+    }
+    return days;
 }
 
 export default function LeaveShow({ leaveCode, authUser }: Props) {

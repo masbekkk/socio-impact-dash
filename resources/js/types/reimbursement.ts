@@ -43,6 +43,9 @@ export interface ReimbursementPayload {
     approver_finance_id?: string;
     approver_direktur_id?: string;
     approver_hr_id?: string;
+    start_date?: string;
+    end_date?: string;
+    replacement_pic_id?: string;
     documents?: { file: File; type: string }[];
     selected_budget_details?: {
         project_budget_detail_id: number;
