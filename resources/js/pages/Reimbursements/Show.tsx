@@ -66,6 +66,7 @@ interface ReimbursementComment {
 
 interface ReimbursementApproval {
   id: number;
+  approver_id: number;
   role: string;
   status: string;
   notes: string | null;
@@ -112,7 +113,8 @@ interface ReimbursementDetail {
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700 border-gray-200', icon: FileText },
-  submitted: { label: 'Submitted', className: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock },
+  submitted: { label: 'Diajukan', className: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock },
+  approved: { label: 'Disetujui', className: 'bg-blue-100 text-blue-700 border-blue-200', icon: CheckCircle },
   head_approved: { label: 'Head Approved', className: 'bg-blue-100 text-blue-700 border-blue-200', icon: CheckCircle },
   finance_approved: { label: 'Finance Approved', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: DollarSign },
   transferred: { label: 'Transferred', className: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle },
@@ -192,6 +194,13 @@ export default function Show() {
 
   // handleFileChange removed as it is no longer needed for approval
 
+  const getCurrentUserRole = () => {
+    if (!data || !userId) return null;
+    // Find the approval record assigned to this user that is still pending or relevant
+    // In our case, we just need to know which role this user is acting as for this reimbursement
+    const myApproval = data.approvals.find(a => a.approver_id === userId);
+    return myApproval?.role ?? null;
+  };
 
   const resetApproveDialog = () => {
     setApproveDialogOpen(false);
@@ -211,10 +220,11 @@ export default function Show() {
     if (!data) return;
     setActionLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('action', 'approved');
+      const role = getCurrentUserRole();
+      const payload: any = { action: 'approved' };
+      if (role) payload.role = role;
 
-      await axios.post(`/api/v1/reimbursements/${data.code}/status`, formData);
+      await axios.post(`/api/v1/reimbursements/${data.code}/status`, payload);
 
       resetApproveDialog();
       await fetchDetail();
@@ -229,10 +239,14 @@ export default function Show() {
     if (!data || !rejectionReason.trim()) return;
     setActionLoading(true);
     try {
-      await axios.patch(`/api/v1/reimbursements/${data.code}/status`, {
+      const role = getCurrentUserRole();
+      const payload: any = {
         action: 'rejected',
         notes: rejectionReason,
-      });
+      };
+      if (role) payload.role = role;
+
+      await axios.post(`/api/v1/reimbursements/${data.code}/status`, payload);
 
       resetRejectDialog();
       await fetchDetail();
@@ -247,10 +261,14 @@ export default function Show() {
     if (!data || !revisiReason.trim()) return;
     setActionLoading(true);
     try {
-      await axios.post(`/api/v1/reimbursements/${data.code}/status`, {
+      const role = getCurrentUserRole();
+      const payload: any = {
         action: 'revision',
         notes: revisiReason,
-      });
+      };
+      if (role) payload.role = role;
+
+      await axios.post(`/api/v1/reimbursements/${data.code}/status`, payload);
 
       resetRevisiDialog();
       await fetchDetail();
@@ -299,7 +317,7 @@ export default function Show() {
           amount,
         })),
       };
-      await axios.patch(`/api/v1/reimbursements/${data.code}/budgets`, payload);
+      await axios.post(`/api/v1/reimbursements/${data.code}/budgets`, payload);
       setIsEditingBudget(false);
       await fetchDetail();
     } catch {
