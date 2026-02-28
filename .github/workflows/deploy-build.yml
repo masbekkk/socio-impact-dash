@@ -107,6 +107,8 @@ jobs:
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: 65002 # Hostinger SSH usually uses port 22 or 2222. Adjust if necessary.
+          timeout: 60s
+          debug: true
           envs: PROJECT_PATH
           # The script that runs ON the Hostinger server
           script: |
