@@ -29,7 +29,7 @@ final readonly class UpdateReimbursementStatus
                     'approver_id' => $approverId, // Update the actual user who approved
                     'status' => $action,
                     'notes' => $notes,
-                    'approved_at' => now(),
+                    'approved_at' => $action === ApprovalStatus::Approved->value ? now() : null,
                 ]
             );
 
@@ -41,7 +41,7 @@ final readonly class UpdateReimbursementStatus
                     // Let's set it to FinanceApproved so Finance can transfer it. Note: If we need a 'DirekturApproved' status, we should add it.
                     // Based on existing statuses, 'FinanceApproved' is the highest before 'Transferred'.
                     $newStatus = ReimbursementStatus::FinanceApproved;
-                    
+
                     // Auto-approve pending lower levels (Head, Finance) for history sanity if needed, or simply let the status change bypass them.
                     // We will just let the status change bypass them.
                 } else {

@@ -93,8 +93,8 @@ interface Props {
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200', icon: FileText },
   submitted: { label: 'Diajukan', className: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-yellow-200', icon: Clock },
-  head_approved: { label: 'Disetujui Head', className: 'bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200', icon: CheckCircle },
-  finance_approved: { label: 'Disetujui Finance', className: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200', icon: DollarSign },
+  head_approved: { label: 'Disetujui', className: 'bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200', icon: CheckCircle },
+  finance_approved: { label: 'Disetujui', className: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200', icon: DollarSign },
   transferred: { label: 'Sudah Ditransfer', className: 'bg-green-100 text-green-700 hover:bg-green-100 border-green-200', icon: CheckCircle },
   revision: { label: 'Revisi', className: 'bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200', icon: AlertCircle },
   rejected: { label: 'Ditolak', className: 'bg-red-100 text-red-700 hover:bg-red-100 border-red-200', icon: XCircle },

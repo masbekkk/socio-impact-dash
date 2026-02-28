@@ -17,9 +17,9 @@ final class UpdateReimbursementStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action' => ['required', 'string', Rule::in(['approved', 'rejected'])],
+            'action' => ['required', 'string', Rule::in(['approved', 'rejected', 'revision'])],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'role' => ['nullable', 'string', 'in:head,finance,hr'],
+            'role' => ['nullable', 'string', 'in:head,finance,hr,direktur'],
             // 'transfer_proof' => [
             //     'nullable',
             //     'file',
