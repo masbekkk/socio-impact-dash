@@ -398,10 +398,10 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1.5">
-                              <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
+                              {/* <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
                                 <StatusIcon className="h-3 w-3" />
                                 {statusCfg.label}
-                              </Badge>
+                              </Badge> */}
                               {item.approvals && item.approvals.length > 0 && (
                                 <div className="mt-1 flex flex-col gap-1 inline-flex">
                                   {item.approvals.map((approval) => (
