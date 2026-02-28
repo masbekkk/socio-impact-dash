@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -40,8 +40,6 @@ import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateFilterPresets } from '@/components/DateFilterPresets';
-import { usePermission } from '@/hooks/use-permission';
-import { Pencil } from 'lucide-react';
 
 interface ReimbursementApproval {
   id: number;
@@ -107,10 +105,6 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-
-  const { hasRole } = usePermission();
-  const { auth } = usePage().props as unknown as { auth: { user: { id: number; name: string } } };
-  const user = auth.user;
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -388,16 +382,20 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                                 {statusCfg.label}
                               </Badge>
                               {item.approvals && item.approvals.length > 0 && (
-                                <div className="flex flex-col gap-0.5">
+                                <div className="mt-1 flex flex-col gap-1 inline-flex">
                                   {item.approvals.map((approval) => (
-                                    <div key={approval.id} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                    <div key={approval.id} className="text-xs flex items-center gap-1.5">
                                       {approval.status === 'approved' ? (
-                                        <CheckCircle className="h-2.5 w-2.5 text-green-500" />
+                                        <CheckCircle className="h-3.5 w-3.5 text-green-500" />
                                       ) : (
-                                        <XCircle className="h-2.5 w-2.5 text-red-500" />
+                                        <XCircle className="h-3.5 w-3.5 text-red-500" />
                                       )}
-                                      <span className="font-medium whitespace-nowrap">
-                                        {approval.status === 'approved' ? 'Disetujui' : 'Ditolak'} {approval.approver?.name}
+                                      <span className={cn(
+                                        "whitespace-nowrap",
+                                        approval.status === 'approved' ? "text-green-700 font-medium" : "text-red-700 font-medium"
+                                      )}>
+                                        {approval.status === 'approved' ? 'Disetujui' : 'Ditolak'}{' '}
+                                        <span className="font-normal text-muted-foreground">{approval.approver?.name}</span>
                                       </span>
                                     </div>
                                   ))}
@@ -419,13 +417,6 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                                     <Eye className="mr-2 h-4 w-4" /> Lihat Detail
                                   </Link>
                                 </DropdownMenuItem>
-                                {(item.user?.id === user?.id || hasRole(['superadmin', 'head', 'hr', 'finance'])) && (
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/reimbursements/${item.code}/edit`} className="cursor-pointer">
-                                      <Pencil className="mr-2 h-4 w-4" /> Edit
-                                    </Link>
-                                  </DropdownMenuItem>
-                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
