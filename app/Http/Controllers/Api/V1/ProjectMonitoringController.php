@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Projects\StoreProjectMonitoring;
 use App\Formatters\JsonResponseFormatter;
+use App\Http\Resources\V1\Project\ProjectMonitoringResource;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -24,8 +25,10 @@ class ProjectMonitoringController extends Controller
 
         $monitoring = $storeMonitoring->handle($project, $validated, $request->user()->id);
 
+        $monitoring->load(['creator', 'documents']);
+
         return JsonResponseFormatter::success(
-            $monitoring,
+            new ProjectMonitoringResource($monitoring),
             'Monitoring report submitted successfully',
             201
         );

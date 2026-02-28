@@ -22,6 +22,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const permissions = props.auth?.permissions || [];
     const canUpdateCode = permissions.includes('create_code_project');
 
+    const headUsers = employees.filter(emp => emp.roles?.some((r: any) => r.name === 'head'));
+    const financeUsers = employees.filter(emp => emp.roles?.some((r: any) => r.name === 'finance'));
+
     const [project, setProject] = useState<any>(null);
     const [step, setStep] = useState('basic')
     const [budget, setBudget] = useState<number>(0)
@@ -498,7 +501,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                 <SelectValue placeholder="Pilih Account Manager" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {employees.map((emp) => (
+                                                {headUsers.map((emp) => (
                                                     <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -512,7 +515,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                 <SelectValue placeholder="Pilih Head Implementation" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {employees.map((emp) => (
+                                                {headUsers.map((emp) => (
                                                     <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -520,13 +523,13 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                         {errors.head_id && <p className="text-xs text-red-500">{errors.head_id}</p>}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>PIC Project <span className="text-red-500">*</span></Label>
+                                        <Label>Finance <span className="text-red-500">*</span></Label>
                                         <Select value={formData.pic_id} onValueChange={(v) => handleInputChange('pic_id', v)}>
                                             <SelectTrigger className={errors.pic_id ? 'border-red-500' : ''}>
-                                                <SelectValue placeholder="Pilih PIC Project" />
+                                                <SelectValue placeholder="Pilih Finance" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {employees.map((emp) => (
+                                                {financeUsers.map((emp) => (
                                                     <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                                                 ))}
                                             </SelectContent>

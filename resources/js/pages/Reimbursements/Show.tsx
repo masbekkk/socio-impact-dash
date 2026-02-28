@@ -4,6 +4,15 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { usePermission } from '@/hooks/use-permission';
+import MoneyInput from '@/components/MoneyInput';
+
+interface AtrBudgetSelected {
+  id: number;
+  project_budget_detail_id: number;
+  amount: number;
+  notes: string;
+}
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -57,9 +66,11 @@ interface ReimbursementComment {
 
 interface ReimbursementApproval {
   id: number;
+  role: string;
   status: string;
   notes: string | null;
   approved_at: string | null;
+  approver_name?: string;
   approver: { id: number; name: string } | null;
 }
 
@@ -96,6 +107,7 @@ interface ReimbursementDetail {
   comments: ReimbursementComment[];
   approvals: ReimbursementApproval[];
   can_approve: boolean;
+  atr_budget_selecteds?: AtrBudgetSelected[];
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -125,7 +137,7 @@ const APPROVABLE_STATUSES = ['submitted', 'head_approved', 'finance_approved'];
 
 export default function Show() {
   const { code, auth } = usePage().props as unknown as { code: string; auth: any };
-  const userRole = auth?.user?.role || 'pegawai';
+  const userRole = auth?.user?.role_name || 'pegawai';
   const userId = auth?.user?.id || 0;
 
   const [data, setData] = useState<ReimbursementDetail | null>(null);
@@ -140,6 +152,14 @@ export default function Show() {
   const [revisiReason, setRevisiReason] = useState('');
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
+
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [budgetEdits, setBudgetEdits] = useState<Record<number, number>>({});
+  const [savingBudget, setSavingBudget] = useState(false);
+
+  const { hasRole, hasPermission } = usePermission();
+  const isPegawai = hasRole('pegawai') && !hasRole('superadmin');
+  const canEditBudget = hasPermission('edit_atr_budget') || userRole === 'superadmin';
 
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -255,6 +275,37 @@ export default function Show() {
       alert('Gagal mengirim komentar.');
     } finally {
       setCommentLoading(false);
+    }
+  };
+
+  const handleEditBudgetClick = () => {
+    if (data?.atr_budget_selecteds) {
+      const edits: Record<number, number> = {};
+      data.atr_budget_selecteds.forEach(b => {
+        edits[b.id] = b.amount;
+      });
+      setBudgetEdits(edits);
+    }
+    setIsEditingBudget(true);
+  };
+
+  const handleSaveBudgets = async () => {
+    if (!data) return;
+    setSavingBudget(true);
+    try {
+      const payload = {
+        budgets: Object.entries(budgetEdits).map(([id, amount]) => ({
+          id: parseInt(id),
+          amount,
+        })),
+      };
+      await axios.patch(`/api/v1/reimbursements/${data.code}/budgets`, payload);
+      setIsEditingBudget(false);
+      await fetchDetail();
+    } catch {
+      alert('Gagal menyimpan perubahan budget.');
+    } finally {
+      setSavingBudget(false);
     }
   };
 
@@ -396,7 +447,7 @@ export default function Show() {
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Sisa Budget</label>
                       <div className={`font-semibold text-base font-mono ${data.project.operational_budget && data.project.used_operational_budget !== null && (data.project.operational_budget - data.project.used_operational_budget) < (data.amount || 0)
-                          ? 'text-red-600' : 'text-green-700'
+                        ? 'text-red-600' : 'text-green-700'
                         }`}>
                         {data.project.operational_budget && data.project.used_operational_budget !== null
                           ? `Rp ${(data.project.operational_budget - data.project.used_operational_budget).toLocaleString('id-ID')}`
@@ -447,6 +498,47 @@ export default function Show() {
                     </div>
                   )}
                 </div>
+
+                {/* Selected Budgets */}
+                {data.atr_budget_selecteds && data.atr_budget_selecteds.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Rincian Anggaran Dipilih</label>
+                      {canEditBudget && data.status !== 'rejected' && data.status !== 'transferred' && (
+                        !isEditingBudget ? (
+                          <Button size="sm" variant="outline" onClick={handleEditBudgetClick}>
+                            Edit Nominal
+                          </Button>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => setIsEditingBudget(false)} disabled={savingBudget}>Batal</Button>
+                            <Button size="sm" onClick={handleSaveBudgets} disabled={savingBudget}>
+                              {savingBudget ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Simpan'}
+                            </Button>
+                          </div>
+                        )
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {data.atr_budget_selecteds.map((budget: AtrBudgetSelected) => (
+                        <div key={budget.id} className="flex items-center justify-between p-3 border rounded-lg bg-slate-50">
+                          <span className="text-sm font-medium text-slate-700">{budget.notes}</span>
+                          {isEditingBudget ? (
+                            <div className="w-1/3">
+                              <MoneyInput
+                                value={budgetEdits[budget.id] ?? budget.amount}
+                                onValueChange={(val) => setBudgetEdits(prev => ({ ...prev, [budget.id]: val.floatValue || 0 }))}
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-sm font-bold text-slate-900 font-mono">Rp {budget.amount.toLocaleString('id-ID')}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Usage Plan */}
                 {data.usage_plan && (
@@ -581,8 +673,8 @@ export default function Show() {
                                 </span>
                               </span>
                               <div className={`rounded-lg px-3 py-2 text-sm ${isCreator
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-white border text-foreground'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-white border text-foreground'
                                 }`}>
                                 {comment.comment}
                               </div>
@@ -639,60 +731,46 @@ export default function Show() {
                     <div className="text-sm text-muted-foreground">{data.project?.division_name ?? 'Karyawan'}</div>
                   </div>
                 </div>
-                {data.project?.pic_name && (
-                  <div className="border-t pt-3 mt-2">
-                    <div className="text-xs text-muted-foreground mb-1">PIC / Atasan</div>
-                    <div className="text-sm font-medium flex items-center gap-2">
-                      <User className="h-3.5 w-3.5 text-muted-foreground" />
-                      {data.project.pic_name}
-                    </div>
-                  </div>
-                )}
-                {data.project?.head_name && (
-                  <div className="border-t pt-3 mt-2">
-                    <div className="text-xs text-muted-foreground mb-1">Head / Approver</div>
-                    <div className="text-sm font-medium flex items-center gap-2">
-                      <User className="h-3.5 w-3.5 text-muted-foreground" />
-                      {data.project.head_name}
-                    </div>
-                    {data.project.head_email && (
-                      <div className="text-xs text-muted-foreground mt-0.5">{data.project.head_email}</div>
-                    )}
-                  </div>
-                )}
               </CardContent>
             </Card>
 
-            {/* Approval Timeline Card */}
+            {/* Approvers Card */}
             {data.approvals && data.approvals.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Timeline Approval</CardTitle>
+                  <CardTitle className="text-base">Daftar Approver</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="relative pl-4 ml-1 border-l-2 border-muted space-y-6 py-1">
-                    {data.approvals.map((approval) => (
-                      <div key={approval.id} className="relative group">
-                        <span className={`absolute -left-[21px] top-1.5 h-3 w-3 rounded-full ring-4 ring-background transition-all ${approval.status === 'approved' ? 'bg-green-500' : approval.status === 'rejected' ? 'bg-red-500' : 'bg-blue-500'}`} />
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-sm font-medium leading-none capitalize">
-                            {approval.status === 'approved' ? 'Disetujui' : approval.status === 'rejected' ? 'Ditolak' : 'Diajukan'}
-                          </span>
-                          {approval.approved_at && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {format(new Date(approval.approved_at), 'dd MMM yyyy, HH:mm', { locale: localeId })}
-                            </div>
-                          )}
-                          {approval.approver && (
-                            <div className="text-xs text-muted-foreground">oleh {approval.approver.name}</div>
-                          )}
-                          {approval.notes && (
-                            <div className="text-xs text-muted-foreground mt-1 italic">{approval.notes}</div>
-                          )}
-                        </div>
+                <CardContent className="space-y-4">
+                  {data.approvals.map((approval) => (
+                    <div key={approval.id} className="flex flex-col gap-1 pb-3 border-b last:border-0 last:pb-0">
+                      <div className="flex justify-between items-start">
+                        <div className="text-xs text-muted-foreground uppercase font-medium">{approval.role}</div>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] px-1.5 py-0 h-4 ${approval.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                            approval.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                              approval.status === 'revision' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                'bg-slate-50 text-slate-600 border-slate-200'
+                            }`}
+                        >
+                          {approval.status}
+                        </Badge>
                       </div>
-                    ))}
-                  </div>
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        {('approver_name' in approval) ? String(approval.approver_name) : '-'}
+                      </div>
+                      {approval.approved_at && (
+                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-600" />
+                          {format(new Date(approval.approved_at), 'dd MMM yyyy, HH:mm', { locale: localeId })}
+                        </div>
+                      )}
+                      {approval.notes && (
+                        <div className="text-xs text-muted-foreground mt-1 italic bg-muted/40 p-2 rounded border">"{approval.notes}"</div>
+                      )}
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}

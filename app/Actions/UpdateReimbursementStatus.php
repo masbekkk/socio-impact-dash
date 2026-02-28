@@ -20,14 +20,18 @@ final readonly class UpdateReimbursementStatus
             $notes = $data['notes'] ?? null;
             $role = $data['role'] ?? 'head';
 
-            ReimbursementApproval::create([
-                'reimbursement_id' => $reimbursement->id,
-                'approver_id' => $approverId,
-                'role' => $role,
-                'status' => $action,
-                'notes' => $notes,
-                'approved_at' => now(),
-            ]);
+            ReimbursementApproval::updateOrCreate(
+                [
+                    'reimbursement_id' => $reimbursement->id,
+                    'role' => $role,
+                ],
+                [
+                    'approver_id' => $approverId, // Update the actual user who approved
+                    'status' => $action,
+                    'notes' => $notes,
+                    'approved_at' => now(),
+                ]
+            );
 
             if ($action === ApprovalStatus::Approved->value) {
                 // If the approver is a Direktur, they have absolute authority to approve the ATR immediately.
