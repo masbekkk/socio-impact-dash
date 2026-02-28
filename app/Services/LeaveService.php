@@ -67,4 +67,24 @@ final class LeaveService
             ->where('code', $code)
             ->firstOrFail();
     }
+
+    public function calculateTotalDays(string $startDate, string $endDate): int
+    {
+        $start = \Illuminate\Support\Carbon::parse($startDate)->startOfDay();
+        $end = \Illuminate\Support\Carbon::parse($endDate)->startOfDay();
+
+        if ($start->gt($end)) {
+            return 0;
+        }
+
+        $days = 0;
+        while ($start->lte($end)) {
+            if ($start->isWeekday()) {
+                $days++;
+            }
+            $start->addDay();
+        }
+
+        return $days;
+    }
 }

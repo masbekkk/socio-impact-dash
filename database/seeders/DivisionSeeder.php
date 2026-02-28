@@ -96,16 +96,23 @@ final class DivisionSeeder extends Seeder
             ],
         ];
 
+        $companyNames = [
+            'Socim.id' => 'PT Dampak Sosial Indonesia',
+            'BKM' => 'PT Bamboo Karya Mandiri',
+            'Lestari' => 'Lestari',
+            'Sustim.id' => 'Yayasan Dampak Keberlanjutan Indonesia',
+        ];
+
         foreach ($divisions as $divisionData) {
             $divisionCode = DivisionCode::firstOrCreate(
-                ['code' => $divisionData['code']]
+                ['code' => $divisionData['code']],
+                ['name' => $companyNames[$divisionData['code']] ?? $divisionData['code']]
             );
-            
+
             $divisionCode->divisions()->firstOrCreate([
                 'name' => $divisionData['name'],
-                'description' => $divisionData['description']
+                'description' => $divisionData['description'],
             ]);
         }
     }
 }
-
