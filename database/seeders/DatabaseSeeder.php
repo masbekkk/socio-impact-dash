@@ -12,7 +12,7 @@ final class DatabaseSeeder extends Seeder
     {
         $this->call([
             RoleAndPermissionSeeder::class,
-            UserSeeder::class,
+            CompanyUserSeeder::class,
             DivisionSeeder::class,
             LeaveSeeder::class,
             LetterCodeSeeder::class,
