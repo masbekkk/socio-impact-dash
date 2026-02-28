@@ -50,6 +50,9 @@ final readonly class CreateReimbursement
             'account_holder' => $data['account_holder'] ?? null,
             'usage_plan' => $data['usage_plan'] ?? null,
             'urgency' => $data['urgency'] ?? null,
+            'start_date' => $data['start_date'] ?? null,
+            'end_date' => $data['end_date'] ?? null,
+            'replacement_pic_id' => $data['replacement_pic_id'] ?? null,
         ]);
     }
 

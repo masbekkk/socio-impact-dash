@@ -19,7 +19,7 @@ final class Reimbursement extends Model
         'code', 'user_id', 'project_id', 'atr_id', 'type', 'eer_type', 'status',
         'amount', 'bank_name', 'bank_account', 'account_holder',
         'transferred_at', 'transfer_proof_path', 'rejection_reason',
-        'usage_plan', 'urgency',
+        'usage_plan', 'urgency', 'start_date', 'end_date', 'replacement_pic_id',
     ];
 
     public function casts(): array
@@ -32,6 +32,8 @@ final class Reimbursement extends Model
             'type' => ReimbursementType::class,
             'status' => ReimbursementStatus::class,
             'transferred_at' => 'datetime',
+            'start_date' => 'date',
+            'end_date' => 'date',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

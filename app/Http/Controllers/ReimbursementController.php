@@ -178,29 +178,25 @@ final class ReimbursementController
                 'head_role' => $project->head?->role?->value ?? '-',
             ]);
 
-        $approversGrouped = \App\Models\User::role(['head', 'hr', 'finance', 'direktur'])
-            ->get()
-            ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
-            ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u) => [
-                'id' => $u->id,
-                'name' => $u->name,
-                'email' => $u->email,
-            ])->values()->all());
-
         $user = $request->user();
         $user->load('division');
 
         return Inertia::render('Reimbursements/CreateAllowance', [
             'authUser' => [
-                'name'          => $user->name,
-                'nip'           => $user->nip ?? '-',
-                'email'         => $user->email,
+                'name' => $user->name,
+                'nip' => $user->nip ?? '-',
+                'email' => $user->email,
                 'division_name' => $user->division?->name ?? '-',
-                'position'      => $user->getRoleNames()->first() ?? '-',
-                'join_date'     => $user->created_at?->format('Y-m-d') ?? '-',
+                'position' => $user->getRoleNames()->first() ?? '-',
+                'join_date' => $user->created_at?->format('Y-m-d') ?? '-',
             ],
             'projects' => $projects,
-            'approvers' => $approversGrouped,
+            'approvers' => [
+                'head' => \App\Models\User::role('head')->get(['id', 'name', 'email']),
+                'hr' => \App\Models\User::role('hr')->get(['id', 'name', 'email']),
+                'direktur' => \App\Models\User::role('direktur')->get(['id', 'name', 'email']),
+            ],
+            'users' => \App\Models\User::where('id', '!=', $user->id)->get(['id', 'name', 'email']),
         ]);
     }
 
