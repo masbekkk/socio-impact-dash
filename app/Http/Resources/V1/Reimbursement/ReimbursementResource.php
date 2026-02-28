@@ -27,6 +27,11 @@ final class ReimbursementResource extends JsonResource
                 'pic_name' => $this->project?->pic?->name,
                 'head_name' => $this->project?->head?->name,
                 'head_email' => $this->project?->head?->email,
+                'operational_budget' => $this->project?->operational_budget ? (float) $this->project->operational_budget : null,
+                'used_operational_budget' => $this->project ? (float) $this->project->reimbursements()
+                    ->where('type', 'atr')
+                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->sum('amount') : null,
             ]),
             'type' => $this->type?->value,
             'eer_type' => $this->eer_type,
@@ -43,6 +48,17 @@ final class ReimbursementResource extends JsonResource
             'documents' => ReimbursementDocumentResource::collection(
                 $this->whenLoaded('documents')
             ),
+            'comments' => $this->whenLoaded('comments', function(): \Illuminate\Support\Collection {
+                return $this->comments->map(function (\App\Models\ReimbursementComment $item): array {
+                    return [
+                        'id' => $item->id,
+                        'user_id' => $item->user_id,
+                        'user_name' => $item->user?->name ?? 'Unknown',
+                        'comment' => $item->comment,
+                        'created_at' => $item->created_at?->toISOString(),
+                    ];
+                });
+            }),
             'approvals' => $this->whenLoaded('approvals'),
             'can_approve' => $this->calculateCanApprove($request),
             'created_at' => $this->created_at?->toISOString(),
@@ -79,8 +95,8 @@ final class ReimbursementResource extends JsonResource
         }
 
         return match ($this->status?->value) {
-            'submitted' => $this->project?->head_id === $user->id,
-            'head_approved', 'finance_approved' => $user->hasRole('finance'),
+            'submitted' => $this->project?->head_id === $user->id || $user->hasRole('direktur'),
+            'head_approved', 'finance_approved', 'revision' => $user->hasRole('finance') || $user->hasRole('direktur'),
             default => false,
         };
     }

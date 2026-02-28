@@ -15,6 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   ArrowLeft,
   CheckCircle,
@@ -43,6 +45,14 @@ interface ReimbursementDocument {
   path: string;
   mime: string;
   size: number;
+}
+
+interface ReimbursementComment {
+  id: number;
+  user_id: number;
+  user_name: string;
+  comment: string;
+  created_at: string;
 }
 
 interface ReimbursementApproval {
@@ -79,8 +89,11 @@ interface ReimbursementDetail {
     pic_name: string | null;
     head_name: string | null;
     head_email: string | null;
+    operational_budget: number | null;
+    used_operational_budget: number | null;
   } | null;
   documents: ReimbursementDocument[];
+  comments: ReimbursementComment[];
   approvals: ReimbursementApproval[];
   can_approve: boolean;
 }
@@ -92,6 +105,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
   finance_approved: { label: 'Finance Approved', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: DollarSign },
   transferred: { label: 'Transferred', className: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle },
   rejected: { label: 'Rejected', className: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
+  revision: { label: 'Revisi', className: 'bg-orange-100 text-orange-700 border-orange-200', icon: AlertCircle },
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -110,15 +124,24 @@ const URGENCY_LABELS: Record<string, { label: string; variant: 'destructive' | '
 const APPROVABLE_STATUSES = ['submitted', 'head_approved', 'finance_approved'];
 
 export default function Show() {
-  const { code } = usePage().props as unknown as { code: string };
+  const { code, auth } = usePage().props as unknown as { code: string; auth: any };
+  const userRole = auth?.user?.role || 'pegawai';
+  const userId = auth?.user?.id || 0;
+
   const [data, setData] = useState<ReimbursementDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [revisiDialogOpen, setRevisiDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [revisiReason, setRevisiReason] = useState('');
+  const [newComment, setNewComment] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
+
+  const commentsEndRef = useRef<HTMLDivElement>(null);
 
 
   const fetchDetail = useCallback(async () => {
@@ -141,6 +164,12 @@ export default function Show() {
     fetchDetail();
   }, [fetchDetail]);
 
+  useEffect(() => {
+    if (commentsEndRef.current) {
+      commentsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [data?.comments]);
+
   // handleFileChange removed as it is no longer needed for approval
 
 
@@ -151,6 +180,11 @@ export default function Show() {
   const resetRejectDialog = () => {
     setRejectDialogOpen(false);
     setRejectionReason('');
+  };
+
+  const resetRevisiDialog = () => {
+    setRevisiDialogOpen(false);
+    setRevisiReason('');
   };
 
   const handleApprove = async () => {
@@ -186,6 +220,41 @@ export default function Show() {
       alert('Gagal menolak pengajuan.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleRevisi = async () => {
+    if (!data || !revisiReason.trim()) return;
+    setActionLoading(true);
+    try {
+      await axios.post(`/api/v1/reimbursements/${data.code}/status`, {
+        action: 'revision',
+        notes: revisiReason,
+      });
+
+      resetRevisiDialog();
+      await fetchDetail();
+    } catch {
+      alert('Gagal meminta revisi.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const submitComment = async () => {
+    if (!data || !newComment.trim()) return;
+    setCommentLoading(true);
+    try {
+      await axios.post(`/api/v1/reimbursements/${data.code}/comments`, {
+        comment: newComment,
+      });
+
+      setNewComment('');
+      await fetchDetail();
+    } catch {
+      alert('Gagal mengirim komentar.');
+    } finally {
+      setCommentLoading(false);
     }
   };
 
@@ -274,6 +343,13 @@ export default function Show() {
                 <XCircle className="mr-2 h-4 w-4" /> Tolak
               </Button>
               <Button
+                variant="outline"
+                className="border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                onClick={() => setRevisiDialogOpen(true)}
+              >
+                <AlertCircle className="mr-2 h-4 w-4" /> Revisi
+              </Button>
+              <Button
                 className="bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => setApproveDialogOpen(true)}
               >
@@ -305,6 +381,28 @@ export default function Show() {
                         <Building2 className="h-4 w-4" /> Divisi: {data.project.division_name}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Finance Budget Visibility */}
+                {data.project && (userRole === 'finance' || userRole === 'superadmin') && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-muted/40 p-4 rounded-lg border border-muted/60">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Budget Operasional</label>
+                      <div className="font-semibold text-base font-mono">
+                        {data.project.operational_budget ? `Rp ${data.project.operational_budget.toLocaleString('id-ID')}` : '-'}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Sisa Budget</label>
+                      <div className={`font-semibold text-base font-mono ${data.project.operational_budget && data.project.used_operational_budget !== null && (data.project.operational_budget - data.project.used_operational_budget) < (data.amount || 0)
+                          ? 'text-red-600' : 'text-green-700'
+                        }`}>
+                        {data.project.operational_budget && data.project.used_operational_budget !== null
+                          ? `Rp ${(data.project.operational_budget - data.project.used_operational_budget).toLocaleString('id-ID')}`
+                          : '-'}
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -453,6 +551,73 @@ export default function Show() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Chat/Comments Card */}
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Diskusi & Revisi</CardTitle>
+                <CardDescription>Catatan dari approver dan pemohon.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ScrollArea className="h-[300px] w-full rounded-md border p-4 bg-muted/10">
+                  {data.comments && data.comments.length > 0 ? (
+                    <div className="space-y-4">
+                      {data.comments.map((comment) => {
+                        const isCreator = comment.user_id === data.user?.id;
+                        return (
+                          <div key={comment.id} className={`flex gap-3 ${isCreator ? 'flex-row-reverse' : ''}`}>
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className={isCreator ? 'bg-primary/20 text-primary uppercase' : 'bg-muted text-muted-foreground uppercase'}>
+                                {comment.user_name.substring(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className={`flex flex-col gap-1 max-w-[80%] ${isCreator ? 'items-end' : 'items-start'}`}>
+                              <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                                {isCreator ? 'Pemohon' : comment.user_name}
+                                <span className="opacity-50 font-normal text-[10px] ml-1">
+                                  {format(new Date(comment.created_at), 'dd MMM HH:mm')}
+                                </span>
+                              </span>
+                              <div className={`rounded-lg px-3 py-2 text-sm ${isCreator
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-white border text-foreground'
+                                }`}>
+                                {comment.comment}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div ref={commentsEndRef} />
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm italic">
+                      Mulai diskusi terkait pengajuan ini.
+                    </div>
+                  )}
+                </ScrollArea>
+
+                <div className="flex gap-2 items-end pt-2">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="comment-input" className="sr-only">Tambah Komentar</Label>
+                    <Textarea
+                      id="comment-input"
+                      placeholder="Tulis pesan atau tanggapan..."
+                      className="min-h-[80px] resize-none"
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    className="h-[80px]"
+                    disabled={commentLoading || !newComment.trim()}
+                    onClick={submitComment}
+                  >
+                    {commentLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Kirim'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -638,6 +803,47 @@ export default function Show() {
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
               ) : (
                 <><XCircle className="mr-2 h-4 w-4" /> Ya, Tolak</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revisi Dialog */}
+      <Dialog open={revisiDialogOpen} onOpenChange={(open) => { if (!open) resetRevisiDialog(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-700">
+              <AlertCircle className="h-5 w-5" />
+              Minta Revisi Pengajuan
+            </DialogTitle>
+            <DialogDescription>
+              Kirimkan catatan revisi kepada <strong>{data.user?.name}</strong> terkait pengajuan <strong>{data.type.toUpperCase()}</strong> ini.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="revisi_reason_show">
+              Catatan Revisi <span className="text-orange-500">*</span>
+            </Label>
+            <Textarea
+              id="revisi_reason_show"
+              placeholder="Tuliskan bagian mana yang perlu diperbaiki..."
+              className="min-h-[100px] resize-none"
+              value={revisiReason}
+              onChange={(e) => setRevisiReason(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={resetRevisiDialog} disabled={actionLoading}>Batal</Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700"
+              disabled={!revisiReason.trim() || actionLoading}
+              onClick={handleRevisi}
+            >
+              {actionLoading ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
+              ) : (
+                <><AlertCircle className="mr-2 h-4 w-4" /> Minta Revisi</>
               )}
             </Button>
           </DialogFooter>
