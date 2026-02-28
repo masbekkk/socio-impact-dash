@@ -30,10 +30,22 @@ final readonly class UpdateReimbursementStatus
             ]);
 
             if ($action === ApprovalStatus::Approved->value) {
-                $newStatus = match ($role) {
-                    'finance' => ReimbursementStatus::FinanceApproved,
-                    default => ReimbursementStatus::HeadApproved,
-                };
+                // If the approver is a Direktur, they have absolute authority to approve the ATR immediately.
+                if ($role === 'direktur') {
+                    $newStatus = ReimbursementStatus::Transferred; // Or whatever final status is appropriate for direktur override, but typically they bypass to finance
+                    // Usually direktur approval just finalizes it to be ready for transfer, or maybe FinanceApproved is the cap before actual transfer.
+                    // Let's set it to FinanceApproved so Finance can transfer it. Note: If we need a 'DirekturApproved' status, we should add it.
+                    // Based on existing statuses, 'FinanceApproved' is the highest before 'Transferred'.
+                    $newStatus = ReimbursementStatus::FinanceApproved;
+                    
+                    // Auto-approve pending lower levels (Head, Finance) for history sanity if needed, or simply let the status change bypass them.
+                    // We will just let the status change bypass them.
+                } else {
+                    $newStatus = match ($role) {
+                        'finance' => ReimbursementStatus::FinanceApproved,
+                        default => ReimbursementStatus::HeadApproved,
+                    };
+                }
 
                 $updateData = ['status' => $newStatus];
 
@@ -41,9 +53,22 @@ final readonly class UpdateReimbursementStatus
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
                     $updateData['transfer_proof_path'] = $path;
                     $updateData['transferred_at'] = now();
+                    $updateData['status'] = ReimbursementStatus::Transferred; // Explicitly set if proof uploaded
                 }
 
                 $reimbursement->update($updateData);
+            } elseif ($action === 'revision') {
+                $reimbursement->update([
+                    'status' => ReimbursementStatus::Revision,
+                ]);
+
+                // Store the revision note as a comment
+                if ($notes) {
+                    $reimbursement->comments()->create([
+                        'user_id' => $approverId,
+                        'comment' => $notes,
+                    ]);
+                }
             } else {
                 $reimbursement->update([
                     'status' => ReimbursementStatus::Rejected,
@@ -51,7 +76,7 @@ final readonly class UpdateReimbursementStatus
                 ]);
             }
 
-            return $reimbursement->fresh(['user', 'project', 'documents', 'approvals.approver']);
+            return $reimbursement->fresh(['user', 'project', 'documents', 'approvals.approver', 'comments.user']);
         });
     }
 }

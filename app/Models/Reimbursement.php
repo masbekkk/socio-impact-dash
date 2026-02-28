@@ -71,4 +71,9 @@ final class Reimbursement extends Model
     {
         return $this->hasMany(self::class, 'atr_id');
     }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(ReimbursementComment::class);
+    }
 }
