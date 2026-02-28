@@ -47,8 +47,18 @@ export default function Index() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
+    const [roles, setRoles] = useState<any[]>([]);
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
+    const [showFilters, setShowFilters] = useState(false);
+
+    // Filters state
+    const [positionFilter, setPositionFilter] = useState('');
+    const [employeeTypeFilter, setEmployeeTypeFilter] = useState('all');
+    const [joinedFrom, setJoinedFrom] = useState('');
+    const [joinedTo, setJoinedTo] = useState('');
+    const [contractFrom, setContractFrom] = useState('');
+    const [contractTo, setContractTo] = useState('');
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -56,7 +66,13 @@ export default function Index() {
             const res = await axios.get('/api/v1/users', {
                 params: {
                     search: searchQuery,
-                    role: roleFilter,
+                    role: roleFilter !== 'all' ? roleFilter : '',
+                    position: positionFilter,
+                    employee_type: employeeTypeFilter !== 'all' ? employeeTypeFilter : '',
+                    joined_from: joinedFrom,
+                    joined_to: joinedTo,
+                    contract_from: contractFrom,
+                    contract_to: contractTo,
                     page: page,
                     per_page: perPage,
                 }
@@ -70,14 +86,27 @@ export default function Index() {
         }
     };
 
+    const fetchRoles = async () => {
+        try {
+            const res = await axios.get('/api/rbac/roles');
+            setRoles(res.data.data);
+        } catch (error) {
+            console.error('Failed to fetch roles', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchRoles();
+    }, []);
+
     useEffect(() => {
         // Reset page to 1 when search or filter changes
         setPage(1);
-    }, [searchQuery, roleFilter]);
+    }, [searchQuery, roleFilter, positionFilter, employeeTypeFilter, joinedFrom, joinedTo, contractFrom, contractTo]);
 
     useEffect(() => {
         fetchUsers();
-    }, [searchQuery, roleFilter, page, perPage]);
+    }, [searchQuery, roleFilter, positionFilter, employeeTypeFilter, joinedFrom, joinedTo, contractFrom, contractTo, page, perPage]);
 
     const handleDelete = async (id: number) => {
         if (!confirm('Apakah anda yakin ingin menghapus user ini?')) return;
@@ -129,9 +158,9 @@ export default function Index() {
                 </div>
 
                 <Card>
-                    <CardHeader className="p-4 border-b">
-                        <div className="flex items-center justify-between gap-4">
-                            <div className="relative w-full max-w-sm">
+                    <CardHeader className="p-4 border-b space-y-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="relative w-full sm:max-w-sm">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     type="search"
@@ -141,18 +170,70 @@ export default function Index() {
                                     className="pl-8 w-full bg-white"
                                 />
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant={roleFilter === 'pegawai' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setRoleFilter(roleFilter === 'pegawai' ? '' : 'pegawai')}
-                                    className="gap-2"
-                                >
-                                    <Filter className="h-4 w-4" />
-                                    Filter Pegawai
-                                </Button>
-                            </div>
+                            <Button
+                                variant={showFilters ? 'secondary' : 'outline'}
+                                size="sm"
+                                onClick={() => setShowFilters(!showFilters)}
+                                className="w-full sm:w-auto gap-2"
+                            >
+                                <Filter className="h-4 w-4" />
+                                Advanced Filters
+                            </Button>
                         </div>
+
+                        {showFilters && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                                <div className="space-y-2">
+                                    <Label>Role</Label>
+                                    <Select value={roleFilter || 'all'} onValueChange={setRoleFilter}>
+                                        <SelectTrigger className="bg-white"><SelectValue placeholder="All Roles" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Roles</SelectItem>
+                                            {roles.map(r => (
+                                                <SelectItem key={r.id} value={r.name} className="capitalize">{r.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Position</Label>
+                                    <Input
+                                        placeholder="Filter by position..."
+                                        value={positionFilter}
+                                        onChange={(e) => setPositionFilter(e.target.value)}
+                                        className="bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Employment Type</Label>
+                                    <Select value={employeeTypeFilter} onValueChange={setEmployeeTypeFilter}>
+                                        <SelectTrigger className="bg-white"><SelectValue placeholder="All Types" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Types</SelectItem>
+                                            <SelectItem value="pegawai_tetap">Pegawai Tetap</SelectItem>
+                                            <SelectItem value="kontrak">Kontrak</SelectItem>
+                                            <SelectItem value="intern">Intern</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Joined From</Label>
+                                    <Input type="date" value={joinedFrom} onChange={(e) => setJoinedFrom(e.target.value)} className="bg-white" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Joined To</Label>
+                                    <Input type="date" value={joinedTo} onChange={(e) => setJoinedTo(e.target.value)} className="bg-white" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Contract From</Label>
+                                    <Input type="date" value={contractFrom} onChange={(e) => setContractFrom(e.target.value)} className="bg-white" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Contract To</Label>
+                                    <Input type="date" value={contractTo} onChange={(e) => setContractTo(e.target.value)} className="bg-white" />
+                                </div>
+                            </div>
+                        )}
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>

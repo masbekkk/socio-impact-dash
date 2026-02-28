@@ -320,7 +320,15 @@ export default function CreateATR({ projects, approvers }: {
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="usage_plan">Rencana untuk Penggunaannya</Label>
-                  <Textarea id="usage_plan" name="usage_plan" placeholder="Jelaskan secara detail rencana penggunaan dana ATR ini..." className="min-h-[120px] resize-none" value={formData.usage_plan} onChange={handleChange} />
+                  <Textarea
+                    id="usage_plan"
+                    name="usage_plan"
+                    placeholder="Jelaskan secara detail rencana penggunaan dana ATR ini..."
+                    className={`min-h-[120px] resize-none ${errors.usage_plan ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                    value={formData.usage_plan}
+                    onChange={handleChange}
+                  />
+                  {errors.usage_plan && <p className="text-xs text-red-500 font-medium">{errors.usage_plan[0]}</p>}
                   <p className="text-xs text-muted-foreground">Minimal 50 karakter</p>
                 </div>
 

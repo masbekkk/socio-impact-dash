@@ -64,7 +64,7 @@ class ReimbursementService
 
     public function getReimbursementDetail(string $code): ?Reimbursement
     {
-        return Reimbursement::with(['user', 'project.division', 'project.pic', 'project.head', 'documents', 'approvals.approver', 'atrBudgetSelecteds.budgetDetail'])
+        return Reimbursement::with(['user', 'project.division', 'project.pic', 'project.head', 'documents', 'approvals.approver', 'atrBudgetSelecteds.budgetDetail', 'comments.user'])
             ->where('code', $code)
             ->first();
     }

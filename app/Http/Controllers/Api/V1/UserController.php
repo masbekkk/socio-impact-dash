@@ -27,6 +27,30 @@ final class UserController extends Controller
             $query->role($request->get('role'));
         }
 
+        if ($request->filled('position')) {
+            $query->where('position', 'like', '%' . $request->get('position') . '%');
+        }
+
+        if ($request->filled('employee_type')) {
+            $query->where('employee_type', $request->get('employee_type'));
+        }
+
+        if ($request->filled('joined_from')) {
+            $query->whereDate('created_at', '>=', $request->get('joined_from'));
+        }
+
+        if ($request->filled('joined_to')) {
+            $query->whereDate('created_at', '<=', $request->get('joined_to'));
+        }
+
+        if ($request->filled('contract_from')) {
+            $query->whereDate('contract_start', '>=', $request->get('contract_from'));
+        }
+
+        if ($request->filled('contract_to')) {
+            $query->whereDate('contract_start', '<=', $request->get('contract_to'));
+        }
+
         if ($request->filled('search')) {
             $search = $request->get('search');
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
