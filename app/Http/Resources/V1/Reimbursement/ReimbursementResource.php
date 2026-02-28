@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\V1\Reimbursement;
 
-use App\Http\Resources\V1\Reimbursement\ReimbursementDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -48,7 +47,7 @@ final class ReimbursementResource extends JsonResource
             'documents' => ReimbursementDocumentResource::collection(
                 $this->whenLoaded('documents')
             ),
-            'comments' => $this->whenLoaded('comments', function(): \Illuminate\Support\Collection {
+            'comments' => $this->whenLoaded('comments', function (): \Illuminate\Support\Collection {
                 return $this->comments->map(function (\App\Models\ReimbursementComment $item): array {
                     return [
                         'id' => $item->id,
@@ -59,11 +58,23 @@ final class ReimbursementResource extends JsonResource
                     ];
                 });
             }),
-            'approvals' => $this->whenLoaded('approvals'),
+            'approvals' => $this->whenLoaded('approvals', function (): \Illuminate\Support\Collection {
+                return $this->approvals->map(function (\App\Models\ReimbursementApproval $item): array {
+                    return [
+                        'id' => $item->id,
+                        'approver_id' => $item->approver_id,
+                        'approver_name' => $item->approver?->name ?? 'Unknown',
+                        'role' => $item->role,
+                        'status' => $item->status,
+                        'notes' => $item->notes,
+                        'approved_at' => $item->approved_at?->toISOString(),
+                    ];
+                });
+            }),
             'can_approve' => $this->calculateCanApprove($request),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
-            'atr_budget_selecteds' => $this->whenLoaded('atrBudgetSelecteds', function(): \Illuminate\Support\Collection {
+            'atr_budget_selecteds' => $this->whenLoaded('atrBudgetSelecteds', function (): \Illuminate\Support\Collection {
                 return $this->atrBudgetSelecteds->map(function (\App\Models\AtrBudgetSelected $item): array {
                     return [
                         'id' => $item->id,
@@ -79,25 +90,47 @@ final class ReimbursementResource extends JsonResource
     private function calculateCanApprove(Request $request): bool
     {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
-        // Requester cannot approve their own reimbursement
+        if ($user->hasRole('superadmin')) {
+            return true;
+        }
+
+        // Requester cannot approve their own reimbursement unless they are superadmin
         if ($this->user_id === $user->id) {
             return false;
         }
 
-        // Check if user has already approved/rejected
-        $hasActed = $this->approvals->where('approver_id', $user->id)->isNotEmpty();
-        if ($hasActed) {
-            return false;
+        // To prevent users from approving the same state multiple times, we check status transitions.
+        $status = $this->status?->value;
+
+        // If a user has already approved at the current stage, hide buttons.
+        $hasApprovedCurrentStage = false;
+
+        if ($status === 'submitted') {
+            $hasApprovedCurrentStage = $this->approvals->where('approver_id', $user->id)->where('role', 'head')->where('status', 'approved')->isNotEmpty();
+            if (! $hasApprovedCurrentStage) {
+                return $this->project?->head_id === $user->id || $user->hasRole('direktur') || $user->hasRole('finance') || $user->hasRole('head');
+            }
         }
 
-        return match ($this->status?->value) {
-            'submitted' => $this->project?->head_id === $user->id || $user->hasRole('direktur'),
-            'head_approved', 'finance_approved', 'revision' => $user->hasRole('finance') || $user->hasRole('direktur'),
-            default => false,
-        };
+        if (in_array($status, ['head_approved', 'revision'])) {
+            $hasApprovedCurrentStage = $this->approvals->where('approver_id', $user->id)->where('role', 'finance')->where('status', 'approved')->isNotEmpty();
+            if (! $hasApprovedCurrentStage) {
+                return $user->hasRole('finance') || $user->hasRole('direktur') || $user->hasRole('head');
+            }
+        }
+
+        if ($status === 'finance_approved') {
+            // Usually awaiting transfer, so no further "approval" button unless it's for transfer.
+            // But let's allow direktur or finance if they still need to act.
+            // Actually, if it's finance approved, we shouldn't show approve buttons unless we also show the transfer upload in Show.tsx.
+            // Assuming they're allowed for direktur or finance:
+            return $user->hasRole('direktur') || $user->hasRole('head');
+        }
+
+        return false;
     }
 }

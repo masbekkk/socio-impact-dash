@@ -26,7 +26,7 @@ final class ProjectController extends Controller
     {
         return Inertia::render('Projects/Create', [
             'divisions' => DivisionCode::with('divisions')->get(),
-            'employees' => User::all(),
+            'employees' => User::with('roles')->get(),
         ]);
     }
 
@@ -43,7 +43,7 @@ final class ProjectController extends Controller
         return Inertia::render('Projects/Edit', [
             'project_slug' => $project->uuid,
             'divisions' => DivisionCode::with('divisions')->get(),
-            'employees' => User::all(),
+            'employees' => User::with('roles')->get(),
         ]);
     }
 }

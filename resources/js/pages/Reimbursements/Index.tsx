@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ListFilter, Calendar as CalendarIcon, X, MoreHorizontal, Wallet, ArrowUpDown, ArrowUp, ArrowDown, DollarSign } from 'lucide-react';
+import { FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ListFilter, Calendar as CalendarIcon, X, MoreHorizontal, Wallet, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, AlertCircle, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -96,10 +96,21 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
   head_approved: { label: 'Disetujui Head', className: 'bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200', icon: CheckCircle },
   finance_approved: { label: 'Disetujui Finance', className: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200', icon: DollarSign },
   transferred: { label: 'Sudah Ditransfer', className: 'bg-green-100 text-green-700 hover:bg-green-100 border-green-200', icon: CheckCircle },
+  revision: { label: 'Revisi', className: 'bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200', icon: AlertCircle },
   rejected: { label: 'Ditolak', className: 'bg-red-100 text-red-700 hover:bg-red-100 border-red-200', icon: XCircle },
 };
 
+const TYPE_COLORS: Record<string, string> = {
+  atr: 'bg-purple-100 text-purple-700 border-purple-200',
+  eer: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  allowance: 'bg-teal-100 text-teal-700 border-teal-200',
+};
+
 export default function ReimbursementsIndex({ reimbursements, filters }: Props) {
+  const { auth } = usePage().props as unknown as { auth: any };
+  const userRoles = auth?.user?.role_name || '';
+  const isSuperadmin = userRoles.includes('superadmin');
+
   const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -140,6 +151,16 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
   const handleSort = (column: string) => {
     const newDir = filters.sort_by === column && filters.sort_dir === 'asc' ? 'desc' : 'asc';
     navigate({ sort_by: column, sort_dir: newDir, page: 1 });
+  };
+
+  const handleDelete = async (code: string) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus reimbursement ini? Aksi ini tidak dapat dibatalkan.')) return;
+    try {
+      await axios.delete(`/api/v1/reimbursements/${code}`);
+      router.reload({ only: ['reimbursements'] });
+    } catch {
+      alert('Gagal menghapus reimbursement.');
+    }
   };
 
   const SortIcon = ({ column }: { column: string }) => {
@@ -363,7 +384,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                         <TableRow key={item.id}>
                           <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="capitalize">{item.type}</Badge>
+                            <Badge variant="outline" className={cn("capitalize", TYPE_COLORS[item.type] || '')}>{item.type}</Badge>
                           </TableCell>
                           <TableCell className="text-sm">
                             {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}
@@ -394,7 +415,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                                         "whitespace-nowrap",
                                         approval.status === 'approved' ? "text-green-700 font-medium" : "text-red-700 font-medium"
                                       )}>
-                                        {approval.status === 'approved' ? 'Disetujui' : 'Ditolak'}{' '}
+                                        {approval.status === 'approved' ? 'Disetujui' : 'Menunggu'}{' '}
                                         <span className="font-normal text-muted-foreground">{approval.approver?.name}</span>
                                       </span>
                                     </div>
@@ -417,6 +438,21 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                                     <Eye className="mr-2 h-4 w-4" /> Lihat Detail
                                   </Link>
                                 </DropdownMenuItem>
+                                {item.type === 'atr' && item.status === 'approved' && (
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/reimbursements/create/eer?atr_code=${item.code}`} className="cursor-pointer">
+                                      <Receipt className="mr-2 h-4 w-4" /> Buat EER
+                                    </Link>
+                                  </DropdownMenuItem>
+                                )}
+                                {isSuperadmin && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer" onClick={() => handleDelete(item.code)}>
+                                      <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>

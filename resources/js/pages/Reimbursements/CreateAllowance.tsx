@@ -124,6 +124,9 @@ export default function CreateAllowance({ projects, approvers }: {
             usage_plan: formData.usage_plan,
             urgency: URGENCY_MAP[formData.urgency] ?? 'normal',
             documents,
+            approver_head_id: formData.approver_head_id,
+            approver_finance_id: formData.approver_finance_id,
+            approver_direktur_id: formData.approver_direktur_id,
         });
     };
 

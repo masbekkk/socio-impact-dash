@@ -15,6 +15,7 @@ use App\Services\ReimbursementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Throwable;
 
 final class ReimbursementController extends Controller
 {
@@ -42,7 +43,7 @@ final class ReimbursementController extends Controller
                 ReimbursementResource::collection($reimbursements),
                 'Daftar reimbursement berhasil diambil'
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }
     }
@@ -56,11 +57,12 @@ final class ReimbursementController extends Controller
                 $request->validated(),
                 $user->id
             );
+
             return JsonResponseFormatter::created(
                 new ReimbursementResource($reimbursement),
                 'Reimbursement berhasil dibuat'
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }
     }
@@ -69,8 +71,7 @@ final class ReimbursementController extends Controller
     {
         try {
             $data = $this->reimbursementService->getReimbursementDetail($code);
-
-            if (!$data) {
+            if (! $data) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
             }
 
@@ -78,7 +79,7 @@ final class ReimbursementController extends Controller
                 new ReimbursementResource($data),
                 'Detail reimbursement berhasil diambil'
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }
     }
@@ -91,7 +92,7 @@ final class ReimbursementController extends Controller
         try {
             $reimbursement = Reimbursement::where('code', $code)->first();
 
-            if (!$reimbursement) {
+            if (! $reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
             }
 
@@ -108,7 +109,79 @@ final class ReimbursementController extends Controller
                 new ReimbursementResource($result),
                 "Reimbursement berhasil {$actionLabel}"
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
+            return JsonResponseFormatter::error($e->getMessage(), 500);
+        }
+    }
+
+    public function updateBudgets(string $code, Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (! $user->hasPermissionTo('edit_atr_budget') && ! $user->hasRole('superadmin')) {
+                return JsonResponseFormatter::error('Unauthorized', 403);
+            }
+
+            $validated = $request->validate([
+                'budgets' => 'required|array',
+                'budgets.*.id' => 'required|integer',
+                'budgets.*.amount' => 'required|numeric|min:0',
+            ]);
+
+            $reimbursement = Reimbursement::where('code', $code)->first();
+
+            if (! $reimbursement) {
+                return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
+            }
+
+            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated) {
+                $totalAmount = 0;
+                foreach ($validated['budgets'] as $budgetData) {
+                    $record = \App\Models\AtrBudgetSelected::where('reimbursement_id', $reimbursement->id)
+                        ->where('id', $budgetData['id'])
+                        ->first();
+
+                    if ($record) {
+                        $record->update(['amount' => $budgetData['amount']]);
+                        $totalAmount += $budgetData['amount'];
+                    }
+                }
+
+                // Also need to sum any unmodified ones just in case? Or actually just sum all belonging to this ATR.
+                $actualTotal = \App\Models\AtrBudgetSelected::where('reimbursement_id', $reimbursement->id)->sum('amount');
+                $reimbursement->update(['amount' => $actualTotal]);
+            });
+
+            // Reload data
+            $data = $this->reimbursementService->getReimbursementDetail($code);
+
+            return JsonResponseFormatter::success(
+                new ReimbursementResource($data),
+                'Budget reimbursement berhasil diupdate'
+            );
+        } catch (Throwable $e) {
+            return JsonResponseFormatter::error($e->getMessage(), 500);
+        }
+    }
+
+    public function destroy(string $id, Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (! $user->hasRole('superadmin')) {
+                return JsonResponseFormatter::error('Unauthorized', 403);
+            }
+
+            $reimbursement = Reimbursement::where('id', $id)->orWhere('code', $id)->first();
+            if (! $reimbursement) {
+                return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
+            }
+
+            // Optional: delete related records if they don't have cascade delete
+            $reimbursement->delete();
+
+            return JsonResponseFormatter::success(null, 'Reimbursement berhasil dihapus');
+        } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }
     }

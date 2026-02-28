@@ -32,10 +32,11 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::delete('projects/{project}/monitorings/{monitoring}', [\App\Http\Controllers\Api\V1\ProjectMonitoringController::class, 'destroy']);
     Route::post('projects/{project}/termins/{termin}', [\App\Http\Controllers\Api\V1\ProjectTerminPaymentController::class, 'update']);
     Route::apiResource('projects', \App\Http\Controllers\Api\V1\ProjectController::class)->names('api.projects');
-    Route::apiResource('reimbursements', ReimbursementController::class)->only(['index', 'store'])->names('api.reimbursements');
+    Route::apiResource('reimbursements', ReimbursementController::class)->only(['index', 'store', 'destroy'])->names('api.reimbursements');
     Route::prefix('reimbursements')->group(function () {
         Route::get('/{code}', [ReimbursementController::class, 'show'])->name('reimbursements.show');
         Route::post('/{code}/status', [ReimbursementController::class, 'updateStatus'])->name('reimbursements.status');
+        Route::patch('/{code}/budgets', [ReimbursementController::class, 'updateBudgets'])->name('reimbursements.budgets.update');
         Route::post('/{code}/comments', [\App\Http\Controllers\Api\V1\ReimbursementCommentController::class, 'store'])->name('reimbursements.comments.store');
     });
 

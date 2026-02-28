@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Circle, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye, Download, MapPin, Plus, Calendar, User, Upload, Handshake, Archive, Save } from 'lucide-react'
+import { CheckCircle2, Circle, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye, Download, MapPin, Plus, Calendar, User, Upload, Handshake, Archive, Save, Loader2 } from 'lucide-react'
 import MoneyInput from '@/components/MoneyInput'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,7 +28,8 @@ interface ProjectTabsProps {
     handleReportFileChange: (id: number, field: string, value: any) => void;
     addReportFileRow: () => void;
     removeReportFileRow: (id: number) => void;
-    setIsSubmitReportAlertOpen: (val: boolean) => void;
+    isSubmittingReport: boolean;
+    onSubmitReport: () => void;
     onDeleteReport?: (id: number | string) => void;
     monitoringList: any[];
 
@@ -52,7 +53,8 @@ export default function ProjectTabs({
     handleReportFileChange,
     addReportFileRow,
     removeReportFileRow,
-    setIsSubmitReportAlertOpen,
+    isSubmittingReport,
+    onSubmitReport,
     onDeleteReport,
     monitoringList,
     closingForm,
@@ -1078,8 +1080,17 @@ export default function ProjectTabs({
                         </CardContent>
                         <CardFooter className="justify-between border-t p-4 bg-gray-50/50">
                             <p className="text-xs text-muted-foreground">Pastikan data yang diinput sudah benar sebelum submit.</p>
-                            <Button onClick={() => setIsSubmitReportAlertOpen(true)} className="bg-[var(--sidebar)] text-white border-1 min-w-[180px] hover:bg-[var(--sidebar)] hover:scale-105">
-                                Submit Laporan
+                            <Button
+                                onClick={onSubmitReport}
+                                disabled={isSubmittingReport}
+                                className="bg-[var(--sidebar)] text-white border-1 min-w-[180px] hover:bg-[var(--sidebar)] hover:scale-105"
+                            >
+                                {isSubmittingReport ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : 'Submit Laporan'}
                             </Button>
                         </CardFooter>
                     </Card>
@@ -1111,7 +1122,10 @@ export default function ProjectTabs({
                                                             {new Date(history.report_date || history.date).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
                                                         </h4>
                                                     </div>
-                                                    <p className="text-sm text-muted-foreground">Dilaporkan oleh: <span className="font-medium text-gray-700">{history.uploader_name || history.uploader}</span> • {new Date(history.report_date || history.date).toLocaleDateString('id-ID')}</p>
+                                                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                                        <User className="h-3.5 w-3.5 text-gray-400" />
+                                                        Dilaporkan oleh: <span className="font-medium text-gray-700">{history.creator?.name || history.uploader_name || history.uploader || '-'}</span> • {new Date(history.report_date || history.date).toLocaleDateString('id-ID')}
+                                                    </p>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <Button

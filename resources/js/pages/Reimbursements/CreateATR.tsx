@@ -131,6 +131,9 @@ export default function CreateATR({ projects, approvers }: {
       urgency: URGENCY_MAP[formData.urgency] ?? 'normal',
       documents,
       selected_budget_details,
+      approver_head_id: formData.approver_head_id,
+      approver_finance_id: formData.approver_finance_id,
+      approver_direktur_id: formData.approver_direktur_id,
     });
   };
 
