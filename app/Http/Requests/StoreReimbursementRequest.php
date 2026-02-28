@@ -26,6 +26,7 @@ final class StoreReimbursementRequest extends FormRequest
             'approver_head_id' => ['nullable', 'integer', 'exists:users,id'],
             'approver_finance_id' => ['nullable', 'integer', 'exists:users,id'],
             'approver_direktur_id' => ['nullable', 'integer', 'exists:users,id'],
+            'approver_hr_id' => ['nullable', 'integer', 'exists:users,id'],
             'bank_name' => ['nullable', 'string', 'max:100'],
             'bank_account' => ['nullable', 'string', 'max:50'],
             'account_holder' => ['nullable', 'string', 'max:100'],

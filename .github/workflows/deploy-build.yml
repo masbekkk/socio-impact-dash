@@ -98,33 +98,42 @@ jobs:
           git push origin build --force
 
       - name: Deploy to Hostinger via SSH
-        # This step will SSH into your Hostinger server and run 'git pull'
-        # You need to configure HOSTINGER_SSH_KEY, HOSTINGER_HOST, and HOSTINGER_USERNAME in GitHub Secrets.
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.0
         env:
-          # Change this path to the actual path of your Laravel app on Hostinger
-          # For example: /home/u123456789/domains/yourdomain.com/public_html
           PROJECT_PATH: "/home/u592892738/domains/manajemensiid.id/public_html/"
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
-          port: 65002 # Hostinger SSH usually uses port 22 or 2222. Adjust if necessary.
-          timeout: 60s
+          port: 65002
+          timeout: 120s
+          command_timeout: 300s
+          proxy_timeout: 120s
           debug: true
           envs: PROJECT_PATH
-          # The script that runs ON the Hostinger server
           script: |
-            # Trust GitHub to fix "Host key verification failed"
+            set -e
+
             mkdir -p ~/.ssh
-            ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+            ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null
 
             cd $PROJECT_PATH
-            git fetch origin build --depth 1
+
+            MAX_RETRIES=3
+            RETRY=0
+            until git fetch origin build --depth 1; do
+              RETRY=$((RETRY + 1))
+              if [ $RETRY -ge $MAX_RETRIES ]; then
+                echo "❌ git fetch failed after $MAX_RETRIES attempts"
+                exit 1
+              fi
+              echo "⚠️ git fetch failed, retrying ($RETRY/$MAX_RETRIES)..."
+              sleep 5
+            done
+
             git checkout build
             git reset --hard origin/build
-            # Clean untracked files but EXCLUDE .htaccess and .env
             git clean -fd -e .htaccess -e .env
-            
-            php artisan migrate --force
+
+            php artisan migrate --force --no-interaction
             php artisan optimize:clear

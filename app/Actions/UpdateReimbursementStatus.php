@@ -58,6 +58,7 @@ final readonly class UpdateReimbursementStatus
                 } else {
                     $newStatus = match ($role) {
                         'finance' => ReimbursementStatus::FinanceApproved,
+                        'hr' => ReimbursementStatus::HRApproved,
                         default => ReimbursementStatus::HeadApproved,
                     };
                 }

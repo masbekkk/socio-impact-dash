@@ -53,7 +53,7 @@ final class ReimbursementController
         ]);
     }
 
-    public function createATR(): \Inertia\Response
+    public function createATR(Request $request): \Inertia\Response
     {
         $projects = Project::with(['division', 'pic', 'head', 'budgetDetails'])
             ->where('status', 'active')
@@ -79,7 +79,7 @@ final class ReimbursementController
                 ])->values()->all(),
             ]);
 
-        $approversGrouped = \App\Models\User::role(['head', 'finance', 'direktur'])
+        $approversGrouped = \App\Models\User::role(['head', 'hr', 'finance', 'direktur'])
             ->get()
             ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
             ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u) => [
@@ -88,7 +88,18 @@ final class ReimbursementController
                 'email' => $u->email,
             ])->values()->all());
 
+        $user = $request->user();
+        $user->load('division');
+
         return Inertia::render('Reimbursements/CreateATR', [
+            'authUser' => [
+                'name'          => $user->name,
+                'nip'           => $user->nip ?? '-',
+                'email'         => $user->email,
+                'division_name' => $user->division?->name ?? '-',
+                'position'      => $user->getRoleNames()->first() ?? '-',
+                'join_date'     => $user->created_at?->format('Y-m-d') ?? '-',
+            ],
             'projects' => $projects,
             'approvers' => $approversGrouped,
         ]);
@@ -129,13 +140,24 @@ final class ReimbursementController
                 'email' => $u->email,
             ])->values()->all());
 
+        $user = $request->user();
+        $user->load('division');
+
         return Inertia::render('Reimbursements/CreateEER', [
+            'authUser' => [
+                'name'          => $user->name,
+                'nip'           => $user->nip ?? '-',
+                'email'         => $user->email,
+                'division_name' => $user->division?->name ?? '-',
+                'position'      => $user->getRoleNames()->first() ?? '-',
+                'join_date'     => $user->created_at?->format('Y-m-d') ?? '-',
+            ],
             'atrs' => $atrs,
             'approvers' => $approversGrouped,
         ]);
     }
 
-    public function createAllowance(): \Inertia\Response
+    public function createAllowance(Request $request): \Inertia\Response
     {
         $projects = Project::with(['division', 'pic', 'head'])
             ->where('status', 'active')
@@ -156,7 +178,7 @@ final class ReimbursementController
                 'head_role' => $project->head?->role?->value ?? '-',
             ]);
 
-        $approversGrouped = \App\Models\User::role(['head', 'finance', 'direktur'])
+        $approversGrouped = \App\Models\User::role(['head', 'hr', 'finance', 'direktur'])
             ->get()
             ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
             ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u) => [
@@ -165,7 +187,18 @@ final class ReimbursementController
                 'email' => $u->email,
             ])->values()->all());
 
+        $user = $request->user();
+        $user->load('division');
+
         return Inertia::render('Reimbursements/CreateAllowance', [
+            'authUser' => [
+                'name'          => $user->name,
+                'nip'           => $user->nip ?? '-',
+                'email'         => $user->email,
+                'division_name' => $user->division?->name ?? '-',
+                'position'      => $user->getRoleNames()->first() ?? '-',
+                'join_date'     => $user->created_at?->format('Y-m-d') ?? '-',
+            ],
             'projects' => $projects,
             'approvers' => $approversGrouped,
         ]);
