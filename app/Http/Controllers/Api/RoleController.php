@@ -11,7 +11,7 @@ use Illuminate\Routing\Controller;
 use Spatie\Permission\Models\Role;
 use Throwable;
 
-class RoleController extends Controller
+final class RoleController extends Controller
 {
     public function index(): JsonResponse
     {
@@ -31,7 +31,10 @@ class RoleController extends Controller
                 'name' => 'required|string|unique:roles,name',
             ]);
 
-            $role = Role::create(['name' => $request->name]);
+            $role = Role::create([
+                'name' => $request->name,
+                'guard_name' => 'web',
+            ]);
 
             return JsonResponseFormatter::created($role, 'Role created successfully');
         } catch (Throwable $th) {
@@ -82,7 +85,11 @@ class RoleController extends Controller
                 'permissions.*' => 'string|exists:permissions,name',
             ]);
 
-            $role->syncPermissions($request->permissions);
+            $permissions = \Spatie\Permission\Models\Permission::whereIn('name', $request->permissions)
+                ->where('guard_name', 'web')
+                ->get();
+
+            $role->syncPermissions($permissions);
 
             return JsonResponseFormatter::success($role->load('permissions'), 'Permissions synced successfully');
         } catch (Throwable $th) {
