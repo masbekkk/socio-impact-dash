@@ -39,6 +39,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
   // Project Code State
   const [projectCode, setProjectCode] = useState('');
   const [isUpdatingCode, setIsUpdatingCode] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -59,7 +60,6 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
   const [approvalNote, setApprovalNote] = useState("");
   const [isApproveAlertOpen, setIsApproveAlertOpen] = useState(false);
   const [isRevisionAlertOpen, setIsRevisionAlertOpen] = useState(false);
-  const [isSubmitReportAlertOpen, setIsSubmitReportAlertOpen] = useState(false);
   const [isDealAlertOpen, setIsDealAlertOpen] = useState(false);
 
   const fetchProject = useCallback(async (showLoading = true) => {
@@ -194,6 +194,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
       }
     });
 
+    setIsSubmittingReport(true);
     try {
       await axios.post(`/api/v1/projects/${project_slug}/monitorings`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -201,11 +202,12 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
       setToast({ show: true, message: 'Laporan berhasil ditambahkan.', type: 'success' });
       setReportForm({ date: new Date().toISOString().split('T')[0], notes: '', files: [{ id: Date.now(), title: '' }] });
-      setIsSubmitReportAlertOpen(false);
       fetchProject(false);
     } catch (error) {
       console.error("Error submitting report:", error);
       setToast({ show: true, message: 'Gagal mengirim laporan.', type: 'error' });
+    } finally {
+      setIsSubmittingReport(false);
     }
   };
 
@@ -496,7 +498,8 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
           handleReportFileChange={handleReportFileChange}
           addReportFileRow={addReportFileRow}
           removeReportFileRow={removeReportFileRow}
-          setIsSubmitReportAlertOpen={setIsSubmitReportAlertOpen}
+          isSubmittingReport={isSubmittingReport}
+          onSubmitReport={submitReport}
           onDeleteReport={handleDeleteReport}
           monitoringList={monitoringList}
           closingForm={closingForm}
@@ -562,20 +565,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isSubmitReportAlertOpen} onOpenChange={setIsSubmitReportAlertOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Submit Laporan</DialogTitle>
-            <DialogDescription>
-              Apakah anda yakin data yang diinput sudah benar? Laporan ini akan dikirim ke atasan untuk approval.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSubmitReportAlertOpen(false)}>Batal</Button>
-            <Button onClick={submitReport}>Submit Laporan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       <Dialog open={isDealAlertOpen} onOpenChange={setIsDealAlertOpen}>
         <DialogContent>

@@ -29,6 +29,9 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
   const queryParams = new URLSearchParams(url.split('?')[1]);
   const type = queryParams.get('type') || 'active'; // 'proposal' or 'active'
 
+  const headUsers = employees.filter(emp => emp.roles?.some((r: any) => r.name === 'head'));
+  const financeUsers = employees.filter(emp => emp.roles?.some((r: any) => r.name === 'finance'));
+
   const [step, setStep] = useState('basic')
   const [budget, setBudget] = useState<number>(0)
   const [status, setStatus] = useState('draft')
@@ -472,7 +475,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                         <SelectValue placeholder="Pilih Account Manager" />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.map((emp) => (
+                        {headUsers.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -486,7 +489,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                         <SelectValue placeholder="Pilih Head Implementation" />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.map((emp) => (
+                        {headUsers.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -494,13 +497,13 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                     {errors.head_id && <p className="text-xs text-red-500">{errors.head_id}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label>PIC Project <span className="text-red-500">*</span></Label>
+                    <Label>Finance <span className="text-red-500">*</span></Label>
                     <Select value={formData.pic_id} onValueChange={(v) => handleInputChange('pic_id', v)}>
                       <SelectTrigger className={errors.pic_id ? 'border-red-500' : ''}>
-                        <SelectValue placeholder="Pilih PIC Project" />
+                        <SelectValue placeholder="Pilih Finance" />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.map((emp) => (
+                        {financeUsers.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                         ))}
                       </SelectContent>

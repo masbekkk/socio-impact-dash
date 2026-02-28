@@ -28,7 +28,9 @@ final readonly class CreateReimbursement
                 $this->syncSelectedBudgets($reimbursement, $data['selected_budget_details']);
             }
 
-            return $reimbursement->load(['documents', 'atrBudgetSelecteds.budgetDetail']);
+            $this->assignApprovers($reimbursement, $data);
+
+            return $reimbursement->load(['documents', 'atrBudgetSelecteds.budgetDetail', 'approvals.approver']);
         });
     }
 
@@ -88,6 +90,25 @@ final readonly class CreateReimbursement
                 'project_budget_detail_id' => $budget['project_budget_detail_id'],
                 'amount' => $budget['amount'],
             ]);
+        }
+    }
+
+    private function assignApprovers(Reimbursement $reimbursement, array $data): void
+    {
+        $roles = [
+            'head' => $data['approver_head_id'] ?? null,
+            'finance' => $data['approver_finance_id'] ?? null,
+            'direktur' => $data['approver_direktur_id'] ?? null,
+        ];
+
+        foreach ($roles as $role => $approverId) {
+            if ($approverId) {
+                $reimbursement->approvals()->create([
+                    'approver_id' => $approverId,
+                    'role' => $role,
+                    'status' => \App\Enums\ApprovalStatus::Pending->value,
+                ]);
+            }
         }
     }
 }
