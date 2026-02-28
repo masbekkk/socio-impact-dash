@@ -84,7 +84,15 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
       const start = new Date(formData.start_date);
       const end = new Date(formData.end_date);
       if (start <= end) {
-        setTotalDays(differenceInDays(end, start) + 1);
+        let days = 0;
+        let date = new Date(start);
+        while (date <= end) {
+          if (date.getDay() !== 0 && date.getDay() !== 6) {
+            days++;
+          }
+          date.setDate(date.getDate() + 1);
+        }
+        setTotalDays(days);
       } else {
         setTotalDays(0);
       }
@@ -173,7 +181,7 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider">NIP / NIK</Label>
                   <Input value={authUser.nip} readOnly className="bg-muted/50 border-transparent font-medium" />
                 </div>
-                 <div className="space-y-2">
+                <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wider">Tanggal Bergabung</Label>
                   <Input value={authUser.join_date} readOnly className="bg-muted/50 border-transparent font-medium" />
                 </div>
@@ -279,6 +287,13 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
                   <Label className="flex items-center gap-2"><FileText className="h-4 w-4" /> Dokumen Pendukung (Opsional)</Label>
                   <FileUploadDropzone className="w-full" onFilesChange={(files: File[]) => setAttachmentFile(files[0] ?? null)} />
                   <p className="text-xs text-muted-foreground">Format: PDF, JPG, PNG (Max 5MB). Lampirkan surat dokter jika cuti sakit.</p>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-sm text-amber-800 font-medium mb-1">Catatan Penting:</p>
+                  <p className="text-xs text-amber-700">
+                    Jika didalam masa cuti terdapat tanggal merah/ libur dari perusahaan, harap memisahkan pengajuan cuti, contoh: range cuti 2-5 Februari, pada tanggal 3 februari terdapat tanggal merah/ libur perusahaan, maka ajukan cuti tanggal 2 dan ajukan lagi untuk tanggal 4-5
+                  </p>
                 </div>
               </div>
             </div>
