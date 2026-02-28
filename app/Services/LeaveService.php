@@ -7,7 +7,6 @@ namespace App\Services;
 use App\Models\Leave;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Auth;
 
 final class LeaveService
 {
@@ -15,11 +14,11 @@ final class LeaveService
     {
         $query = Leave::with(['user', 'project', 'replacementPic', 'approvals.approver']);
 
-        if (!$user->can('view_all_leaves')) {
+        if (! $user->hasAnyPermission(['view_all_leaves'])) {
             $query->where('user_id', $user->id);
         }
 
-        if (!empty($filters['type'])) {
+        if (! empty($filters['type'])) {
             if ($filters['type'] === 'leave') {
                 $query->where('type', '!=', 'travel');
             } else {
@@ -27,19 +26,19 @@ final class LeaveService
             }
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['start_date'])) {
+        if (! empty($filters['start_date'])) {
             $query->whereDate('start_date', '>=', $filters['start_date']);
         }
 
-        if (!empty($filters['end_date'])) {
+        if (! empty($filters['end_date'])) {
             $query->whereDate('end_date', '<=', $filters['end_date']);
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
                 $q->where('code', 'like', "%{$search}%")

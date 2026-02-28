@@ -27,12 +27,13 @@ const NAV_ITEMS: NavItem[] = [
         title: 'Proyek',
         href: '/projects',
         icon: Folder,
-        roles: ['head', 'hr', 'direktur', 'superadmin'],
+        roles: ['head', 'hr', 'direktur', 'superadmin', 'finance'],
     },
     {
         title: 'Reimbursement',
         href: '/reimbursements',
         icon: DollarSign,
+        roles: ['pegawai', 'finance', 'hr', 'superadmin', 'head'],
     },
     {
         title: 'Presensi',
@@ -54,18 +55,18 @@ const NAV_ITEMS: NavItem[] = [
         href: '/letter-requests',
         icon: FileText,
     },
-    {
-        title: 'Pengajuan Cuti',
-        href: '/leaves/approvals',
-        icon: Calendar,
-        roles: ['head', 'hr', 'direktur', 'superadmin'],
-    },
-    {
-        title: 'Transfer',
-        href: '/reimbursements',
-        icon: FileText,
-        roles: ['finance', 'superadmin', 'direktur', 'head', 'hr'],
-    },
+    // {
+    //     title: 'Pengajuan Cuti',
+    //     href: '/leaves/approvals',
+    //     icon: Calendar,
+    //     roles: ['head', 'hr', 'direktur', 'superadmin'],
+    // },
+    // {
+    //     title: 'Transfer',
+    //     href: '/reimbursements',
+    //     icon: FileText,
+    //     roles: ['finance', 'superadmin', 'direktur', 'head', 'hr'],
+    // },
     {
         title: 'Divisi',
         href: '/admin/divisions',
@@ -125,4 +126,3 @@ export function AppSidebar() {
         </Sidebar>
     );
 }
-
