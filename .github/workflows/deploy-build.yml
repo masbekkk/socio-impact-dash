@@ -1,0 +1,117 @@
+name: Build and Push to Build Branch
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  build:
+    # Only run on push, or if the PR was merged (not just closed)
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history so we can checkout branches
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, pdo_mysql, zip
+          tools: composer:v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install PHP Dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Prepare Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Generate Wayfinder types
+        # Since you just ignored the generated Wayfinder files in .gitignore,
+        # we MUST generate them before running 'npm run build' or Vite will fail.
+        run: php artisan wayfinder:generate --with-form
+
+      - name: Install NPM Dependencies
+        run: npm install
+
+      - name: Build Assets
+        run: npm run build
+
+      - name: Run Database Migrations
+        # WARNING! GitHub Actions runs on a remote server.
+        # To run this against your Hostinger database, you MUST configure the credentials
+        # below in your GitHub Secrets (Settings > Secrets and variables > Actions).
+        # You also need to allow remote MySQL connections from anywhere (%) in Hostinger.
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: 3306
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          # If secrets are not set, skip this step to avoid failure.
+          if [ -n "$DB_HOST" ]; then
+            php artisan migrate --force
+          else
+            echo "Skipping migration: Database secrets not configured."
+          fi
+
+      - name: Commit and Push to 'build' branch
+        run: |
+          # Configure Git user for GitHub Actions Bot
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Switch to 'build' branch, or create it based on current commit on main
+          git checkout -B build
+          
+          # Force add the 'public/build' directory and 'dist' just in case they are ignored
+          git add -f public/build/
+          
+          # Commit the changes (it will safely do nothing if there are no changes)
+          git commit -m "Auto-build assets from main ($GITHUB_SHA)" || echo "No changes to commit"
+          
+          # Force push the 'build' branch back to GitHub
+          # The secrets.GITHUB_TOKEN is automatically provided by GitHub Actions
+          git push origin build --force
+
+      - name: Deploy to Hostinger via SSH
+        # This step will SSH into your Hostinger server and run 'git pull'
+        # You need to configure HOSTINGER_SSH_KEY, HOSTINGER_HOST, and HOSTINGER_USERNAME in GitHub Secrets.
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          # Change this path to the actual path of your Laravel app on Hostinger
+          # For example: /home/u123456789/domains/yourdomain.com/public_html
+          PROJECT_PATH: "/home/u592892738/domains/manajemensiid.id/public_html/"
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: 65002 # Hostinger SSH usually uses port 22 or 2222. Adjust if necessary.
+          envs: PROJECT_PATH
+          # The script that runs ON the Hostinger server
+          script: |
+            cd $PROJECT_PATH
+            git fetch origin build --depth 1
+            git checkout build
+            git reset --hard origin/build
+            git clean -fd
+            # If you run migrate on the server instead of GH actions, uncomment below:
+            php artisan migrate --force
+            php artisan optimize:clear
