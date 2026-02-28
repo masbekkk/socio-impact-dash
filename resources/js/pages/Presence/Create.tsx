@@ -16,14 +16,16 @@ import { Label } from '@/components/ui/label';
 import { MapPin, Loader2, FileText, ArrowLeft, Save, Camera, RotateCcw, X, Image as ImageIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-// --- Mock Projects ---
-const MOCK_PROJECTS = [
-    { id: '1', name: 'Socio Impact Development' },
-    { id: '2', name: 'Community Outreach Phase 1' },
-    { id: '3', name: 'Education Fund Assessment' },
-];
+interface Project {
+    id: string;
+    name: string;
+}
 
-export default function CreatePresence() {
+interface PageProps {
+    projects: Project[];
+}
+
+export default function CreatePresence({ projects }: PageProps) {
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Presensi', href: '/presences' },
@@ -166,10 +168,9 @@ export default function CreatePresence() {
             return;
         }
 
-        // Simulate submission
-        console.log('Submitting Presence:', data);
-        alert('Data presensi berhasil disubmit (Simulasi)!');
-        // In real app: post('/presences', data);
+        post('/presences', {
+            preserveScroll: true
+        });
     };
 
     return (
@@ -213,8 +214,8 @@ export default function CreatePresence() {
                                                 <SelectValue placeholder="Pilih Proyek..." />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {MOCK_PROJECTS.map(p => (
-                                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                                {projects.map(p => (
+                                                    <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>

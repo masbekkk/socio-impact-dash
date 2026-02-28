@@ -39,6 +39,10 @@ export default function StatusBadge({ status }: Props) {
     submitted: { cls: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: <Clock className="w-3 h-3 mr-1" /> },
     head_approved: { cls: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
     hr_approved: { cls: 'bg-green-100 text-green-800 border-green-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
+
+    // Presence Detail Statuses
+    checked_in: { cls: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
+    late: { cls: 'bg-amber-100 text-amber-800 border-amber-200', icon: <Clock className="w-3 h-3 mr-1" /> },
   }
 
   const statusLabels: Record<string, string> = {
@@ -60,6 +64,8 @@ export default function StatusBadge({ status }: Props) {
     hr_approved: 'Disetujui HR',
     finance_approved: 'Disetujui Finance',
     transferred: 'Sudah Ditransfer',
+    checked_in: 'Hadir',
+    late: 'Terlambat',
   };
 
   const { cls, icon } = config[status] || { cls: 'bg-gray-100 text-gray-800', icon: null }

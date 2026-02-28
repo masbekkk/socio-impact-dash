@@ -30,6 +30,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Presences
     Route::resource('presences', PresenceController::class)->only(['index', 'create', 'store', 'show']);
+    Route::post('presences/checkout', [PresenceController::class, 'checkOut'])->name('presences.checkout');
 
     // Projects
     Route::resource('projects', ProjectController::class)->only(['index', 'create', 'show', 'edit']);
@@ -50,6 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Calendar
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+    Route::post('calendar', [CalendarController::class, 'store'])->name('calendar.store');
     Route::get('calendar/day/{date}', [CalendarController::class, 'show'])->name('calendar.show');
 
     // Leaves
@@ -59,9 +61,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
     Route::post('leaves/{leave}/reject', [LeaveController::class, 'reject'])->name('leaves.reject');
 
-    // Presence
-    Route::post('presences/check-in', [PresenceController::class, 'checkIn'])->name('presences.check-in');
-    Route::get('presences', [PresenceController::class, 'index'])->name('presences.index');
+
 
     // Admin
     Route::prefix('admin')->middleware('can:adminAccess')->group(function (): void {
