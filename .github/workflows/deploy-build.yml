@@ -84,8 +84,11 @@ jobs:
           # Switch to 'build' branch, or create it based on current commit on main
           git checkout -B build
           
-          # Force add the 'public/build' directory and 'dist' just in case they are ignored
+          # Force add the 'public/build' directory and wayfinder generated files
           git add -f public/build/
+          git add -f resources/js/actions/
+          git add -f resources/js/routes/
+          git add -f resources/js/wayfinder/
           
           # Commit the changes (it will safely do nothing if there are no changes)
           git commit -m "Auto-build assets from main ($GITHUB_SHA)" || echo "No changes to commit"
@@ -112,11 +115,16 @@ jobs:
           envs: PROJECT_PATH
           # The script that runs ON the Hostinger server
           script: |
+            # Trust GitHub to fix "Host key verification failed"
+            mkdir -p ~/.ssh
+            ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+
             cd $PROJECT_PATH
             git fetch origin build --depth 1
             git checkout build
             git reset --hard origin/build
-            git clean -fd
-            # If you run migrate on the server instead of GH actions, uncomment below:
+            # Clean untracked files but EXCLUDE .htaccess and .env
+            git clean -fd -e .htaccess -e .env
+            
             php artisan migrate --force
             php artisan optimize:clear
