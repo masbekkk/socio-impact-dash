@@ -13,7 +13,7 @@ final class StorePresenceRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -24,7 +24,11 @@ final class StorePresenceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'project_id' => ['required', 'exists:projects,id'],
+            'activity' => ['required', 'string', 'max:255'],
+            'lat' => ['required', 'numeric'],
+            'lng' => ['required', 'numeric'],
+            'image' => ['required', 'image', 'max:5120'], // Max 5MB
         ];
     }
 }

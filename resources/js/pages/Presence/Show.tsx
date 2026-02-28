@@ -3,8 +3,10 @@ import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { format } from 'date-fns';
 import { ArrowLeft, MapPin, Calendar, Clock, User, Briefcase, FileText, ChevronDown, CheckCircle, XCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import {
@@ -23,28 +25,36 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 
-// --- Mock Data (Replace with prop from controller) ---
-const MOCK_PROJECTS = [
-    { id: '1', name: 'Socio Impact Development', code: 'SID-2024-001' },
-    { id: '2', name: 'Community Outreach Phase 1', code: 'COP-2024-002' },
-    { id: '3', name: 'Education Fund Assessment', code: 'EFA-2024-003' },
-];
-
-interface Props {
-    presence: any;
-    auth: {
-        user: {
-            id: string;
-            name: string;
-            role: 'admin' | 'hr' | 'user';
-        }
-    }
+interface PresenceData {
+    id: number;
+    date: string;
+    check_in_at: string;
+    check_out_at: string | null;
+    status: string;
+    project: {
+        name: string;
+        code: string;
+    } | null;
+    activity: string;
+    notes: string | null;
+    check_in_latitude: string;
+    check_in_longitude: string;
+    check_out_latitude: string | null;
+    check_out_longitude: string | null;
+    photo_path: string | null;
+    image_url: string | null;
+    user: {
+        name: string;
+        email: string;
+        position: string | null;
+    };
 }
 
-export default function PresenceShow({ presence: propPresence, auth }: Props) {
-    // If no prop is passed (during dev/testing), fallback to a default safe object or handle error
-    // Adapting the prop structure to match what the view expects if coming from JSON
-    const presence = propPresence || {};
+interface Props {
+    presence: PresenceData;
+}
+
+export default function PresenceShow({ presence }: Props) {
 
     // Action Dialog State
     const [actionDialog, setActionDialog] = useState<{ open: boolean; type: 'approve' | 'reject' | null }>({
@@ -104,7 +114,7 @@ export default function PresenceShow({ presence: propPresence, auth }: Props) {
                             <div className="flex items-center gap-2 text-muted-foreground text-sm mt-1">
                                 <Calendar className="h-3.5 w-3.5" /> {presence.date}
                                 <span className="text-gray-300">|</span>
-                                <Clock className="h-3.5 w-3.5" /> {presence.time}
+                                <Clock className="h-3.5 w-3.5" /> {presence.check_in_at ? format(new Date(presence.check_in_at), 'HH:mm') : '-'}
                             </div>
                         </div>
                     </div>
@@ -147,7 +157,7 @@ export default function PresenceShow({ presence: propPresence, auth }: Props) {
                                     <h4 className="text-sm font-medium text-muted-foreground">Proyek</h4>
                                     <div className="flex items-center gap-2 font-medium text-base">
                                         <Briefcase className="h-4 w-4 text-primary" />
-                                        {presence.project?.name || presence.project || 'Unknown Project'}
+                                        {presence.project?.name || 'Unknown Project'}
                                     </div>
                                     <p className="text-xs text-muted-foreground ml-6">{presence.project?.code}</p>
                                 </div>
@@ -192,7 +202,7 @@ export default function PresenceShow({ presence: propPresence, auth }: Props) {
                                     )}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-2 italic flex items-center justify-end gap-1">
-                                    Diupload pada {presence.date} • {presence.time}
+                                    Diupload pada {presence.date} • {presence.check_in_at ? format(new Date(presence.check_in_at), 'HH:mm') : '-'}
                                 </p>
                             </CardContent>
                         </Card>
@@ -222,33 +232,67 @@ export default function PresenceShow({ presence: propPresence, auth }: Props) {
                         {/* Location Card */}
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-base">Lokasi Check-In</CardTitle>
+                                <CardTitle className="text-base">Lokasi & Waktu</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="bg-muted/30 p-3 rounded-md border flex items-center gap-3">
-                                    <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                                        <MapPin className="h-4 w-4" />
+                            <CardContent className="space-y-6">
+                                {/* Check-In */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 uppercase text-[10px]">Check-In</Badge>
+                                        <span className="text-sm font-medium">{presence.check_in_at ? format(new Date(presence.check_in_at), 'HH:mm') : '-'}</span>
                                     </div>
-                                    <div>
-                                        <p className="text-xs font-mono text-muted-foreground">Coordinates</p>
-                                        <p className="text-sm font-medium">{presence.location.lat}, {presence.location.lng}</p>
+                                    <div className="bg-muted/30 p-3 rounded-md border flex items-center gap-3">
+                                        <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                                            <MapPin className="h-4 w-4" />
+                                        </div>
+                                        <div className="truncate">
+                                            <p className="text-[10px] font-mono text-muted-foreground">Coordinates</p>
+                                            <p className="text-xs font-medium truncate">{presence.check_in_latitude}, {presence.check_in_longitude}</p>
+                                        </div>
                                     </div>
+                                    <Button variant="outline" className="w-full text-xs h-8" asChild>
+                                        <a
+                                            href={`https://www.google.com/maps/search/?api=1&query=${presence.check_in_latitude},${presence.check_in_longitude}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            View on Maps
+                                        </a>
+                                    </Button>
                                 </div>
 
-                                <div className="text-sm text-muted-foreground leading-snug">
-                                    <span className="font-medium text-foreground block mb-1">Alamat Terdeteksi:</span>
-                                    {presence.location.address}
-                                </div>
+                                <Separator />
 
-                                <Button variant="outline" className="w-full text-xs h-9" asChild>
-                                    <a
-                                        href={`https://www.google.com/maps/search/?api=1&query=${presence.location.lat},${presence.location.lng}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        Buka di Google Maps
-                                    </a>
-                                </Button>
+                                {/* Check-Out */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 uppercase text-[10px]">Check-Out</Badge>
+                                        <span className="text-sm font-medium">{presence.check_out_at ? format(new Date(presence.check_out_at), 'HH:mm') : 'Belum Check-out'}</span>
+                                    </div>
+
+                                    {presence.check_out_at && (
+                                        <>
+                                            <div className="bg-muted/30 p-3 rounded-md border flex items-center gap-3">
+                                                <div className="h-8 w-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                                                    <MapPin className="h-4 w-4" />
+                                                </div>
+                                                <div className="truncate">
+                                                    <p className="text-[10px] font-mono text-muted-foreground">Coordinates</p>
+                                                    <p className="text-xs font-medium truncate">{presence.check_out_latitude}, {presence.check_out_longitude}</p>
+                                                </div>
+                                            </div>
+                                            <Button variant="outline" className="w-full text-xs h-8" asChild>
+                                                <a
+                                                    href={`https://www.google.com/maps/search/?api=1&query=${presence.check_out_latitude},${presence.check_out_longitude}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    View on Maps
+                                                </a>
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
@@ -273,8 +317,8 @@ export default function PresenceShow({ presence: propPresence, auth }: Props) {
                     </DialogHeader>
                     <div className="py-4">
                         <p className="text-sm text-muted-foreground">
-                            Proyek: {presence.project?.name || presence.project} <br />
-                            Waktu: {presence.date} {presence.time}
+                            Proyek: {presence.project?.name || '-'} <br />
+                            Waktu: {presence.date} {presence.check_in_at ? format(new Date(presence.check_in_at), 'HH:mm') : '-'}
                         </p>
                         {actionDialog.type === 'reject' && (
                             <Textarea

@@ -119,9 +119,13 @@ class PresenceService
             ->first();
     }
 
-    public function getPresenceHistory(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public function getPresenceHistory(?User $user = null, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Presence::where('user_id', $user->id);
+        $query = Presence::with(['user', 'project']);
+
+        if ($user) {
+            $query->where('user_id', $user->id);
+        }
 
         if (!empty($filters['start_date'])) {
             $query->whereDate('date', '>=', $filters['start_date']);
@@ -174,6 +178,8 @@ class PresenceService
 
         return [
             'user_id' => $user->id,
+            'project_id' => $data['project_id'] ?? null,
+            'activity' => $data['activity'] ?? null,
             'date' => $today,
             'status' => $status,
             'check_in_at' => $checkInTime,
@@ -198,7 +204,14 @@ class PresenceService
             return PresenceStatus::from($requestedStatus);
         }
 
-        $lateThreshold = Carbon::today()->setTime(8, 0, 0);
+        $configTime = config('presence.check_in_time', '09:00');
+        $tolerance = config('presence.tolerance_minutes', 15);
+        
+        [$hour, $minute] = explode(':', $configTime);
+        
+        $lateThreshold = Carbon::today()
+            ->setTime((int) $hour, (int) $minute, 0)
+            ->addMinutes($tolerance);
         
         if ($checkInTime->gt($lateThreshold)) {
             return PresenceStatus::Late;

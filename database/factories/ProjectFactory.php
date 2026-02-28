@@ -25,7 +25,7 @@ final class ProjectFactory extends Factory
             'created_by' => fn () => \App\Models\User::role(\App\Enums\UserRole::Pegawai->value)->inRandomOrder()->first()?->id ?? \App\Models\User::factory(),
             'division_id' => fn () => \App\Models\Division::inRandomOrder()->first()?->id ?? \App\Models\Division::factory(),
             'account_manager_id' => fn () => \App\Models\User::role(\App\Enums\UserRole::Pegawai->value)->inRandomOrder()->first()?->id ?? \App\Models\User::factory(),
-            'head_id' => fn () => \App\Models\User::role(\App\Enums\UserRole::Head->value)->get()->random()->id ?? \App\Models\User::factory(),
+            'head_id' => fn () => \App\Models\User::role(\App\Enums\UserRole::Head->value)->inRandomOrder()->first()?->id ?? \App\Models\User::factory(),
             'pic_id' => fn () => \App\Models\User::role(\App\Enums\UserRole::Pegawai->value)->inRandomOrder()->first()?->id ?? \App\Models\User::factory(),
             'status' => $this->faker->randomElement(['draft', 'submitted', 'active', 'finished', 'archived']),
             'project_type' => $this->faker->randomElement(['pendampingan', 'pelatihan', 'dokumen', 'event']),

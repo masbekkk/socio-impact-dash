@@ -14,7 +14,9 @@ final class Presence extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 
+        'user_id',
+        'project_id',
+        'activity',
         'date', 
         'status', 
         'check_in_at', 
@@ -33,6 +35,7 @@ final class Presence extends Model
         return [
             'id' => 'integer',
             'user_id' => 'integer',
+            'project_id' => 'integer',
             'date' => 'date',
             'status' => PresenceStatus::class,
             'check_in_at' => 'datetime',
@@ -47,5 +50,10 @@ final class Presence extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
     }
 }

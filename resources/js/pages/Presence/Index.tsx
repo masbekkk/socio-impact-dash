@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,50 +49,50 @@ import { DateFilterPresets } from '@/components/DateFilterPresets';
 import { X as XIcon } from 'lucide-react';
 
 // --- Types ---
-interface Project {
-  id: string;
-  name: string;
-}
-
-interface PresenceLog {
-  id: string;
+interface PresenceData {
+  id: number;
   date: string;
-  time: string;
-  project: string;
+  check_in_at: string;
+  status: string;
+  project: {
+    name: string;
+  } | null;
   activity: string;
-  notes?: string;
-  location: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  status: 'pending' | 'approved' | 'rejected';
+  check_in_latitude: string;
+  check_in_longitude: string;
   user: {
     name: string;
     email: string;
   };
+  check_out_at: string | null;
+  check_out_latitude: string | null;
+  check_out_longitude: string | null;
+  notes: string | null;
 }
 
-// --- Mock Data ---
-import MOCK_LOGS_DATA from './presence_logs.json';
+interface PaginatedPresences {
+  data: PresenceData[];
+  links: { url: string | null; label: string; active: boolean }[];
+  current_page: number;
+  from: number;
+  to: number;
+  total: number;
+  last_page: number;
+}
 
-const MOCK_PROJECTS: Project[] = [
-  { id: '1', name: 'Socio Impact Development' },
-  { id: '2', name: 'Community Outreach Phase 1' },
-  { id: '3', name: 'Education Fund Assessment' },
-];
+interface PageProps {
+  presences: PaginatedPresences;
+  todayPresence: PresenceData | null;
+}
 
-export default function PresenceIndex() {
+export default function PresenceIndex({ presences, todayPresence }: PageProps) {
   // --- State ---
   const [breadcrumbs] = useState([
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Presensi', href: '/presences' },
   ]);
 
-  const [logs, setLogs] = useState<PresenceLog[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Form State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -107,7 +107,7 @@ export default function PresenceIndex() {
   });
 
   // Action Dialog State
-  const [actionDialog, setActionDialog] = useState<{ open: boolean; type: 'approve' | 'reject' | null; log: PresenceLog | null }>({
+  const [actionDialog, setActionDialog] = useState<{ open: boolean; type: 'approve' | 'reject' | null; log: PresenceData | null }>({
     open: false,
     type: null,
     log: null
@@ -117,12 +117,13 @@ export default function PresenceIndex() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // --- Effects ---
-  useEffect(() => {
-    // Load mock data
-    // @ts-ignore
-    setLogs(MOCK_LOGS_DATA);
-  }, []);
+  // Checkout State
+  const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
+  const [checkoutData, setCheckoutData] = useState({
+    latitude: '',
+    longitude: '',
+    notes: ''
+  });
 
   // --- Handlers ---
   const handleFetchLocation = () => {
@@ -139,6 +140,30 @@ export default function PresenceIndex() {
           ...prev,
           lat: pos.coords.latitude.toString(),
           lng: pos.coords.longitude.toString()
+        }));
+        setLoadingLocation(false);
+      },
+      (err) => {
+        alert('Gagal mengambil lokasi: ' + err.message);
+        setLoadingLocation(false);
+      }
+    );
+  };
+
+  const handleFetchCheckoutLocation = () => {
+    setLoadingLocation(true);
+    if (!navigator.geolocation) {
+      alert('Geolocation tidak didukung oleh browser ini.');
+      setLoadingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCheckoutData(prev => ({
+          ...prev,
+          latitude: pos.coords.latitude.toString(),
+          longitude: pos.coords.longitude.toString()
         }));
         setLoadingLocation(false);
       },
@@ -167,11 +192,24 @@ export default function PresenceIndex() {
       image_name: formData.image.name
     }, null, 2));
 
-    setIsDialogOpen(false);
     // Reset form or optimistically update UI here
   };
 
-  const openActionDialog = (type: 'approve' | 'reject', log: PresenceLog) => {
+  const handleCheckoutSubmit = () => {
+    if (!checkoutData.latitude) {
+      alert('Harap ambil lokasi terlebih dahulu.');
+      return;
+    }
+
+    router.post(route('presences.checkout'), checkoutData, {
+      onSuccess: () => {
+        setIsCheckoutDialogOpen(false);
+        setCheckoutData({ latitude: '', longitude: '', notes: '' });
+      }
+    });
+  };
+
+  const openActionDialog = (type: 'approve' | 'reject', log: PresenceData) => {
     setActionDialog({ open: true, type, log });
   };
 
@@ -182,32 +220,11 @@ export default function PresenceIndex() {
     // In real app, make API call here
   };
 
-  // --- Filtering & Pagination Logic (Frontend Mock) ---
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch =
-      log.project.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.activity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.id.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus = filterStatus === 'all' || log.status === filterStatus;
-
-    const logDate = new Date(log.date);
-    const start = startDate ? new Date(startDate) : null;
-    const end = endDate ? new Date(endDate) : null;
-
-    const matchesDate =
-      (!start || logDate >= start) &&
-      (!end || logDate <= end);
-
-    return matchesSearch && matchesStatus && matchesDate;
-  });
-
-  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
-  const paginatedLogs = filteredLogs.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Use backend pagination data
+  const paginatedLogs = presences.data;
+  const totalPages = presences.last_page;
+  const currentPage = presences.current_page;
+  const totalLogs = presences.total;
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -219,12 +236,35 @@ export default function PresenceIndex() {
           <p className="text-muted-foreground text-sm md:text-base">Catat kehadiran, lokasi, dan aktivitas di luar kantor.</p>
         </div>
 
-        <Link href="/presences/create">
-          <Button className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)] transition-transform hover:scale-105 active:scale-95 shadow-sm">
-            <PlusIcon className="h-4 w-4" />
-            Check-In Baru
-          </Button>
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-4 sm:mt-0">
+          {!todayPresence ? (
+            <Link href="/presences/create">
+              <Button className="w-full sm:w-auto gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)] transition-transform hover:scale-105 active:scale-95 shadow-sm">
+                <PlusIcon className="h-4 w-4" />
+                Check-In Baru
+              </Button>
+            </Link>
+          ) : !todayPresence.check_out_at ? (
+            <Button
+              onClick={() => {
+                setIsCheckoutDialogOpen(true);
+                handleFetchCheckoutLocation();
+              }}
+              className="w-full sm:w-auto gap-2 bg-rose-600 text-white hover:bg-rose-700 transition-transform hover:scale-105 active:scale-95 shadow-sm"
+            >
+              <XIcon className="h-4 w-4" />
+              Check-Out Sekarang
+            </Button>
+          ) : (
+            <div className="flex flex-col items-end">
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 py-1.5 px-3">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Selesai Kerja Hari Ini
+              </Badge>
+              <span className="text-[10px] text-muted-foreground mt-1">Check-out jam {format(new Date(todayPresence.check_out_at), 'HH:mm')}</span>
+            </div>
+          )}
+        </div>
       </CardContent>
 
       <Card className="mx-4 md:mx-8 mb-8 border-none rounded-xl overflow-hidden shadow-sm">
@@ -239,7 +279,6 @@ export default function PresenceIndex() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setCurrentPage(1);
                 }}
               />
             </div>
@@ -355,7 +394,7 @@ export default function PresenceIndex() {
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-semibold text-sm">{log.date}</h3>
-                        <p className="text-xs text-muted-foreground">{log.time}</p>
+                        <p className="text-xs text-muted-foreground">{log.check_in_at ? format(new Date(log.check_in_at), 'HH:mm') : '-'}</p>
                       </div>
                       <StatusBadge status={log.status} />
                     </div>
@@ -367,7 +406,7 @@ export default function PresenceIndex() {
                       </div>
                       <div className="text-sm">
                         <p className="text-xs text-muted-foreground mb-0.5">Proyek</p>
-                        <div className="font-medium">{log.project}</div>
+                        <div className="font-medium">{log.project?.name || '-'}</div>
                       </div>
                       <div className="text-sm">
                         <p className="text-xs text-muted-foreground mb-0.5">Kegiatan</p>
@@ -376,13 +415,13 @@ export default function PresenceIndex() {
                       <div className="text-sm">
                         <p className="text-xs text-muted-foreground mb-0.5">Lokasi</p>
                         <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${log.location.lat},${log.location.lng}`}
+                          href={`https://www.google.com/maps/search/?api=1&query=${log.check_in_latitude},${log.check_in_longitude}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary hover:underline"
                         >
                           <MapPin className="h-3 w-3" />
-                          {log.location.lat.toFixed(4)}, {log.location.lng.toFixed(4)}
+                          {Number(log.check_in_latitude || 0).toFixed(4)}, {Number(log.check_in_longitude || 0).toFixed(4)}
                         </a>
                       </div>
                     </div>
@@ -423,7 +462,7 @@ export default function PresenceIndex() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <span className="font-medium">{log.date}</span>
-                          <span className="text-xs text-muted-foreground">{log.time}</span>
+                          <span className="text-xs text-muted-foreground">{log.check_in_at ? format(new Date(log.check_in_at), 'HH:mm') : '-'}</span>
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
@@ -433,7 +472,7 @@ export default function PresenceIndex() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {log.project}
+                        {log.project?.name || '-'}
                       </TableCell>
                       <TableCell className="hidden md:table-cell max-w-[300px]">
                         <div className="truncate text-muted-foreground" title={log.activity}>
@@ -443,12 +482,12 @@ export default function PresenceIndex() {
                       <TableCell>
                         <Badge variant="outline" className="font-mono text-[10px] font-normal gap-1 hover:bg-muted cursor-pointer" asChild>
                           <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${log.location.lat},${log.location.lng}`}
+                            href={`https://www.google.com/maps/search/?api=1&query=${log.check_in_latitude},${log.check_in_longitude}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
                             <MapPin className="h-3 w-3" />
-                            {log.location.lat.toFixed(4)}, {log.location.lng.toFixed(4)}
+                            {Number(log.check_in_latitude || 0).toFixed(4)}, {Number(log.check_in_longitude || 0).toFixed(4)}
                           </a>
                         </Badge>
                       </TableCell>
@@ -498,73 +537,19 @@ export default function PresenceIndex() {
         {/* Pagination */}
         <div className="flex items-center justify-between px-8 py-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            Menampilkan {(currentPage - 1) * itemsPerPage + 1} sampai {Math.min(currentPage * itemsPerPage, filteredLogs.length)} dari {filteredLogs.length} hasil
+            Menampilkan {presences.from || 0} sampai {presences.to || 0} dari {totalLogs} hasil
           </div>
-          <div className="flex w-full items-center gap-8 lg:w-fit">
-            <div className="hidden items-center gap-2 lg:flex">
-              <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Baris per halaman
-              </Label>
-              <Select
-                value={`${itemsPerPage}`}
-                onValueChange={(value) => {
-                  setItemsPerPage(Number(value));
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-16 h-8 text-xs" id="rows-per-page">
-                  <SelectValue placeholder={itemsPerPage} />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                      {pageSize}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Halaman {currentPage} dari {totalPages || 1}
-            </div>
-            <div className="ml-auto flex items-center gap-2 lg:ml-0">
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-              >
-                <span className="sr-only">Go to first page</span>
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="h-8 w-8 p-0"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <span className="sr-only">Go to previous page</span>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="h-8 w-8 p-0"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                <span className="sr-only">Go to next page</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-              >
-                <span className="sr-only">Go to last page</span>
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
+          <div className="flex w-full items-center gap-2 lg:w-fit overflow-x-auto pb-2">
+            {presences.links.map((link, i) => (
+              <Link key={i} href={link.url || '#'} preserveScroll preserveState>
+                <Button
+                  variant={link.active ? "default" : "outline"}
+                  size="sm"
+                  disabled={!link.url}
+                  dangerouslySetInnerHTML={{ __html: link.label }}
+                />
+              </Link>
+            ))}
           </div>
         </div>
       </Card>
@@ -587,8 +572,8 @@ export default function PresenceIndex() {
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              Proyek: {actionDialog.log?.project} <br />
-              Waktu: {actionDialog.log?.date} {actionDialog.log?.time}
+              Proyek: {actionDialog.log?.project?.name || '-'} <br />
+              Waktu: {actionDialog.log?.date} {actionDialog.log?.check_in_at ? format(new Date(actionDialog.log.check_in_at), 'HH:mm') : ''}
             </p>
             {actionDialog.type === 'reject' && (
               <Textarea placeholder="Alasan penolakan (opsional)" className="mt-4" />
@@ -608,6 +593,51 @@ export default function PresenceIndex() {
               ) : (
                 <><XCircle className="h-4 w-4" /> Tolak Presensi</>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Checkout Dialog */}
+      <Dialog open={isCheckoutDialogOpen} onOpenChange={setIsCheckoutDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Check-Out Kerja</DialogTitle>
+            <DialogDescription>
+              Pastikan Anda sudah menyelesaikan pekerjaan sebelum melakukan check-out.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label>Lokasi Check-out</Label>
+              <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-md border border-dashed">
+                {loadingLocation ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> <span className="text-sm italic">Mengambil lokasi...</span></>
+                ) : checkoutData.latitude ? (
+                  <><MapPin className="h-4 w-4 text-emerald-600" /> <span className="text-sm font-mono">{Number(checkoutData.latitude).toFixed(6)}, {Number(checkoutData.longitude).toFixed(6)}</span></>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={handleFetchCheckoutLocation}>Ambil Lokasi</Button>
+                )}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="checkout-notes">Catatan (Opsional)</Label>
+              <Textarea
+                id="checkout-notes"
+                placeholder="Apa yang telah diselesaikan hari ini?"
+                value={checkoutData.notes}
+                onChange={(e) => setCheckoutData(prev => ({ ...prev, notes: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCheckoutDialogOpen(false)}>Batal</Button>
+            <Button
+              onClick={handleCheckoutSubmit}
+              disabled={!checkoutData.latitude || loadingLocation}
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              Confirm Check-Out
             </Button>
           </DialogFooter>
         </DialogContent>

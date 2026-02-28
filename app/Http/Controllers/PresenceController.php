@@ -6,7 +6,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePresenceRequest;
 use App\Http\Requests\UpdatePresenceRequest;
+use App\Http\Requests\CheckOutRequest;
 use App\Models\Presence;
+use App\Models\Project;
+use App\Services\PresenceService;
 use Inertia\Inertia;
 
 final class PresenceController
@@ -14,9 +17,23 @@ final class PresenceController
     /**
      * Display a listing of the resource.
      */
-    public function index(): \Inertia\Response
+    public function index(PresenceService $presenceService): \Inertia\Response
     {
-        return Inertia::render('Presence/Index');
+        $user = auth()->user();
+        
+        // Define permission for viewing all presences
+        $canViewAll = $user->hasRole(['superadmin', 'direktur', 'head', 'hr']);
+
+        $presences = $presenceService->getPresenceHistory(
+            $canViewAll ? null : $user, 
+            request()->all(), 
+            15
+        );
+
+        return Inertia::render('Presence/Index', [
+            'presences' => $presences,
+            'todayPresence' => $presenceService->getTodayPresence($user),
+        ]);
     }
 
     public function checkIn(): void
@@ -29,18 +46,43 @@ final class PresenceController
      */
     public function create(): \Inertia\Response
     {
-        return Inertia::render('Presence/Create');
+        $projects = Project::select('id', 'name')->get();
+        return Inertia::render('Presence/Create', [
+            'projects' => $projects
+        ]);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePresenceRequest $request): \Illuminate\Http\RedirectResponse
+    public function store(StorePresenceRequest $request, PresenceService $presenceService): \Illuminate\Http\RedirectResponse
     {
-        // Validation is handled by StorePresenceRequest
-        // Logic to store presence
+        $validated = $request->validated();
+        
+        $mappedData = [
+            'project_id' => $validated['project_id'],
+            'activity' => $validated['activity'],
+            'latitude' => $validated['lat'],
+            'longitude' => $validated['lng'],
+            'photo' => $validated['image'],
+        ];
 
-        return to_route('presences.index')->with('success', 'Presensi berhasil dikirim.');
+        try {
+            $presenceService->checkIn(auth()->user(), $mappedData);
+            return to_route('presences.index')->with('success', 'Check-in berhasil.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function checkOut(CheckOutRequest $request, PresenceService $presenceService): \Illuminate\Http\RedirectResponse
+    {
+        try {
+            $presenceService->checkOut(auth()->user(), $request->validated());
+            return to_route('presences.index')->with('success', 'Check-out berhasil.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     /**
