@@ -55,26 +55,6 @@ jobs:
       - name: Build Assets
         run: npm run build:ssr
 
-      - name: Run Database Migrations
-        # WARNING! GitHub Actions runs on a remote server.
-        # To run this against your Hostinger database, you MUST configure the credentials
-        # below in your GitHub Secrets (Settings > Secrets and variables > Actions).
-        # You also need to allow remote MySQL connections from anywhere (%) in Hostinger.
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: 3306
-          DB_DATABASE: ${{ secrets.DB_DATABASE }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        run: |
-          # If secrets are not set, skip this step to avoid failure.
-          if [ -n "$DB_HOST" ]; then
-            php artisan migrate --force
-          else
-            echo "Skipping migration: Database secrets not configured."
-          fi
-
       - name: Commit and Push to 'build' branch
         run: |
           # Configure Git user for GitHub Actions Bot
