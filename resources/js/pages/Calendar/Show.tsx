@@ -36,7 +36,6 @@ import {
 import { format, parse } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import calendarEventsData from './calendar-events.json';
 
 // Types
 type EventType = 'meeting' | 'deadline' | 'task' | 'holiday' | 'project';
