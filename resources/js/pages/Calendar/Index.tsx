@@ -104,6 +104,7 @@ export default function CalendarIndex({
 
     const { auth } = usePage<any>().props;
     const canDelete = auth.permissions.includes('delete_event');
+    const canAdd = auth.permissions.includes('add_event_calendar');
 
     // Filters
     const [visibleTypes, setVisibleTypes] = useState<
@@ -240,13 +241,15 @@ export default function CalendarIndex({
                         {/* Filters */}
                         {/* Filters removed as per user request */}
 
-                        <Button
-                            onClick={() => handleOpenDialog()}
-                            className="shrink-0 gap-2 bg-[var(--sidebar)] text-white shadow-sm transition-all hover:scale-105 hover:bg-[var(--sidebar)] active:scale-95"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Agenda Baru
-                        </Button>
+                        {canAdd && (
+                            <Button
+                                onClick={() => handleOpenDialog()}
+                                className="shrink-0 gap-2 bg-[var(--sidebar)] text-white shadow-sm transition-all hover:scale-105 hover:bg-[var(--sidebar)] active:scale-95"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Agenda Baru
+                            </Button>
+                        )}
 
                         <Dialog
                             open={isDialogOpen}
@@ -550,20 +553,22 @@ export default function CalendarIndex({
                                     </div>
 
                                     {/* Add button on hover (desktop) */}
-                                    <div className="absolute right-1 bottom-1 z-10 opacity-0 transition-opacity group-hover:opacity-100">
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-5 w-5 rounded-full border bg-white shadow-sm hover:bg-gray-200 md:h-[22px] md:w-[22px]"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                handleOpenDialog(day);
-                                            }}
-                                        >
-                                            <Plus className="h-3 w-3 text-gray-500" />
-                                        </Button>
-                                    </div>
+                                    {canAdd && (
+                                        <div className="absolute right-1 bottom-1 z-10 opacity-0 transition-opacity group-hover:opacity-100">
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-5 w-5 rounded-full border bg-white shadow-sm hover:bg-gray-200 md:h-[22px] md:w-[22px]"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleOpenDialog(day);
+                                                }}
+                                            >
+                                                <Plus className="h-3 w-3 text-gray-500" />
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

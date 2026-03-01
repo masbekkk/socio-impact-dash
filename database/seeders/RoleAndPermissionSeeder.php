@@ -42,6 +42,8 @@ final class RoleAndPermissionSeeder extends Seeder
             'manage_detail_budget',
             'create_event',
             'delete_event',
+            'edit_atr_budget',
+            'add_event_calendar',
         ];
 
         foreach ($permissions as $permission) {
@@ -59,6 +61,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'view_leaves',
             'create_event',
             'delete_event',
+            'add_event_calendar',
         ]);
 
         $headRole = Role::firstOrCreate(['name' => UserRole::Head->value]);
@@ -74,6 +77,8 @@ final class RoleAndPermissionSeeder extends Seeder
             'manage_detail_budget',
             'create_event',
             'delete_event',
+            'edit_atr_budget',
+            'add_event_calendar',
         ]);
 
         $financeRole = Role::firstOrCreate(['name' => UserRole::Finance->value]);
@@ -87,6 +92,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'view_audit_logs',
             'input_budget_partition',
             'manage_detail_budget',
+            'edit_atr_budget',
         ]);
 
         $superadminRole = Role::firstOrCreate(['name' => UserRole::Superadmin->value]);

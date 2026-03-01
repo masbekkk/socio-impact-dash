@@ -27,9 +27,14 @@ final class ReimbursementResource extends JsonResource
                 'head_name' => $this->project?->head?->name,
                 'head_email' => $this->project?->head?->email,
                 'operational_budget' => $this->project?->operational_budget ? (float) $this->project->operational_budget : null,
+                'allowance_budget' => $this->project?->allowance_budget ? (float) $this->project->allowance_budget : null,
                 'used_operational_budget' => $this->project ? (float) $this->project->reimbursements()
                     ->where('type', 'atr')
                     ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->sum('amount') : null,
+                'used_allowance_budget' => $this->project ? (float) $this->project->reimbursements()
+                    ->where('type', 'allowance')
+                    ->whereNotIn('status', ['rejected', 'submitted', 'draft', 'revision'])
                     ->sum('amount') : null,
             ]),
             'type' => $this->type?->value,
@@ -110,25 +115,62 @@ final class ReimbursementResource extends JsonResource
         $hasApprovedCurrentStage = false;
 
         if ($status === 'submitted') {
-            $hasApprovedCurrentStage = $this->approvals->where('approver_id', $user->id)->where('role', 'head')->where('status', 'approved')->isNotEmpty();
-            if (! $hasApprovedCurrentStage) {
-                return $this->project?->head_id === $user->id || $user->hasRole('direktur') || $user->hasRole('finance') || $user->hasRole('head');
+            $hasApproved = $this->approvals->where('approver_id', $user->id)->where('status', 'approved')->isNotEmpty();
+            if ($hasApproved) return false;
+
+            $myPendingApproval = $this->approvals->where('approver_id', $user->id)->where('status', 'pending');
+            if ($myPendingApproval->isNotEmpty()) {
+                return true;
+            }
+            
+            // Fallback for project head or generic role if no specific assignment exists
+            if ($this->project?->head_id === $user->id || $user->hasRole('direktur')) {
+                return true;
+            }
+            
+            // If there's an assignment for someone else in 'head' role, this user cannot approve unless they are superadmin/direktur
+            $someoneElseAssignedHead = $this->approvals->where('role', 'head')->where('status', 'pending')->isNotEmpty();
+            if (!$someoneElseAssignedHead && $user->hasRole('head')) {
+                return true;
             }
         }
 
-        if (in_array($status, ['head_approved', 'revision'])) {
-            $hasApprovedCurrentStage = $this->approvals->where('approver_id', $user->id)->where('role', 'finance')->where('status', 'approved')->isNotEmpty();
-            if (! $hasApprovedCurrentStage) {
-                return $user->hasRole('finance') || $user->hasRole('direktur') || $user->hasRole('head');
+        if (in_array($status, ['head_approved', 'hr_approved', 'revision'])) {
+            $hasApproved = $this->approvals->where('approver_id', $user->id)->where('status', 'approved')->isNotEmpty();
+            if ($hasApproved) return false;
+
+            $myPendingApproval = $this->approvals->where('approver_id', $user->id)->where('status', 'pending');
+            if ($myPendingApproval->isNotEmpty()) {
+                return true;
+            }
+            
+            if ($user->hasRole('direktur')) {
+                return true;
+            }
+
+            // For allowance, next is HR. For ATR, next is Finance.
+            if ($this->type->value === 'allowance') {
+                $someoneElseAssignedHR = $this->approvals->where('role', 'hr')->where('status', 'pending')->isNotEmpty();
+                if (!$someoneElseAssignedHR && $user->hasRole('hr')) {
+                    return true;
+                }
+                
+                if ($status === 'hr_approved') {
+                    $someoneElseAssignedFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
+                    if (!$someoneElseAssignedFinance && $user->hasRole('finance')) {
+                        return true;
+                    }
+                }
+            } else {
+                $someoneElseAssignedFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
+                if (!$someoneElseAssignedFinance && $user->hasRole('finance')) {
+                    return true;
+                }
             }
         }
 
         if ($status === 'finance_approved') {
-            // Usually awaiting transfer, so no further "approval" button unless it's for transfer.
-            // But let's allow direktur or finance if they still need to act.
-            // Actually, if it's finance approved, we shouldn't show approve buttons unless we also show the transfer upload in Show.tsx.
-            // Assuming they're allowed for direktur or finance:
-            return $user->hasRole('direktur') || $user->hasRole('head');
+            return $user->hasRole('direktur') || $user->hasRole('head') || $user->hasRole('superadmin');
         }
 
         return false;

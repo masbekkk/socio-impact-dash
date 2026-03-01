@@ -103,6 +103,8 @@ interface ReimbursementDetail {
     head_email: string | null;
     operational_budget: number | null;
     used_operational_budget: number | null;
+    allowance_budget: number | null;
+    used_allowance_budget: number | null;
   } | null;
   documents: ReimbursementDocument[];
   comments: ReimbursementComment[];
@@ -116,6 +118,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
   submitted: { label: 'Diajukan', className: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock },
   approved: { label: 'Disetujui', className: 'bg-blue-100 text-blue-700 border-blue-200', icon: CheckCircle },
   head_approved: { label: 'Head Approved', className: 'bg-blue-100 text-blue-700 border-blue-200', icon: CheckCircle },
+  hr_approved: { label: 'HR Approved', className: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: CheckCircle },
   finance_approved: { label: 'Finance Approved', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: DollarSign },
   transferred: { label: 'Transferred', className: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle },
   rejected: { label: 'Rejected', className: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
@@ -135,7 +138,7 @@ const URGENCY_LABELS: Record<string, { label: string; variant: 'destructive' | '
   rendah: { label: 'Rendah', variant: 'outline' },
 };
 
-const APPROVABLE_STATUSES = ['submitted', 'head_approved', 'finance_approved'];
+const APPROVABLE_STATUSES = ['submitted', 'head_approved', 'hr_approved', 'finance_approved'];
 
 export default function Show() {
   const { code, auth } = usePage().props as unknown as { code: string; auth: any };
@@ -196,8 +199,11 @@ export default function Show() {
 
   const getCurrentUserRole = () => {
     if (!data || !userId) return null;
-    // Find the approval record assigned to this user that is still pending or relevant
-    // In our case, we just need to know which role this user is acting as for this reimbursement
+    // Prefer the role that is currently pending for this user
+    const pendingApproval = data.approvals.find(a => a.approver_id === userId && a.status === 'pending');
+    if (pendingApproval) return pendingApproval.role;
+
+    // Fallback to any assigned role
     const myApproval = data.approvals.find(a => a.approver_id === userId);
     return myApproval?.role ?? null;
   };
@@ -453,23 +459,32 @@ export default function Show() {
                   </div>
                 )}
 
-                {/* Finance Budget Visibility */}
-                {data.project && (userRole === 'finance' || userRole === 'superadmin') && (
+                {/* Finance/HR Budget Visibility */}
+                {data.project && (userRole === 'finance' || userRole === 'hr' || userRole === 'superadmin') && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-muted/40 p-4 rounded-lg border border-muted/60">
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Budget Operasional</label>
+                      <label className="text-xs font-medium text-muted-foreground uppercase">
+                        {data.type === 'allowance' ? 'Budget Allowance' : 'Budget Operasional'}
+                      </label>
                       <div className="font-semibold text-base font-mono">
-                        {data.project.operational_budget ? `Rp ${data.project.operational_budget.toLocaleString('id-ID')}` : '-'}
+                        {data.type === 'allowance'
+                          ? (data.project.allowance_budget ? `Rp ${data.project.allowance_budget.toLocaleString('id-ID')}` : '-')
+                          : (data.project.operational_budget ? `Rp ${data.project.operational_budget.toLocaleString('id-ID')}` : '-')}
                       </div>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Sisa Budget</label>
-                      <div className={`font-semibold text-base font-mono ${data.project.operational_budget && data.project.used_operational_budget !== null && (data.project.operational_budget - data.project.used_operational_budget) < (data.amount || 0)
-                        ? 'text-red-600' : 'text-green-700'
+                      <div className={`font-semibold text-base font-mono ${data.type === 'allowance'
+                        ? (data.project.allowance_budget && data.project.used_allowance_budget !== null && (data.project.allowance_budget - data.project.used_allowance_budget) < (data.amount || 0) ? 'text-red-600' : 'text-green-700')
+                        : (data.project.operational_budget && data.project.used_operational_budget !== null && (data.project.operational_budget - data.project.used_operational_budget) < (data.amount || 0) ? 'text-red-600' : 'text-green-700')
                         }`}>
-                        {data.project.operational_budget && data.project.used_operational_budget !== null
-                          ? `Rp ${(data.project.operational_budget - data.project.used_operational_budget).toLocaleString('id-ID')}`
-                          : '-'}
+                        {data.type === 'allowance'
+                          ? (data.project.allowance_budget && data.project.used_allowance_budget !== null
+                            ? `Rp ${(data.project.allowance_budget - data.project.used_allowance_budget).toLocaleString('id-ID')}`
+                            : '-')
+                          : (data.project.operational_budget && data.project.used_operational_budget !== null
+                            ? `Rp ${(data.project.operational_budget - data.project.used_operational_budget).toLocaleString('id-ID')}`
+                            : '-')}
                       </div>
                     </div>
                   </div>
