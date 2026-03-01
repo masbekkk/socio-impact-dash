@@ -322,8 +322,8 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
   const isAssignedFinance = project?.account_manager_id === currentUserId;
   const isAssignedHR = project?.head_id === currentUserId;
-  const isAssignedDirektur = project?.pic_id === currentUserId;
-  const isAssignedStakeholder = isAssignedFinance || isAssignedHR || isAssignedDirektur;
+  const isAssignedPIC = project?.pic_id === currentUserId;
+  const isAssignedStakeholder = isAssignedFinance || isAssignedHR || isAssignedPIC;
 
   const isReadyForClosing = currentStatus === 'active';
 

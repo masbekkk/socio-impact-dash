@@ -90,7 +90,7 @@ function durationDays(start: string, end: string): number {
   if (s > e) return 0;
 
   let days = 0;
-  let curr = new Date(s);
+  const curr = new Date(s);
   while (curr <= e) {
     const day = curr.getDay();
     if (day !== 0 && day !== 6) {
