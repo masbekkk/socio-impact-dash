@@ -53,7 +53,7 @@ jobs:
         run: npm install
 
       - name: Build Assets
-        run: npm run build
+        run: npm run build:ssr
 
       - name: Run Database Migrations
         # WARNING! GitHub Actions runs on a remote server.
@@ -84,8 +84,9 @@ jobs:
           # Switch to 'build' branch, or create it based on current commit on main
           git checkout -B build
           
-          # Force add the 'public/build' directory and wayfinder generated files
+          # Force add the 'public/build' directory, SSR bundle, and wayfinder generated files
           git add -f public/build/
+          git add -f bootstrap/ssr/
           git add -f resources/js/actions/
           git add -f resources/js/routes/
           git add -f resources/js/wayfinder/
