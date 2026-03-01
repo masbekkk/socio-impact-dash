@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\PresenceStatus;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 final class Presence extends Model
 {
@@ -28,6 +30,10 @@ final class Presence extends Model
         'photo_path', 
         'attachment_path',
         'notes'
+    ];
+    
+    protected $appends = [
+        'image_url',
     ];
 
     public function casts(): array
@@ -55,5 +61,12 @@ final class Presence extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::get(
+            fn () => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null
+        );
     }
 }

@@ -114,7 +114,7 @@ export default function PresenceShow({ presence }: Props) {
                             <div className="flex items-center gap-2 text-muted-foreground text-sm mt-1">
                                 <Calendar className="h-3.5 w-3.5" /> {presence.date}
                                 <span className="text-gray-300">|</span>
-                                <Clock className="h-3.5 w-3.5" /> {presence.check_in_at ? format(new Date(presence.check_in_at), 'HH:mm') : '-'}
+                                <Clock className="h-3.5 w-3.5" /> {presence.check_in_at ? { format(new Date(presence.check_in_at), 'dd MMMM yyyy, HH:mm', { locale: localeId })} : '-'}
                             </div>
                         </div>
                     </div>

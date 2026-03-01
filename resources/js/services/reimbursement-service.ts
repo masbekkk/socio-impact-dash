@@ -30,6 +30,10 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     if (payload.approver_head_id) fd.append('approver_head_id', payload.approver_head_id);
     if (payload.approver_finance_id) fd.append('approver_finance_id', payload.approver_finance_id);
     if (payload.approver_direktur_id) fd.append('approver_direktur_id', payload.approver_direktur_id);
+    if (payload.approver_hr_id) fd.append('approver_hr_id', payload.approver_hr_id);
+    if (payload.start_date) fd.append('start_date', payload.start_date);
+    if (payload.end_date) fd.append('end_date', payload.end_date);
+    if (payload.replacement_pic_id) fd.append('replacement_pic_id', payload.replacement_pic_id);
 
     payload.documents?.forEach((doc, index) => {
         fd.append(`documents[${index}][file]`, doc.file);

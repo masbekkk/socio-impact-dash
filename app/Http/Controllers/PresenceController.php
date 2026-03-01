@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CheckOutRequest;
 use App\Http\Requests\StorePresenceRequest;
 use App\Http\Requests\UpdatePresenceRequest;
-use App\Http\Requests\CheckOutRequest;
 use App\Models\Presence;
 use App\Models\Project;
 use App\Services\PresenceService;
+use Exception;
 use Inertia\Inertia;
 
 final class PresenceController
@@ -20,13 +21,13 @@ final class PresenceController
     public function index(PresenceService $presenceService): \Inertia\Response
     {
         $user = auth()->user();
-        
+
         // Define permission for viewing all presences
         $canViewAll = $user->hasRole(['superadmin', 'direktur', 'head', 'hr']);
 
         $presences = $presenceService->getPresenceHistory(
-            $canViewAll ? null : $user, 
-            request()->all(), 
+            $canViewAll ? null : $user,
+            request()->all(),
             15
         );
 
@@ -47,8 +48,9 @@ final class PresenceController
     public function create(): \Inertia\Response
     {
         $projects = Project::select('id', 'name')->get();
+
         return Inertia::render('Presence/Create', [
-            'projects' => $projects
+            'projects' => $projects,
         ]);
     }
 
@@ -58,7 +60,7 @@ final class PresenceController
     public function store(StorePresenceRequest $request, PresenceService $presenceService): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validated();
-        
+
         $mappedData = [
             'project_id' => $validated['project_id'],
             'activity' => $validated['activity'],
@@ -69,8 +71,9 @@ final class PresenceController
 
         try {
             $presenceService->checkIn(auth()->user(), $mappedData);
+
             return to_route('presences.index')->with('success', 'Check-in berhasil.');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return back()->with('error', $e->getMessage());
         }
     }
@@ -79,8 +82,9 @@ final class PresenceController
     {
         try {
             $presenceService->checkOut(auth()->user(), $request->validated());
+
             return to_route('presences.index')->with('success', 'Check-out berhasil.');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return back()->with('error', $e->getMessage());
         }
     }
@@ -88,24 +92,12 @@ final class PresenceController
     /**
      * Display the specified resource.
      */
-    public function show(string $id): \Inertia\Response
+    public function show(Presence $presence): \Inertia\Response
     {
-        // Mock data loading
-        $json = file_get_contents(resource_path('js/Pages/Presence/presence_logs.json'));
-        $logs = json_decode($json, true);
-
-        // Find the log with the matching ID OR User Name (slug)
-        $presence = collect($logs)->first(function (array $log) use ($id): bool {
-            $slugName = \Illuminate\Support\Str::slug($log['user']['name']);
-            return $log['id'] === $id || $slugName === $id || $log['user']['name'] === $id;
-        });
-
-        if (!$presence) {
-            abort(404, 'Presence log not found for identifier: ' . $id);
-        }
+        $presence->load(['user', 'project']);
 
         return Inertia::render('Presence/Show', [
-            'presence' => $presence
+            'presence' => $presence,
         ]);
     }
 

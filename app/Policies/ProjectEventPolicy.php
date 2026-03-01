@@ -12,7 +12,7 @@ final class ProjectEventPolicy
 {
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create_event');
+        return $user->hasPermissionTo('add_event_calendar');
     }
 
     public function delete(User $user, ProjectEvent $projectEvent): bool
