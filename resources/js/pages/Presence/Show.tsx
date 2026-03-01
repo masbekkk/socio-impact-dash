@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link } from '@inertiajs/react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
-import { ArrowLeft, MapPin, Calendar, Clock, User, Briefcase, FileText, ChevronDown, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Clock, Briefcase, FileText, ChevronDown, CheckCircle, XCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import {
     DropdownMenu,
@@ -24,6 +24,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
+import { id as localeId } from 'date-fns/locale';
 
 interface PresenceData {
     id: number;
@@ -112,13 +113,12 @@ export default function PresenceShow({ presence }: Props) {
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight">Detail Presensi</h1>
                             <div className="flex items-center gap-2 text-muted-foreground text-sm mt-1">
-                                <Calendar className="h-3.5 w-3.5" /> {presence.date}
+                                <Calendar className="h-3.5 w-3.5" /> {format(new Date(presence.date), 'dd MMMM yyyy', { locale: localeId })}
                                 <span className="text-gray-300">|</span>
-                                <Clock className="h-3.5 w-3.5" /> {presence.check_in_at ? { format(new Date(presence.check_in_at), 'dd MMMM yyyy, HH:mm', { locale: localeId })} : '-'}
+                                <Clock className="h-3.5 w-3.5" /> {presence.check_in_at ? format(new Date(presence.check_in_at), 'HH:mm') : '-'}
                             </div>
                         </div>
                     </div>
-                    {/* @ts-ignore */}
                     <div className="flex items-center gap-3">
                         <StatusBadge status={presence.status} />
 
