@@ -29,10 +29,9 @@ final class PermissionController extends Controller
         try {
             $request->validate([
                 'name' => 'required|string|unique:permissions,name',
-                'guard_name' => 'web',
             ]);
 
-            $permission = Permission::create(['name' => $request->name]);
+            $permission = Permission::create(['name' => $request->name, 'guard_name' => 'web']);
 
             return JsonResponseFormatter::created($permission, 'Permission created successfully');
         } catch (Throwable $th) {
