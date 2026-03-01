@@ -20,7 +20,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { cn } from '@/lib/utils';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     addMonths,
     eachDayOfInterval,
@@ -44,6 +44,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Plus,
+    Trash2,
 } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -69,6 +70,10 @@ interface ProjectData {
 interface PageProps {
     events: CalendarEvent[];
     projects: ProjectData[];
+    auth: {
+        user: any;
+        permissions: string[];
+    };
 }
 
 const EVENT_STYLES: Record<EventType, string> = {
@@ -95,6 +100,10 @@ export default function CalendarIndex({
         null,
     );
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+    const { auth } = usePage<any>().props;
+    const canDelete = auth.permissions.includes('delete_event');
 
     // Filters
     const [visibleTypes, setVisibleTypes] = useState<
@@ -149,6 +158,19 @@ export default function CalendarIndex({
     const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
     const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const goToToday = () => setCurrentDate(new Date());
+
+    const handleDelete = () => {
+        if (!selectedEvent) return;
+
+        const id = selectedEvent.id.replace('event_', '');
+        router.delete(route('calendar.destroy', id), {
+            onSuccess: () => {
+                setIsDeleteConfirmOpen(false);
+                setIsDetailOpen(false);
+                setSelectedEvent(null);
+            },
+        });
+    };
 
     // Generate Calendar Grid
     const monthStart = startOfMonth(currentDate);
@@ -626,12 +648,56 @@ export default function CalendarIndex({
                         </div>
                     )}
 
-                    <DialogFooter>
+                    <DialogFooter className="flex justify-between items-center sm:justify-between">
+                        {canDelete && (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => setIsDeleteConfirmOpen(true)}
+                                className="gap-1.5"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Hapus
+                            </Button>
+                        )}
                         <Button
                             variant="outline"
                             onClick={() => setIsDetailOpen(false)}
                         >
                             Tutup
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={isDeleteConfirmOpen}
+                onOpenChange={setIsDeleteConfirmOpen}
+            >
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle>Hapus Agenda</DialogTitle>
+                        <DialogDescription>
+                            Apakah Anda yakin ingin menghapus agenda "
+                            {selectedEvent?.title}"? Tindakan ini tidak dapat
+                            dibatalkan.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0 mt-4">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsDeleteConfirmOpen(false)}
+                            className="w-full sm:w-auto"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDelete}
+                            className="w-full sm:w-auto"
+                        >
+                            Hapus Sekarang
                         </Button>
                     </DialogFooter>
                 </DialogContent>

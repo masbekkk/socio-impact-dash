@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Calendar\CreateCalendarEvent;
+use App\Actions\Calendar\DeleteCalendarEvent;
 use App\Actions\Calendar\GetCalendarEvents;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -53,5 +54,12 @@ final class CalendarController
         return Inertia::render('Calendar/Show', [
             'selectedDate' => $date,
         ]);
+    }
+
+    public function destroy(int $id, DeleteCalendarEvent $deleteCalendarEvent): \Illuminate\Http\RedirectResponse
+    {
+        $deleteCalendarEvent->handle($id);
+
+        return back()->with('success', 'Agenda berhasil dihapus.');
     }
 }

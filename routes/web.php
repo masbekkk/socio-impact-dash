@@ -52,6 +52,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // Calendar
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
     Route::post('calendar', [CalendarController::class, 'store'])->name('calendar.store');
+    Route::delete('calendar/{id}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
     Route::get('calendar/day/{date}', [CalendarController::class, 'show'])->name('calendar.show');
 
     // Leaves

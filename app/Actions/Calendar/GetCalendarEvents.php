@@ -8,6 +8,8 @@ use App\Enums\UserRole;
 use App\Models\Project;
 use App\Models\ProjectEvent;
 use App\Models\User;
+use App\Policies\ProjectEventPolicy;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Collection;
 
 final readonly class GetCalendarEvents
@@ -31,8 +33,7 @@ final readonly class GetCalendarEvents
                     ->orWhere('division_id', $divisionId);
             });
 
-            // Events linked to visible projects or created by them (general events)
-            $visibleProjectIds = (clone $projectsQuery)->select('id');
+            $visibleProjectIds = $projectsQuery->pluck('id');
             $eventsQuery->where(function ($q) use ($user, $visibleProjectIds) {
                 $q->whereIn('project_id', $visibleProjectIds)
                     ->orWhere('created_by', $user->id);
@@ -46,7 +47,7 @@ final readonly class GetCalendarEvents
                     ->orWhere('account_manager_id', $user->id);
             });
 
-            $visibleProjectIds = (clone $projectsQuery)->select('id');
+            $visibleProjectIds = $projectsQuery->pluck('id');
             $eventsQuery->where(function ($q) use ($user, $visibleProjectIds) {
                 $q->whereIn('project_id', $visibleProjectIds)
                     ->orWhere('created_by', $user->id);

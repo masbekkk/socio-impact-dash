@@ -36,18 +36,21 @@ it('fetches only own events for pegawai', function (): void {
         'project_id' => $ownProject->id,
         'created_by' => $this->pegawai->id,
         'start_date' => now(),
-        'name' => 'Own Event'
+        'name' => 'Own Event',
     ]);
 
     $otherProject = Project::factory()->create([
         'created_by' => $this->superadmin->id,
         'pic_id' => $this->superadmin->id,
+        'account_manager_id' => $this->superadmin->id,
+        'head_id' => $this->superadmin->id,
+        // Omit division_id to avoid FK issues, or use a real one
     ]);
     $otherEvent = ProjectEvent::factory()->create([
         'project_id' => $otherProject->id,
         'created_by' => $this->superadmin->id,
         'start_date' => now(),
-        'name' => 'Other Event'
+        'name' => 'Other Event',
     ]);
 
     actingAs($this->pegawai)
@@ -91,4 +94,51 @@ it('allows creating calendar project event', function (): void {
         'created_by' => $this->pegawai->id,
         'project_id' => $ownProject->id,
     ]);
+});
+
+it('allows deleting own calendar event', function (): void {
+    $event = ProjectEvent::factory()->create([
+        'created_by' => $this->pegawai->id,
+        'name' => 'To Be Deleted',
+    ]);
+
+    // Give permission
+    $this->pegawai->givePermissionTo('delete_event');
+
+    actingAs($this->pegawai)
+        ->delete(route('calendar.destroy', $event->id))
+        ->assertRedirect();
+
+    $this->assertDatabaseMissing('project_events', ['id' => $event->id]);
+});
+
+it('forbids deleting other users calendar event for non-admin', function (): void {
+    $event = ProjectEvent::factory()->create([
+        'created_by' => $this->superadmin->id,
+        'name' => 'Other Persons Event',
+    ]);
+
+    // Give permission but it's not their event
+    $this->pegawai->givePermissionTo('delete_event');
+
+    actingAs($this->pegawai)
+        ->delete(route('calendar.destroy', $event->id))
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('project_events', ['id' => $event->id]);
+});
+
+it('allows superadmin to delete any event', function (): void {
+    $event = ProjectEvent::factory()->create([
+        'created_by' => $this->pegawai->id,
+        'name' => 'Pegawai Event',
+    ]);
+
+    $this->superadmin->givePermissionTo('delete_event');
+
+    actingAs($this->superadmin)
+        ->delete(route('calendar.destroy', $event->id))
+        ->assertRedirect();
+
+    $this->assertDatabaseMissing('project_events', ['id' => $event->id]);
 });
