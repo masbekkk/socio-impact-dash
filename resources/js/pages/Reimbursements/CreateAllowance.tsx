@@ -79,7 +79,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
             const end = new Date(formData.end_date);
             if (start <= end) {
                 let days = 0;
-                let date = new Date(start);
+                const date = new Date(start);
                 while (date <= end) {
                     if (date.getDay() !== 0 && date.getDay() !== 6) {
                         days++;

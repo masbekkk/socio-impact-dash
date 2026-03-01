@@ -32,7 +32,16 @@ final class UpdateProjectRequest extends FormRequest
             'division_id' => ['sometimes', 'required', 'exists:divisions,id'],
             'account_manager_id' => ['sometimes', 'required', 'exists:users,id'],
             'head_id' => ['sometimes', 'required', 'exists:users,id'],
-            'pic_id' => ['sometimes', 'required', 'exists:users,id'],
+            'pic_id' => [
+                'sometimes',
+                'required',
+                'exists:users,id',
+                Rule::exists('users', 'id')->where(function ($query) {
+                    $query->whereHas('roles', function ($q) {
+                        $q->where('name', '!=', \App\Enums\UserRole::Direktur->value);
+                    });
+                }),
+            ],
             'project_type' => ['sometimes', 'required', 'string'],
             'status' => ['sometimes', 'required', Rule::enum(ProjectStatus::class)],
             'budget_total' => ['sometimes', 'required', 'numeric', 'min:0'],

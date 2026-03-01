@@ -154,6 +154,40 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
     setCurrentPage(1); // Reset to first page on filter change
   };
 
+  const renderPagination = () => {
+    const { current_page, last_page } = pagination;
+    const pages = [];
+    const delta = 1; // Number of siblings to show on each side
+
+    for (let i = 1; i <= last_page; i++) {
+      if (
+        i === 1 ||
+        i === last_page ||
+        (i >= current_page - delta && i <= current_page + delta)
+      ) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== "...") {
+        pages.push("...");
+      }
+    }
+
+    return pages.map((page, index) => (
+      <Button
+        key={index}
+        variant={page === current_page ? "default" : "outline"}
+        size="icon"
+        className={cn(
+          "size-8 text-xs",
+          page === "..." && "cursor-default hover:bg-transparent border-none shadow-none"
+        )}
+        onClick={() => typeof page === "number" && setCurrentPage(page)}
+        disabled={page === "..."}
+      >
+        {page}
+      </Button>
+    ));
+  };
+
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
       <Head title="Proyek" />
@@ -473,47 +507,45 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex w-fit items-center justify-center text-sm font-medium">
-                Halaman {pagination.current_page} dari {pagination.last_page}
+              <div className="flex w-fit items-center justify-center text-sm font-medium gap-1">
+                {renderPagination()}
               </div>
-              <div className="ml-auto flex items-center gap-2 lg:ml-0">
+              <div className="ml-auto flex items-center gap-1 lg:ml-0">
                 <Button
                   variant="outline"
-                  className="hidden h-8 w-8 p-0 lg:flex"
+                  size="icon"
+                  className="size-8"
                   disabled={pagination.current_page === 1}
                   onClick={() => setCurrentPage(1)}
                 >
-                  <span className="sr-only">Go to first page</span>
                   <ChevronsLeft className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
-                  className="size-8"
                   size="icon"
+                  className="size-8"
                   disabled={pagination.current_page === 1}
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 >
-                  <span className="sr-only">Go to previous page</span>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
+
                 <Button
                   variant="outline"
-                  className="size-8"
                   size="icon"
+                  className="size-8"
                   disabled={pagination.current_page === pagination.last_page}
                   onClick={() => setCurrentPage(prev => Math.min(pagination.last_page, prev + 1))}
                 >
-                  <span className="sr-only">Go to next page</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
-                  className="hidden size-8 lg:flex"
                   size="icon"
+                  className="size-8"
                   disabled={pagination.current_page === pagination.last_page}
                   onClick={() => setCurrentPage(pagination.last_page)}
                 >
-                  <span className="sr-only">Go to last page</span>
                   <ChevronsRight className="h-4 w-4" />
                 </Button>
               </div>

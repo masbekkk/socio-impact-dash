@@ -10,12 +10,13 @@ import FileUploadDropzone from '@/components/FileUploadDropzone'
 import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import MoneyInput from '@/components/MoneyInput'
-import { ArrowLeft, ArrowRight, X, Save, Building2, Plus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, X, Save, Building2, Plus, AlertCircle } from 'lucide-react'
 import { Head, Link, usePage, router } from '@inertiajs/react'
 import { PROJECT_MAPPINGS } from '@/constants/project-mappings'
 import axios from 'axios';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function ProjectsEdit({ project_slug, divisions, employees }: { project_slug: string | number, divisions: any[], employees: any[] }) {
     const { props } = usePage<any>();
@@ -24,6 +25,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
     const headUsers = employees.filter(emp => emp.roles?.some((r: any) => r.name === 'head'));
     const financeUsers = employees.filter(emp => emp.roles?.some((r: any) => r.name === 'finance'));
+    const picUsers = employees.filter(emp => !emp.roles?.some((r: any) => r.name === 'direktur'));
 
     const [project, setProject] = useState<any>(null);
     const [step, setStep] = useState('basic')
@@ -33,6 +35,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [saving, setSaving] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [errors, setErrors] = useState<any>({});
+    const [generalError, setGeneralError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         code: '',
@@ -228,6 +231,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         setSaving(true);
         setUploadProgress(0);
         setErrors({});
+        setGeneralError(null);
 
         const submitData = new FormData();
         // Laravel method spoofing for PUT with multipart/form-data
@@ -314,10 +318,12 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             });
             router.visit(`/projects/${project_slug}`);
         } catch (error: any) {
+            console.error("Error updating project:", error);
             if (error.response?.status === 422) {
                 setErrors(error.response.data.errors);
+                setGeneralError("Terdapat kesalahan validasi. Silakan periksa kembali data Anda.");
             } else {
-                console.error("Error updating project:", error);
+                setGeneralError(error.response?.data?.message || "Terjadi kesalahan saat menyimpan proyek. Silakan coba lagi.");
             }
         } finally {
             setSaving(false);
@@ -402,6 +408,14 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                             ))}
                         </TabsList>
                     </div>
+
+                    {generalError && (
+                        <Alert variant="destructive" className="mb-6">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Error</AlertTitle>
+                            <AlertDescription>{generalError}</AlertDescription>
+                        </Alert>
+                    )}
 
                     {/* Step 1: Identitas */}
                     <TabsContent value="basic" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
@@ -523,13 +537,13 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                         {errors.head_id && <p className="text-xs text-red-500">{errors.head_id}</p>}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Finance <span className="text-red-500">*</span></Label>
+                                        <Label>PIC <span className="text-red-500">*</span></Label>
                                         <Select value={formData.pic_id} onValueChange={(v) => handleInputChange('pic_id', v)}>
                                             <SelectTrigger className={errors.pic_id ? 'border-red-500' : ''}>
-                                                <SelectValue placeholder="Pilih Finance" />
+                                                <SelectValue placeholder="Pilih PIC" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {financeUsers.map((emp) => (
+                                                {picUsers.map((emp) => (
                                                     <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
                                                 ))}
                                             </SelectContent>

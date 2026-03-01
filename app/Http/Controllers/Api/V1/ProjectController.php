@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Actions\Projects\CreateProject;
 use App\Actions\Projects\DeleteProject;
 use App\Actions\Projects\UpdateProject;
+use App\Enums\UserRole;
 use App\Formatters\JsonResponseFormatter;
 use App\Http\Requests\Projects\StoreProjectRequest;
 use App\Http\Requests\Projects\UpdateProjectRequest;
@@ -16,6 +17,7 @@ use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Throwable;
 
 final class ProjectController extends Controller
 {
@@ -25,7 +27,7 @@ final class ProjectController extends Controller
 
         /** @var \App\Models\User $user */
         $user = $request->user();
-        $canViewAll = [\App\Enums\UserRole::Superadmin, \App\Enums\UserRole::Direktur, \App\Enums\UserRole::Finance];
+        $canViewAll = [UserRole::Superadmin, UserRole::Direktur, UserRole::Finance, UserRole::HR];
 
         if (! $user->hasRole($canViewAll)) {
             $query->where('created_by', $user->id);
@@ -71,18 +73,18 @@ final class ProjectController extends Controller
     public function store(StoreProjectRequest $request, CreateProject $createProject): JsonResponse
     {
         try {
-        $user = $request->user();
-        $project = $createProject->handle($request->validated(), $user->id);
+            $user = $request->user();
+            $project = $createProject->handle($request->validated(), $user->id);
 
-        return JsonResponseFormatter::success(
-            new ProjectResource($project),
-            'Project created successfully',
-            201
-        );
-        } catch (\Throwable $th) {
+            return JsonResponseFormatter::success(
+                new ProjectResource($project),
+                'Project created successfully',
+                201
+            );
+        } catch (Throwable $th) {
             return response()->json(['err' => $th->getMessage()]);
         }
-        
+
     }
 
     public function show(Project $project): JsonResponse
