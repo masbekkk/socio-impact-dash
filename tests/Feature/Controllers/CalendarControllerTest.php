@@ -78,6 +78,21 @@ it('allows creating calendar event', function (): void {
     ]);
 });
 
+it('forbids creating calendar event without permission', function (): void {
+    $guest = User::factory()->create(); // No role, no permission
+
+    actingAs($guest)
+        ->post(route('calendar.store'), [
+            'name' => 'Forbidden Event',
+            'start_date' => now()->format('Y-m-d'),
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseMissing('project_events', [
+        'name' => 'Forbidden Event',
+    ]);
+});
+
 it('allows creating calendar project event', function (): void {
     $ownProject = Project::factory()->create(['created_by' => $this->pegawai->id]);
 

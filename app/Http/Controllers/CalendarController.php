@@ -35,6 +35,8 @@ final class CalendarController
 
     public function store(Request $request, CreateCalendarEvent $createCalendarEvent): \Illuminate\Http\RedirectResponse
     {
+        \Illuminate\Support\Facades\Gate::authorize('create', \App\Models\ProjectEvent::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'start_date' => ['required', 'date'],

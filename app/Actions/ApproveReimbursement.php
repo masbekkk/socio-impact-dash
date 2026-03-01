@@ -38,6 +38,7 @@ final readonly class ApproveReimbursement
 
             $nextStatus = match ($role) {
                 'head' => ReimbursementStatus::HeadApproved,
+                'hr' => ReimbursementStatus::HRApproved,
                 'finance' => ReimbursementStatus::FinanceApproved,
                 default => $reimbursement->status,
             };

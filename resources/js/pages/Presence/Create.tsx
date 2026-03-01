@@ -40,6 +40,14 @@ export default function CreatePresence({ projects }: PageProps) {
     const [stream, setStream] = useState<MediaStream | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Sync stream to video element when it opens
+    useEffect(() => {
+        if (isCameraOpen && stream && videoRef.current) {
+            videoRef.current.srcObject = stream;
+        }
+    }, [isCameraOpen, stream]);
 
     useEffect(() => {
         handleFetchLocation();
@@ -100,13 +108,10 @@ export default function CreatePresence({ projects }: PageProps) {
             setStream(newStream);
             setIsCameraOpen(true);
             setCameraFacingMode(facingMode);
-
-            if (videoRef.current) {
-                videoRef.current.srcObject = newStream;
-            }
         } catch (err) {
             console.error("Error accessing camera:", err);
             alert("Gagal membuka kamera. Pastikan izin kamera diberikan.");
+            setIsCameraOpen(false);
         }
     };
 
@@ -269,10 +274,23 @@ export default function CreatePresence({ projects }: PageProps) {
                                                     <p className="font-medium text-sm">Ambil Foto Presensi</p>
                                                     <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">Pastikan wajah dan lokasi terlihat jelas</p>
                                                 </div>
-                                                <Button type="button" onClick={() => startCamera('user')} variant="outline">
-                                                    <Camera className="h-4 w-4 mr-2" />
-                                                    Buka Kamera
-                                                </Button>
+                                                <div className="flex flex-wrap justify-center gap-3 mt-2">
+                                                    <Button type="button" onClick={() => startCamera('user')} variant="outline" className="gap-2">
+                                                        <Camera className="h-4 w-4" />
+                                                        Buka Kamera
+                                                    </Button>
+                                                    <Button type="button" onClick={() => fileInputRef.current?.click()} variant="outline" className="gap-2">
+                                                        <ImageIcon className="h-4 w-4" />
+                                                        Galeri / File
+                                                    </Button>
+                                                    <input
+                                                        type="file"
+                                                        ref={fileInputRef}
+                                                        onChange={handleFileChange}
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                    />
+                                                </div>
                                             </div>
                                         )}
 

@@ -412,17 +412,40 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
                         <p className="text-xs text-muted-foreground mb-0.5">Kegiatan</p>
                         <div className="line-clamp-2 text-muted-foreground">{log.activity}</div>
                       </div>
-                      <div className="text-sm">
-                        <p className="text-xs text-muted-foreground mb-0.5">Lokasi</p>
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${log.check_in_latitude},${log.check_in_longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary hover:underline"
-                        >
-                          <MapPin className="h-3 w-3" />
-                          {Number(log.check_in_latitude || 0).toFixed(4)}, {Number(log.check_in_longitude || 0).toFixed(4)}
-                        </a>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-sm">
+                          <p className="text-xs text-muted-foreground mb-0.5">Check-In</p>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium">{log.check_in_at ? format(new Date(log.check_in_at), 'HH:mm') : '-'}</span>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${log.check_in_latitude},${log.check_in_longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-[10px] text-emerald-600 hover:underline"
+                            >
+                              <MapPin className="h-2 w-2" />
+                              View Maps
+                            </a>
+                          </div>
+                        </div>
+                        <div className="text-sm">
+                          <p className="text-xs text-muted-foreground mb-0.5">Check-Out</p>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium">{log.check_out_at ? format(new Date(log.check_out_at), 'HH:mm') : '-'}</span>
+                            {log.check_out_at && (
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${log.check_out_latitude},${log.check_out_longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-[10px] text-rose-600 hover:underline"
+                              >
+                                <MapPin className="h-2 w-2" />
+                                View Maps
+                              </a>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -444,7 +467,7 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
                   <TableHead>Karyawan</TableHead>
                   <TableHead>Proyek</TableHead>
                   <TableHead className="hidden md:table-cell">Kegiatan</TableHead>
-                  <TableHead>Lokasi</TableHead>
+                  <TableHead className="w-[200px]">Check-In / Out</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right w-[80px]">Aksi</TableHead>
                 </TableRow>
@@ -461,8 +484,16 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
                     <TableRow key={log.id} className="group">
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <span className="font-medium">{log.date}</span>
-                          <span className="text-xs text-muted-foreground">{log.check_in_at ? format(new Date(log.check_in_at), 'HH:mm') : '-'}</span>
+                          <span className="font-medium text-sm">{format(new Date(log.date), 'dd MMM yyyy', { locale: id })}</span>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <span className="font-medium text-emerald-600 underline decoration-emerald-200 decoration-offset-2">
+                              {log.check_in_at ? format(new Date(log.check_in_at), 'HH:mm') : '-'}
+                            </span>
+                            <span>→</span>
+                            <span className={cn("font-medium", log.check_out_at ? "text-rose-600 underline decoration-rose-200 decoration-offset-2" : "text-muted-foreground")}>
+                              {log.check_out_at ? format(new Date(log.check_out_at), 'HH:mm') : '-'}
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
@@ -480,16 +511,35 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="font-mono text-[10px] font-normal gap-1 hover:bg-muted cursor-pointer" asChild>
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${log.check_in_latitude},${log.check_in_longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <MapPin className="h-3 w-3" />
-                            {Number(log.check_in_latitude || 0).toFixed(4)}, {Number(log.check_in_longitude || 0).toFixed(4)}
-                          </a>
-                        </Badge>
+                        <div className="flex flex-col gap-2">
+                          {/* Check-In Location */}
+                          <Badge variant="outline" className="font-mono text-[9px] font-normal gap-1 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 cursor-pointer w-fit py-0 px-2 h-5" asChild title="Check-In Location">
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${log.check_in_latitude},${log.check_in_longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <span className="text-emerald-600 font-bold mr-1">IN</span>
+                              {Number(log.check_in_latitude || 0).toFixed(4)}, {Number(log.check_in_longitude || 0).toFixed(4)}
+                            </a>
+                          </Badge>
+
+                          {/* Check-Out Location */}
+                          {log.check_out_at ? (
+                            <Badge variant="outline" className="font-mono text-[9px] font-normal gap-1 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-700 cursor-pointer w-fit py-0 px-2 h-5" asChild title="Check-Out Location">
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${log.check_out_latitude},${log.check_out_longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <span className="text-rose-600 font-bold mr-1">OUT</span>
+                                {Number(log.check_out_latitude || 0).toFixed(4)}, {Number(log.check_out_longitude || 0).toFixed(4)}
+                              </a>
+                            </Badge>
+                          ) : (
+                            <span className="text-[9px] text-muted-foreground italic ml-2">Belum checkout</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {/* @ts-ignore */}
@@ -507,8 +557,7 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                             <DropdownMenuItem asChild>
-                              {/* Using name/slug in URL as requested */}
-                              <Link href={`/presences/${log.user.name.split(' ').join('-').toLowerCase()}`} className="cursor-pointer flex items-center">
+                              <Link href={`/presences/${log.id}`} className="cursor-pointer flex items-center">
                                 <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Lihat Detail
                               </Link>
                             </DropdownMenuItem>

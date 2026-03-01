@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\DivisionController as AdminDivisionController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\LetterRequestController;
 use App\Http\Controllers\PresenceController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReimbursementController;
@@ -16,14 +19,10 @@ use App\Http\Controllers\UserEmailVerificationNotificationController;
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
-use App\Http\Controllers\CalendarController;
-use App\Http\Controllers\LetterRequestController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-use App\Http\Controllers\DashboardController;
-
-Route::get('/', fn() => redirect()->route('projects.index'))->name('home');
+Route::get('/', fn () => redirect()->route('dashboard'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -62,15 +61,13 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
     Route::post('leaves/{leave}/reject', [LeaveController::class, 'reject'])->name('leaves.reject');
 
-
-
     // Admin
     Route::prefix('admin')->middleware('can:adminAccess')->group(function (): void {
         Route::resource('users', AdminUserController::class);
         Route::resource('divisions', AdminDivisionController::class);
-        Route::resource('letter-codes', \App\Http\Controllers\Admin\LetterCodeController::class)->except(['store', 'update', 'destroy']);
-        Route::resource('letter-divisions', \App\Http\Controllers\Admin\LetterDivisionController::class)->except(['store', 'update', 'destroy']);
-        Route::get('rbac', fn() => Inertia::render('admin/rbac/index'))->name('admin.rbac');
+        Route::resource('letter-codes', App\Http\Controllers\Admin\LetterCodeController::class)->except(['store', 'update', 'destroy']);
+        Route::resource('letter-divisions', App\Http\Controllers\Admin\LetterDivisionController::class)->except(['store', 'update', 'destroy']);
+        Route::get('rbac', fn () => Inertia::render('admin/rbac/index'))->name('admin.rbac');
     });
 });
 
@@ -90,7 +87,7 @@ Route::middleware('auth')->group(function (): void {
         ->name('password.update');
 
     // Appearance...
-    Route::get('settings/appearance', fn() => Inertia::render('appearance/update'))->name('appearance.edit');
+    Route::get('settings/appearance', fn () => Inertia::render('appearance/update'))->name('appearance.edit');
 
     // User Two-Factor Authentication...
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
