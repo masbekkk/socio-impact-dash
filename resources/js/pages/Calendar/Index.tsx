@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 
-type EventType = 'project' | 'leave' | 'monitoring' | 'event';
+type EventType = 'event';
 
 interface CalendarEvent {
     id: string;
@@ -56,6 +56,7 @@ interface CalendarEvent {
     endDate: string | null;
     type: EventType;
     description?: string;
+    project_name?: string | null;
     allDay?: boolean;
     route?: string;
 }
@@ -71,17 +72,10 @@ interface PageProps {
 }
 
 const EVENT_STYLES: Record<EventType, string> = {
-    project:
-        'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700 shadow-sm', // Info logic essentially
-    leave: 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200', // Destructive
-    monitoring: 'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200', // Primary/Secondary
-    event: 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200', // Muted
+    event: 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200',
 };
 
 const EVENT_LABELS: Record<EventType, string> = {
-    project: 'Project',
-    leave: 'Cuti',
-    monitoring: 'Monitoring',
     event: 'Agenda',
 };
 
@@ -97,14 +91,15 @@ export default function CalendarIndex({
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+        null,
+    );
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
 
     // Filters
     const [visibleTypes, setVisibleTypes] = useState<
         Record<EventType, boolean>
     >({
-        project: true,
-        leave: true,
-        monitoring: true,
         event: true,
     });
 
@@ -113,11 +108,11 @@ export default function CalendarIndex({
     };
 
     // Form
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset, transform } = useForm({
         name: '',
         start_date: format(new Date(), 'yyyy-MM-dd'),
         end_date: '',
-        project_id: '',
+        project_id: 'none',
         notes: '',
     });
 
@@ -128,8 +123,19 @@ export default function CalendarIndex({
         setIsDialogOpen(true);
     };
 
+    const handleOpenDetail = (event: CalendarEvent) => {
+        setSelectedEvent(event);
+        setIsDetailOpen(true);
+    };
+
     const submitForm = (e: React.FormEvent) => {
         e.preventDefault();
+
+        transform((data: any) => ({
+            ...data,
+            project_id: data.project_id === 'none' ? '' : data.project_id,
+        }));
+
         post(route('calendar.store'), {
             preserveScroll: true,
             onSuccess: () => {
@@ -210,40 +216,7 @@ export default function CalendarIndex({
 
                     <div className="flex w-full items-center gap-2 overflow-x-auto pb-2 sm:w-auto sm:pb-0">
                         {/* Filters */}
-                        <div className="flex shrink-0 rounded-md border bg-white p-1 shadow-sm">
-                            {Object.entries(EVENT_LABELS).map(
-                                ([type, label]) => (
-                                    <Button
-                                        key={type}
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                            toggleFilter(type as EventType)
-                                        }
-                                        className={cn(
-                                            'h-7 rounded px-2 text-xs',
-                                            visibleTypes[type as EventType]
-                                                ? 'bg-gray-100 font-medium text-gray-900'
-                                                : 'opacity-50 hover:opacity-100',
-                                        )}
-                                    >
-                                        <div
-                                            className={cn(
-                                                'mr-1.5 h-2 w-2 rounded-full',
-                                                type === 'project'
-                                                    ? 'bg-emerald-500'
-                                                    : type === 'leave'
-                                                      ? 'bg-red-500'
-                                                      : type === 'monitoring'
-                                                        ? 'bg-blue-500'
-                                                        : 'bg-slate-500',
-                                            )}
-                                        />
-                                        {label}
-                                    </Button>
-                                ),
-                            )}
-                        </div>
+                        {/* Filters removed as per user request */}
 
                         <Button
                             onClick={() => handleOpenDialog()}
@@ -268,10 +241,10 @@ export default function CalendarIndex({
                                             atau milestone untuk tanggal{' '}
                                             {selectedDate
                                                 ? format(
-                                                      selectedDate,
-                                                      'dd MMMM yyyy',
-                                                      { locale: id },
-                                                  )
+                                                    selectedDate,
+                                                    'dd MMMM yyyy',
+                                                    { locale: id },
+                                                )
                                                 : 'ini'}
                                             .
                                         </DialogDescription>
@@ -302,7 +275,7 @@ export default function CalendarIndex({
                                             )}
                                         </div>
 
-                                        <div className="grid gap-2">
+                                        {/* <div className="grid gap-2">
                                             <Label htmlFor="project_id">
                                                 Pilih Project (Opsional)
                                             </Label>
@@ -316,7 +289,7 @@ export default function CalendarIndex({
                                                     <SelectValue placeholder="Pilih Project" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="">
+                                                    <SelectItem value="none">
                                                         -- Tidak ada Project
                                                         (Umum) --
                                                     </SelectItem>
@@ -335,7 +308,7 @@ export default function CalendarIndex({
                                                     {errors.project_id}
                                                 </span>
                                             )}
-                                        </div>
+                                        </div> */}
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="grid gap-2">
@@ -476,7 +449,7 @@ export default function CalendarIndex({
                                     className={cn(
                                         'group relative flex min-h-[80px] flex-col gap-0.5 bg-white p-1 transition-all hover:bg-gray-50 md:min-h-[120px] md:gap-1 md:p-2',
                                         !isCurrentMonth &&
-                                            'bg-gray-50/30 text-gray-400',
+                                        'bg-gray-50/30 text-gray-400',
                                     )}
                                 >
                                     <div className="mb-0.5 flex items-center justify-between md:mb-1">
@@ -487,7 +460,7 @@ export default function CalendarIndex({
                                                     ? 'bg-[var(--sidebar)] text-white shadow-sm'
                                                     : 'text-gray-700',
                                                 !isCurrentMonth &&
-                                                    'text-gray-400',
+                                                'text-gray-400',
                                             )}
                                         >
                                             {format(day, 'd')}
@@ -509,17 +482,7 @@ export default function CalendarIndex({
                                                 <>
                                                     <div
                                                         className={cn(
-                                                            'h-1 w-1 shrink-0 rounded-full md:h-1.5 md:w-1.5',
-                                                            event.type ===
-                                                                'project'
-                                                                ? 'bg-white'
-                                                                : event.type ===
-                                                                    'leave'
-                                                                  ? 'bg-red-500'
-                                                                  : event.type ===
-                                                                      'monitoring'
-                                                                    ? 'bg-blue-500'
-                                                                    : 'bg-slate-500',
+                                                            'h-1 w-1 shrink-0 rounded-full md:h-1.5 md:w-1.5 bg-slate-500',
                                                         )}
                                                     />
                                                     <span className="flex-1 truncate">
@@ -534,21 +497,15 @@ export default function CalendarIndex({
                                             );
 
                                             // Make actionable via route if it exists
-                                            if (event.route) {
-                                                return (
-                                                    <a
-                                                        key={event.id}
-                                                        href={event.route}
-                                                        title={
-                                                            event.description ||
-                                                            event.title
-                                                        }
-                                                        className={className}
-                                                    >
-                                                        <Inner />
-                                                    </a>
-                                                );
-                                            }
+                                            const clickHandler = () => {
+                                                if (event.route) {
+                                                    window.location.href =
+                                                        event.route;
+                                                } else {
+                                                    handleOpenDetail(event);
+                                                }
+                                            };
+
                                             return (
                                                 <div
                                                     key={event.id}
@@ -556,7 +513,8 @@ export default function CalendarIndex({
                                                         event.description ||
                                                         event.title
                                                     }
-                                                    className={className}
+                                                    className={cn(className, 'cursor-pointer')}
+                                                    onClick={clickHandler}
                                                 >
                                                     <Inner />
                                                 </div>
@@ -590,6 +548,94 @@ export default function CalendarIndex({
                     </div>
                 </div>
             </div>
+            {/* Detail Event Dialog */}
+            <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold">
+                            Detail Agenda
+                        </DialogTitle>
+                        <DialogDescription>
+                            Informasi detail mengenai agenda yang dipilih.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {selectedEvent && (
+                        <div className="grid gap-4 py-4">
+                            <div className="flex flex-col gap-1">
+                                <Label className="text-xs text-muted-foreground">
+                                    Nama Agenda
+                                </Label>
+                                <div className="text-base font-semibold">
+                                    {selectedEvent.title}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex flex-col gap-1">
+                                    <Label className="text-xs text-muted-foreground">
+                                        Tanggal
+                                    </Label>
+                                    <div className="text-sm">
+                                        {format(
+                                            parseISO(selectedEvent.date),
+                                            'EEEE, d MMMM yyyy',
+                                            { locale: id },
+                                        )}
+                                    </div>
+                                </div>
+                                {selectedEvent.endDate && (
+                                    <div className="flex flex-col gap-1">
+                                        <Label className="text-xs text-muted-foreground">
+                                            Sampai Tanggal
+                                        </Label>
+                                        <div className="text-sm">
+                                            {format(
+                                                parseISO(selectedEvent.endDate),
+                                                'EEEE, d MMMM yyyy',
+                                                { locale: id },
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {selectedEvent.project_name && (
+                                <div className="flex flex-col gap-1">
+                                    <Label className="text-xs text-muted-foreground">
+                                        Proyek Terkait
+                                    </Label>
+                                    <Badge
+                                        variant="outline"
+                                        className="w-fit bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    >
+                                        {selectedEvent.project_name}
+                                    </Badge>
+                                </div>
+                            )}
+
+                            <div className="flex flex-col gap-1">
+                                <Label className="text-xs text-muted-foreground">
+                                    Catatan
+                                </Label>
+                                <div className="rounded-md border bg-gray-50 p-3 text-sm text-gray-700 whitespace-pre-wrap">
+                                    {selectedEvent.description ||
+                                        'Tidak ada catatan.'}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsDetailOpen(false)}
+                        >
+                            Tutup
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppSidebarLayout>
     );
 }

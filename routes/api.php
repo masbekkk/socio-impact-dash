@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\V1\LeaveController;
 use App\Http\Controllers\Api\V1\ReimbursementController;
+use App\Http\Controllers\CalendarController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'can:view-admin'])->prefix('rbac')->group(function () {
@@ -57,4 +58,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     // Leaves
     Route::apiResource('leaves', LeaveController::class)->only(['index', 'store', 'show'])->names('api.leaves');
     Route::post('leaves/{code}/status', [LeaveController::class, 'updateStatus']);
+    // Calendar
+    Route::get('calendar', [CalendarController::class, 'index'])->name('api.v1.calendar.index');
+    Route::post('calendar', [CalendarController::class, 'store'])->name('api.v1.calendar.store');
 });

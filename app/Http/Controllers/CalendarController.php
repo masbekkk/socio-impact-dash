@@ -22,12 +22,13 @@ final class CalendarController
 
         return Inertia::render('Calendar/Index', [
             'events' => $events,
+            'projects' => [],
             // Also send projects for the dropdown in "Create Event" modal
-            'projects' => $isExecutive
-                ? \App\Models\Project::select('id', 'name')->orderBy('name')->get()
-                : ($isHead
-                    ? \App\Models\Project::where('division_id', $user->division_id)->orWhere('created_by', $user->id)->select('id', 'name')->orderBy('name')->get()
-                    : \App\Models\Project::where('created_by', $user->id)->select('id', 'name')->orderBy('name')->get())
+            // 'projects' => $isExecutive
+            //     ? \App\Models\Project::select('id', 'name')->orderBy('name')->get()
+            //     : ($isHead
+            //         ? \App\Models\Project::where('division_id', $user->division_id)->orWhere('created_by', $user->id)->select('id', 'name')->orderBy('name')->get()
+            //         : \App\Models\Project::where('created_by', $user->id)->select('id', 'name')->orderBy('name')->get()),
         ]);
     }
 

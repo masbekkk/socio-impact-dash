@@ -30,21 +30,31 @@ it('renders calendar index view', function (): void {
         ->assertInertia(fn ($page) => $page->component('Calendar/Index'));
 });
 
-it('fetches only own projects for pegawai', function (): void {
-    $ownProject = Project::factory()->create(['created_by' => $this->pegawai->id, 'start_date' => now(), 'end_date' => now()->addDays(2)]);
+it('fetches only own events for pegawai', function (): void {
+    $ownProject = Project::factory()->create(['created_by' => $this->pegawai->id]);
+    $ownEvent = ProjectEvent::factory()->create([
+        'project_id' => $ownProject->id,
+        'created_by' => $this->pegawai->id,
+        'start_date' => now(),
+        'name' => 'Own Event'
+    ]);
+
     $otherProject = Project::factory()->create([
         'created_by' => $this->superadmin->id,
         'pic_id' => $this->superadmin->id,
-        'account_manager_id' => $this->superadmin->id,
-        'start_date' => now(), 
-        'end_date' => now()->addDays(2)
+    ]);
+    $otherEvent = ProjectEvent::factory()->create([
+        'project_id' => $otherProject->id,
+        'created_by' => $this->superadmin->id,
+        'start_date' => now(),
+        'name' => 'Other Event'
     ]);
 
     actingAs($this->pegawai)
         ->get(route('calendar.index'))
         ->assertInertia(fn ($page) => $page
             ->has('events', 1)
-            ->where('events.0.id', 'project_' . $ownProject->id)
+            ->where('events.0.id', 'event_' . $ownEvent->id)
         );
 });
 
