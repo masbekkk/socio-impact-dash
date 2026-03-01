@@ -11,12 +11,13 @@ use Illuminate\Routing\Controller;
 use Spatie\Permission\Models\Permission;
 use Throwable;
 
-class PermissionController extends Controller
+final class PermissionController extends Controller
 {
     public function index(): JsonResponse
     {
         try {
             $permissions = Permission::all();
+
             return JsonResponseFormatter::success($permissions);
         } catch (Throwable $th) {
             return JsonResponseFormatter::error('Failed to fetch permissions: '.$th->getMessage(), 500);
@@ -28,6 +29,7 @@ class PermissionController extends Controller
         try {
             $request->validate([
                 'name' => 'required|string|unique:permissions,name',
+                'guard_name' => 'web',
             ]);
 
             $permission = Permission::create(['name' => $request->name]);
@@ -42,6 +44,7 @@ class PermissionController extends Controller
     {
         try {
             $permission->delete();
+
             return JsonResponseFormatter::success(null, 'Permission deleted successfully');
         } catch (Throwable $th) {
             return JsonResponseFormatter::error('Failed to delete permission: '.$th->getMessage(), 500);

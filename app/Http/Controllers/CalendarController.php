@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Calendar\CreateCalendarEvent;
+use App\Actions\Calendar\DeleteCalendarEvent;
 use App\Actions\Calendar\GetCalendarEvents;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,12 +23,13 @@ final class CalendarController
 
         return Inertia::render('Calendar/Index', [
             'events' => $events,
+            'projects' => [],
             // Also send projects for the dropdown in "Create Event" modal
-            'projects' => $isExecutive
-                ? \App\Models\Project::select('id', 'name')->orderBy('name')->get()
-                : ($isHead
-                    ? \App\Models\Project::where('division_id', $user->division_id)->orWhere('created_by', $user->id)->select('id', 'name')->orderBy('name')->get()
-                    : \App\Models\Project::where('created_by', $user->id)->select('id', 'name')->orderBy('name')->get())
+            // 'projects' => $isExecutive
+            //     ? \App\Models\Project::select('id', 'name')->orderBy('name')->get()
+            //     : ($isHead
+            //         ? \App\Models\Project::where('division_id', $user->division_id)->orWhere('created_by', $user->id)->select('id', 'name')->orderBy('name')->get()
+            //         : \App\Models\Project::where('created_by', $user->id)->select('id', 'name')->orderBy('name')->get()),
         ]);
     }
 
@@ -52,5 +54,12 @@ final class CalendarController
         return Inertia::render('Calendar/Show', [
             'selectedDate' => $date,
         ]);
+    }
+
+    public function destroy(int $id, DeleteCalendarEvent $deleteCalendarEvent): \Illuminate\Http\RedirectResponse
+    {
+        $deleteCalendarEvent->handle($id);
+
+        return back()->with('success', 'Agenda berhasil dihapus.');
     }
 }

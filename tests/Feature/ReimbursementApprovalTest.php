@@ -14,15 +14,15 @@ beforeEach(function () {
     Role::firstOrCreate(['name' => 'finance']);
     Role::firstOrCreate(['name' => 'pegawai']);
 
-    if (\App\Models\Division::count() === 0) {
-        \App\Models\Division::factory()->create();
+    if (App\Models\Division::count() === 0) {
+        App\Models\Division::factory()->create();
     }
 });
 
 test('requester cannot approve their own reimbursement', function () {
     $user = User::factory()->create();
     $user->assignRole('head');
-    
+
     $project = Project::factory()->create([
         'head_id' => $user->id,
         'created_by' => $user->id,
@@ -36,9 +36,9 @@ test('requester cannot approve their own reimbursement', function () {
     ]);
 
     $this->actingAs($user);
-    
+
     $response = $this->getJson("/api/v1/reimbursements/{$reimbursement->code}");
-    
+
     $response->assertStatus(200)
         ->assertJsonPath('data.can_approve', false);
 });
@@ -46,9 +46,9 @@ test('requester cannot approve their own reimbursement', function () {
 test('project head can approve submitted reimbursement', function () {
     $head = User::factory()->create();
     $head->assignRole('head');
-    
+
     $requester = User::factory()->create();
-    
+
     $project = Project::factory()->create([
         'head_id' => $head->id,
         'created_by' => $head->id,
@@ -62,9 +62,9 @@ test('project head can approve submitted reimbursement', function () {
     ]);
 
     $this->actingAs($head);
-    
+
     $response = $this->getJson("/api/v1/reimbursements/{$reimbursement->code}");
-    
+
     $response->assertStatus(200)
         ->assertJsonPath('data.can_approve', true);
 });
@@ -72,9 +72,9 @@ test('project head can approve submitted reimbursement', function () {
 test('finance can approve head_approved reimbursement', function () {
     $finance = User::factory()->create();
     $finance->assignRole('finance');
-    
+
     $requester = User::factory()->create();
-    
+
     $project = Project::factory()->create([
         'head_id' => $finance->id,
         'created_by' => $finance->id,
@@ -89,9 +89,9 @@ test('finance can approve head_approved reimbursement', function () {
     ]);
 
     $this->actingAs($finance);
-    
+
     $response = $this->getJson("/api/v1/reimbursements/{$reimbursement->code}");
-    
+
     $response->assertStatus(200)
         ->assertJsonPath('data.can_approve', true);
 });
@@ -99,9 +99,9 @@ test('finance can approve head_approved reimbursement', function () {
 test('user cannot approve twice', function () {
     $head = User::factory()->create();
     $head->assignRole('head');
-    
+
     $requester = User::factory()->create();
-    
+
     $project = Project::factory()->create([
         'head_id' => $head->id,
         'created_by' => $head->id,
@@ -123,9 +123,9 @@ test('user cannot approve twice', function () {
     ]);
 
     $this->actingAs($head);
-    
+
     $response = $this->getJson("/api/v1/reimbursements/{$reimbursement->code}");
-    
+
     $response->assertStatus(200)
         ->assertJsonPath('data.can_approve', false);
 });

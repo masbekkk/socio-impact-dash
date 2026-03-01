@@ -1,5 +1,7 @@
 import { InertiaLinkProps } from '@inertiajs/react';
 import { LucideIcon } from 'lucide-react';
+import { AxiosInstance } from 'axios';
+import { route as ziggyRoute } from 'ziggy-js';
 
 export interface Auth {
     user: User;
@@ -45,4 +47,12 @@ export interface User {
     updated_at: string;
     role_name: string;
     [key: string]: unknown;
+}
+
+declare global {
+    interface Window {
+        axios: AxiosInstance;
+    }
+
+    var route: typeof ziggyRoute;
 }
