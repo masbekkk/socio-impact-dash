@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Enums\UserRole;
+use App\Models\ProjectEvent;
+use App\Policies\ProjectEventPolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -38,5 +40,6 @@ final class AppServiceProvider extends ServiceProvider
     {
         Gate::define('adminAccess', fn (\App\Models\User $user): bool => $user->hasRole(UserRole::Superadmin->value));
         Gate::define('view-admin', fn (\App\Models\User $user): bool => $user->hasRole(UserRole::Superadmin->value));
+        Gate::policy(ProjectEvent::class, ProjectEventPolicy::class);
     }
 }

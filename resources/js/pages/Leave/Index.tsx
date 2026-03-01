@@ -17,7 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import {
-  MoreHorizontal, Eye, FileText, Plane, Calendar, Search, Filter,
+  MoreHorizontal, Eye, FileText, Calendar, Search, Filter,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, ArrowUpDown,
 } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
@@ -168,88 +168,37 @@ function useLeaveData(typeFilter: string | null) {
 export default function LeaveIndex() {
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Cuti & Dinas', href: '/leaves' },
+    { title: 'Cuti', href: '/leaves' },
   ];
 
-  const [activeTab, setActiveTab] = useState('leave');
-
-  // Use a combined type filter: leave tab shows non-travel, travel tab shows travel only
-  // We filter "travel" type for travel tab. For leave, we exclude travel.
-  // Since backend only supports single type filter, we'll use it for travel tab
-  // and leave the leave tab without type filter, then exclude travel in the query.
-  // Actually, let's use null for leave tab (show all except travel) and 'travel' for travel tab.
-  // We need to update the backend... but the simpler approach: leave tab = no type filter (show all),
-  // travel tab = type=travel. The leave tab will also show travel items though.
-  // Better: use 'leave' as a special type filter that the backend interprets as "not travel".
-
   const leave = useLeaveData('leave');
-  const travel = useLeaveData('travel');
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
-      <Head title="Cuti & Dinas" />
+      <Head title="Cuti" />
 
       <div className="p-6 md:p-8 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Manajemen Cuti & Dinas</h1>
-            <p className="text-muted-foreground text-sm md:text-base">Kelola pengajuan cuti dan perjalanan dinas Anda.</p>
+            <h1 className="text-2xl font-bold tracking-tight">Manajemen Cuti</h1>
+            <p className="text-muted-foreground text-sm md:text-base">Kelola pengajuan cuti Anda.</p>
           </div>
 
           <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="gap-2 bg-sidebar text-white hover:bg-sidebar/90 transition-transform hover:scale-105 active:scale-95 shadow-sm">
-                  <FileText className="h-4 w-4" />
-                  Buat Pengajuan
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Pilih Jenis Pengajuan</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/leaves/create" className="cursor-pointer">
-                    <Calendar className="mr-2 h-4 w-4" /> Pengajuan Cuti
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/leaves/create-travel" className="cursor-pointer">
-                    <Plane className="mr-2 h-4 w-4" /> Dinas Luar
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button asChild className="gap-2 bg-sidebar text-white hover:bg-sidebar/90 transition-transform hover:scale-105 active:scale-95 shadow-sm">
+              <Link href="/leaves/create">
+                <Calendar className="h-4 w-4" />
+                Buat Pengajuan Cuti
+              </Link>
+            </Button>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="leave" className="gap-2">
-              <Calendar className="h-4 w-4" /> Riwayat Cuti
-            </TabsTrigger>
-            <TabsTrigger value="travel" className="gap-2">
-              <Plane className="h-4 w-4" /> Dinas Luar
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="leave">
-            <LeaveTable
-              title="Daftar Pengajuan Cuti"
-              description="Riwayat pengajuan cuti tahunan, sakit, dan lainnya."
-              hook={leave}
-              isTravel={false}
-            />
-          </TabsContent>
-
-          <TabsContent value="travel">
-            <LeaveTable
-              title="Daftar Dinas Luar"
-              description="Riwayat pengajuan dinas luar kantor."
-              hook={travel}
-              isTravel={true}
-            />
-          </TabsContent>
-        </Tabs>
+        <LeaveTable
+          title="Daftar Pengajuan Cuti"
+          description="Riwayat pengajuan cuti tahunan, sakit, dan lainnya."
+          hook={leave}
+        />
       </div>
     </AppSidebarLayout>
   );
@@ -259,10 +208,9 @@ interface LeaveTableProps {
   title: string;
   description: string;
   hook: ReturnType<typeof useLeaveData>;
-  isTravel: boolean;
 }
 
-function LeaveTable({ title, description, hook, isTravel }: LeaveTableProps) {
+function LeaveTable({ title, description, hook }: LeaveTableProps) {
   const { data, meta, loading, search, setSearch, status, setStatus, startDate, endDate, setDateRange, clearDates, page, setPage, perPage, setPerPage, sortBy, toggleSort } = hook;
 
   const SortHeader = ({ col, children }: { col: string; children: React.ReactNode }) => (
@@ -361,9 +309,9 @@ function LeaveTable({ title, description, hook, isTravel }: LeaveTableProps) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <SortHeader col="code">{isTravel ? 'Kode & Tujuan' : 'Kode & Tanggal'}</SortHeader>
+                  <SortHeader col="code">Kode & Tanggal</SortHeader>
                   <TableHead>Karyawan</TableHead>
-                  <SortHeader col="type">{isTravel ? 'Proyek' : 'Jenis Cuti'}</SortHeader>
+                  <SortHeader col="type">Jenis Cuti</SortHeader>
                   <SortHeader col="start_date">Durasi</SortHeader>
                   <TableHead>Keterangan</TableHead>
                   <SortHeader col="status">Status</SortHeader>
@@ -375,17 +323,8 @@ function LeaveTable({ title, description, hook, isTravel }: LeaveTableProps) {
                   <TableRow key={item.id} className="group">
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        {isTravel ? (
-                          <>
-                            <span className="font-medium text-sm">{item.destination ?? '-'}</span>
-                            <span className="text-xs text-muted-foreground">{item.code}</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="font-medium text-sm">{item.code}</span>
-                            <span className="text-xs text-muted-foreground">{item.created_at ? format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId }) : '-'}</span>
-                          </>
-                        )}
+                        <span className="font-medium text-sm">{item.code}</span>
+                        <span className="text-xs text-muted-foreground">{item.created_at ? format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId }) : '-'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -395,13 +334,9 @@ function LeaveTable({ title, description, hook, isTravel }: LeaveTableProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {isTravel ? (
-                        <div className="text-sm font-medium">{item.project?.name ?? '-'}</div>
-                      ) : (
-                        <Badge variant="outline" className="font-normal border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100">
-                          {LEAVE_TYPE_LABELS[item.type] ?? item.type}
-                        </Badge>
-                      )}
+                      <Badge variant="outline" className="font-normal border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100">
+                        {LEAVE_TYPE_LABELS[item.type] ?? item.type}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-0.5 text-sm">

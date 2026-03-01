@@ -40,6 +40,8 @@ final class RoleAndPermissionSeeder extends Seeder
             'input_budget_partition',
             'approval_budget_partition',
             'manage_detail_budget',
+            'create_event',
+            'delete_event',
         ];
 
         foreach ($permissions as $permission) {
@@ -55,6 +57,8 @@ final class RoleAndPermissionSeeder extends Seeder
             'view_reimbursements',
             'create_leaves',
             'view_leaves',
+            'create_event',
+            'delete_event',
         ]);
 
         $headRole = Role::firstOrCreate(['name' => UserRole::Head->value]);
@@ -68,6 +72,8 @@ final class RoleAndPermissionSeeder extends Seeder
             'view_leaves',
             'view_all_leaves',
             'manage_detail_budget',
+            'create_event',
+            'delete_event',
         ]);
 
         $financeRole = Role::firstOrCreate(['name' => UserRole::Finance->value]);
