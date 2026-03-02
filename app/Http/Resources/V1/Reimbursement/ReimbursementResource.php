@@ -89,6 +89,23 @@ final class ReimbursementResource extends JsonResource
                     ];
                 });
             }),
+            'items' => $this->whenLoaded('items', function (): \Illuminate\Support\Collection {
+                return $this->items->map(function (\App\Models\ReimbursementItem $item): array {
+                    return [
+                        'id' => $item->id,
+                        'parent_item_id' => $item->parent_item_id,
+                        'item_name' => $item->item_name,
+                        'quantity' => $item->quantity,
+                        'unit_price' => (float) $item->unit_price,
+                        'amount' => (float) $item->amount,
+                        'expense_type' => $item->expense_type?->value,
+                        'receipt_path' => $item->receipt_path,
+                        'notes' => $item->notes,
+                        'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
+                        'activity_id' => $item->project_budget_detail_id,
+                    ];
+                });
+            }),
         ];
     }
 

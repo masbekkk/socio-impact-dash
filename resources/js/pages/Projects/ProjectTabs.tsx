@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -158,9 +159,10 @@ export default function ProjectTabs({
                 if (!detail.isNew) {
                     submitData.append(`detail_budgets[${index}][id]`, detail.id);
                 }
-                submitData.append(`detail_budgets[${index}][quantity]`, (detail.quantity || 1).toString());
+                submitData.append(`detail_budgets[${index}][item_name]`, detail.item_name || '');
+                if (detail.quantity) submitData.append(`detail_budgets[${index}][quantity]`, detail.quantity.toString());
                 submitData.append(`detail_budgets[${index}][item_price]`, (detail.item_price || 0).toString());
-                submitData.append(`detail_budgets[${index}][amount]`, detail.amount.toString());
+                submitData.append(`detail_budgets[${index}][amount]`, (detail.amount || (detail.item_price || 0)).toString());
                 if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
             });
 
@@ -236,6 +238,8 @@ export default function ProjectTabs({
     };
 
     const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
+    const totalDetailBudgets = detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div ref={tabsListRef} className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0 scrollbar-hide">
@@ -589,6 +593,17 @@ export default function ProjectTabs({
                                     )}
                                 </div>
                             </div>
+
+                            {opsBudget < totalDetailBudgets && (
+                                <Alert variant="destructive" className="mb-4">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Peringatan Anggaran</AlertTitle>
+                                    <AlertDescription>
+                                        project activity memiliki pagu lebih besar dari operational, update/ remove project activity terlebih dahulu
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-blue-200 transition-colors">
                                     <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">Operasional</p>
@@ -646,8 +661,8 @@ export default function ProjectTabs({
                         <div className="md:col-span-2 pt-6 border-t mt-4">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
-                                    <h4 className="text-sm font-semibold text-slate-900">Rincian Anggaran (RAB)</h4>
-                                    <p className="text-xs text-muted-foreground">Detail pengelokasian item anggaran.</p>
+                                    <h4 className="text-sm font-semibold text-slate-900">Kegiatan Anggaran Proyek</h4>
+                                    <p className="text-xs text-muted-foreground">Detail pengelokasian kegiatan anggaran.</p>
                                 </div>
                                 {canManageDetailBudget && !editDetailBudget && (
                                     <Button
@@ -668,10 +683,9 @@ export default function ProjectTabs({
                                         <thead className="bg-gray-50 border-b">
                                             <tr>
                                                 <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500">Keterangan / Item</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-center">Qty</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Harga Satuan</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Total</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500">Nama Kegiatan</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Nominal Kegiatan</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500">Catatan</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -679,14 +693,11 @@ export default function ProjectTabs({
                                                 detailBudgets.map((detail, idx) => (
                                                     <tr key={idx} className="hover:bg-gray-50/50">
                                                         <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
-                                                        <td className="px-4 py-3 font-medium text-gray-900">{detail.notes || '-'}</td>
-                                                        <td className="px-4 py-3 text-center">{detail.quantity || 1}</td>
+                                                        <td className="px-4 py-3 font-medium text-gray-900">{detail.item_name || '-'}</td>
                                                         <td className="px-4 py-3 text-right">
                                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.item_price || 0)}
                                                         </td>
-                                                        <td className="px-4 py-3 text-right font-medium text-gray-900">
-                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.amount || 0)}
-                                                        </td>
+                                                        <td className="px-4 py-3 text-muted-foreground">{detail.notes || '-'}</td>
                                                     </tr>
                                                 ))
                                             ) : (
@@ -715,43 +726,27 @@ export default function ProjectTabs({
                                         {detailBudgets.map((detail, idx) => (
                                             <div key={detail.id} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-white p-3 rounded-lg border shadow-sm">
                                                 <div className="flex-[2] w-full space-y-1.5">
-                                                    <Label className="text-xs text-muted-foreground">Keterangan / Item</Label>
+                                                    <Label className="text-xs text-muted-foreground">Nama Kegiatan</Label>
                                                     <Input
                                                         type="text"
-                                                        value={detail.notes}
+                                                        value={detail.item_name || ''}
                                                         onChange={(e) => {
                                                             const newDetails = [...detailBudgets];
-                                                            newDetails[idx].notes = e.target.value;
+                                                            newDetails[idx].item_name = e.target.value;
                                                             setDetailBudgets(newDetails);
                                                         }}
-                                                        placeholder="Nama Item..."
+                                                        placeholder="Sewa Gedung, Konsumsi, dll..."
                                                         className="h-9"
                                                     />
                                                 </div>
                                                 <div className="flex-1 w-full space-y-1.5">
-                                                    <Label className="text-xs text-muted-foreground">Qty</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="1"
-                                                        value={detail.quantity || 1}
-                                                        onChange={(e) => {
-                                                            const newDetails = [...detailBudgets];
-                                                            newDetails[idx].quantity = parseInt(e.target.value) || 0;
-                                                            newDetails[idx].amount = newDetails[idx].quantity * (newDetails[idx].item_price || 0);
-                                                            setDetailBudgets(newDetails);
-                                                        }}
-                                                        placeholder="1"
-                                                        className="h-9"
-                                                    />
-                                                </div>
-                                                <div className="flex-1 w-full space-y-1.5">
-                                                    <Label className="text-xs text-muted-foreground">Harga Satuan</Label>
+                                                    <Label className="text-xs text-muted-foreground">Nominal Kegiatan</Label>
                                                     <MoneyInput
                                                         value={detail.item_price || 0}
                                                         onValueChange={(vals) => {
                                                             const newDetails = [...detailBudgets];
                                                             newDetails[idx].item_price = vals.floatValue || 0;
-                                                            newDetails[idx].amount = (newDetails[idx].quantity || 0) * newDetails[idx].item_price;
+                                                            newDetails[idx].amount = (newDetails[idx].quantity || 1) * newDetails[idx].item_price;
                                                             setDetailBudgets(newDetails);
                                                         }}
                                                         placeholder="0"
@@ -759,13 +754,18 @@ export default function ProjectTabs({
                                                         className="h-9"
                                                     />
                                                 </div>
-                                                <div className="flex-1 w-full space-y-1.5">
-                                                    <Label className="text-xs text-muted-foreground">Total</Label>
-                                                    <MoneyInput
-                                                        value={detail.amount || 0}
-                                                        disabled
-                                                        prefix="Rp "
-                                                        className="h-9 bg-gray-50 cursor-not-allowed text-gray-500"
+                                                <div className="flex-[2] w-full space-y-1.5">
+                                                    <Label className="text-xs text-muted-foreground">Catatan / Keterangan</Label>
+                                                    <Input
+                                                        type="text"
+                                                        value={detail.notes || ''}
+                                                        onChange={(e) => {
+                                                            const newDetails = [...detailBudgets];
+                                                            newDetails[idx].notes = e.target.value;
+                                                            setDetailBudgets(newDetails);
+                                                        }}
+                                                        placeholder="Catatan tambahan (Opsional)..."
+                                                        className="h-9"
                                                     />
                                                 </div>
                                                 <div className="pt-5 flex-shrink-0">
@@ -793,11 +793,11 @@ export default function ProjectTabs({
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), quantity: 1, item_price: 0, amount: 0, notes: '', isNew: true }])}
+                                            onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, notes: '', isNew: true }])}
                                             className="gap-1.5 border-dashed"
                                         >
                                             <Plus className="h-3.5 w-3.5" />
-                                            Tambah Item
+                                            Tambah Kegiatan
                                         </Button>
 
                                         <div className="flex items-center gap-2">

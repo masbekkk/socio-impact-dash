@@ -13,6 +13,20 @@ interface AtrBudgetSelected {
   amount: number;
   notes: string;
 }
+
+interface ReimbursementItem {
+  id: number;
+  parent_item_id: number | null;
+  item_name: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  expense_type: string | null;
+  receipt_path: string | null;
+  notes: string | null;
+  activity_name: string;
+  activity_id: number;
+}
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -111,6 +125,7 @@ interface ReimbursementDetail {
   approvals: ReimbursementApproval[];
   can_approve: boolean;
   atr_budget_selecteds?: AtrBudgetSelected[];
+  items?: ReimbursementItem[];
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -532,8 +547,117 @@ export default function Show() {
                   )}
                 </div>
 
-                {/* Selected Budgets */}
-                {data.atr_budget_selecteds && data.atr_budget_selecteds.length > 0 && (
+                {/* ATR Items (New Flow) */}
+                {data.items && data.items.length > 0 && data.type === 'atr' && (() => {
+                  const atrItems = data.items.filter(i => !i.parent_item_id);
+                  const grouped: Record<number, { name: string; items: ReimbursementItem[] }> = {};
+                  atrItems.forEach(item => {
+                    if (!grouped[item.activity_id]) grouped[item.activity_id] = { name: item.activity_name, items: [] };
+                    grouped[item.activity_id].items.push(item);
+                  });
+                  return (
+                    <div className="space-y-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Item Kegiatan ATR</label>
+                      {Object.entries(grouped).map(([actId, group]) => (
+                        <div key={actId} className="border rounded-xl overflow-hidden">
+                          <div className="bg-slate-50 p-3 border-b">
+                            <h4 className="font-semibold text-sm text-slate-800">{group.name}</h4>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b bg-muted/30">
+                                  <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nama Item</th>
+                                  <th className="text-center p-3 font-medium text-muted-foreground text-xs w-16">Qty</th>
+                                  <th className="text-right p-3 font-medium text-muted-foreground text-xs">Nominal</th>
+                                  <th className="text-right p-3 font-medium text-muted-foreground text-xs">Jumlah</th>
+                                  <th className="text-left p-3 font-medium text-muted-foreground text-xs">Jenis</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {group.items.map(item => (
+                                  <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20">
+                                    <td className="p-3 font-medium">{item.item_name}</td>
+                                    <td className="p-3 text-center">{item.quantity}</td>
+                                    <td className="p-3 text-right font-mono">Rp {item.unit_price.toLocaleString('id-ID')}</td>
+                                    <td className="p-3 text-right font-mono font-semibold">Rp {item.amount.toLocaleString('id-ID')}</td>
+                                    <td className="p-3">
+                                      {item.expense_type && (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 bg-slate-50">{item.expense_type}</Badge>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot>
+                                <tr className="bg-slate-50">
+                                  <td colSpan={3} className="p-3 text-right font-medium text-xs text-muted-foreground uppercase">Subtotal</td>
+                                  <td className="p-3 text-right font-mono font-bold text-emerald-700">
+                                    Rp {group.items.reduce((s, i) => s + i.amount, 0).toLocaleString('id-ID')}
+                                  </td>
+                                  <td></td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* EER Claimed Items */}
+                {data.items && data.items.length > 0 && data.type === 'eer' && (
+                  <div className="space-y-3">
+                    <label className="text-xs font-medium text-muted-foreground uppercase">Item Klaim EER</label>
+                    <div className="border rounded-xl overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b bg-muted/30">
+                              <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nama Item</th>
+                              <th className="text-left p-3 font-medium text-muted-foreground text-xs">Kegiatan</th>
+                              <th className="text-right p-3 font-medium text-muted-foreground text-xs">Nominal Klaim</th>
+                              <th className="text-center p-3 font-medium text-muted-foreground text-xs">Kwitansi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.items.map(item => (
+                              <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20">
+                                <td className="p-3 font-medium">{item.item_name}</td>
+                                <td className="p-3 text-muted-foreground">{item.activity_name}</td>
+                                <td className="p-3 text-right font-mono font-semibold">Rp {item.amount.toLocaleString('id-ID')}</td>
+                                <td className="p-3 text-center">
+                                  {item.receipt_path ? (
+                                    <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
+                                      <Button size="sm" variant="outline" className="gap-1 text-xs h-7">
+                                        <Download className="h-3 w-3" /> Lihat
+                                      </Button>
+                                    </a>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground italic">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-slate-50">
+                              <td colSpan={2} className="p-3 text-right font-medium text-xs text-muted-foreground uppercase">Total Klaim</td>
+                              <td className="p-3 text-right font-mono font-bold text-blue-700">
+                                Rp {data.items.reduce((s, i) => s + i.amount, 0).toLocaleString('id-ID')}
+                              </td>
+                              <td></td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Legacy Selected Budgets (backward compat) */}
+                {data.atr_budget_selecteds && data.atr_budget_selecteds.length > 0 && (!data.items || data.items.length === 0) && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Rincian Anggaran Dipilih</label>

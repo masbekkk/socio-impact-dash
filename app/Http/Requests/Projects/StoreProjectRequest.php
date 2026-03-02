@@ -35,11 +35,12 @@ final class StoreProjectRequest extends FormRequest
             'pic_id' => [
                 'required',
                 'exists:users,id',
-                Rule::exists('users', 'id')->where(function ($query) {
-                    $query->whereHas('roles', function ($q) {
-                        $q->where('name', '!=', \App\Enums\UserRole::Direktur->value);
-                    });
-                }),
+                function ($attribute, $value, $fail) {
+                    $user = \App\Models\User::find($value);
+                    if ($user && $user->hasRole(\App\Enums\UserRole::Direktur->value)) {
+                        $fail('The selected PIC cannot be a Direktur.');
+                    }
+                },
             ],
             'project_type' => ['required', 'string'],
             'status' => ['nullable', Rule::enum(ProjectStatus::class)],
@@ -59,7 +60,8 @@ final class StoreProjectRequest extends FormRequest
             'documents.*.type' => ['required', 'string'],
             'documents.*.file' => ['required', 'file', 'max:10240'], // 10MB limit
             'detail_budgets' => ['nullable', 'array'],
-            'detail_budgets.*.quantity' => ['required_with:detail_budgets', 'numeric', 'min:1'],
+            'detail_budgets.*.item_name' => ['required_with:detail_budgets', 'string', 'max:255'],
+            'detail_budgets.*.quantity' => ['nullable', 'numeric', 'min:1'],
             'detail_budgets.*.item_price' => ['required_with:detail_budgets', 'numeric', 'min:0'],
             'detail_budgets.*.amount' => ['required', 'numeric', 'min:0'],
             'detail_budgets.*.notes' => ['nullable', 'string'],
@@ -83,6 +85,24 @@ final class StoreProjectRequest extends FormRequest
 
                 if ($detailSum > ($budgetTotal + 0.01)) {
                     $validator->errors()->add('detail_budgets', 'Total rincian anggaran tidak boleh melebihi total anggaran proyek.');
+                }
+            }
+
+            $terminPayments = $this->input('termin_payments', []);
+            if (is_array($terminPayments) && count($terminPayments) > 0) {
+                $terminSum = array_reduce($terminPayments, fn (float $carry, array $item): float => $carry + (float) $item['nominal'], 0);
+                if ($terminSum > ($budgetTotal + 0.01)) {
+                    $validator->errors()->add('termin_payments', 'Total termin pembayaran tidak boleh melebihi total anggaran proyek.');
+                }
+
+                // Check chronological order
+                $prevDate = null;
+                foreach ($terminPayments as $index => $term) {
+                    $currentDate = $term['due_date'] ?? null;
+                    if ($prevDate && $currentDate && strtotime($currentDate) < strtotime($prevDate)) {
+                        $validator->errors()->add("termin_payments.{$index}.due_date", 'Tanggal jatuh tempo termin harus berurutan.');
+                    }
+                    $prevDate = $currentDate;
                 }
             }
         });

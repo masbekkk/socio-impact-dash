@@ -74,8 +74,11 @@ final class ReimbursementController
                 'head_role' => $project->head?->role?->value ?? '-',
                 'budget_details' => $project->budgetDetails->map(fn (\App\Models\ProjectBudgetDetail $detail) => [
                     'id' => $detail->id,
+                    'item_name' => $detail->item_name ?? $detail->notes ?? '-',
                     'notes' => $detail->notes,
                     'amount' => (float) $detail->amount,
+                    'used_amount' => (float) $detail->used_amount,
+                    'remaining_amount' => (float) $detail->remaining_amount,
                 ])->values()->all(),
             ]);
 
@@ -102,16 +105,19 @@ final class ReimbursementController
             ],
             'projects' => $projects,
             'approvers' => $approversGrouped,
+            'expenseTypes' => array_map(fn (\App\Enums\ExpenseType $e) => [
+                'value' => $e->value,
+                'label' => $e->value,
+            ], \App\Enums\ExpenseType::cases()),
         ]);
     }
 
     public function createEER(Request $request): \Inertia\Response
     {
-        $atrs = Reimbursement::with(['project.division', 'project.pic', 'project.head', 'approvals'])
+        $atrs = Reimbursement::with(['project.division', 'project.pic', 'project.head', 'approvals', 'items.budgetDetail'])
             ->where('user_id', $request->user()->id)
             ->where('type', 'atr')
             ->where('status', 'LIKE', '%approve%')
-            // ->doesntHave('eers')
             ->get()
             ->map(fn (Reimbursement $atr) => [
                 'id' => $atr->id,
@@ -128,7 +134,20 @@ final class ReimbursementController
                 'head_role' => $atr->project?->head?->role?->value ?? '-',
                 'approver_head_id' => $atr->approvals->where('role', \App\Enums\ApprovalRole::Head)->first()?->approver_id,
                 'approver_finance_id' => $atr->approvals->where('role', \App\Enums\ApprovalRole::Finance)->first()?->approver_id,
-                'approver_direktur_id' => $atr->approvals->where('role', 'direktur')->first()?->approver_id, // Potential mismatch with ApprovalRole, but aligning with UI
+                'approver_direktur_id' => $atr->approvals->where('role', 'direktur')->first()?->approver_id,
+                'items' => $atr->items->where('parent_item_id', null)->map(fn (\App\Models\ReimbursementItem $item) => [
+                    'id' => $item->id,
+                    'item_name' => $item->item_name,
+                    'quantity' => $item->quantity,
+                    'unit_price' => (float) $item->unit_price,
+                    'amount' => (float) $item->amount,
+                    'expense_type' => $item->expense_type?->value,
+                    'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
+                    'activity_id' => $item->project_budget_detail_id,
+                    'used_eer_amount' => (float) $item->children()->whereHas('reimbursement', function ($q) {
+                        $q->where('type', 'eer')->whereNotIn('status', ['rejected', 'draft']);
+                    })->sum('amount'),
+                ])->values()->all(),
             ]);
 
         $approversGrouped = \App\Models\User::role(['head', 'hr', 'finance', 'direktur'])

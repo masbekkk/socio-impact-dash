@@ -384,7 +384,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                         <TableRow key={item.id}>
                           <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn("capitalize", TYPE_COLORS[item.type] || '')}>{item.type}</Badge>
+                            <Badge variant="outline" className={cn("uppercase", TYPE_COLORS[item.type] || '')}>{item.type}</Badge>
                           </TableCell>
                           <TableCell className="text-sm">
                             {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}

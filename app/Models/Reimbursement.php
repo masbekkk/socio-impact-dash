@@ -78,4 +78,9 @@ final class Reimbursement extends Model
     {
         return $this->hasMany(ReimbursementComment::class);
     }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(ReimbursementItem::class);
+    }
 }

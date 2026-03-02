@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -12,11 +13,10 @@ import LocationPicker from '@/components/LocationPicker'
 import MoneyInput from '@/components/MoneyInput'
 import { ArrowLeft, ArrowRight, X, Save, Building2, Plus, AlertCircle } from 'lucide-react'
 import { Head, Link, usePage, router } from '@inertiajs/react'
-import { PROJECT_MAPPINGS } from '@/constants/project-mappings'
 import axios from 'axios';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
 
 export default function ProjectsEdit({ project_slug, divisions, employees }: { project_slug: string | number, divisions: any[], employees: any[] }) {
     const { props } = usePage<any>();
@@ -60,7 +60,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [deletePaymentTerms, setDeletePaymentTerms] = useState<string[]>([])
 
     // State Detail Budgets
-    const [detailBudgets, setDetailBudgets] = useState<{ id: string, quantity: number, item_price: number, amount: number, notes: string, isNew?: boolean }[]>([])
+    const [detailBudgets, setDetailBudgets] = useState<{ id: string, item_name: string, quantity: number | null, item_price: number, amount: number, notes: string, isNew?: boolean }[]>([])
     const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([])
 
     // Dynamic Docs State
@@ -141,13 +141,14 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                 if (data.budget_details && data.budget_details.length > 0) {
                     setDetailBudgets(data.budget_details.map((detail: any) => ({
                         id: detail.id.toString(),
-                        quantity: parseInt(detail.quantity) || 1,
+                        item_name: detail.item_name || '',
+                        quantity: detail.quantity ? parseInt(detail.quantity) : null,
                         item_price: parseFloat(detail.item_price) || 0,
                         amount: parseFloat(detail.amount) || 0,
                         notes: detail.notes || ''
                     })));
                 } else {
-                    setDetailBudgets([{ id: crypto.randomUUID(), quantity: 1, item_price: 0, amount: 0, notes: '', isNew: true }]);
+                    setDetailBudgets([{ id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, notes: '', isNew: true }]);
                 }
             } catch (error) {
                 console.error("Error fetching project:", error);
@@ -201,9 +202,19 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         setPaymentTerms(paymentTerms.map(t => t.id === id ? { ...t, [field]: value } : t));
     };
 
+    const totalPaymentTerm = paymentTerms.reduce((sum, term) => sum + (term.nominal || 0), 0);
+    const isTerminOverBudget = totalPaymentTerm > budget;
+
+    // Check if termin dates are chronological
+    const areTerminDatesChronological = paymentTerms.every((term, idx) => {
+        if (idx === 0) return true;
+        if (!term.date || !paymentTerms[idx - 1].date) return true;
+        return new Date(term.date) >= new Date(paymentTerms[idx - 1].date);
+    });
+
     // Detail Budgets Functions
     const addDetailBudget = () => {
-        setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), quantity: 1, item_price: 0, amount: 0, notes: '', isNew: true }]);
+        setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, notes: '', isNew: true }]);
     };
     const removeDetailBudget = (id: string, isNew?: boolean) => {
         if (detailBudgets.length > 1) {
@@ -213,12 +224,12 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             }
         }
     };
-    const updateDetailBudget = (id: string, field: 'quantity' | 'item_price' | 'notes', value: any) => {
+    const updateDetailBudget = (id: string, field: 'item_name' | 'quantity' | 'item_price' | 'notes', value: any) => {
         setDetailBudgets(detailBudgets.map(d => {
             if (d.id === id) {
                 const updated = { ...d, [field]: value };
                 if (field === 'quantity' || field === 'item_price') {
-                    updated.amount = (updated.quantity || 0) * (updated.item_price || 0);
+                    updated.amount = (updated.quantity || 1) * (updated.item_price || 0);
                 }
                 return updated;
             }
@@ -226,6 +237,11 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         }));
     };
     const totalDetailBudget = detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+    // Auto calculate partitions (50% Ops, 30% Mgmt, 20% Allowance)
+    const operationalBudget = budget * 0.5;
+    const managementBudget = budget * 0.3;
+    const allowanceBudget = budget * 0.2;
 
     const handleSubmit = async () => {
         setSaving(true);
@@ -296,7 +312,8 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             if (!detail.isNew) {
                 submitData.append(`detail_budgets[${index}][id]`, detail.id);
             }
-            submitData.append(`detail_budgets[${index}][quantity]`, detail.quantity.toString());
+            submitData.append(`detail_budgets[${index}][item_name]`, detail.item_name);
+            if (detail.quantity) submitData.append(`detail_budgets[${index}][quantity]`, detail.quantity.toString());
             submitData.append(`detail_budgets[${index}][item_price]`, detail.item_price.toString());
             submitData.append(`detail_budgets[${index}][amount]`, detail.amount.toString());
             if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
@@ -786,6 +803,20 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                 <p className="text-xs text-muted-foreground pt-1">
                                                     100% dari Total Project
                                                 </p>
+                                                <div className="pt-2 mt-2 border-t space-y-1 text-left">
+                                                    <div className="flex justify-between text-[10px]">
+                                                        <span className="text-muted-foreground">Operasional (50%):</span>
+                                                        <span className="font-semibold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(operationalBudget)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-[10px]">
+                                                        <span className="text-muted-foreground">Management (30%):</span>
+                                                        <span className="font-semibold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(managementBudget)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-[10px]">
+                                                        <span className="text-muted-foreground">Allowance (20%):</span>
+                                                        <span className="font-semibold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(allowanceBudget)}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -795,8 +826,8 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                 <div className="space-y-4 pt-4 border-t mt-6">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            {/* <Label className="text-base font-semibold">Rincian Anggaran (RAB)</Label> */}
-                                            <p className="text-xs text-muted-foreground mt-1">Atur rincian pengeluaran anggaran proyek.</p>
+                                            <Label className="text-base font-semibold">Kegiatan Anggaran Proyek</Label>
+                                            <p className="text-xs text-muted-foreground mt-1">Atur rincian kegiatan dan pengeluaran anggaran proyek.</p>
                                             {errors.detail_budgets && <p className="text-xs text-red-500 mt-1">{errors.detail_budgets}</p>}
                                         </div>
                                         <Button
@@ -807,7 +838,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                             className="gap-2 border-dashed hover:border-solid"
                                         >
                                             <Plus className="h-4 w-4" />
-                                            Tambah Rincian
+                                            Tambah Kegiatan
                                         </Button>
                                     </div>
 
@@ -815,7 +846,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                         {detailBudgets.map((detail, idx) => (
                                             <div key={detail.id} className="border rounded-xl p-5 bg-white shadow-sm space-y-4 group hover:border-gray-300 transition-colors">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <h4 className="font-semibold text-sm text-gray-900">Item #{idx + 1}</h4>
+                                                    <h4 className="font-semibold text-sm text-gray-900">Kegiatan #{idx + 1}</h4>
                                                     {detailBudgets.length > 1 && (
                                                         <Button
                                                             type="button"
@@ -830,34 +861,20 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                 </div>
 
                                                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                                    {/* Notes */}
-                                                    <div className="space-y-2 md:col-span-4">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Keterangan / Item</Label>
+                                                    <div className="space-y-2 md:col-span-6">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Nama Kegiatan <span className="text-red-500">*</span></Label>
                                                         <Input
                                                             type="text"
-                                                            value={detail.notes}
-                                                            onChange={(e) => updateDetailBudget(detail.id, 'notes', e.target.value)}
-                                                            placeholder="Contoh: Sewa Gedung, Konsumsi, dll"
-                                                            className="bg-white h-10"
-                                                        />
-                                                    </div>
-
-                                                    {/* Quantity */}
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Qty</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="1"
-                                                            value={detail.quantity}
-                                                            onChange={(e) => updateDetailBudget(detail.id, 'quantity', parseInt(e.target.value) || 0)}
-                                                            placeholder="1"
+                                                            value={detail.item_name}
+                                                            onChange={(e) => updateDetailBudget(detail.id, 'item_name', e.target.value)}
+                                                            placeholder="Masukkan nama kegiatan..."
                                                             className="bg-white h-10"
                                                         />
                                                     </div>
 
                                                     {/* Item Price */}
                                                     <div className="space-y-2 md:col-span-3">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Harga Satuan</Label>
+                                                        <Label className="text-xs font-medium text-muted-foreground">Nominal Kegiatan</Label>
                                                         <div className="relative">
                                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
                                                             <MoneyInput
@@ -869,17 +886,16 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                         </div>
                                                     </div>
 
-                                                    {/* Total Amount */}
+                                                    {/* Notes */}
                                                     <div className="space-y-2 md:col-span-3">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Total (Qty × Harga)</Label>
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
-                                                            <MoneyInput
-                                                                value={detail.amount}
-                                                                disabled
-                                                                className="pl-10 bg-gray-50 text-gray-500 h-10 cursor-not-allowed"
-                                                            />
-                                                        </div>
+                                                        <Label className="text-xs font-medium text-muted-foreground">Catatan (Opsional)</Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={detail.notes}
+                                                            onChange={(e) => updateDetailBudget(detail.id, 'notes', e.target.value)}
+                                                            placeholder="Keterangan tambahan..."
+                                                            className="bg-white h-10"
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
@@ -887,18 +903,28 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     </div>
 
                                     {/* Summary Detail Budget */}
-                                    <div className={cn("border rounded-lg p-4 flex items-center justify-between", totalDetailBudget > budget ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200")}>
+                                    {totalDetailBudget > operationalBudget && (
+                                        <Alert variant="destructive" className="mb-4">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle>Peringatan Anggaran</AlertTitle>
+                                            <AlertDescription>
+                                                project activity memiliki pagu lebih besar dari operational ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(operationalBudget)}), update/ remove project activity terlebih dahulu
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
+                                    <div className={cn("border rounded-lg p-4 flex items-center justify-between", totalDetailBudget > operationalBudget ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200")}>
                                         <div>
-                                            <p className={cn("text-sm font-medium", totalDetailBudget > budget ? "text-red-900" : "text-green-900")}>Total Rincian Anggaran</p>
-                                            <p className={cn("text-xs mt-0.5", totalDetailBudget > budget ? "text-red-700" : "text-green-700")}>{detailBudgets.length} item rincian</p>
+                                            <p className={cn("text-sm font-medium", totalDetailBudget > operationalBudget ? "text-red-900" : "text-green-900")}>Total Kegiatan Anggaran</p>
+                                            <p className={cn("text-xs mt-0.5", totalDetailBudget > operationalBudget ? "text-red-700" : "text-green-700")}>{detailBudgets.length} kegiatan</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className={cn("text-lg font-bold", totalDetailBudget > budget ? "text-red-900" : "text-green-900")}>
+                                            <p className={cn("text-lg font-bold", totalDetailBudget > operationalBudget ? "text-red-900" : "text-green-900")}>
                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalDetailBudget)}
                                             </p>
-                                            <p className={cn("text-xs", totalDetailBudget > budget ? "text-red-700 font-bold" : "text-green-700")}>
-                                                {budget > 0 ? `${((totalDetailBudget / budget) * 100).toFixed(1)}% dari total` : '0%'}
-                                                {totalDetailBudget > budget && " (Melebihi Total Anggaran!)"}
+                                            <p className={cn("text-xs", totalDetailBudget > operationalBudget ? "text-red-700 font-bold" : "text-green-700")}>
+                                                {operationalBudget > 0 ? `${((totalDetailBudget / operationalBudget) * 100).toFixed(1)}% dari Pagu Operasional` : '0%'}
+                                                {totalDetailBudget > operationalBudget && " (Melebihi Pagu Operasional!)"}
                                             </p>
                                         </div>
                                     </div>
@@ -1006,19 +1032,40 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     </div>
 
                                     {/* Summary */}
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+                                    {isTerminOverBudget && (
+                                        <Alert variant="destructive" className="mb-4">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle>Peringatan Termin</AlertTitle>
+                                            <AlertDescription>
+                                                Total nominal termin ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalPaymentTerm)}) melebihi total anggaran proyek ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(budget)}).
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
+                                    {!areTerminDatesChronological && (
+                                        <Alert variant="destructive" className="mb-4">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle>Peringatan Tanggal</AlertTitle>
+                                            <AlertDescription>
+                                                Tanggal jatuh tempo termin harus berurutan. Harap periksa kembali tanggal pada setiap termin.
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
+                                    <div className={cn("border rounded-lg p-4 flex items-center justify-between", isTerminOverBudget || !areTerminDatesChronological ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200")}>
                                         <div>
-                                            <p className="text-sm font-medium text-blue-900">Total Termin Pembayaran</p>
-                                            <p className="text-xs text-blue-700 mt-0.5">{paymentTerms.length} termin terjadwal</p>
+                                            <p className={cn("text-sm font-medium", isTerminOverBudget || !areTerminDatesChronological ? "text-red-900" : "text-blue-900")}>Total Termin Pembayaran</p>
+                                            <p className={cn("text-xs mt-0.5", isTerminOverBudget || !areTerminDatesChronological ? "text-red-700" : "text-blue-700")}>{paymentTerms.length} termin terjadwal</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-lg font-bold text-blue-900">
+                                            <p className={cn("text-lg font-bold", isTerminOverBudget || !areTerminDatesChronological ? "text-red-900" : "text-blue-900")}>
                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
-                                                    paymentTerms.reduce((sum, term) => sum + (term.nominal || 0), 0)
+                                                    totalPaymentTerm
                                                 )}
                                             </p>
-                                            <p className="text-xs text-blue-700">
-                                                {budget > 0 ? `${((paymentTerms.reduce((sum, term) => sum + (term.nominal || 0), 0) / budget) * 100).toFixed(1)}% dari total` : '0%'}
+                                            <p className={cn("text-xs", isTerminOverBudget || !areTerminDatesChronological ? "text-red-700 font-bold" : "text-blue-700")}>
+                                                {budget > 0 ? `${((totalPaymentTerm / budget) * 100).toFixed(1)}% dari total` : '0%'}
+                                                {isTerminOverBudget && " (Melebihi Total Anggaran!)"}
                                             </p>
                                         </div>
                                     </div>
