@@ -255,8 +255,8 @@ export default function ProjectTabs({
                     {/* PROPOSAL SECTION */}
                     <Card className="bg-muted/30 border-none shadow-none">
                         <CardHeader className="px-0 pt-0">
-                            <CardTitle>{currentStatus === 'active' ? 'Dokumen Scope of Work (SOW)' : 'Dokumen Proposal Project'}</CardTitle>
-                            <CardDescription>{currentStatus === 'active' ? 'Dokumen SOW utama yang telah disepakati.' : 'Dokumen proposal yang diajukan ke klien.'}</CardDescription>
+                            <CardTitle>{currentStatus === 'active' ? 'Dokumen Kontrak' : 'Dokumen Proposal Project'}</CardTitle>
+                            <CardDescription>{currentStatus === 'active' ? 'List Dokumen Kontrak utama yang telah disepakati.' : 'Dokumen proposal yang diajukan ke klien.'}</CardDescription>
                         </CardHeader>
                         <CardContent className="px-0">
                             {project.supporting_docs && project.supporting_docs.length > 0 ? (
