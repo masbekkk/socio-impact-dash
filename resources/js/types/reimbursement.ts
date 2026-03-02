@@ -13,8 +13,11 @@ export interface Project {
     head_role: string;
     budget_details?: {
         id: number;
+        item_name: string;
         notes: string;
         amount: number;
+        used_amount: number;
+        remaining_amount: number;
     }[];
 }
 
@@ -27,6 +30,18 @@ export interface ProjectAutoFill {
 }
 
 export type ReimbursementType = 'atr' | 'eer' | 'allowance';
+
+export interface ReimbursementItemPayload {
+    project_budget_detail_id: number;
+    parent_item_id?: number | null;
+    item_name: string;
+    quantity: number;
+    unit_price: number;
+    amount: number;
+    expense_type?: string;
+    receipt?: File | null;
+    notes?: string;
+}
 
 export interface ReimbursementPayload {
     type: ReimbursementType;
@@ -51,4 +66,5 @@ export interface ReimbursementPayload {
         project_budget_detail_id: number;
         amount: number;
     }[];
+    items?: ReimbursementItemPayload[];
 }

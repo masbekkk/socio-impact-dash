@@ -28,9 +28,13 @@ final readonly class CreateReimbursement
                 $this->syncSelectedBudgets($reimbursement, $data['selected_budget_details']);
             }
 
+            if (!empty($data['items'])) {
+                $this->syncReimbursementItems($reimbursement, $data['items']);
+            }
+
             $this->assignApprovers($reimbursement, $data);
 
-            return $reimbursement->load(['documents', 'atrBudgetSelecteds.budgetDetail', 'approvals.approver']);
+            return $reimbursement->load(['documents', 'atrBudgetSelecteds.budgetDetail', 'approvals.approver', 'items.budgetDetail']);
         });
     }
 
@@ -92,6 +96,32 @@ final readonly class CreateReimbursement
             $reimbursement->atrBudgetSelecteds()->create([
                 'project_budget_detail_id' => $budget['project_budget_detail_id'],
                 'amount' => $budget['amount'],
+            ]);
+        }
+    }
+
+    private function syncReimbursementItems(Reimbursement $reimbursement, array $items): void
+    {
+        foreach ($items as $item) {
+            $receiptPath = null;
+            if (isset($item['receipt']) && $item['receipt'] instanceof UploadedFile) {
+                $meta = $this->fileUploadService->uploadFile(
+                    $item['receipt'],
+                    "reimbursements/{$reimbursement->id}/receipts"
+                );
+                $receiptPath = $meta['path'];
+            }
+
+            $reimbursement->items()->create([
+                'project_budget_detail_id' => $item['project_budget_detail_id'],
+                'parent_item_id' => $item['parent_item_id'] ?? null,
+                'item_name' => $item['item_name'],
+                'quantity' => $item['quantity'] ?? 1,
+                'unit_price' => $item['unit_price'] ?? 0,
+                'amount' => $item['amount'] ?? 0,
+                'expense_type' => $item['expense_type'] ?? null,
+                'receipt_path' => $receiptPath,
+                'notes' => $item['notes'] ?? null,
             ]);
         }
     }

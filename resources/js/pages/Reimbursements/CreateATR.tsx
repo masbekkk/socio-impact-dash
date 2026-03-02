@@ -1,21 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Save, FileText, CreditCard, User, AlertCircle, Building2, Briefcase, UserCheck, Loader2 } from 'lucide-react';
-import FileUploadDropzone from '@/components/FileUploadDropzone';
+import { ArrowLeft, Save, CreditCard, User, AlertCircle, Building2, Briefcase, UserCheck, Loader2, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import MoneyInput from '@/components/MoneyInput';
 import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 import type { Project } from '@/types/reimbursement';
-
-import { Checkbox } from '@/components/ui/checkbox';
 
 const URGENCY_MAP: Record<string, string> = {
   low: 'rendah',
@@ -30,16 +29,37 @@ interface Approver {
   email: string;
 }
 
-export default function CreateATR({ projects, approvers }: {
+interface ExpenseTypeOption {
+  value: string;
+  label: string;
+}
+
+interface ChildItem {
+  id: string;
+  item_name: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  expense_type: string;
+  notes: string;
+}
+
+interface SelectedActivity {
+  budget_detail_id: number;
+  expanded: boolean;
+  children: ChildItem[];
+}
+
+const fmt = (v: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
+
+export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
   projects: Project[],
-  approvers: Record<string, Approver[]>
+  approvers: Record<string, Approver[]>,
+  expenseTypes?: ExpenseTypeOption[],
 }) {
   const { authUser, loading, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
 
-  const [proposalFile, setProposalFile] = useState<File | null>(null);
-  const [rabFile, setRabFile] = useState<File | null>(null);
-
-  const [selectedBudgets, setSelectedBudgets] = useState<Record<number, number>>({});
+  const [selectedActivities, setSelectedActivities] = useState<SelectedActivity[]>([]);
 
   const [formData, setFormData] = useState({
     nama: authUser?.name ?? '',
@@ -71,7 +91,7 @@ export default function CreateATR({ projects, approvers }: {
       divisi: autoFill.division,
       pic_project: autoFill.pic,
     }));
-    setSelectedBudgets({}); // Reset checks when project changes
+    setSelectedActivities([]);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -85,13 +105,91 @@ export default function CreateATR({ projects, approvers }: {
     clearFieldError(name);
   };
 
+  const selectedProject = useMemo(() => {
+    if (!formData.project_id) return null;
+    return projects.find(p => p.id === parseInt(formData.project_id)) ?? null;
+  }, [formData.project_id, projects]);
+
+  // Activity management
+  const addActivity = (budgetDetailId: number) => {
+    if (selectedActivities.find(a => a.budget_detail_id === budgetDetailId)) return;
+    setSelectedActivities(prev => [...prev, {
+      budget_detail_id: budgetDetailId,
+      expanded: true,
+      children: [{ id: crypto.randomUUID(), item_name: '', quantity: 1, unit_price: 0, amount: 0, expense_type: '', notes: '' }],
+    }]);
+  };
+
+  const removeActivity = (budgetDetailId: number) => {
+    setSelectedActivities(prev => prev.filter(a => a.budget_detail_id !== budgetDetailId));
+  };
+
+  const toggleActivity = (budgetDetailId: number) => {
+    setSelectedActivities(prev => prev.map(a =>
+      a.budget_detail_id === budgetDetailId ? { ...a, expanded: !a.expanded } : a
+    ));
+  };
+
+  // Child item management
+  const addChildItem = (budgetDetailId: number) => {
+    setSelectedActivities(prev => prev.map(a => {
+      if (a.budget_detail_id !== budgetDetailId) return a;
+      return { ...a, children: [...a.children, { id: crypto.randomUUID(), item_name: '', quantity: 1, unit_price: 0, amount: 0, expense_type: '', notes: '' }] };
+    }));
+  };
+
+  const removeChildItem = (budgetDetailId: number, itemId: string) => {
+    setSelectedActivities(prev => prev.map(a => {
+      if (a.budget_detail_id !== budgetDetailId) return a;
+      return { ...a, children: a.children.filter(c => c.id !== itemId) };
+    }));
+  };
+
+  const updateChildItem = (budgetDetailId: number, itemId: string, field: keyof ChildItem, value: any) => {
+    setSelectedActivities(prev => prev.map(a => {
+      if (a.budget_detail_id !== budgetDetailId) return a;
+      return {
+        ...a,
+        children: a.children.map(c => {
+          if (c.id !== itemId) return c;
+          const updated = { ...c, [field]: value };
+          if (field === 'quantity' || field === 'unit_price') {
+            updated.amount = (updated.quantity || 1) * (updated.unit_price || 0);
+          }
+          return updated;
+        }),
+      };
+    }));
+  };
+
+  // Budget calculations
+  const getActivityChildrenTotal = (budgetDetailId: number) => {
+    const activity = selectedActivities.find(a => a.budget_detail_id === budgetDetailId);
+    return activity?.children.reduce((sum, c) => sum + (c.amount || 0), 0) ?? 0;
+  };
+
   const totalAmount = useMemo(() => {
-    return Object.values(selectedBudgets).reduce((sum, val) => sum + val, 0);
-  }, [selectedBudgets]);
+    return selectedActivities.reduce((sum, a) => sum + a.children.reduce((s, c) => s + (c.amount || 0), 0), 0);
+  }, [selectedActivities]);
+
+  const remainingBudget = useMemo(() => {
+    if (!selectedProject) return null;
+    return (selectedProject.operational_budget ?? 0) - (selectedProject.used_operational_budget ?? 0);
+  }, [selectedProject]);
+
+  const budgetExceeded = remainingBudget !== null && totalAmount > remainingBudget;
+
+  // Available activities (not yet selected)
+  const availableActivities = useMemo(() => {
+    if (!selectedProject?.budget_details) return [];
+    return selectedProject.budget_details.filter(
+      bd => !selectedActivities.find(a => a.budget_detail_id === bd.id) && bd.remaining_amount > 0
+    );
+  }, [selectedProject, selectedActivities]);
 
   const handleSubmit = async () => {
-    if (totalAmount <= 0) {
-      setErrors({ amount: ['Nominal pengajuan wajib diisi dengan memilih budget.'] });
+    if (selectedActivities.length === 0 || totalAmount <= 0) {
+      setErrors({ amount: ['Tambahkan minimal 1 item pada kegiatan yang dipilih.'] });
       return;
     }
 
@@ -100,25 +198,29 @@ export default function CreateATR({ projects, approvers }: {
       return;
     }
 
-    const selected = projects.find(p => p.id === parseInt(formData.project_id));
-    if (selected) {
-      const remaining = (selected.operational_budget ?? 0) - (selected.used_operational_budget ?? 0);
-      if (totalAmount > remaining) {
-        setErrors({ amount: ['Nominal pengajuan melebihi sisa pagu operasional proyek.'] });
-        return;
+    // Validate per-activity budget
+    for (const activity of selectedActivities) {
+      const detail = selectedProject?.budget_details?.find(bd => bd.id === activity.budget_detail_id);
+      if (detail) {
+        const childTotal = activity.children.reduce((s, c) => s + (c.amount || 0), 0);
+        if (childTotal > detail.remaining_amount) {
+          setErrors({ amount: [`Total item pada kegiatan "${detail.item_name}" melebihi sisa anggaran (${fmt(detail.remaining_amount)}).`] });
+          return;
+        }
       }
     }
 
-    const documents: { file: File; type: string }[] = [];
-    if (proposalFile) documents.push({ file: proposalFile, type: 'proposal' });
-    if (rabFile) documents.push({ file: rabFile, type: 'RAB' });
-
-    const selected_budget_details = Object.entries(selectedBudgets)
-      .filter(([_, amount]) => amount > 0)
-      .map(([id, amount]) => ({
-        project_budget_detail_id: parseInt(id),
-        amount,
-      }));
+    const items = selectedActivities.flatMap(a =>
+      a.children.filter(c => c.amount > 0 && c.item_name).map(c => ({
+        project_budget_detail_id: a.budget_detail_id,
+        item_name: c.item_name,
+        quantity: c.quantity,
+        unit_price: c.unit_price,
+        amount: c.amount,
+        expense_type: c.expense_type || undefined,
+        notes: c.notes || undefined,
+      }))
+    );
 
     await submitReimbursement({
       type: 'atr',
@@ -129,8 +231,7 @@ export default function CreateATR({ projects, approvers }: {
       account_holder: formData.account_name,
       usage_plan: formData.usage_plan,
       urgency: URGENCY_MAP[formData.urgency] ?? 'normal',
-      documents,
-      selected_budget_details,
+      items,
       approver_head_id: formData.approver_head_id,
       approver_finance_id: formData.approver_finance_id,
       approver_direktur_id: formData.approver_direktur_id,
@@ -138,18 +239,6 @@ export default function CreateATR({ projects, approvers }: {
   };
 
   const isAutoFilled = !!formData.project_id;
-
-  const selectedProject = useMemo(() => {
-    if (!formData.project_id) return null;
-    return projects.find(p => p.id === parseInt(formData.project_id)) ?? null;
-  }, [formData.project_id, projects]);
-
-  const remainingBudget = useMemo(() => {
-    if (!selectedProject) return null;
-    return (selectedProject.operational_budget ?? 0) - (selectedProject.used_operational_budget ?? 0);
-  }, [selectedProject]);
-
-  const budgetExceeded = remainingBudget !== null && totalAmount > remainingBudget;
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -211,72 +300,6 @@ export default function CreateATR({ projects, approvers }: {
                   </Select>
                   {errors.project_id && <p className="text-xs text-red-500 font-medium">{errors.project_id[0]}</p>}
                 </div>
-                <div className="space-y-4 md:col-span-2">
-                  <h4 className="text-sm font-semibold text-slate-800 border-b pb-2">Pilih Item Anggaran (RAB)</h4>
-                  {selectedProject ? (
-                    selectedProject.budget_details?.length ? (
-                      <div className="space-y-3 max-h-60 overflow-y-auto pr-2 rounded-md border p-3 bg-slate-50">
-                        {selectedProject.budget_details.map((detail) => (
-                          <div key={detail.id} className="flex items-start gap-3 p-2 bg-white rounded border shadow-sm">
-                            <Checkbox
-                              id={`budget-${detail.id}`}
-                              checked={!!selectedBudgets[detail.id]}
-                              onCheckedChange={(checked) => {
-                                setSelectedBudgets((prev) => {
-                                  const next = { ...prev };
-                                  if (checked) {
-                                    next[detail.id] = detail.amount;
-                                  } else {
-                                    delete next[detail.id];
-                                  }
-                                  return next;
-                                });
-                              }}
-                              className="mt-1"
-                            />
-                            <div className="flex-1">
-                              <label htmlFor={`budget-${detail.id}`} className="text-sm font-medium leading-none cursor-pointer">
-                                {detail.notes}
-                              </label>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(detail.amount)}
-                              </p>
-                            </div>
-                            {selectedBudgets[detail.id] !== undefined && (
-                              <div className="w-1/3">
-                                <MoneyInput
-                                  value={selectedBudgets[detail.id]}
-                                  onValueChange={(values) => {
-                                    setSelectedBudgets(prev => ({ ...prev, [detail.id]: values.floatValue || 0 }));
-                                  }}
-                                  className="h-8 text-xs"
-                                  placeholder="Nominal"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded-md border border-yellow-200">
-                        Proyek ini belum memiliki rincian anggaran (RAB).
-                      </p>
-                    )
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">Pilih proyek terlebih dahulu.</p>
-                  )}
-
-                  <div className="flex justify-between items-center bg-slate-100 p-3 rounded-md border">
-                    <span className="font-semibold text-sm">Total Pengajuan:</span>
-                    <span className="text-lg font-bold text-slate-900 tracking-tight">
-                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalAmount)}
-                    </span>
-                  </div>
-                  {errors.amount && <p className="text-xs text-red-500 font-medium">{errors.amount[0]}</p>}
-                  {budgetExceeded && (
-                    <p className="text-xs text-red-600 font-medium mt-1">Total pengajuan melebihi batas pagu operasional proyek.</p>
-                  )}
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="divisi">Divisi</Label>
                   <div className="relative">
@@ -293,6 +316,159 @@ export default function CreateATR({ projects, approvers }: {
                 </div>
               </div>
             </div>
+
+            <Separator />
+
+            {/* Kegiatan & Item Section */}
+            <div className="p-6 md:p-8 bg-white">
+              <h3 className="text-lg font-semibold mb-1">Kegiatan & Item Anggaran</h3>
+              <p className="text-sm text-muted-foreground mb-6">Pilih kegiatan dari proyek, lalu tambahkan item detail untuk setiap kegiatan.</p>
+
+              {selectedProject ? (
+                <div className="space-y-4">
+                  {/* Activity Selector */}
+                  {availableActivities.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Tambah Kegiatan</Label>
+                      <Select onValueChange={(v) => addActivity(parseInt(v))}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Pilih kegiatan yang akan diajukan..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableActivities.map(bd => (
+                            <SelectItem key={bd.id} value={bd.id.toString()}>
+                              {bd.item_name} — Sisa: {fmt(bd.remaining_amount)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedActivities.length === 0 && (
+                    <p className="text-sm text-muted-foreground italic py-4 text-center">Pilih kegiatan di atas untuk mulai menambahkan item.</p>
+                  )}
+
+                  {/* Selected Activities */}
+                  {selectedActivities.map((activity) => {
+                    const detail = selectedProject.budget_details?.find(bd => bd.id === activity.budget_detail_id);
+                    if (!detail) return null;
+                    const childTotal = getActivityChildrenTotal(activity.budget_detail_id);
+                    const overBudget = childTotal > detail.remaining_amount;
+
+                    return (
+                      <div key={activity.budget_detail_id} className="border rounded-xl overflow-hidden shadow-sm">
+                        {/* Activity Header */}
+                        <div
+                          className={cn("flex items-center justify-between p-4 cursor-pointer transition-colors", overBudget ? "bg-red-50 hover:bg-red-100" : "bg-slate-50 hover:bg-slate-100")}
+                          onClick={() => toggleActivity(activity.budget_detail_id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            {activity.expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            <div>
+                              <h4 className="font-semibold text-sm">{detail.item_name}</h4>
+                              <p className="text-xs text-muted-foreground">
+                                Pagu: {fmt(detail.amount)} · Terpakai: {fmt(detail.used_amount)} · Sisa: <span className={cn(overBudget && "text-red-600 font-bold")}>{fmt(detail.remaining_amount)}</span>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={cn("text-sm font-bold", overBudget ? "text-red-600" : "text-emerald-700")}>{fmt(childTotal)}</span>
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700" onClick={(e) => { e.stopPropagation(); removeActivity(activity.budget_detail_id); }}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Children */}
+                        {activity.expanded && (
+                          <div className="p-4 space-y-3 bg-white">
+                            {overBudget && (
+                              <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>Melebihi Sisa Anggaran</AlertTitle>
+                                <AlertDescription>Total item ({fmt(childTotal)}) melebihi sisa anggaran kegiatan ini ({fmt(detail.remaining_amount)}).</AlertDescription>
+                              </Alert>
+                            )}
+
+                            {activity.children.map((child, idx) => (
+                              <div key={child.id} className="border rounded-lg p-4 space-y-3 bg-slate-50/50">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold text-muted-foreground">Item #{idx + 1}</span>
+                                  {activity.children.length > 1 && (
+                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => removeChildItem(activity.budget_detail_id, child.id)}>
+                                      <X className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                  <div className="md:col-span-4 space-y-1">
+                                    <Label className="text-xs">Nama Item <span className="text-red-500">*</span></Label>
+                                    <Input value={child.item_name} onChange={(e) => updateChildItem(activity.budget_detail_id, child.id, 'item_name', e.target.value)} placeholder="Nama item..." className="h-9 text-sm" />
+                                  </div>
+                                  <div className="md:col-span-1 space-y-1">
+                                    <Label className="text-xs">Qty</Label>
+                                    <Input type="number" min={1} value={child.quantity} onChange={(e) => updateChildItem(activity.budget_detail_id, child.id, 'quantity', parseInt(e.target.value) || 1)} className="h-9 text-sm" />
+                                  </div>
+                                  <div className="md:col-span-2 space-y-1">
+                                    <Label className="text-xs">Nominal</Label>
+                                    <MoneyInput value={child.unit_price} onValueChange={(v) => updateChildItem(activity.budget_detail_id, child.id, 'unit_price', v.floatValue || 0)} placeholder="0" className="h-9 text-sm" />
+                                  </div>
+                                  <div className="md:col-span-2 space-y-1">
+                                    <Label className="text-xs">Jumlah</Label>
+                                    <Input value={fmt(child.amount)} readOnly className="h-9 text-sm bg-muted/30 font-medium" />
+                                  </div>
+                                  <div className="md:col-span-3 space-y-1">
+                                    <Label className="text-xs">Jenis Expense</Label>
+                                    <Select value={child.expense_type} onValueChange={(v) => updateChildItem(activity.budget_detail_id, child.id, 'expense_type', v)}>
+                                      <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Pilih..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {expenseTypes.map(et => (
+                                          <SelectItem key={et.value} value={et.value}>{et.label}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+
+                            <Button type="button" variant="outline" size="sm" onClick={() => addChildItem(activity.budget_detail_id)} className="gap-2 border-dashed">
+                              <Plus className="h-3.5 w-3.5" /> Tambah Item
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Grand Total */}
+                  <div className={cn("border rounded-lg p-4 flex items-center justify-between", budgetExceeded ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200")}>
+                    <div>
+                      <p className={cn("text-sm font-medium", budgetExceeded ? "text-red-900" : "text-emerald-900")}>Total Pengajuan ATR</p>
+                      <p className={cn("text-xs mt-0.5", budgetExceeded ? "text-red-700" : "text-emerald-700")}>{selectedActivities.reduce((s, a) => s + a.children.length, 0)} item dari {selectedActivities.length} kegiatan</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={cn("text-lg font-bold", budgetExceeded ? "text-red-900" : "text-emerald-900")}>{fmt(totalAmount)}</p>
+                      {remainingBudget !== null && (
+                        <p className={cn("text-xs", budgetExceeded ? "text-red-700 font-bold" : "text-emerald-700")}>
+                          Sisa pagu operasional: {fmt(remainingBudget)}
+                          {budgetExceeded && ' (Melebihi!)'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {errors.amount && <p className="text-xs text-red-500 font-medium">{errors.amount[0]}</p>}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Pilih proyek terlebih dahulu.</p>
+              )}
+            </div>
+
+            <Separator />
 
             {/* Rencana Penggunaan */}
             <div className="p-6 md:p-8 bg-white">

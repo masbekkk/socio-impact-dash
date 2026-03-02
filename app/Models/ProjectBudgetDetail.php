@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProjectBudgetDetail extends Model
 {
@@ -46,4 +47,35 @@ class ProjectBudgetDetail extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    /**
+     * Get the reimbursement items linked to this budget detail.
+     */
+    public function reimbursementItems(): HasMany
+    {
+        return $this->hasMany(ReimbursementItem::class, 'project_budget_detail_id');
+    }
+
+    /**
+     * Get the total used amount from approved/in-progress ATR items.
+     */
+    public function getUsedAmountAttribute(): float
+    {
+        return (float) $this->reimbursementItems()
+            ->whereHas('reimbursement', function ($q) {
+                $q->where('type', 'atr')
+                  ->whereNotIn('status', ['rejected', 'draft']);
+            })
+            ->whereNull('parent_item_id')
+            ->sum('amount');
+    }
+
+    /**
+     * Get remaining available amount for new ATR claims.
+     */
+    public function getRemainingAmountAttribute(): float
+    {
+        return max(0, $this->amount - $this->used_amount);
+    }
 }
+

@@ -42,6 +42,17 @@ final class StoreReimbursementRequest extends FormRequest
             'selected_budget_details' => ['nullable', 'array'],
             'selected_budget_details.*.project_budget_detail_id' => ['required', 'integer', 'exists:project_budget_details,id'],
             'selected_budget_details.*.amount' => ['required', 'numeric', 'min:0'],
+
+            'items' => ['nullable', 'array'],
+            'items.*.project_budget_detail_id' => ['required', 'integer', 'exists:project_budget_details,id'],
+            'items.*.parent_item_id' => ['nullable', 'integer', 'exists:reimbursement_items,id'],
+            'items.*.item_name' => ['required', 'string', 'max:255'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'items.*.amount' => ['required', 'numeric', 'min:0'],
+            'items.*.expense_type' => ['nullable', 'string'],
+            'items.*.receipt' => ['nullable', 'file', 'max:10240'],
+            'items.*.notes' => ['nullable', 'string'],
         ];
     }
 
