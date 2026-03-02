@@ -24,9 +24,9 @@ final readonly class UpdateReimbursementStatus
                 // Direktur override: update ALL approval records for this reimbursement
                 ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
                     ->update([
-                        'approver_id' => $approverId,
+                        // 'approver_id' => $approverId,
                         'status' => $action,
-                        'notes' => $notes,
+                        // 'notes' => $notes,
                         'approved_at' => $action === ApprovalStatus::Approved->value ? now() : null,
                     ]);
             } else {
