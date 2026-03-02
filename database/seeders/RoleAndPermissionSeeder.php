@@ -44,6 +44,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'delete_event',
             'edit_atr_budget',
             'add_event_calendar',
+            'view_all_projects',
         ];
 
         foreach ($permissions as $permission) {
@@ -59,9 +60,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'view_reimbursements',
             'create_leaves',
             'view_leaves',
-            'create_event',
-            'delete_event',
-            'add_event_calendar',
+
         ]);
 
         $headRole = Role::firstOrCreate(['name' => UserRole::Head->value]);
@@ -76,7 +75,6 @@ final class RoleAndPermissionSeeder extends Seeder
             'view_all_leaves',
             'manage_detail_budget',
             'create_event',
-            'delete_event',
             'edit_atr_budget',
             'add_event_calendar',
         ]);
@@ -93,6 +91,8 @@ final class RoleAndPermissionSeeder extends Seeder
             'input_budget_partition',
             'manage_detail_budget',
             'edit_atr_budget',
+            'view_all_projects',
+            'create_event',
         ]);
 
         $superadminRole = Role::firstOrCreate(['name' => UserRole::Superadmin->value]);
@@ -105,6 +105,8 @@ final class RoleAndPermissionSeeder extends Seeder
             'approve_leaves',
             'view_reimbursements',
             'view_projects',
+            'view_all_projects',
+            'create_event',
         ]);
 
         $direkturRole = Role::firstOrCreate(['name' => UserRole::Direktur->value]);
@@ -116,6 +118,8 @@ final class RoleAndPermissionSeeder extends Seeder
             'view_all_leaves',
             'approve_leaves',
             'approval_budget_partition',
+            'view_all_projects',
+            'create_event',
         ]);
     }
 }

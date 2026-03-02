@@ -496,7 +496,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   }}
                 >
                   <SelectTrigger className="w-20 h-8 text-xs" id="rows-per-page">
-                    <SelectValue placeholder={pagination.per_page} />
+                    <SelectValue>{pagination.per_page}</SelectValue>
                   </SelectTrigger>
                   <SelectContent side="top">
                     {[10, 20, 30, 40, 50].map((pageSize) => (
