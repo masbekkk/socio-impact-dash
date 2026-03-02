@@ -14,6 +14,7 @@ class ProjectBudgetDetail extends Model
 
     protected $fillable = [
         'project_id',
+        'item_name',
         'quantity',
         'item_price',
         'amount',

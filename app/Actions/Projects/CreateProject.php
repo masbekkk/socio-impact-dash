@@ -154,6 +154,7 @@ final class CreateProject
             $project->budgetDetails()->create([
                 'quantity' => $detail['quantity'] ?? 1,
                 'item_price' => $detail['item_price'] ?? 0,
+                'item_name' => $detail['item_name'] ?? null,
                 'amount' => $detail['amount'],
                 'notes' => $detail['notes'] ?? null,
                 'created_by' => $userId,
