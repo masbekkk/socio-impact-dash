@@ -29,7 +29,7 @@ final class ProjectController extends Controller
         $user = $request->user();
         $canViewAll = [UserRole::Superadmin, UserRole::Direktur, UserRole::Finance, UserRole::HR];
 
-        if (! $user->hasRole($canViewAll)) {
+        if (! $user->hasAnyPermission(['view_all_projects'])) {
             $query->where('created_by', $user->id);
         }
 

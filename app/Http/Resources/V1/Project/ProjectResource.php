@@ -49,14 +49,17 @@ final class ProjectResource extends JsonResource
             'account_manager' => $this->whenLoaded('accountManager', fn () => [
                 'id' => $this->accountManager->id,
                 'name' => $this->accountManager->name,
+                'email' => $this->accountManager->email,
             ]),
             'head' => $this->whenLoaded('head', fn () => [
                 'id' => $this->head->id,
                 'name' => $this->head->name,
+                'email' => $this->head->email,
             ]),
             'pic' => $this->whenLoaded('pic', fn () => [
                 'id' => $this->pic->id,
                 'name' => $this->pic->name,
+                'email' => $this->pic->email,
             ]),
             'locations' => $this->whenLoaded('locations'),
             'documents' => $this->whenLoaded('documents'),

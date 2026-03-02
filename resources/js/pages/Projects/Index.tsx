@@ -285,18 +285,6 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'all')}>
-                    Semua Status
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'active')}>
-                    Aktif
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleFilterChange('status', 'proposal')}>
-                    Proposal
-                  </DropdownMenuItem>
-
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Filter by Divisi</DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -496,7 +484,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   }}
                 >
                   <SelectTrigger className="w-20 h-8 text-xs" id="rows-per-page">
-                    <SelectValue placeholder={pagination.per_page} />
+                    <SelectValue>{pagination.per_page}</SelectValue>
                   </SelectTrigger>
                   <SelectContent side="top">
                     {[10, 20, 30, 40, 50].map((pageSize) => (

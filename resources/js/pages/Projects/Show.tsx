@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import ProjectTabs from './ProjectTabs'
 import { Link, usePage, Head, router } from '@inertiajs/react'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Circle, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye, Download, MapPin, Plus, Calendar, User, Upload, Handshake, Archive, Loader2 } from 'lucide-react'
+import { CheckCircle2, Pencil, Plus, Calendar, User, Handshake, Loader2, ShieldCheck, Hash, BarChart3, Layers, Users, Trash2 } from 'lucide-react'
+import { cn } from '@/lib/utils';
 import MoneyInput from '@/components/MoneyInput'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -377,116 +378,174 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
       <div className="p-4 md:p-8 pt-0 space-y-8">
 
-        {/* stakeholder WORKFLOW */}
+        {/* STAKEHOLDER WORKFLOW */}
         <section>
-          <h3 className="text-lg font-semibold mb-4">Stakeholders</h3>
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="h-5 w-5 text-emerald-600" />
+            <h3 className="text-lg font-bold">Stakeholders</h3>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { role: 'Account Manager', user: project.account_manager },
-              { role: 'Head Implementation', user: project.head },
-              { role: 'PIC Project', user: project.pic }
-            ].map((stakeholder, index) => (
-              <Card
-                key={index}
-                className="transition-all duration-200 bg-[var(--sidebar)] text-white border-[var(--sidebar)] shadow-md hover:shadow-lg"
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-sm font-medium text-white/80 uppercase tracking-wide">
-                      {stakeholder.role}
-                    </CardTitle>
-                    <CheckCircle2 className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="text-lg font-bold mt-1 text-white truncate" title={stakeholder.user?.name}>
-                    {stakeholder.user?.name || '-'}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm mb-3">
-                    <span className="capitalize px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 border bg-white/20 text-white border-white/20 backdrop-blur-sm">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Assigned
-                    </span>
-                  </div>
-
-                  {/* Notes Section - Optional */}
-                  <div className="p-3 rounded-lg border text-sm mt-3 bg-white/10 border-white/20 backdrop-blur-sm">
-                    <div className="flex items-center gap-2 text-white/80">
-                      <User className="h-3.5 w-3.5" />
-                      <span className="text-xs truncate">{stakeholder.user?.name || '-'}</span>
+              { role: 'Account Manager', user: project.account_manager, icon: Handshake, color: 'emerald' },
+              { role: 'Head Implementation', user: project.head, icon: ShieldCheck, color: 'blue' },
+              { role: 'PIC Project', user: project.pic, icon: User, color: 'purple' }
+            ].map((stakeholder, index) => {
+              const Icon = stakeholder.icon;
+              return (
+                <Card
+                  key={index}
+                  className="transition-all duration-300 border-none shadow-sm hover:shadow-md overflow-hidden group"
+                >
+                  <div className={cn(
+                    "h-1.5 w-full",
+                    stakeholder.color === 'emerald' ? "bg-emerald-500" :
+                      stakeholder.color === 'blue' ? "bg-blue-500" : "bg-purple-500"
+                  )} />
+                  <CardHeader className="pb-3 px-5">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Icon className="h-3 w-3" />
+                        {stakeholder.role}
+                      </span>
+                      <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 text-[10px] h-5 border-emerald-100">
+                        Assigned
+                      </Badge>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <CardTitle className="text-base font-bold truncate group-hover:text-emerald-700 transition-colors">
+                      {stakeholder.user?.name || '-'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-5 pb-4">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 p-2 rounded-lg border border-muted/50">
+                      <div className="h-6 w-6 rounded-full bg-white flex items-center justify-center border shadow-sm shrink-0">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <span className="truncate">{stakeholder.user?.email || 'No email provided'}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
-          {/* Approval Notes Input (Below Cards) */}
-          {(isAssignedStakeholder || canUpdateCode) && (
-            <div className="mt-6 p-4 border rounded-xl bg-white shadow-sm">
-              {/* Project Code Input - Based on permission */}
-              {canUpdateCode && (
-                <div className="mb-4 space-y-2 border-b pb-4">
-                  <Label htmlFor="project-code" className="text-sm font-semibold">
-                    Tetapkan Kode Proyek <span className="text-red-500">*</span>
-                  </Label>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        id="project-code"
-                        className="max-w-md bg-white border-gray-300 font-mono"
-                        placeholder="Contoh: PRJ-2025-001"
-                        value={projectCode}
-                        onChange={(e) => setProjectCode(e.target.value)}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={handleUpdateCode}
-                        disabled={isUpdatingCode || !projectCode || projectCode === project.code}
-                      >
-                        {isUpdatingCode ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          "Simpan"
-                        )}
-                      </Button>
+          {/* PROJECT IDENTITY & ACTIONS */}
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden">
+              <CardHeader className="pb-3 bg-slate-50/50 border-b">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-emerald-600" />
+                  <CardTitle className="text-base font-bold text-slate-800">Identitas & Klasifikasi Proyek</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 px-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Left Column: Project Code */}
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="project-code" className="text-sm font-bold flex items-center gap-2">
+                        <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                        Kode Proyek
+                      </Label>
+                      {canUpdateCode ? (
+                        <div className="flex gap-2 group">
+                          <div className="relative flex-1">
+                            <Input
+                              id="project-code"
+                              className="bg-white border-gray-200 font-mono text-sm h-10 transition-all focus:ring-2 focus:ring-emerald-500/20"
+                              placeholder="PRJ-XXXX-XXX"
+                              value={projectCode}
+                              onChange={(e) => setProjectCode(e.target.value)}
+                            />
+                            {projectCode === project.code && project.code && (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500 absolute right-3 top-3" />
+                            )}
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="default"
+                            className="h-10 w-10 shrink-0 bg-emerald-600 hover:bg-emerald-700 transition-transform active:scale-95 shadow-sm"
+                            onClick={handleUpdateCode}
+                            disabled={isUpdatingCode || !projectCode || projectCode === project.code}
+                          >
+                            {isUpdatingCode ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Plus className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="h-10 px-3 bg-muted/30 rounded-lg flex items-center border border-muted/50 font-mono text-sm text-slate-600">
+                          {project.code || 'BELUM DITETAPKAN'}
+                        </div>
+                      )}
+                      <p className="text-[10px] text-muted-foreground italic pl-1">
+                        *Kode unik internal untuk identifikasi proyek.
+                      </p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      Kode proyek wajib diisi untuk identifikasi unik sebelum menyetujui.
-                    </p>
+                  </div>
+
+                  {/* Right Column: Project Type */}
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-sm font-bold flex items-center gap-2 text-slate-700">
+                        <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                        Jenis / Kategori Proyek
+                      </Label>
+                      <div className="h-20 p-4 border rounded-xl bg-gradient-to-br from-emerald-50 to-blue-50/30 flex items-center justify-between border-emerald-100 shadow-sm transition-all hover:shadow-md">
+                        <div>
+                          <p className="text-[10px] text-emerald-600/70 font-bold uppercase tracking-widest mb-1">Classification Target</p>
+                          <p className="font-extrabold text-lg text-slate-800 capitalize leading-none">
+                            {project.project_type || 'General'}
+                          </p>
+                        </div>
+                        <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-50">
+                          <Layers className="h-5 w-5" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
+              </CardContent>
+            </Card>
 
-              {/* {isAssignedStakeholder && (
-                <>
-                  <Label htmlFor="approval-note" className="text-sm font-semibold mb-2 block">Catatan Approval / Evaluasi Project</Label>
-                  <span className="text-xs text-muted-foreground ml-1">
-                    *Catatan wajib diisi jika memilih Revisi.
-                  </span>
-                  <Textarea
-                    id="approval-note"
-                    placeholder="Tulis catatan, arahan, atau evaluasi terkait persetujuan proyek ini..."
-                    className="min-h-[100px] resize-y bg-gray-50 focus:bg-white transition-colors"
-                    value={approvalNote}
-                    onChange={(e) => setApprovalNote(e.target.value)}
-                  />
-                  <div className="flex justify-end items-center mt-3">
-                    <div className="flex gap-3">
-                      <Button variant="outline" onClick={() => setIsRevisionAlertOpen(true)} className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-transform hover:scale-105 active:scale-95">
-                        <AlertCircle className="h-4 w-4 mr-2" />
-                        Minta Revisi
-                      </Button>
-                      <Button onClick={() => setIsApproveAlertOpen(true)} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)] text-white shadow-sm transition-transform hover:scale-105 active:scale-95">
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Setujui Proyek
-                      </Button>
+            {/* Quick Summary / Status Card */}
+            <Card className="border-none shadow-sm bg-slate-900 text-white overflow-hidden relative group">
+              <div className="absolute -right-8 -bottom-8 opacity-10 transition-transform group-hover:scale-110 duration-500">
+                <BarChart3 className="h-48 w-48 text-white" />
+              </div>
+              <CardHeader className="pb-2 border-b border-white/10">
+                <CardTitle className="text-sm font-medium text-white/60 uppercase tracking-widest">Project Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4 relative z-10">
+                <div>
+                  <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest mb-1">Contract Value</p>
+                  <p className="text-2xl font-black text-emerald-400 font-mono">
+                    {project.budget_total ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(project.budget_total) : 'Rp 0'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest mb-1">Timeline</p>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-white/90">
+                      <Calendar className="h-3 w-3 text-emerald-400" />
+                      <span>{project.start_date ? new Date(project.start_date).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'}</span>
                     </div>
                   </div>
-                </>
-              )} */}
-            </div>
-          )}
+                  <div>
+                    <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest mb-1">Division</p>
+                    <p className="text-xs font-bold text-white/90 truncate">{project.division?.name || '-'}</p>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="pt-2 border-t border-white/10 bg-black/20">
+                <div className="flex items-center gap-2 text-[10px] text-white/50 italic">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                  <span>Verified Project Data</span>
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
         </section>
 
         <ProjectTabs
