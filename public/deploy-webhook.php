@@ -10,7 +10,6 @@ declare(strict_types=1);
  * 2. Add DEPLOY_SECRET=your_secret to your .env
  * 3. Add DEPLOY_WEBHOOK_SECRET and DEPLOY_WEBHOOK_URL to GitHub Secrets
  */
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);
@@ -19,17 +18,17 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // Project root is one level up from /public/
 $projectPath = dirname(__DIR__);
-$envFile = $projectPath . '/.env';
+$envFile = $projectPath.'/.env';
 $secret = null;
 
 if (file_exists($envFile)) {
     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        if (str_starts_with(trim($line), '#')) {
+        if (str_starts_with(mb_trim($line), '#')) {
             continue;
         }
         if (str_starts_with($line, 'DEPLOY_SECRET=')) {
-            $secret = trim(substr($line, strlen('DEPLOY_SECRET=')));
+            $secret = mb_trim(mb_substr($line, mb_strlen('DEPLOY_SECRET=')));
             break;
         }
     }
@@ -41,10 +40,9 @@ if ($secret === null || $secret === '') {
     exit(1);
 }
 
-$authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['HTTP_X_DEPLOY_TOKEN'] ?? '';
-$token = str_replace('Bearer ', '', $authHeader);
+$token = $_SERVER['HTTP_X_DEPLOY_TOKEN'] ?? '';
 
-if (!hash_equals($secret, $token)) {
+if (! hash_equals($secret, $token)) {
     http_response_code(403);
     echo json_encode(['error' => 'Unauthorized']);
     exit(1);
@@ -66,8 +64,9 @@ function runCommand(string $command, string $cwd, array &$output): bool
 
     $process = proc_open($command, $descriptors, $pipes, $cwd);
 
-    if (!is_resource($process)) {
+    if (! is_resource($process)) {
         $output[] = ['command' => $command, 'status' => 'error', 'message' => 'Failed to start process'];
+
         return false;
     }
 
@@ -82,8 +81,8 @@ function runCommand(string $command, string $cwd, array &$output): bool
     $output[] = [
         'command' => $command,
         'status' => $returnCode === 0 ? 'success' : 'error',
-        'stdout' => trim($stdout),
-        'stderr' => trim($stderr),
+        'stdout' => mb_trim($stdout),
+        'stderr' => mb_trim($stderr),
         'exit_code' => $returnCode,
     ];
 
@@ -105,7 +104,7 @@ for ($i = 1; $i <= 3; $i++) {
     }
 }
 
-if (!$fetchSuccess) {
+if (! $fetchSuccess) {
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'git fetch failed after 3 attempts', 'steps' => $output]);
     exit(1);
@@ -121,7 +120,7 @@ $steps = [
 ];
 
 foreach ($steps as $step) {
-    if (!runCommand($step, $projectPath, $output)) {
+    if (! runCommand($step, $projectPath, $output)) {
         $hasError = true;
         break;
     }
