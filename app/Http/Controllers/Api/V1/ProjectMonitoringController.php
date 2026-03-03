@@ -11,7 +11,7 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
-class ProjectMonitoringController extends Controller
+final class ProjectMonitoringController extends Controller
 {
     public function store(Request $request, Project $project, StoreProjectMonitoring $storeMonitoring): \Illuminate\Http\JsonResponse
     {
@@ -20,7 +20,7 @@ class ProjectMonitoringController extends Controller
             'notes' => ['nullable', 'string', 'max:5000'],
             'documents' => ['nullable', 'array'],
             'documents.*.title' => ['nullable', 'string', 'max:255'],
-            'documents.*.file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'], // 10MB
+            // 'documents.*.file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:51200'], // 50MB limit
         ]);
 
         $monitoring = $storeMonitoring->handle($project, $validated, $request->user()->id);

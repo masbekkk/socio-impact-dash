@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Save, CreditCard, User, AlertCircle, Building2, Briefcase, UserCheck, Loader2, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Save, CreditCard, User, AlertCircle, Building2, Briefcase, UserCheck, Loader2, Plus, X, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -75,6 +75,8 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
     account_name: '',
     usage_plan: '',
     urgency: 'normal',
+    start_date: '',
+    end_date: '',
   });
 
   const breadcrumbs = [
@@ -231,6 +233,8 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
       account_holder: formData.account_name,
       usage_plan: formData.usage_plan,
       urgency: URGENCY_MAP[formData.urgency] ?? 'normal',
+      start_date: formData.start_date || undefined,
+      end_date: formData.end_date || undefined,
       items,
       approver_head_id: formData.approver_head_id,
       approver_finance_id: formData.approver_finance_id,
@@ -473,9 +477,37 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
             {/* Rencana Penggunaan */}
             <div className="p-6 md:p-8 bg-white">
               <h3 className="text-lg font-semibold mb-1">Rencana Penggunaan</h3>
-              <p className="text-sm text-muted-foreground mb-6">Jelaskan rencana penggunaan dana dan tingkat urgensi.</p>
+              <p className="text-sm text-muted-foreground mb-6">Jelaskan rencana penggunaan dana, jadwal pemakaian, dan tingkat urgensi.</p>
 
               <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start_date" className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Tanggal Mulai Penggunaan</Label>
+                    <Input
+                      id="start_date"
+                      name="start_date"
+                      type="date"
+                      className={`h-10 ${errors.start_date ? 'border-red-500' : ''}`}
+                      value={formData.start_date}
+                      onChange={handleChange}
+                    />
+                    {errors.start_date && <p className="text-xs text-red-500 font-medium">{errors.start_date[0]}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end_date" className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Tanggal Selesai Penggunaan</Label>
+                    <Input
+                      id="end_date"
+                      name="end_date"
+                      type="date"
+                      className={`h-10 ${errors.end_date ? 'border-red-500' : ''}`}
+                      value={formData.end_date}
+                      min={formData.start_date || undefined}
+                      onChange={handleChange}
+                    />
+                    {errors.end_date && <p className="text-xs text-red-500 font-medium">{errors.end_date[0]}</p>}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="usage_plan">Rencana untuk Penggunaannya</Label>
                   <Textarea

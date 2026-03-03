@@ -29,18 +29,27 @@ class StoreProjectMonitoring
             if (isset($data['documents']) && is_array($data['documents'])) {
                 foreach ($data['documents'] as $doc) {
                     if (isset($doc['file']) && $doc['file'] instanceof UploadedFile) {
-                        $meta = $this->fileUploadService->uploadFile(
-                            $doc['file'],
+                        $file = $doc['file'];
+
+                        // Save to temp local disk
+                        $tempPath = $file->store("temp/projects/{$project->id}/monitorings/{$monitoring->id}", 'local');
+
+                        // Create doc record with pending
+                        $document = $monitoring->documents()->create([
+                            'title' => $doc['title'] ?? null,
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => '', // Set by job
+                            'mime' => $file->getClientMimeType(),
+                            'size' => $file->getSize(),
+                            'upload_status' => 'pending',
+                            'temp_path' => $tempPath,
+                        ]);
+
+                        // Dispatch background job
+                        \App\Jobs\ProcessProjectMonitoringDocumentUpload::dispatch(
+                            $document->id,
                             "projects/{$project->id}/monitorings/{$monitoring->id}"
                         );
-
-                        $monitoring->documents()->create([
-                            'title' => $doc['title'] ?? null,
-                            'original_name' => $meta['original_name'],
-                            'path' => $meta['path'],
-                            'mime' => $meta['mime'],
-                            'size' => $meta['size'],
-                        ]);
                     }
                 }
             }

@@ -64,7 +64,7 @@ final class UpdateProjectRequest extends FormRequest
             'termin_payments.*.notes' => ['nullable', 'string'],
             'documents.*.id' => ['nullable', 'integer'],
             'documents.*.type' => ['required', 'string'],
-            'documents.*.file' => ['sometimes', 'file', 'max:10240'],
+            'documents.*.file' => ['sometimes', 'file', 'max:51200'], // 50MB limit
             'detail_budgets' => ['nullable', 'array'],
             'detail_budgets.*.id' => ['nullable', 'integer'],
             'detail_budgets.*.item_name' => ['required_with:detail_budgets', 'string', 'max:255'],

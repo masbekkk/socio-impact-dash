@@ -13,11 +13,11 @@ final class ProjectDocument extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['project_id', 'type', 'original_name', 'path', 'mime', 'size', 'uploaded_by'];
+    protected $fillable = ['project_id', 'type', 'original_name', 'path', 'mime', 'size', 'uploaded_by', 'upload_status', 'temp_path'];
 
     protected function casts(): array
     {
-        return ['id' => 'integer', 'project_id' => 'integer', 'uploaded_by' => 'integer', 'size' => 'integer'];
+        return ['id' => 'integer', 'project_id' => 'integer', 'uploaded_by' => 'integer', 'size' => 'integer', 'upload_status' => 'string'];
     }
 
     public function project(): BelongsTo

@@ -125,34 +125,55 @@ final class UpdateProject
     {
         foreach ($documents as $doc) {
             if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
-                // Determine if we are replacing or adding
+                $file = $doc['file'];
+
+                // Save to temp local disk (fast, no external I/O)
+                $tempPath = $file->store("temp/projects/{$project->id}", 'local');
+
+                // If replacing an existing document
                 if (isset($doc['id'])) {
                     $existingDoc = $project->documents()->find($doc['id']);
                     if ($existingDoc) {
-                        $meta = $this->fileUploadService->replaceFile(
-                            $doc['file'],
-                            $existingDoc->path,
+                        // Delete old file from final storage
+                        if ($existingDoc->path) {
+                            \Illuminate\Support\Facades\Storage::disk('public')->delete($existingDoc->path);
+                        }
+
+                        $existingDoc->update([
+                            'type' => $doc['type'] ?? $existingDoc->type,
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => '', // Will be set by the job
+                            'mime' => $file->getClientMimeType(),
+                            'size' => $file->getSize(),
+                            'upload_status' => 'pending',
+                            'temp_path' => $tempPath,
+                        ]);
+
+                        \App\Jobs\ProcessProjectDocumentUpload::dispatch(
+                            $existingDoc->id,
                             "projects/{$project->id}/documents"
                         );
-                        $existingDoc->update(array_merge($meta, ['type' => $doc['type'] ?? $existingDoc->type]));
 
                         continue;
                     }
                 }
 
-                $meta = $this->fileUploadService->uploadFile(
-                    $doc['file'],
+                // Create new document record
+                $document = $project->documents()->create([
+                    'type' => $doc['type'] ?? 'other',
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => '',
+                    'mime' => $file->getClientMimeType(),
+                    'size' => $file->getSize(),
+                    'uploaded_by' => $userId,
+                    'upload_status' => 'pending',
+                    'temp_path' => $tempPath,
+                ]);
+
+                \App\Jobs\ProcessProjectDocumentUpload::dispatch(
+                    $document->id,
                     "projects/{$project->id}/documents"
                 );
-
-                $project->documents()->create([
-                    'type' => $doc['type'] ?? 'other',
-                    'original_name' => $meta['original_name'],
-                    'path' => $meta['path'],
-                    'mime' => $meta['mime'],
-                    'size' => $meta['size'],
-                    'uploaded_by' => $userId,
-                ]);
             }
         }
     }

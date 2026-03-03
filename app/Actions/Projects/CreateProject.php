@@ -101,19 +101,28 @@ final class CreateProject
     {
         foreach ($documents as $doc) {
             if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
-                $meta = $this->fileUploadService->uploadFile(
-                    $doc['file'],
+                $file = $doc['file'];
+
+                // Save to temp local disk (fast, no external I/O)
+                $tempPath = $file->store("temp/projects/{$project->id}", 'local');
+
+                // Create document record immediately with pending status
+                $document = $project->documents()->create([
+                    'type' => $doc['type'] ?? 'other',
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => '', // Will be set by the job
+                    'mime' => $file->getClientMimeType(),
+                    'size' => $file->getSize(),
+                    'uploaded_by' => $userId,
+                    'upload_status' => 'pending',
+                    'temp_path' => $tempPath,
+                ]);
+
+                // Dispatch background job to move file to final storage
+                \App\Jobs\ProcessProjectDocumentUpload::dispatch(
+                    $document->id,
                     "projects/{$project->id}/documents"
                 );
-
-                $project->documents()->create([
-                    'type' => $doc['type'] ?? 'other',
-                    'original_name' => $meta['original_name'],
-                    'path' => $meta['path'],
-                    'mime' => $meta['mime'],
-                    'size' => $meta['size'],
-                    'uploaded_by' => $userId,
-                ]);
             }
         }
     }

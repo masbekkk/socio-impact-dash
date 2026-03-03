@@ -58,7 +58,7 @@ final class StoreProjectRequest extends FormRequest
             'termin_payments.*.notes' => ['nullable', 'string'],
             'documents' => ['nullable', 'array'],
             'documents.*.type' => ['required', 'string'],
-            'documents.*.file' => ['required', 'file', 'max:10240'], // 10MB limit
+            'documents.*.file' => ['required', 'file', 'max:51200'], // 50MB limit
             'detail_budgets' => ['nullable', 'array'],
             'detail_budgets.*.item_name' => ['required_with:detail_budgets', 'string', 'max:255'],
             'detail_budgets.*.quantity' => ['nullable', 'numeric', 'min:1'],
