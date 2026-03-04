@@ -742,7 +742,7 @@ export default function ProjectTabs({
                                             {detailBudgets.length > 0 && (
                                                 <>
                                                     <tr className="bg-gray-50/80 font-semibold border-t-2">
-                                                        <td colSpan={2} className="px-4 py-3 text-right text-gray-700">Total:</td>
+                                                        <td colSpan={2} className="px-4 py-3 text-right text-gray-700">Total ({project.budget_total > 0 ? ((totalProposal / project.budget_total) * 100).toFixed(1) : 0}%):</td>
                                                         <td className="px-4 py-3 text-right font-mono text-primary">
                                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
                                                         </td>
@@ -755,7 +755,7 @@ export default function ProjectTabs({
                                                         <td></td>
                                                     </tr>
                                                     <tr className="bg-emerald-50/80 border-t">
-                                                        <td colSpan={2} className="px-4 py-3 text-right text-emerald-800 font-bold">Estimasi Profit (Total Pagu - Pelaksanaan):</td>
+                                                        <td colSpan={2} className="px-4 py-3 text-right text-emerald-800 font-bold">Estimasi Profit (Total Pagu - Pelaksanaan) ({project.budget_total > 0 ? ((estimasiProfit / project.budget_total) * 100).toFixed(1) : 0}%):</td>
                                                         <td colSpan={4} className={`px-4 py-3 text-right font-mono text-lg font-bold ${estimasiProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
                                                         </td>

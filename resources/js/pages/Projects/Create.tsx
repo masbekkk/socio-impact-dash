@@ -880,13 +880,13 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                         <p className="text-lg font-bold text-gray-900">
                           {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
                         </p>
-                        <p className="text-xs text-muted-foreground">Total Proposal</p>
+                        <p className="text-xs text-muted-foreground">Total Proposal ({budget > 0 ? ((totalProposal / budget) * 100).toFixed(1) : 0}%)</p>
                       </div>
                     </div>
                     <div className="border-t mt-3 pt-3 flex items-center justify-between">
                       <div>
                         <p className={cn("text-sm font-bold", estimasiProfit >= 0 ? "text-emerald-800" : "text-red-800")}>
-                          Estimasi Profit (Total Pagu - Pelaksanaan)
+                          Estimasi Profit (Total Pagu - Pelaksanaan) ({budget > 0 ? ((estimasiProfit / budget) * 100).toFixed(1) : 0}%)
                         </p>
                       </div>
                       <div className="text-right">
