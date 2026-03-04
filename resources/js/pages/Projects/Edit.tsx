@@ -60,7 +60,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [deletePaymentTerms, setDeletePaymentTerms] = useState<string[]>([])
 
     // State Detail Budgets
-    const [detailBudgets, setDetailBudgets] = useState<{ id: string, item_name: string, quantity: number | null, item_price: number, amount: number, notes: string, isNew?: boolean }[]>([])
+    const [detailBudgets, setDetailBudgets] = useState<{ id: string, item_name: string, quantity: number | null, item_price: number, amount: number, amount_pelaksanaan: number, amount_proposal: number, notes: string, isNew?: boolean }[]>([])
     const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([])
 
     // Dynamic Docs State
@@ -145,10 +145,12 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                         quantity: detail.quantity ? parseInt(detail.quantity) : null,
                         item_price: parseFloat(detail.item_price) || 0,
                         amount: parseFloat(detail.amount) || 0,
+                        amount_pelaksanaan: parseFloat(detail.amount_pelaksanaan) || 0,
+                        amount_proposal: parseFloat(detail.amount_proposal) || 0,
                         notes: detail.notes || ''
                     })));
                 } else {
-                    setDetailBudgets([{ id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, notes: '', isNew: true }]);
+                    setDetailBudgets([{ id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, amount_pelaksanaan: 0, amount_proposal: 0, notes: '', isNew: true }]);
                 }
             } catch (error) {
                 console.error("Error fetching project:", error);
@@ -214,7 +216,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
     // Detail Budgets Functions
     const addDetailBudget = () => {
-        setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, notes: '', isNew: true }]);
+        setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, amount_pelaksanaan: 0, amount_proposal: 0, notes: '', isNew: true }]);
     };
     const removeDetailBudget = (id: string, isNew?: boolean) => {
         if (detailBudgets.length > 1) {
@@ -224,12 +226,12 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             }
         }
     };
-    const updateDetailBudget = (id: string, field: 'item_name' | 'quantity' | 'item_price' | 'notes', value: any) => {
+    const updateDetailBudget = (id: string, field: 'item_name' | 'quantity' | 'item_price' | 'notes' | 'amount_pelaksanaan' | 'amount_proposal', value: any) => {
         setDetailBudgets(detailBudgets.map(d => {
             if (d.id === id) {
                 const updated = { ...d, [field]: value };
-                if (field === 'quantity' || field === 'item_price') {
-                    updated.amount = (updated.quantity || 1) * (updated.item_price || 0);
+                if (field === 'amount_proposal') {
+                    updated.amount = value;
                 }
                 return updated;
             }
@@ -237,11 +239,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         }));
     };
     const totalDetailBudget = detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-
-    // Auto calculate partitions (50% Ops, 30% Mgmt, 20% Allowance)
-    const operationalBudget = budget * 0.5;
-    const managementBudget = budget * 0.3;
-    const allowanceBudget = budget * 0.2;
+    const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
+    const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
+    const estimasiProfit = budget - totalPelaksanaan;
 
     const handleSubmit = async () => {
         setSaving(true);
@@ -316,6 +316,8 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             if (detail.quantity) submitData.append(`detail_budgets[${index}][quantity]`, detail.quantity.toString());
             submitData.append(`detail_budgets[${index}][item_price]`, detail.item_price.toString());
             submitData.append(`detail_budgets[${index}][amount]`, detail.amount.toString());
+            submitData.append(`detail_budgets[${index}][amount_pelaksanaan]`, (detail.amount_pelaksanaan || 0).toString());
+            submitData.append(`detail_budgets[${index}][amount_proposal]`, (detail.amount_proposal || 0).toString());
             if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
         });
 
@@ -804,18 +806,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                     100% dari Total Project
                                                 </p>
                                                 <div className="pt-2 mt-2 border-t space-y-1 text-left">
-                                                    <div className="flex justify-between text-[10px]">
-                                                        <span className="text-muted-foreground">Operasional (50%):</span>
-                                                        <span className="font-semibold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(operationalBudget)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between text-[10px]">
-                                                        <span className="text-muted-foreground">Management (30%):</span>
-                                                        <span className="font-semibold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(managementBudget)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between text-[10px]">
-                                                        <span className="text-muted-foreground">Allowance (20%):</span>
-                                                        <span className="font-semibold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(allowanceBudget)}</span>
-                                                    </div>
+                                                    <p className="text-[10px] text-muted-foreground italic">Pembagian anggaran (Operasional, Manajemen, Allowance) diatur pada tab Nilai Kontrak oleh role Finance.</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -860,8 +851,8 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                     )}
                                                 </div>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                                    <div className="space-y-2 md:col-span-6">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="space-y-2 md:col-span-2">
                                                         <Label className="text-xs font-medium text-muted-foreground">Nama Kegiatan <span className="text-red-500">*</span></Label>
                                                         <Input
                                                             type="text"
@@ -872,22 +863,33 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                         />
                                                     </div>
 
-                                                    {/* Item Price */}
-                                                    <div className="space-y-2 md:col-span-3">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Nominal Kegiatan</Label>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Amount Proposal</Label>
                                                         <div className="relative">
                                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
                                                             <MoneyInput
-                                                                value={detail.item_price}
-                                                                onValueChange={(vals) => updateDetailBudget(detail.id, 'item_price', vals.floatValue || 0)}
+                                                                value={detail.amount_proposal || 0}
+                                                                onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_proposal', vals.floatValue || 0)}
                                                                 placeholder="0"
                                                                 className="pl-10 bg-white h-10"
                                                             />
                                                         </div>
                                                     </div>
 
-                                                    {/* Notes */}
-                                                    <div className="space-y-2 md:col-span-3">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Amount Pelaksanaan</Label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
+                                                            <MoneyInput
+                                                                value={detail.amount_pelaksanaan || 0}
+                                                                onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_pelaksanaan', vals.floatValue || 0)}
+                                                                placeholder="0"
+                                                                className="pl-10 bg-white h-10"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-2 md:col-span-2">
                                                         <Label className="text-xs font-medium text-muted-foreground">Catatan (Opsional)</Label>
                                                         <Input
                                                             type="text"
@@ -903,29 +905,30 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     </div>
 
                                     {/* Summary Detail Budget */}
-                                    {totalDetailBudget > operationalBudget && (
-                                        <Alert variant="destructive" className="mb-4">
-                                            <AlertCircle className="h-4 w-4" />
-                                            <AlertTitle>Peringatan Anggaran</AlertTitle>
-                                            <AlertDescription>
-                                                project activity memiliki pagu lebih besar dari operational ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(operationalBudget)}), update/ remove project activity terlebih dahulu
-                                            </AlertDescription>
-                                        </Alert>
-                                    )}
-
-                                    <div className={cn("border rounded-lg p-4 flex items-center justify-between", totalDetailBudget > operationalBudget ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200")}>
-                                        <div>
-                                            <p className={cn("text-sm font-medium", totalDetailBudget > operationalBudget ? "text-red-900" : "text-green-900")}>Total Kegiatan Anggaran</p>
-                                            <p className={cn("text-xs mt-0.5", totalDetailBudget > operationalBudget ? "text-red-700" : "text-green-700")}>{detailBudgets.length} kegiatan</p>
+                                    <div className={cn("border rounded-lg p-4", estimasiProfit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200")}>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">Total Kegiatan Anggaran</p>
+                                                <p className="text-xs mt-0.5 text-muted-foreground">{detailBudgets.length} kegiatan</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-lg font-bold text-gray-900">
+                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">Total Proposal</p>
+                                            </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className={cn("text-lg font-bold", totalDetailBudget > operationalBudget ? "text-red-900" : "text-green-900")}>
-                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalDetailBudget)}
-                                            </p>
-                                            <p className={cn("text-xs", totalDetailBudget > operationalBudget ? "text-red-700 font-bold" : "text-green-700")}>
-                                                {operationalBudget > 0 ? `${((totalDetailBudget / operationalBudget) * 100).toFixed(1)}% dari Pagu Operasional` : '0%'}
-                                                {totalDetailBudget > operationalBudget && " (Melebihi Pagu Operasional!)"}
-                                            </p>
+                                        <div className="border-t mt-3 pt-3 flex items-center justify-between">
+                                            <div>
+                                                <p className={cn("text-sm font-bold", estimasiProfit >= 0 ? "text-emerald-800" : "text-red-800")}>
+                                                    Estimasi Profit (Total Pagu - Pelaksanaan)
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className={cn("text-lg font-bold", estimasiProfit >= 0 ? "text-emerald-700" : "text-red-600")}>
+                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

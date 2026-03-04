@@ -58,9 +58,9 @@ final class CreateProject
             'status' => $data['status'] ?? ProjectStatus::Active,
             'project_type' => $data['project_type'],
             'budget_total' => $budgetTotal,
-            'operational_budget' => $budgetTotal * 0.5,
-            'management_budget' => $budgetTotal * 0.3,
-            'allowance_budget' => $budgetTotal * 0.2,
+            'operational_budget' => $data['operational_budget'] ?? 0,
+            'management_budget' => $data['management_budget'] ?? 0,
+            'allowance_budget' => $data['allowance_budget'] ?? 0,
             'start_date' => $data['start_date'],
             'end_date' => $data['end_date'],
         ]);
@@ -165,6 +165,8 @@ final class CreateProject
                 'item_price' => $detail['item_price'] ?? 0,
                 'item_name' => $detail['item_name'] ?? null,
                 'amount' => $detail['amount'],
+                'amount_pelaksanaan' => $detail['amount_pelaksanaan'] ?? null,
+                'amount_proposal' => $detail['amount_proposal'] ?? null,
                 'notes' => $detail['notes'] ?? null,
                 'created_by' => $userId,
             ]);

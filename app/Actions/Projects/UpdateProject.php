@@ -60,22 +60,9 @@ final class UpdateProject
             'code', 'name', 'description', 'division_id',
             'status', 'project_type', 'budget_total', 'head_id', 'account_manager_id', 'pic_id',
             'start_date', 'end_date', 'actual_budget',
-            'operational_budget', 'allowance_budget', 'budget_partition_status',
+            'operational_budget', 'management_budget', 'allowance_budget', 'budget_partition_status',
             'lesson_learned',
         ])->toArray();
-
-        // If managing detailed budgets, this basic calculation could be preserved or adjusted,
-        // but it's kept per existing requirements unless fully overwritten.
-        if (isset($updateData['budget_total'])) {
-            $budgetTotal = (float) $updateData['budget_total'];
-            $updateData['management_budget'] = $budgetTotal * 0.3;
-            if (! isset($updateData['operational_budget'])) {
-                $updateData['operational_budget'] = $budgetTotal * 0.5;
-            }
-            if (! isset($updateData['allowance_budget'])) {
-                $updateData['allowance_budget'] = $budgetTotal * 0.2;
-            }
-        }
 
         if (! empty($updateData)) {
             $project->update($updateData);
@@ -186,6 +173,8 @@ final class UpdateProject
                     'quantity' => $detail['quantity'] ?? 1,
                     'item_price' => $detail['item_price'] ?? 0,
                     'amount' => $detail['amount'],
+                    'amount_pelaksanaan' => $detail['amount_pelaksanaan'] ?? null,
+                    'amount_proposal' => $detail['amount_proposal'] ?? null,
                     'notes' => $detail['notes'] ?? null,
                 ]);
             } else {
@@ -193,6 +182,8 @@ final class UpdateProject
                     'quantity' => $detail['quantity'] ?? 1,
                     'item_price' => $detail['item_price'] ?? 0,
                     'amount' => $detail['amount'],
+                    'amount_pelaksanaan' => $detail['amount_pelaksanaan'] ?? null,
+                    'amount_proposal' => $detail['amount_proposal'] ?? null,
                     'notes' => $detail['notes'] ?? null,
                     'created_by' => $userId,
                 ]);
