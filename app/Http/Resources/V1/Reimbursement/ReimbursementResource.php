@@ -20,13 +20,16 @@ final class ReimbursementResource extends JsonResource
             ],
             'project' => $this->when($this->project_id !== null, [
                 'id' => $this->project?->id,
+                'uuid' => $this->project?->uuid,
                 'name' => $this->project?->name,
                 'code' => $this->project?->code,
                 'division_name' => $this->project?->division?->name,
                 'pic_name' => $this->project?->pic?->name,
                 'head_name' => $this->project?->head?->name,
                 'head_email' => $this->project?->head?->email,
+                'budget_total' => $this->project?->budget_total ? (float) $this->project->budget_total : null,
                 'operational_budget' => $this->project?->operational_budget ? (float) $this->project->operational_budget : null,
+                'management_budget' => $this->project?->management_budget ? (float) $this->project->management_budget : null,
                 'allowance_budget' => $this->project?->allowance_budget ? (float) $this->project->allowance_budget : null,
                 'used_operational_budget' => $this->project ? (float) $this->project->reimbursements()
                     ->where('type', 'atr')
