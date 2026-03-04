@@ -49,6 +49,8 @@ final class ReimbursementResource extends JsonResource
             'transferred_at' => $this->transferred_at?->toISOString(),
             'transfer_proof_path' => $this->transfer_proof_path,
             'rejection_reason' => $this->rejection_reason,
+            'start_date' => $this->start_date?->toDateString(),
+            'end_date' => $this->end_date?->toDateString(),
             'documents' => ReimbursementDocumentResource::collection(
                 $this->whenLoaded('documents')
             ),
@@ -120,11 +122,6 @@ final class ReimbursementResource extends JsonResource
             return true;
         }
 
-        // Requester cannot approve their own reimbursement unless they are superadmin
-        if ($this->user_id === $user->id) {
-            return false;
-        }
-
         // To prevent users from approving the same state multiple times, we check status transitions.
         $status = $this->status?->value;
 
@@ -188,6 +185,12 @@ final class ReimbursementResource extends JsonResource
 
         if ($status === 'finance_approved') {
             return $user->hasRole('direktur') || $user->hasRole('head') || $user->hasRole('superadmin');
+        }
+
+         // Requester cannot approve their own reimbursement unless they are superadmin
+        if ($this->user_id === $user->id) {
+            /// TODO: only if head return true
+            return false;
         }
 
         return false;

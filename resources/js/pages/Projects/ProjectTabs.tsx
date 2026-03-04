@@ -94,13 +94,15 @@ export default function ProjectTabs({
     // Budget Partitions State
     const [editPartitions, setEditPartitions] = useState(false);
     const [opsBudget, setOpsBudget] = useState<number>(project.operational_budget || 0);
+    const [mgmtBudget, setMgmtBudget] = useState<number>(project.management_budget || 0);
     const [allowanceBudget, setAllowanceBudget] = useState<number>(project.allowance_budget || 0);
     const [savingBudget, setSavingBudget] = useState(false);
     const [localBudgetStatus, setLocalBudgetStatus] = useState(project.budget_partition_status || 'draft');
 
     // Permissions
+    const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
     const permissions = (usePage().props as any).auth?.permissions || [];
-    const canInputBudget = permissions.includes('input_budget_partition');
+    const canInputBudget = isAdminOrFinance;
     const canApproveBudget = permissions.includes('approval_budget_partition');
     const canManageDetailBudget = permissions.includes('manage_detail_budget');
 
@@ -112,6 +114,7 @@ export default function ProjectTabs({
 
     useEffect(() => {
         setOpsBudget(project.operational_budget || 0);
+        setMgmtBudget(project.management_budget || 0);
         setAllowanceBudget(project.allowance_budget || 0);
         setLocalBudgetStatus(project.budget_partition_status || 'draft');
     }, [project]);
@@ -121,6 +124,7 @@ export default function ProjectTabs({
         try {
             await axios.put(`/api/v1/projects/${project.uuid}`, {
                 operational_budget: opsBudget,
+                management_budget: mgmtBudget,
                 allowance_budget: allowanceBudget
             });
             setEditPartitions(false);
@@ -163,6 +167,8 @@ export default function ProjectTabs({
                 if (detail.quantity) submitData.append(`detail_budgets[${index}][quantity]`, detail.quantity.toString());
                 submitData.append(`detail_budgets[${index}][item_price]`, (detail.item_price || 0).toString());
                 submitData.append(`detail_budgets[${index}][amount]`, (detail.amount || (detail.item_price || 0)).toString());
+                submitData.append(`detail_budgets[${index}][amount_pelaksanaan]`, (detail.amount_pelaksanaan || 0).toString());
+                submitData.append(`detail_budgets[${index}][amount_proposal]`, (detail.amount_proposal || 0).toString());
                 if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
             });
 
@@ -237,8 +243,10 @@ export default function ProjectTabs({
         }
     };
 
-    const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
     const totalDetailBudgets = detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
+    const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
+    const estimasiProfit = (project.budget_total || 0) - totalPelaksanaan;
 
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -627,11 +635,22 @@ export default function ProjectTabs({
                                     <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu operasional {(project.budget_total > 0 ? ((opsBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
                                 </div>
                                 <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-purple-200 transition-colors">
-                                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-2">Manajemen (30%)</p>
-                                    <div className="text-xl font-bold text-slate-900 tracking-tight">
-                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.management_budget || 0)}
-                                    </div>
-                                    <p className="text-[10px] text-muted-foreground pt-1">Fix 30% dari Total Pagu</p>
+                                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-2">Manajemen</p>
+                                    {editPartitions ? (
+                                        <MoneyInput
+                                            value={mgmtBudget}
+                                            onValueChange={(values) => {
+                                                const val = values.floatValue || 0;
+                                                setMgmtBudget(val);
+                                            }}
+                                            placeholder="Nilai Manajemen"
+                                        />
+                                    ) : (
+                                        <div className="text-xl font-bold text-slate-900 tracking-tight">
+                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(mgmtBudget)}
+                                        </div>
+                                    )}
+                                    <p className="text-[10px] text-muted-foreground pt-1">Pagu manajemen {(project.budget_total > 0 ? ((mgmtBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
                                 </div>
                                 <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-amber-200 transition-colors">
                                     <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">Allowance</p>
@@ -684,38 +703,64 @@ export default function ProjectTabs({
                                             <tr>
                                                 <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
                                                 <th className="px-4 py-3 font-medium text-gray-500">Nama Kegiatan</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Nominal Kegiatan</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Amount Proposal</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Amount Pelaksanaan</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Selisih</th>
                                                 <th className="px-4 py-3 font-medium text-gray-500">Catatan</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
                                             {detailBudgets.length > 0 ? (
-                                                detailBudgets.map((detail, idx) => (
-                                                    <tr key={idx} className="hover:bg-gray-50/50">
-                                                        <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
-                                                        <td className="px-4 py-3 font-medium text-gray-900">{detail.item_name || '-'}</td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.item_price || 0)}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-muted-foreground">{detail.notes || '-'}</td>
-                                                    </tr>
-                                                ))
+                                                detailBudgets.map((detail, idx) => {
+                                                    const proposal = Number(detail.amount_proposal) || 0;
+                                                    const pelaksanaan = Number(detail.amount_pelaksanaan) || 0;
+                                                    const selisih = proposal - pelaksanaan;
+                                                    return (
+                                                        <tr key={idx} className="hover:bg-gray-50/50">
+                                                            <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
+                                                            <td className="px-4 py-3 font-medium text-gray-900">{detail.item_name || '-'}</td>
+                                                            <td className="px-4 py-3 text-right font-mono">
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(proposal)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right font-mono">
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(pelaksanaan)}
+                                                            </td>
+                                                            <td className={`px-4 py-3 text-right font-mono font-semibold ${selisih >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(selisih)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-muted-foreground">{detail.notes || '-'}</td>
+                                                        </tr>
+                                                    );
+                                                })
                                             ) : (
                                                 <tr>
-                                                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground italic">
+                                                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground italic">
                                                         Belum ada rincian anggaran.
                                                     </td>
                                                 </tr>
                                             )}
                                             {detailBudgets.length > 0 && (
-                                                <tr className="bg-gray-50/80 font-semibold border-t-2">
-                                                    <td colSpan={4} className="px-4 py-3 text-right text-gray-700">Total Rincian:</td>
-                                                    <td className="px-4 py-3 text-right text-primary">
-                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
-                                                            detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
-                                                        )}
-                                                    </td>
-                                                </tr>
+                                                <>
+                                                    <tr className="bg-gray-50/80 font-semibold border-t-2">
+                                                        <td colSpan={2} className="px-4 py-3 text-right text-gray-700">Total:</td>
+                                                        <td className="px-4 py-3 text-right font-mono text-primary">
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right font-mono text-primary">
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalPelaksanaan)}
+                                                        </td>
+                                                        <td className={`px-4 py-3 text-right font-mono font-bold ${(totalProposal - totalPelaksanaan) >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal - totalPelaksanaan)}
+                                                        </td>
+                                                        <td></td>
+                                                    </tr>
+                                                    <tr className="bg-emerald-50/80 border-t">
+                                                        <td colSpan={2} className="px-4 py-3 text-right text-emerald-800 font-bold">Estimasi Profit (Total Pagu - Pelaksanaan):</td>
+                                                        <td colSpan={4} className={`px-4 py-3 text-right font-mono text-lg font-bold ${estimasiProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
+                                                        </td>
+                                                    </tr>
+                                                </>
                                             )}
                                         </tbody>
                                     </table>
@@ -724,55 +769,13 @@ export default function ProjectTabs({
                                 <div className="border rounded-xl p-5 bg-gray-50/50 space-y-4">
                                     <div className="space-y-3">
                                         {detailBudgets.map((detail, idx) => (
-                                            <div key={detail.id} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-white p-3 rounded-lg border shadow-sm">
-                                                <div className="flex-[2] w-full space-y-1.5">
-                                                    <Label className="text-xs text-muted-foreground">Nama Kegiatan</Label>
-                                                    <Input
-                                                        type="text"
-                                                        value={detail.item_name || ''}
-                                                        onChange={(e) => {
-                                                            const newDetails = [...detailBudgets];
-                                                            newDetails[idx].item_name = e.target.value;
-                                                            setDetailBudgets(newDetails);
-                                                        }}
-                                                        placeholder="Sewa Gedung, Konsumsi, dll..."
-                                                        className="h-9"
-                                                    />
-                                                </div>
-                                                <div className="flex-1 w-full space-y-1.5">
-                                                    <Label className="text-xs text-muted-foreground">Nominal Kegiatan</Label>
-                                                    <MoneyInput
-                                                        value={detail.item_price || 0}
-                                                        onValueChange={(vals) => {
-                                                            const newDetails = [...detailBudgets];
-                                                            newDetails[idx].item_price = vals.floatValue || 0;
-                                                            newDetails[idx].amount = (newDetails[idx].quantity || 1) * newDetails[idx].item_price;
-                                                            setDetailBudgets(newDetails);
-                                                        }}
-                                                        placeholder="0"
-                                                        prefix="Rp "
-                                                        className="h-9"
-                                                    />
-                                                </div>
-                                                <div className="flex-[2] w-full space-y-1.5">
-                                                    <Label className="text-xs text-muted-foreground">Catatan / Keterangan</Label>
-                                                    <Input
-                                                        type="text"
-                                                        value={detail.notes || ''}
-                                                        onChange={(e) => {
-                                                            const newDetails = [...detailBudgets];
-                                                            newDetails[idx].notes = e.target.value;
-                                                            setDetailBudgets(newDetails);
-                                                        }}
-                                                        placeholder="Catatan tambahan (Opsional)..."
-                                                        className="h-9"
-                                                    />
-                                                </div>
-                                                <div className="pt-5 flex-shrink-0">
+                                            <div key={detail.id} className="bg-white p-4 rounded-lg border shadow-sm space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-bold text-muted-foreground">Kegiatan #{idx + 1}</span>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-9 w-9 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                                        className="h-7 w-7 text-red-500 hover:bg-red-50 hover:text-red-600"
                                                         onClick={() => {
                                                             const toDelete = detailBudgets[idx];
                                                             const newDetails = detailBudgets.filter((_, i) => i !== idx);
@@ -785,6 +788,65 @@ export default function ProjectTabs({
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <div className="md:col-span-2 space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">Nama Kegiatan</Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={detail.item_name || ''}
+                                                            onChange={(e) => {
+                                                                const newDetails = [...detailBudgets];
+                                                                newDetails[idx].item_name = e.target.value;
+                                                                setDetailBudgets(newDetails);
+                                                            }}
+                                                            placeholder="Sewa Gedung, Konsumsi, dll..."
+                                                            className="h-9"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">Amount Proposal</Label>
+                                                        <MoneyInput
+                                                            value={detail.amount_proposal || 0}
+                                                            onValueChange={(vals) => {
+                                                                const newDetails = [...detailBudgets];
+                                                                newDetails[idx].amount_proposal = vals.floatValue || 0;
+                                                                newDetails[idx].amount = vals.floatValue || 0;
+                                                                setDetailBudgets(newDetails);
+                                                            }}
+                                                            placeholder="0"
+                                                            prefix="Rp "
+                                                            className="h-9"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">Amount Pelaksanaan</Label>
+                                                        <MoneyInput
+                                                            value={detail.amount_pelaksanaan || 0}
+                                                            onValueChange={(vals) => {
+                                                                const newDetails = [...detailBudgets];
+                                                                newDetails[idx].amount_pelaksanaan = vals.floatValue || 0;
+                                                                setDetailBudgets(newDetails);
+                                                            }}
+                                                            placeholder="0"
+                                                            prefix="Rp "
+                                                            className="h-9"
+                                                        />
+                                                    </div>
+                                                    <div className="md:col-span-2 space-y-1.5">
+                                                        <Label className="text-xs text-muted-foreground">Catatan / Keterangan</Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={detail.notes || ''}
+                                                            onChange={(e) => {
+                                                                const newDetails = [...detailBudgets];
+                                                                newDetails[idx].notes = e.target.value;
+                                                                setDetailBudgets(newDetails);
+                                                            }}
+                                                            placeholder="Catatan tambahan (Opsional)..."
+                                                            className="h-9"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -793,7 +855,7 @@ export default function ProjectTabs({
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, notes: '', isNew: true }])}
+                                            onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, amount_pelaksanaan: 0, amount_proposal: 0, notes: '', isNew: true }])}
                                             className="gap-1.5 border-dashed"
                                         >
                                             <Plus className="h-3.5 w-3.5" />

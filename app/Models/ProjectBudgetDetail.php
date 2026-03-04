@@ -19,6 +19,8 @@ class ProjectBudgetDetail extends Model
         'quantity',
         'item_price',
         'amount',
+        'amount_pelaksanaan',
+        'amount_proposal',
         'notes',
         'created_by',
     ];
@@ -29,6 +31,8 @@ class ProjectBudgetDetail extends Model
             'quantity' => 'integer',
             'item_price' => 'float',
             'amount' => 'float',
+            'amount_pelaksanaan' => 'float',
+            'amount_proposal' => 'float',
         ];
     }
 

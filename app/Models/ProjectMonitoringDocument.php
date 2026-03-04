@@ -14,7 +14,19 @@ class ProjectMonitoringDocument extends Model
         'path',
         'mime',
         'size',
+        'upload_status',
+        'temp_path',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'id' => 'integer',
+            'project_monitoring_id' => 'integer',
+            'size' => 'integer',
+            'upload_status' => 'string',
+        ];
+    }
 
     protected $appends = ['url'];
 

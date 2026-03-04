@@ -23,7 +23,16 @@ final class ProjectMonitoringResource extends JsonResource
                 'id' => $this->creator->id,
                 'name' => $this->creator->name,
             ]),
-            'documents' => $this->whenLoaded('documents'),
+            'documents' => $this->whenLoaded('documents', fn () => $this->documents->map(fn ($doc) => [
+                'id' => $doc->id,
+                'title' => $doc->title,
+                'original_name' => $doc->original_name,
+                'path' => $doc->path,
+                'mime' => $doc->mime,
+                'size' => $doc->size,
+                'url' => $doc->url,
+                'upload_status' => $doc->upload_status ?? 'completed',
+            ])),
             'created_at' => $this->created_at->toDateTimeString(),
             'updated_at' => $this->updated_at->toDateTimeString(),
         ];

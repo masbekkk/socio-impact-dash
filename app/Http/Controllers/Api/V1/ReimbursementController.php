@@ -164,6 +164,67 @@ final class ReimbursementController extends Controller
         }
     }
 
+    public function resubmit(string $code, Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $reimbursement = Reimbursement::where('code', $code)->first();
+
+            if (! $reimbursement) {
+                return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
+            }
+
+            if ($reimbursement->user_id !== $user->id) {
+                return JsonResponseFormatter::error('Hanya pembuat pengajuan yang dapat mengirim ulang revisi.', 403);
+            }
+
+            if ($reimbursement->status->value !== 'revision') {
+                return JsonResponseFormatter::error('Pengajuan tidak dalam status revisi.', 422);
+            }
+
+            $validated = $request->validate([
+                'usage_plan' => ['nullable', 'string'],
+                'amount' => ['nullable', 'numeric', 'min:0'],
+                'start_date' => ['nullable', 'date'],
+                'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+                'revision_note' => ['nullable', 'string'],
+            ]);
+
+            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user) {
+                // Update editable fields
+                $updateData = ['status' => \App\Enums\ReimbursementStatus::Submitted];
+                if (isset($validated['usage_plan'])) $updateData['usage_plan'] = $validated['usage_plan'];
+                if (isset($validated['amount'])) $updateData['amount'] = $validated['amount'];
+                if (isset($validated['start_date'])) $updateData['start_date'] = $validated['start_date'];
+                if (isset($validated['end_date'])) $updateData['end_date'] = $validated['end_date'];
+
+                $reimbursement->update($updateData);
+
+                // Reset all approvals back to pending
+                $reimbursement->approvals()->update([
+                    'status' => 'pending',
+                    'approved_at' => null,
+                ]);
+
+                // Add a system comment notifying approvers
+                $note = $validated['revision_note'] ?? 'Pengajuan telah direvisi dan diajukan kembali.';
+                $reimbursement->comments()->create([
+                    'user_id' => $user->id,
+                    'comment' => "[Revisi Diajukan Ulang] {$note}",
+                ]);
+            });
+
+            $data = $this->reimbursementService->getReimbursementDetail($code);
+
+            return JsonResponseFormatter::success(
+                new ReimbursementResource($data),
+                'Revisi berhasil diajukan kembali'
+            );
+        } catch (Throwable $e) {
+            return JsonResponseFormatter::error($e->getMessage(), 500);
+        }
+    }
+
     public function destroy(string $id, Request $request): JsonResponse
     {
         try {

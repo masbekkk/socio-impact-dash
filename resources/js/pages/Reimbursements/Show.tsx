@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { usePermission } from '@/hooks/use-permission';
 import MoneyInput from '@/components/MoneyInput';
+import { Input } from '@/components/ui/input';
 
 interface AtrBudgetSelected {
   id: number;
@@ -126,6 +127,8 @@ interface ReimbursementDetail {
   can_approve: boolean;
   atr_budget_selecteds?: AtrBudgetSelected[];
   items?: ReimbursementItem[];
+  start_date: string | null;
+  end_date: string | null;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -177,9 +180,15 @@ export default function Show() {
   const [budgetEdits, setBudgetEdits] = useState<Record<number, number>>({});
   const [savingBudget, setSavingBudget] = useState(false);
 
+  const [revisionEditing, setRevisionEditing] = useState(false);
+  const [revisionForm, setRevisionForm] = useState({ usage_plan: '', start_date: '', end_date: '', revision_note: '' });
+  const [resubmitLoading, setResubmitLoading] = useState(false);
+
   const { hasRole, hasPermission } = usePermission();
   const isPegawai = hasRole('pegawai') && !hasRole('superadmin');
   const canEditBudget = hasPermission('edit_atr_budget') || userRole === 'superadmin';
+  const isCreator = data?.user?.id === userId;
+  const isRevisionStatus = data?.status === 'revision';
 
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -345,6 +354,36 @@ export default function Show() {
       alert('Gagal menyimpan perubahan budget.');
     } finally {
       setSavingBudget(false);
+    }
+  };
+
+  const handleStartRevisionEdit = () => {
+    if (!data) return;
+    setRevisionForm({
+      usage_plan: data.usage_plan ?? '',
+      start_date: data.start_date ?? '',
+      end_date: data.end_date ?? '',
+      revision_note: '',
+    });
+    setRevisionEditing(true);
+  };
+
+  const handleResubmitRevision = async () => {
+    if (!data) return;
+    setResubmitLoading(true);
+    try {
+      await axios.post(`/api/v1/reimbursements/${data.code}/resubmit`, {
+        usage_plan: revisionForm.usage_plan,
+        start_date: revisionForm.start_date || null,
+        end_date: revisionForm.end_date || null,
+        revision_note: revisionForm.revision_note || 'Pengajuan telah direvisi dan diajukan kembali.',
+      });
+      setRevisionEditing(false);
+      await fetchDetail();
+    } catch {
+      alert('Gagal mengirim ulang revisi.');
+    } finally {
+      setResubmitLoading(false);
     }
   };
 
@@ -546,6 +585,94 @@ export default function Show() {
                     </div>
                   )}
                 </div>
+
+                {/* Usage Date */}
+                {(data.start_date || data.end_date) && (
+                  <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 space-y-2">
+                    <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
+                      <Calendar className="h-4 w-4" /> Jadwal Penggunaan Dana
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      {data.start_date && (
+                        <div>
+                          <span className="text-muted-foreground text-xs block">Tanggal Mulai</span>
+                          <span className="font-medium">{format(new Date(data.start_date), 'dd MMMM yyyy', { locale: localeId })}</span>
+                        </div>
+                      )}
+                      {data.end_date && (
+                        <div>
+                          <span className="text-muted-foreground text-xs block">Tanggal Selesai</span>
+                          <span className="font-medium">{format(new Date(data.end_date), 'dd MMMM yyyy', { locale: localeId })}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Revision Edit Panel */}
+                {isRevisionStatus && isCreator && (
+                  <div className="bg-orange-50/50 p-4 rounded-lg border border-orange-200 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-orange-800 font-medium text-sm">
+                        <AlertCircle className="h-4 w-4" /> Pengajuan Perlu Revisi
+                      </div>
+                      {!revisionEditing && (
+                        <Button size="sm" variant="outline" className="gap-1 border-orange-300 text-orange-700 hover:bg-orange-100" onClick={handleStartRevisionEdit}>
+                          Edit & Ajukan Ulang
+                        </Button>
+                      )}
+                    </div>
+                    {revisionEditing && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <Label className="text-xs font-medium">Tanggal Mulai</Label>
+                            <Input
+                              type="date"
+                              className="h-9 text-sm"
+                              value={revisionForm.start_date}
+                              onChange={(e) => setRevisionForm(p => ({ ...p, start_date: e.target.value }))}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs font-medium">Tanggal Selesai</Label>
+                            <Input
+                              type="date"
+                              className="h-9 text-sm"
+                              value={revisionForm.end_date}
+                              min={revisionForm.start_date || undefined}
+                              onChange={(e) => setRevisionForm(p => ({ ...p, end_date: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium">Keterangan / Rencana Penggunaan</Label>
+                          <Textarea
+                            className="min-h-[80px] text-sm resize-none"
+                            value={revisionForm.usage_plan}
+                            onChange={(e) => setRevisionForm(p => ({ ...p, usage_plan: e.target.value }))}
+                            placeholder="Update rencana penggunaan..."
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium">Catatan Revisi untuk Approver</Label>
+                          <Textarea
+                            className="min-h-[60px] text-sm resize-none"
+                            value={revisionForm.revision_note}
+                            onChange={(e) => setRevisionForm(p => ({ ...p, revision_note: e.target.value }))}
+                            placeholder="Jelaskan perubahan yang Anda lakukan..."
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" variant="outline" onClick={() => setRevisionEditing(false)} disabled={resubmitLoading}>Batal</Button>
+                          <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={handleResubmitRevision} disabled={resubmitLoading}>
+                            {resubmitLoading ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Mengirim...</> : 'Ajukan Ulang'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ATR Items (New Flow) */}
                 {data.items && data.items.length > 0 && data.type === 'atr' && (() => {

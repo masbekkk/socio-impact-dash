@@ -38,6 +38,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
         Route::get('/{code}', [ReimbursementController::class, 'show'])->name('reimbursements.show');
         Route::post('/{code}/status', [ReimbursementController::class, 'updateStatus'])->name('reimbursements.status');
         Route::patch('/{code}/budgets', [ReimbursementController::class, 'updateBudgets'])->name('reimbursements.budgets.update');
+        Route::post('/{code}/resubmit', [ReimbursementController::class, 'resubmit'])->name('reimbursements.resubmit');
         Route::post('/{code}/comments', [App\Http\Controllers\Api\V1\ReimbursementCommentController::class, 'store'])->name('reimbursements.comments.store');
     });
 

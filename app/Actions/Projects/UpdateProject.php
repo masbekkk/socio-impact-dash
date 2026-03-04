@@ -60,22 +60,9 @@ final class UpdateProject
             'code', 'name', 'description', 'division_id',
             'status', 'project_type', 'budget_total', 'head_id', 'account_manager_id', 'pic_id',
             'start_date', 'end_date', 'actual_budget',
-            'operational_budget', 'allowance_budget', 'budget_partition_status',
+            'operational_budget', 'management_budget', 'allowance_budget', 'budget_partition_status',
             'lesson_learned',
         ])->toArray();
-
-        // If managing detailed budgets, this basic calculation could be preserved or adjusted,
-        // but it's kept per existing requirements unless fully overwritten.
-        if (isset($updateData['budget_total'])) {
-            $budgetTotal = (float) $updateData['budget_total'];
-            $updateData['management_budget'] = $budgetTotal * 0.3;
-            if (! isset($updateData['operational_budget'])) {
-                $updateData['operational_budget'] = $budgetTotal * 0.5;
-            }
-            if (! isset($updateData['allowance_budget'])) {
-                $updateData['allowance_budget'] = $budgetTotal * 0.2;
-            }
-        }
 
         if (! empty($updateData)) {
             $project->update($updateData);
@@ -125,34 +112,55 @@ final class UpdateProject
     {
         foreach ($documents as $doc) {
             if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
-                // Determine if we are replacing or adding
+                $file = $doc['file'];
+
+                // Save to temp local disk (fast, no external I/O)
+                $tempPath = $file->store("temp/projects/{$project->id}", 'local');
+
+                // If replacing an existing document
                 if (isset($doc['id'])) {
                     $existingDoc = $project->documents()->find($doc['id']);
                     if ($existingDoc) {
-                        $meta = $this->fileUploadService->replaceFile(
-                            $doc['file'],
-                            $existingDoc->path,
+                        // Delete old file from final storage
+                        if ($existingDoc->path) {
+                            \Illuminate\Support\Facades\Storage::disk('public')->delete($existingDoc->path);
+                        }
+
+                        $existingDoc->update([
+                            'type' => $doc['type'] ?? $existingDoc->type,
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => '', // Will be set by the job
+                            'mime' => $file->getClientMimeType(),
+                            'size' => $file->getSize(),
+                            'upload_status' => 'pending',
+                            'temp_path' => $tempPath,
+                        ]);
+
+                        \App\Jobs\ProcessProjectDocumentUpload::dispatch(
+                            $existingDoc->id,
                             "projects/{$project->id}/documents"
                         );
-                        $existingDoc->update(array_merge($meta, ['type' => $doc['type'] ?? $existingDoc->type]));
 
                         continue;
                     }
                 }
 
-                $meta = $this->fileUploadService->uploadFile(
-                    $doc['file'],
+                // Create new document record
+                $document = $project->documents()->create([
+                    'type' => $doc['type'] ?? 'other',
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => '',
+                    'mime' => $file->getClientMimeType(),
+                    'size' => $file->getSize(),
+                    'uploaded_by' => $userId,
+                    'upload_status' => 'pending',
+                    'temp_path' => $tempPath,
+                ]);
+
+                \App\Jobs\ProcessProjectDocumentUpload::dispatch(
+                    $document->id,
                     "projects/{$project->id}/documents"
                 );
-
-                $project->documents()->create([
-                    'type' => $doc['type'] ?? 'other',
-                    'original_name' => $meta['original_name'],
-                    'path' => $meta['path'],
-                    'mime' => $meta['mime'],
-                    'size' => $meta['size'],
-                    'uploaded_by' => $userId,
-                ]);
             }
         }
     }
@@ -165,6 +173,8 @@ final class UpdateProject
                     'quantity' => $detail['quantity'] ?? 1,
                     'item_price' => $detail['item_price'] ?? 0,
                     'amount' => $detail['amount'],
+                    'amount_pelaksanaan' => $detail['amount_pelaksanaan'] ?? null,
+                    'amount_proposal' => $detail['amount_proposal'] ?? null,
                     'notes' => $detail['notes'] ?? null,
                 ]);
             } else {
@@ -172,6 +182,8 @@ final class UpdateProject
                     'quantity' => $detail['quantity'] ?? 1,
                     'item_price' => $detail['item_price'] ?? 0,
                     'amount' => $detail['amount'],
+                    'amount_pelaksanaan' => $detail['amount_pelaksanaan'] ?? null,
+                    'amount_proposal' => $detail['amount_proposal'] ?? null,
                     'notes' => $detail['notes'] ?? null,
                     'created_by' => $userId,
                 ]);
