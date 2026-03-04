@@ -219,7 +219,7 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
                     </Select>
                     {errors.type && <p className="text-xs text-red-500">{errors.type[0]}</p>}
                   </div>
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label htmlFor="project_id">Nama Project (Jika ada)</Label>
                     <Select value={formData.project_id} onValueChange={(val) => handleSelectChange('project_id', val)}>
                       <SelectTrigger className="h-10">
@@ -231,7 +231,7 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div> */}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">

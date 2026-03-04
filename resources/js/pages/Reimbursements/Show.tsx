@@ -130,6 +130,7 @@ interface ReimbursementDetail {
   can_approve: boolean;
   atr_budget_selecteds?: AtrBudgetSelected[];
   items?: ReimbursementItem[];
+  atr_items?: { id: number; item_name: string; quantity: number; unit_price: number; amount: number; expense_type: string | null; notes: string | null; activity_name: string; activity_id: number }[];
   start_date: string | null;
   end_date: string | null;
 }
@@ -840,55 +841,121 @@ export default function Show() {
                   );
                 })()}
 
-                {/* EER Claimed Items */}
-                {data.items && data.items.length > 0 && data.type === 'eer' && (
-                  <div className="space-y-3">
-                    <label className="text-xs font-medium text-muted-foreground uppercase">Item Klaim EER</label>
-                    <div className="border rounded-xl overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b bg-muted/30">
-                              <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nama Item</th>
-                              <th className="text-left p-3 font-medium text-muted-foreground text-xs">Kegiatan</th>
-                              <th className="text-right p-3 font-medium text-muted-foreground text-xs">Nominal Klaim</th>
-                              <th className="text-center p-3 font-medium text-muted-foreground text-xs">Kwitansi</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {data.items.map(item => (
-                              <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20">
-                                <td className="p-3 font-medium">{item.item_name}</td>
-                                <td className="p-3 text-muted-foreground">{item.activity_name}</td>
-                                <td className="p-3 text-right font-mono font-semibold">Rp {item.amount.toLocaleString('id-ID')}</td>
-                                <td className="p-3 text-center">
-                                  {item.receipt_path ? (
-                                    <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
-                                      <Button size="sm" variant="outline" className="gap-1 text-xs h-7">
-                                        <Download className="h-3 w-3" /> Lihat
-                                      </Button>
-                                    </a>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground italic">—</span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                          <tfoot>
-                            <tr className="bg-slate-50">
-                              <td colSpan={2} className="p-3 text-right font-medium text-xs text-muted-foreground uppercase">Total Klaim</td>
-                              <td className="p-3 text-right font-mono font-bold text-blue-700">
-                                Rp {data.items.reduce((s, i) => s + i.amount, 0).toLocaleString('id-ID')}
-                              </td>
-                              <td></td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
+                {/* EER Claimed Items + All ATR Items */}
+                {data.type === 'eer' && (() => {
+                  const eerItems = data.items || [];
+                  const atrItems = data.atr_items || [];
+                  const claimedParentIds = new Set(eerItems.map(i => i.parent_item_id).filter(Boolean));
+
+                  // Group ATR items by activity
+                  const grouped: Record<number, { name: string; items: typeof atrItems }> = {};
+                  atrItems.forEach(item => {
+                    if (!grouped[item.activity_id]) grouped[item.activity_id] = { name: item.activity_name, items: [] };
+                    grouped[item.activity_id].items.push(item);
+                  });
+
+                  return (
+                    <div className="space-y-4">
+                      {/* EER Claimed Items Table */}
+                      {eerItems.length > 0 && (
+                        <div className="space-y-3">
+                          <label className="text-xs font-medium text-muted-foreground uppercase">Item Klaim EER</label>
+                          <div className="border rounded-xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b bg-muted/30">
+                                    <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nama Item</th>
+                                    <th className="text-left p-3 font-medium text-muted-foreground text-xs">Kegiatan</th>
+                                    <th className="text-right p-3 font-medium text-muted-foreground text-xs">Nominal Klaim</th>
+                                    <th className="text-center p-3 font-medium text-muted-foreground text-xs">Kwitansi</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {eerItems.map(item => (
+                                    <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20">
+                                      <td className="p-3 font-medium">{item.item_name}</td>
+                                      <td className="p-3 text-muted-foreground">{item.activity_name}</td>
+                                      <td className="p-3 text-right font-mono font-semibold">Rp {item.amount.toLocaleString('id-ID')}</td>
+                                      <td className="p-3 text-center">
+                                        {item.receipt_path ? (
+                                          <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
+                                            <Button size="sm" variant="outline" className="gap-1 text-xs h-7">
+                                              <Download className="h-3 w-3" /> Lihat
+                                            </Button>
+                                          </a>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground italic">—</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                                <tfoot>
+                                  <tr className="bg-slate-50">
+                                    <td colSpan={2} className="p-3 text-right font-medium text-xs text-muted-foreground uppercase">Total Klaim</td>
+                                    <td className="p-3 text-right font-mono font-bold text-blue-700">
+                                      Rp {eerItems.reduce((s, i) => s + i.amount, 0).toLocaleString('id-ID')}
+                                    </td>
+                                    <td></td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* All ATR Items - Show which were selected */}
+                      {atrItems.length > 0 && (
+                        <div className="space-y-3">
+                          <label className="text-xs font-medium text-muted-foreground uppercase">Semua Item ATR</label>
+                          <p className="text-xs text-muted-foreground -mt-1">Item yang diklaim pada EER ini ditandai dengan warna hijau.</p>
+                          {Object.entries(grouped).map(([actId, group]) => (
+                            <div key={actId} className="border rounded-xl overflow-hidden">
+                              <div className="bg-slate-50 p-3 border-b">
+                                <h4 className="font-semibold text-sm text-slate-800">{group.name}</h4>
+                              </div>
+                              <div className="divide-y">
+                                {group.items.map(atrItem => {
+                                  const isClaimed = claimedParentIds.has(atrItem.id);
+                                  const eerItem = isClaimed ? eerItems.find(e => e.parent_item_id === atrItem.id) : null;
+                                  return (
+                                    <div key={atrItem.id} className={`flex items-center justify-between p-3 ${isClaimed ? 'bg-green-50/60' : 'bg-white opacity-60'}`}>
+                                      <div className="flex items-center gap-2">
+                                        {isClaimed ? (
+                                          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                                        ) : (
+                                          <div className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" />
+                                        )}
+                                        <div>
+                                          <span className={`text-sm font-medium ${isClaimed ? 'text-green-900' : 'text-gray-500'}`}>
+                                            {atrItem.item_name}
+                                          </span>
+                                          {atrItem.expense_type && (
+                                            <span className="text-xs text-muted-foreground ml-2">({atrItem.expense_type})</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className={`text-sm font-mono font-semibold ${isClaimed ? 'text-green-800' : 'text-gray-400'}`}>
+                                          Rp {atrItem.amount.toLocaleString('id-ID')}
+                                        </span>
+                                        {isClaimed && eerItem && (
+                                          <p className="text-xs text-green-700">Klaim: Rp {eerItem.amount.toLocaleString('id-ID')}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Legacy Selected Budgets (backward compat) */}
                 {data.atr_budget_selecteds && data.atr_budget_selecteds.length > 0 && (!data.items || data.items.length === 0) && (
