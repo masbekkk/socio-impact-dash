@@ -64,6 +64,8 @@ final class StoreProjectRequest extends FormRequest
             'detail_budgets.*.quantity' => ['nullable', 'numeric', 'min:1'],
             'detail_budgets.*.item_price' => ['required_with:detail_budgets', 'numeric', 'min:0'],
             'detail_budgets.*.amount' => ['required', 'numeric', 'min:0'],
+            'detail_budgets.*.amount_pelaksanaan' => ['nullable', 'numeric', 'min:0'],
+            'detail_budgets.*.amount_proposal' => ['nullable', 'numeric', 'min:0'],
             'detail_budgets.*.notes' => ['nullable', 'string'],
         ];
     }
