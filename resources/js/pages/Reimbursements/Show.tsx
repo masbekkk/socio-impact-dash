@@ -110,13 +110,16 @@ interface ReimbursementDetail {
   user: { id: number; name: string } | null;
   project: {
     id: number;
+    uuid: string;
     name: string;
     code: string;
     division_name: string | null;
     pic_name: string | null;
     head_name: string | null;
     head_email: string | null;
+    budget_total: number | null;
     operational_budget: number | null;
+    management_budget: number | null;
     used_operational_budget: number | null;
     allowance_budget: number | null;
     used_allowance_budget: number | null;
@@ -127,6 +130,7 @@ interface ReimbursementDetail {
   can_approve: boolean;
   atr_budget_selecteds?: AtrBudgetSelected[];
   items?: ReimbursementItem[];
+  atr_items?: { id: number; item_name: string; quantity: number; unit_price: number; amount: number; expense_type: string | null; notes: string | null; activity_name: string; activity_id: number }[];
   start_date: string | null;
   end_date: string | null;
 }
@@ -186,9 +190,17 @@ export default function Show() {
 
   const { hasRole, hasPermission } = usePermission();
   const isPegawai = hasRole('pegawai') && !hasRole('superadmin');
-  const canEditBudget = hasPermission('edit_atr_budget') || userRole === 'superadmin';
+  const canEditBudget = hasPermission('edit_atr_budget') || userRole === 'finance' || userRole === 'superadmin';
   const isCreator = data?.user?.id === userId;
   const isRevisionStatus = data?.status === 'revision';
+  const isFinanceOrAdmin = userRole === 'finance' || userRole === 'superadmin';
+
+  // Budget Partition Editing State
+  const [editingPartitions, setEditingPartitions] = useState(false);
+  const [partitionOps, setPartitionOps] = useState<number>(0);
+  const [partitionMgmt, setPartitionMgmt] = useState<number>(0);
+  const [partitionAllow, setPartitionAllow] = useState<number>(0);
+  const [savingPartitions, setSavingPartitions] = useState(false);
 
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -544,6 +556,102 @@ export default function Show() {
                   </div>
                 )}
 
+                {/* Budget Partition Editor for Finance */}
+                {data.project && isFinanceOrAdmin && (
+                  <div className="mt-4 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 p-5 rounded-xl border border-blue-100/80">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-blue-900">Pembagian Anggaran Proyek</h4>
+                        <p className="text-xs text-blue-700/70 mt-0.5">Total Pagu: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(data.project.budget_total || 0)}</p>
+                      </div>
+                      {!editingPartitions ? (
+                        <Button size="sm" variant="outline" onClick={() => {
+                          setPartitionOps(data.project?.operational_budget || 0);
+                          setPartitionMgmt(data.project?.management_budget || 0);
+                          setPartitionAllow(data.project?.allowance_budget || 0);
+                          setEditingPartitions(true);
+                        }} className="text-blue-700 border-blue-200 hover:bg-blue-50">
+                          Edit Pembagian
+                        </Button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setEditingPartitions(false)} disabled={savingPartitions}>Batal</Button>
+                          <Button size="sm" onClick={async () => {
+                            if (!data.project?.uuid) return;
+                            setSavingPartitions(true);
+                            try {
+                              await axios.put(`/api/v1/projects/${data.project.uuid}`, {
+                                operational_budget: partitionOps,
+                                management_budget: partitionMgmt,
+                                allowance_budget: partitionAllow,
+                              });
+                              setEditingPartitions(false);
+                              fetchDetail();
+                            } catch (e: any) {
+                              console.error('Failed to save partitions', e);
+                              alert(e?.response?.data?.message || 'Gagal menyimpan pembagian anggaran');
+                            } finally {
+                              setSavingPartitions(false);
+                            }
+                          }} disabled={savingPartitions}>
+                            {savingPartitions ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Simpan'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="p-3 bg-white rounded-lg border shadow-sm space-y-1">
+                        <p className="text-[10px] font-bold text-teal-700 uppercase tracking-wider">Operasional</p>
+                        {editingPartitions ? (
+                          <MoneyInput
+                            value={partitionOps}
+                            onValueChange={(v) => setPartitionOps(v.floatValue || 0)}
+                            placeholder="0"
+                            className="h-9 text-sm"
+                          />
+                        ) : (
+                          <p className="text-base font-bold text-slate-900">
+                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(data.project.operational_budget || 0)}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground">{data.project.budget_total ? ((((editingPartitions ? partitionOps : data.project.operational_budget) || 0) / data.project.budget_total) * 100).toFixed(1) : 0}%</p>
+                      </div>
+                      <div className="p-3 bg-white rounded-lg border shadow-sm space-y-1">
+                        <p className="text-[10px] font-bold text-purple-700 uppercase tracking-wider">Manajemen</p>
+                        {editingPartitions ? (
+                          <MoneyInput
+                            value={partitionMgmt}
+                            onValueChange={(v) => setPartitionMgmt(v.floatValue || 0)}
+                            placeholder="0"
+                            className="h-9 text-sm"
+                          />
+                        ) : (
+                          <p className="text-base font-bold text-slate-900">
+                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(data.project.management_budget || 0)}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground">{data.project.budget_total ? ((((editingPartitions ? partitionMgmt : data.project.management_budget) || 0) / data.project.budget_total) * 100).toFixed(1) : 0}%</p>
+                      </div>
+                      <div className="p-3 bg-white rounded-lg border shadow-sm space-y-1">
+                        <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Allowance</p>
+                        {editingPartitions ? (
+                          <MoneyInput
+                            value={partitionAllow}
+                            onValueChange={(v) => setPartitionAllow(v.floatValue || 0)}
+                            placeholder="0"
+                            className="h-9 text-sm"
+                          />
+                        ) : (
+                          <p className="text-base font-bold text-slate-900">
+                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(data.project.allowance_budget || 0)}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground">{data.project.budget_total ? ((((editingPartitions ? partitionAllow : data.project.allowance_budget) || 0) / data.project.budget_total) * 100).toFixed(1) : 0}%</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Sub-Type Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {data.type === 'atr' && data.urgency && (
@@ -733,62 +841,128 @@ export default function Show() {
                   );
                 })()}
 
-                {/* EER Claimed Items */}
-                {data.items && data.items.length > 0 && data.type === 'eer' && (
-                  <div className="space-y-3">
-                    <label className="text-xs font-medium text-muted-foreground uppercase">Item Klaim EER</label>
-                    <div className="border rounded-xl overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b bg-muted/30">
-                              <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nama Item</th>
-                              <th className="text-left p-3 font-medium text-muted-foreground text-xs">Kegiatan</th>
-                              <th className="text-right p-3 font-medium text-muted-foreground text-xs">Nominal Klaim</th>
-                              <th className="text-center p-3 font-medium text-muted-foreground text-xs">Kwitansi</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {data.items.map(item => (
-                              <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20">
-                                <td className="p-3 font-medium">{item.item_name}</td>
-                                <td className="p-3 text-muted-foreground">{item.activity_name}</td>
-                                <td className="p-3 text-right font-mono font-semibold">Rp {item.amount.toLocaleString('id-ID')}</td>
-                                <td className="p-3 text-center">
-                                  {item.receipt_path ? (
-                                    <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
-                                      <Button size="sm" variant="outline" className="gap-1 text-xs h-7">
-                                        <Download className="h-3 w-3" /> Lihat
-                                      </Button>
-                                    </a>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground italic">—</span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                          <tfoot>
-                            <tr className="bg-slate-50">
-                              <td colSpan={2} className="p-3 text-right font-medium text-xs text-muted-foreground uppercase">Total Klaim</td>
-                              <td className="p-3 text-right font-mono font-bold text-blue-700">
-                                Rp {data.items.reduce((s, i) => s + i.amount, 0).toLocaleString('id-ID')}
-                              </td>
-                              <td></td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
+                {/* EER Claimed Items + All ATR Items */}
+                {data.type === 'eer' && (() => {
+                  const eerItems = data.items || [];
+                  const atrItems = data.atr_items || [];
+                  const claimedParentIds = new Set(eerItems.map(i => i.parent_item_id).filter(Boolean));
+
+                  // Group ATR items by activity
+                  const grouped: Record<number, { name: string; items: typeof atrItems }> = {};
+                  atrItems.forEach(item => {
+                    if (!grouped[item.activity_id]) grouped[item.activity_id] = { name: item.activity_name, items: [] };
+                    grouped[item.activity_id].items.push(item);
+                  });
+
+                  return (
+                    <div className="space-y-4">
+                      {/* EER Claimed Items Table */}
+                      {eerItems.length > 0 && (
+                        <div className="space-y-3">
+                          <label className="text-xs font-medium text-muted-foreground uppercase">Item Klaim EER</label>
+                          <div className="border rounded-xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b bg-muted/30">
+                                    <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nama Item</th>
+                                    <th className="text-left p-3 font-medium text-muted-foreground text-xs">Kegiatan</th>
+                                    <th className="text-right p-3 font-medium text-muted-foreground text-xs">Nominal Klaim</th>
+                                    <th className="text-center p-3 font-medium text-muted-foreground text-xs">Kwitansi</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {eerItems.map(item => (
+                                    <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20">
+                                      <td className="p-3 font-medium">{item.item_name}</td>
+                                      <td className="p-3 text-muted-foreground">{item.activity_name}</td>
+                                      <td className="p-3 text-right font-mono font-semibold">Rp {item.amount.toLocaleString('id-ID')}</td>
+                                      <td className="p-3 text-center">
+                                        {item.receipt_path ? (
+                                          <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
+                                            <Button size="sm" variant="outline" className="gap-1 text-xs h-7">
+                                              <Download className="h-3 w-3" /> Lihat
+                                            </Button>
+                                          </a>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground italic">—</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                                <tfoot>
+                                  <tr className="bg-slate-50">
+                                    <td colSpan={2} className="p-3 text-right font-medium text-xs text-muted-foreground uppercase">Total Klaim</td>
+                                    <td className="p-3 text-right font-mono font-bold text-blue-700">
+                                      Rp {eerItems.reduce((s, i) => s + i.amount, 0).toLocaleString('id-ID')}
+                                    </td>
+                                    <td></td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* All ATR Items - Show which were selected */}
+                      {atrItems.length > 0 && (
+                        <div className="space-y-3">
+                          <label className="text-xs font-medium text-muted-foreground uppercase">Semua Item ATR</label>
+                          <p className="text-xs text-muted-foreground -mt-1">Item yang diklaim pada EER ini ditandai dengan warna hijau.</p>
+                          {Object.entries(grouped).map(([actId, group]) => (
+                            <div key={actId} className="border rounded-xl overflow-hidden">
+                              <div className="bg-slate-50 p-3 border-b">
+                                <h4 className="font-semibold text-sm text-slate-800">{group.name}</h4>
+                              </div>
+                              <div className="divide-y">
+                                {group.items.map(atrItem => {
+                                  const isClaimed = claimedParentIds.has(atrItem.id);
+                                  const eerItem = isClaimed ? eerItems.find(e => e.parent_item_id === atrItem.id) : null;
+                                  return (
+                                    <div key={atrItem.id} className={`flex items-center justify-between p-3 ${isClaimed ? 'bg-green-50/60' : 'bg-white opacity-60'}`}>
+                                      <div className="flex items-center gap-2">
+                                        {isClaimed ? (
+                                          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                                        ) : (
+                                          <div className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" />
+                                        )}
+                                        <div>
+                                          <span className={`text-sm font-medium ${isClaimed ? 'text-green-900' : 'text-gray-500'}`}>
+                                            {atrItem.item_name}
+                                          </span>
+                                          {atrItem.expense_type && (
+                                            <span className="text-xs text-muted-foreground ml-2">({atrItem.expense_type})</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className={`text-sm font-mono font-semibold ${isClaimed ? 'text-green-800' : 'text-gray-400'}`}>
+                                          Rp {atrItem.amount.toLocaleString('id-ID')}
+                                        </span>
+                                        {isClaimed && eerItem && (
+                                          <p className="text-xs text-green-700">Klaim: Rp {eerItem.amount.toLocaleString('id-ID')}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Legacy Selected Budgets (backward compat) */}
                 {data.atr_budget_selecteds && data.atr_budget_selecteds.length > 0 && (!data.items || data.items.length === 0) && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Rincian Anggaran Dipilih</label>
-                      {canEditBudget && data.status !== 'rejected' && data.status !== 'transferred' && (
+                      {canEditBudget && (
                         !isEditingBudget ? (
                           <Button size="sm" variant="outline" onClick={handleEditBudgetClick}>
                             Edit Nominal
