@@ -177,6 +177,8 @@ export default function Show() {
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [revisiReason, setRevisiReason] = useState('');
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [transferProof, setTransferProof] = useState<File | null>(null);
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
 
@@ -258,6 +260,11 @@ export default function Show() {
     setRevisiReason('');
   };
 
+  const resetTransferDialog = () => {
+    setTransferDialogOpen(false);
+    setTransferProof(null);
+  };
+
   const handleApprove = async () => {
     if (!data) return;
     setActionLoading(true);
@@ -316,6 +323,30 @@ export default function Show() {
       await fetchDetail();
     } catch {
       alert('Gagal meminta revisi.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!data || !transferProof) return;
+    setActionLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('action', 'transferred');
+      formData.append('transfer_proof', transferProof);
+
+      const role = getCurrentUserRole();
+      if (role) formData.append('role', role);
+
+      await axios.post(`/api/v1/reimbursements/${data.code}/status`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      resetTransferDialog();
+      await fetchDetail();
+    } catch {
+      alert('Gagal menyelesaikan transfer.');
     } finally {
       setActionLoading(false);
     }
@@ -1053,6 +1084,16 @@ export default function Show() {
                   </div>
                 )}
 
+                {data.status === 'submitted' && isFinanceOrAdmin && (
+                  <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                    <Button
+                      onClick={() => setTransferDialogOpen(true)}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Upload className="mr-2 h-4 w-4" /> Selesaikan & Transfer
+                    </Button>
+                  </div>
+                )}
                 {/* Rejection Reason */}
                 {data.status === 'rejected' && data.rejection_reason && (
                   <div className="bg-red-50/50 p-4 rounded-lg border border-red-200 space-y-2">
@@ -1396,6 +1437,52 @@ export default function Show() {
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
               ) : (
                 <><AlertCircle className="mr-2 h-4 w-4" /> Minta Revisi</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transfer Dialog */}
+      <Dialog open={transferDialogOpen} onOpenChange={(open) => { if (!open) resetTransferDialog(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-700">
+              <CheckCircle className="h-5 w-5" />
+              Selesaikan & Transfer
+            </DialogTitle>
+            <DialogDescription>
+              Unggah bukti transfer untuk menyelesaikan reimbursement <strong>{data?.type?.toUpperCase()}</strong> dengan kode <strong className="font-mono">{data?.code}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>
+                Bukti Transfer (Image/PDF) <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setTransferProof(e.target.files[0]);
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">Maksimal 5MB.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={resetTransferDialog} disabled={actionLoading}>Batal</Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={!transferProof || actionLoading}
+              onClick={handleTransfer}
+            >
+              {actionLoading ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
+              ) : (
+                <><Upload className="mr-2 h-4 w-4" /> Upload & Selesai</>
               )}
             </Button>
           </DialogFooter>

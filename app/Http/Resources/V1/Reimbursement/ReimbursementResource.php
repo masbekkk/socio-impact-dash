@@ -152,11 +152,26 @@ final class ReimbursementResource extends JsonResource
 
         // To prevent users from approving the same state multiple times, we check status transitions.
         $status = $this->status?->value;
+        $effectiveStatus = $status;
+
+        // Since the main status stays 'submitted' until transferred, we deduce the effective stage
+        // based on the individual approval records.
+        if ($status === 'submitted') {
+            $headApproval = $this->approvals->where('role', 'head')->first();
+            $hrApproval = $this->approvals->where('role', 'hr')->first();
+
+            if ($headApproval && $headApproval->status->value === 'approved') {
+                $effectiveStatus = 'head_approved';
+                if ($hrApproval && $hrApproval->status->value === 'approved') {
+                    $effectiveStatus = 'hr_approved';
+                }
+            }
+        }
 
         // If a user has already approved at the current stage, hide buttons.
         $hasApprovedCurrentStage = false;
 
-        if ($status === 'submitted') {
+        if ($effectiveStatus === 'submitted') {
             $hasApproved = $this->approvals->where('approver_id', $user->id)->where('status', 'approved')->isNotEmpty();
             if ($hasApproved) {
                 return false;
@@ -179,7 +194,7 @@ final class ReimbursementResource extends JsonResource
             }
         }
 
-        if (in_array($status, ['head_approved', 'hr_approved', 'revision'])) {
+        if (in_array($effectiveStatus, ['head_approved', 'hr_approved', 'revision'])) {
             $hasApproved = $this->approvals->where('approver_id', $user->id)->where('status', 'approved')->isNotEmpty();
             if ($hasApproved) {
                 return false;
@@ -201,7 +216,7 @@ final class ReimbursementResource extends JsonResource
                     return true;
                 }
 
-                if ($status === 'hr_approved') {
+                if ($effectiveStatus === 'hr_approved') {
                     $someoneElseAssignedFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
                     if (! $someoneElseAssignedFinance && $user->hasRole('finance')) {
                         return true;
@@ -215,7 +230,7 @@ final class ReimbursementResource extends JsonResource
             }
         }
 
-        if ($status === 'finance_approved') {
+        if ($effectiveStatus === 'finance_approved') {
             return $user->hasRole('direktur') || $user->hasRole('head') || $user->hasRole('superadmin');
         }
 

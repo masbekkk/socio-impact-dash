@@ -147,7 +147,7 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
     }));
   };
 
-  const updateChildItem = (budgetDetailId: number, itemId: string, field: keyof ChildItem, value: any) => {
+  const updateChildItem = (budgetDetailId: number, itemId: string, field: keyof ChildItem, value: string | number) => {
     setSelectedActivities(prev => prev.map(a => {
       if (a.budget_detail_id !== budgetDetailId) return a;
       return {
@@ -372,7 +372,7 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
                             <div>
                               <h4 className="font-semibold text-sm">{detail.item_name}</h4>
                               <p className="text-xs text-muted-foreground">
-                                Pagu: {fmt(detail.amount)} · Terpakai: {fmt(detail.used_amount)} · Sisa: <span className={cn(overBudget && "text-red-600 font-bold")}>{fmt(detail.remaining_amount)}</span>
+                                Pagu: {fmt(detail.amount_pelaksanaan && detail.amount_pelaksanaan > 0 ? detail.amount_pelaksanaan : detail.amount)} · Terpakai: {fmt(detail.used_amount)} · Sisa: <span className={cn(overBudget && "text-red-600 font-bold")}>{fmt(detail.remaining_amount)}</span>
                               </p>
                             </div>
                           </div>

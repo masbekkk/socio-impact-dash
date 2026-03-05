@@ -17,28 +17,28 @@ final class UpdateReimbursementStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action' => ['required', 'string', Rule::in(['approved', 'rejected', 'revision'])],
+            'action' => ['required', 'string', Rule::in(['approved', 'rejected', 'revision', 'transferred'])],
             'notes' => ['nullable', 'string', 'max:1000'],
             'role' => ['nullable', 'string', 'in:head,finance,hr,direktur'],
-            // 'transfer_proof' => [
-            //     'nullable',
-            //     'file',
-            //     'mimes:jpg,jpeg,png,pdf',
-            //     'max:5120',
-            //     Rule::requiredIf($this->input('action') === 'approved'),
-            // ],
+            'transfer_proof' => [
+                 'nullable',
+                 'file',
+                 'mimes:jpg,jpeg,png,pdf',
+                 'max:5120',
+                 Rule::requiredIf($this->input('action') === 'transferred'),
+             ],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'action.required' => 'Aksi (approved/rejected) wajib diisi.',
-            'action.in' => 'Aksi harus berupa approved atau rejected.',
+            'action.required' => 'Aksi wajib diisi.',
+            'action.in' => 'Aksi harus berupa approved, rejected, revision, atau transferred.',
             'notes.max' => 'Catatan maksimal 1000 karakter.',
-            // 'transfer_proof.required' => 'Bukti transfer wajib diupload saat menyetujui.',
-            // 'transfer_proof.mimes' => 'Bukti transfer harus berupa file JPG, PNG, atau PDF.',
-            // 'transfer_proof.max' => 'Ukuran file bukti transfer maksimal 5MB.',
+            'transfer_proof.required' => 'Bukti transfer wajib diupload saat menyelesaikan transfer.',
+            'transfer_proof.mimes' => 'Bukti transfer harus berupa file JPG, PNG, atau PDF.',
+            'transfer_proof.max' => 'Ukuran file bukti transfer maksimal 5MB.',
         ];
     }
 }
