@@ -30,7 +30,7 @@ const NAV_ITEMS: NavItem[] = [
         roles: ['head', 'hr', 'direktur', 'superadmin', 'finance'],
     },
     {
-        title: 'Reimbursement',
+        title: 'Keuangan',
         href: '/reimbursements',
         icon: DollarSign,
         roles: ['pegawai', 'finance', 'hr', 'superadmin', 'head', 'direktur'],
@@ -45,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
         title: 'Cuti',
         href: '/leaves',
         icon: Calendar,
-        roles: ['pegawai', 'hr', 'superadmin', 'head'],
+        roles: ['pegawai', 'hr', 'superadmin', 'head', 'direktur'],
     },
     {
         title: 'Kalender',

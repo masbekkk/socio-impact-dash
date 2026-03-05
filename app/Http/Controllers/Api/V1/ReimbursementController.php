@@ -48,6 +48,67 @@ final class ReimbursementController extends Controller
         }
     }
 
+    public function exportAtr(Request $request)
+    {
+        $user = $request->user();
+        $filters = [
+            'status' => $request->get('status'),
+            'type' => 'atr',
+            'project_id' => $request->get('project_id'),
+            'start_date' => $request->get('start_date'),
+            'end_date' => $request->get('end_date'),
+        ];
+
+        // Fetch without strict pagination limiting
+        $reimbursements = $this->reimbursementService->listReimbursements($user, $filters, 10000);
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="export-atr-'.now()->format('Y-m-d').'.csv"',
+        ];
+
+        $callback = function () use ($reimbursements) {
+            $file = fopen('php://output', 'w');
+
+            // CSV Header
+            fputcsv($file, [
+                'Kode ATR',
+                'Nama Pemohon',
+                'Project',
+                'Status',
+                'Urgensi',
+                'Tanggal Pengajuan',
+                'Tanggal Penggunaan',
+                'Total Nominal',
+                'Bank',
+                'No. Rekening',
+                'Atas Nama',
+                'Keterangan',
+            ]);
+
+            foreach ($reimbursements as $r) {
+                fputcsv($file, [
+                    $r->code,
+                    $r->user?->name ?? '-',
+                    $r->project?->name ?? '-',
+                    $r->status->value ?? '-',
+                    $r->urgency ?? '-',
+                    $r->created_at->format('Y-m-d H:i'),
+                    $r->start_date ? \Carbon\Carbon::parse($r->start_date)->format('Y-m-d') : '-',
+                    $r->amount,
+                    $r->bank_name ?? '-',
+                    $r->bank_account ?? '-',
+                    $r->account_holder ?? '-',
+                    $r->usage_plan ?? '-',
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function store(StoreReimbursementRequest $request, CreateReimbursement $createReimbursement): JsonResponse
     {
         try {
@@ -188,19 +249,71 @@ final class ReimbursementController extends Controller
                 'start_date' => ['nullable', 'date'],
                 'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
                 'revision_note' => ['nullable', 'string'],
+                'items' => ['nullable', 'array'],
+                'selected_budget_details' => ['nullable', 'array'],
             ]);
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user) {
                 // Update editable fields
                 $updateData = ['status' => \App\Enums\ReimbursementStatus::Submitted];
-                if (isset($validated['usage_plan'])) $updateData['usage_plan'] = $validated['usage_plan'];
-                if (isset($validated['amount'])) $updateData['amount'] = $validated['amount'];
-                if (isset($validated['start_date'])) $updateData['start_date'] = $validated['start_date'];
-                if (isset($validated['end_date'])) $updateData['end_date'] = $validated['end_date'];
+                if (isset($validated['usage_plan'])) {
+                    $updateData['usage_plan'] = $validated['usage_plan'];
+                }
+                if (isset($validated['start_date'])) {
+                    $updateData['start_date'] = $validated['start_date'];
+                }
+                if (isset($validated['end_date'])) {
+                    $updateData['end_date'] = $validated['end_date'];
+                }
+
+                // Sync items if provided
+                if (isset($validated['items'])) {
+                    $reimbursement->items()->delete();
+                    foreach ($validated['items'] as $item) {
+                        $reimbursement->items()->create([
+                            'project_budget_detail_id' => $item['project_budget_detail_id'],
+                            'parent_item_id' => $item['parent_item_id'] ?? null,
+                            'item_name' => $item['item_name'],
+                            'quantity' => $item['quantity'] ?? 1,
+                            'unit_price' => $item['unit_price'] ?? 0,
+                            'amount' => $item['amount'] ?? 0,
+                            'expense_type' => $item['expense_type'] ?? null,
+                            'notes' => $item['notes'] ?? null,
+                        ]);
+                    }
+                }
+
+                // Sync budget details if provided
+                if (isset($validated['selected_budget_details'])) {
+                    $reimbursement->atrBudgetSelecteds()->delete();
+                    foreach ($validated['selected_budget_details'] as $budget) {
+                        $reimbursement->atrBudgetSelecteds()->create([
+                            'project_budget_detail_id' => $budget['project_budget_detail_id'],
+                            'amount' => $budget['amount'],
+                            'notes' => $budget['notes'] ?? null,
+                        ]);
+                    }
+                }
+
+                // Recalculate amount if items or budget details were synced
+                if (isset($validated['items']) || isset($validated['selected_budget_details'])) {
+                    $newAmount = 0;
+                    if ($reimbursement->type->value === 'atr') {
+                        $newAmount = $reimbursement->atrBudgetSelecteds()->sum('amount');
+                    } else {
+                        $newAmount = $reimbursement->items()->sum('amount');
+                    }
+                    $updateData['amount'] = $newAmount;
+                } elseif (isset($validated['amount'])) {
+                    $updateData['amount'] = $validated['amount'];
+                }
 
                 $reimbursement->update($updateData);
 
-                // Reset all approvals back to pending
+                $reimbursement->update([
+                    'status' => \App\Enums\ReimbursementStatus::Revised,
+                ]);
+
                 $reimbursement->approvals()->update([
                     'status' => 'pending',
                     'approved_at' => null,

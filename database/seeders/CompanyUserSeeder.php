@@ -52,29 +52,29 @@ final class CompanyUserSeeder extends Seeder
         // $head->assignRole(UserRole::Head->value);
 
         // Create finance user
-        // $finance = User::firstOrCreate(
-        //     ['email' => 'finance@socio-impact.test'],
-        //     [
-        //         'name' => 'Finance Officer',
-        //         'nip' => '10000003',
-        //         'password' => Hash::make('password'),
-        //         'email_verified_at' => now(),
-        //         'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
-        //     ]
-        // );
-        // $finance->assignRole(UserRole::Finance->value);
+        $finance = User::firstOrCreate(
+            ['email' => 'finance@socio-impact.test'],
+            [
+                'name' => 'Finance Officer',
+                'nip' => '10000003',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
+            ]
+        );
+        $finance->assignRole(UserRole::Finance->value);
 
         // Create HR user
-        // $hr = User::firstOrCreate(
-        //     ['email' => 'hr@socio-impact.test'],
-        //     [
-        //         'name' => 'HR Manager',
-        //         'password' => Hash::make('password'),
-        //         'email_verified_at' => now(),
-        //         'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
-        //     ]
-        // );
-        // $hr->assignRole(UserRole::HR->value);
+        $hr = User::firstOrCreate(
+            ['email' => 'hr@socio-impact.test'],
+            [
+                'name' => 'HR Manager',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
+            ]
+        );
+        $hr->assignRole(UserRole::HR->value);
 
         // Create 10 regular employees
         // for ($i = 1; $i <= 10; $i++) {
@@ -94,16 +94,16 @@ final class CompanyUserSeeder extends Seeder
         //     $user->assignRole(UserRole::Pegawai->value);
         // }
 
-        // $direktur = User::firstOrCreate(
-        //     ['email' => 'direktur@socio-impact.test'],
-        //     [
-        //         'name' => 'Direktur User',
-        //         'password' => Hash::make('password'),
-        //         'email_verified_at' => now(),
-        //         'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
-        //     ]
-        // );
-        // $direktur->assignRole(UserRole::Direktur->value);
+        $direktur = User::firstOrCreate(
+            ['email' => 'direktur@socio-impact.test'],
+            [
+                'name' => 'Direktur User',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
+            ]
+        );
+        $direktur->assignRole(UserRole::Direktur->value);
 
         // ----------------------------------------------------
         // Company Staff Accounts

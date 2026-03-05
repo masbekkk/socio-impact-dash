@@ -14,6 +14,7 @@ class AtrBudgetSelected extends Model
         'reimbursement_id',
         'project_budget_detail_id',
         'amount',
+        'notes',
     ];
 
     protected function casts(): array

@@ -96,6 +96,7 @@ final readonly class CreateReimbursement
             $reimbursement->atrBudgetSelecteds()->create([
                 'project_budget_detail_id' => $budget['project_budget_detail_id'],
                 'amount' => $budget['amount'],
+                'notes' => $budget['notes'] ?? null,
             ]);
         }
     }
@@ -134,6 +135,16 @@ final readonly class CreateReimbursement
             'direktur' => $data['approver_direktur_id'] ?? null,
             'hr' => $data['approver_hr_id'] ?? null,
         ];
+
+        // Default approver for Finance if not provided
+        if (empty($roles['finance'])) {
+            $roles['finance'] = \App\Models\User::where('email', 'finance@socio-impact.test')->first()?->id;
+        }
+
+        // Default approver for Direktur if not provided
+        if (empty($roles['direktur'])) {
+            $roles['direktur'] = \App\Models\User::where('email', 'direktur@socio-impact.test')->first()?->id;
+        }
 
         foreach ($roles as $role => $approverId) {
             if ($approverId) {

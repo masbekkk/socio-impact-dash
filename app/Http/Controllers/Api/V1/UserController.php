@@ -28,7 +28,7 @@ final class UserController extends Controller
         }
 
         if ($request->filled('position')) {
-            $query->where('position', 'like', '%' . $request->get('position') . '%');
+            $query->where('position', 'like', '%'.$request->get('position').'%');
         }
 
         if ($request->filled('employee_type')) {
@@ -78,6 +78,7 @@ final class UserController extends Controller
         $role = $data['role'];
 
         unset($data['role']);
+        $data['email_verified_at'] = now();
         $user = User::create($data);
 
         $user->assignRole($role);

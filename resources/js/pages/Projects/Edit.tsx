@@ -76,6 +76,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const updateSupportingDocType = (id: number | string, type: string) => {
         setSupportingDocs(supportingDocs.map(d => d.id === id ? { ...d, type } : d));
     };
+    const handleSupportingDocFile = (id: number | string, file: File | null) => {
+        setSupportingDocs(supportingDocs.map(d => d.id === id ? { ...d, file: file || undefined } : d));
+    };
     const removeSupportingDocLocal = (id: number | string) => {
         if (supportingDocs.length > 1) {
             setSupportingDocs(supportingDocs.filter(d => d.id !== id));
@@ -249,7 +252,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
     const estimasiProfit = budget - totalPelaksanaan;
 
-    const isProposalOverOperational = totalPelaksanaan > opsBudget;
+    const isPelaksanaanOverOperational = totalPelaksanaan > opsBudget;
 
     const handleSubmit = async () => {
         setSaving(true);
@@ -271,19 +274,25 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         submitData.append('allowance_budget', allowanceBudget.toString());
         submitData.append('status', status);
 
-        let docIndex = 0;
-
         if (rabFile) {
-            submitData.append(`documents[${docIndex}][file]`, rabFile);
-            submitData.append(`documents[${docIndex}][type]`, 'RAB');
-            docIndex++;
+            submitData.append('documents[RAB][type]', 'RAB');
+            submitData.append('documents[RAB][file]', rabFile);
         }
 
         if (sowFile) {
-            submitData.append(`documents[${docIndex}][file]`, sowFile);
-            submitData.append(`documents[${docIndex}][type]`, status === 'proposal' ? 'PROPOSAL' : 'KONTRAK');
-            docIndex++;
+            const sowType = status === 'proposal' ? 'PROPOSAL' : 'KONTRAK';
+            submitData.append('documents[PROPOSAL_KONTRAK][type]', sowType);
+            submitData.append('documents[PROPOSAL_KONTRAK][file]', sowFile);
         }
+
+        // Append supporting documents with stable keys
+        supportingDocs.forEach((doc: any) => {
+            if (doc.file) { // Only append if a file is actually selected/changed
+                const key = `SUPPORTING_${doc.id}`;
+                submitData.append(`documents[${key}][type]`, doc.type);
+                submitData.append(`documents[${key}][file]`, doc.file);
+            }
+        });
 
         locations.forEach((loc, index) => {
             if (!loc.isNew) {
@@ -298,13 +307,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             submitData.append(`delete_locations[${index}]`, id);
         });
 
-        supportingDocs.forEach((doc: any) => {
-            if (doc.file) {
-                submitData.append(`documents[${docIndex}][file]`, doc.file);
-                submitData.append(`documents[${docIndex}][type]`, doc.type);
-                docIndex++;
-            }
-        });
+        // paymentTerms loop follows...
 
         paymentTerms.forEach((term, index) => {
             if (!term.isNew) {
@@ -337,7 +340,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         });
 
         try {
-            if (isProposalOverOperational) {
+            if (isPelaksanaanOverOperational) {
                 setGeneralError("Peringatan Anggaran: Project activity memiliki pagu lebih besar dari operational. Update/remove project activity terlebih dahulu atau sesuaikan budget operational.");
                 setSaving(false);
                 setUploadProgress(0);
@@ -902,113 +905,110 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
                                     <div className="space-y-3">
                                         {detailBudgets.map((detail, idx) => (
-                                            <div key={detail.id} className="border rounded-xl p-5 bg-white shadow-sm space-y-4 group hover:border-gray-300 transition-colors">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <h4 className="font-semibold text-sm text-gray-900">Kegiatan #{idx + 1}</h4>
-                                                    {detailBudgets.length > 1 && (
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => removeDetailBudget(detail.id, detail.isNew)}
-                                                            className="h-8 w-8 text-muted-foreground hover:text-red-500"
-                                                        >
-                                                            <X className="h-4 w-4" />
-                                                        </Button>
-                                                    )}
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Nama Kegiatan <span className="text-red-500">*</span></Label>
+                                            <div key={detail.id} className="border rounded-xl p-3 bg-white shadow-sm flex items-center gap-3 group hover:border-gray-300 transition-colors">
+                                                <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                                                    <div className="md:col-span-4 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Kegiatan #{idx + 1} <span className="text-red-500">*</span></Label>
                                                         <Input
                                                             type="text"
                                                             value={detail.item_name}
                                                             onChange={(e) => updateDetailBudget(detail.id, 'item_name', e.target.value)}
-                                                            placeholder="Masukkan nama kegiatan..."
-                                                            className="bg-white h-10"
+                                                            placeholder="Nama kegiatan..."
+                                                            className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.item_name`] && "border-red-500")}
                                                         />
+                                                        {errors[`detail_budgets.${idx}.item_name`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.item_name`]}</p>}
                                                     </div>
 
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Amount Proposal</Label>
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
-                                                            <MoneyInput
-                                                                value={detail.amount_proposal || 0}
-                                                                onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_proposal', vals.floatValue || 0)}
-                                                                placeholder="0"
-                                                                className="pl-10 bg-white h-10"
-                                                            />
-                                                        </div>
+                                                    <div className="md:col-span-2 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Proposal</Label>
+                                                        <MoneyInput
+                                                            value={detail.amount_proposal}
+                                                            onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_proposal', vals.floatValue || 0)}
+                                                            placeholder="0"
+                                                            className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.amount_proposal`] && "border-red-500")}
+                                                        />
+                                                        {errors[`detail_budgets.${idx}.amount_proposal`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.amount_proposal`]}</p>}
                                                     </div>
 
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Amount Pelaksanaan</Label>
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
-                                                            <MoneyInput
-                                                                value={detail.amount_pelaksanaan || 0}
-                                                                onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_pelaksanaan', vals.floatValue || 0)}
-                                                                placeholder="0"
-                                                                className="pl-10 bg-white h-10"
-                                                            />
-                                                        </div>
+                                                    <div className="md:col-span-2 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Pelaksanaan</Label>
+                                                        <MoneyInput
+                                                            value={detail.amount_pelaksanaan}
+                                                            onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_pelaksanaan', vals.floatValue || 0)}
+                                                            placeholder="0"
+                                                            className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.amount_pelaksanaan`] && "border-red-500")}
+                                                        />
+                                                        {errors[`detail_budgets.${idx}.amount_pelaksanaan`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.amount_pelaksanaan`]}</p>}
                                                     </div>
 
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label className="text-xs font-medium text-muted-foreground">Catatan (Opsional)</Label>
+                                                    <div className="md:col-span-4 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Catatan (Opsional)</Label>
                                                         <Input
                                                             type="text"
                                                             value={detail.notes}
                                                             onChange={(e) => updateDetailBudget(detail.id, 'notes', e.target.value)}
-                                                            placeholder="Keterangan tambahan..."
-                                                            className="bg-white h-10"
+                                                            placeholder="Keterangan..."
+                                                            className="bg-white h-8 text-xs"
                                                         />
                                                     </div>
                                                 </div>
+
+                                                {detailBudgets.length > 1 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => removeDetailBudget(detail.id, detail.isNew)}
+                                                        className="h-8 w-8 text-muted-foreground hover:text-red-500 mt-5 shrink-0"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
 
                                     {/* Summary Detail Budget */}
 
-                                    {isProposalOverOperational && (
+                                    {isPelaksanaanOverOperational && (
                                         <Alert variant="destructive" className="mb-4">
                                             <AlertCircle className="h-4 w-4" />
                                             <AlertTitle>Peringatan Anggaran</AlertTitle>
                                             <AlertDescription>
-                                                Project activity memiliki pagu ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalProposal)})
+                                                Project activity memiliki nominal pelaksanaan ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalPelaksanaan)})
                                                 lebih besar dari budget operational ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(opsBudget)}).
-                                                Update/remove project activity terlebih dahulu atau ajukan tambahan budget operational beserta catatannya (setelah project dibuat).
+                                                Update/remove project activity terlebih dahulu atau sesuaikan budget operational.
                                             </AlertDescription>
                                         </Alert>
                                     )}
 
-                                    <div className={cn("border rounded-lg p-4", estimasiProfit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200")}>
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-900">Total Kegiatan Anggaran</p>
-                                                <p className="text-xs mt-0.5 text-muted-foreground">{detailBudgets.length} kegiatan</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className={cn("text-lg font-bold", isProposalOverOperational ? "text-red-600" : "text-gray-900")}>
-                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">Total Proposal ({budget > 0 ? ((totalProposal / budget) * 100).toFixed(1) : 0}%)</p>
-                                            </div>
+                                    <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-lg shadow-sm bg-white", estimasiProfit < 0 ? "border-red-200" : "border-blue-200")}>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Proposal</p>
+                                            <p className="text-sm font-bold text-blue-600">
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
+                                            </p>
+                                            <p className="text-[9px] text-muted-foreground font-medium">({budget > 0 ? ((totalProposal / budget) * 100).toFixed(1) : 0}%)</p>
                                         </div>
-                                        <div className="border-t mt-3 pt-3 flex items-center justify-between">
-                                            <div>
-                                                <p className={cn("text-sm font-bold", estimasiProfit >= 0 ? "text-emerald-800" : "text-red-800")}>
-                                                    Estimasi Profit (Total Pagu - Pelaksanaan) ({budget > 0 ? ((estimasiProfit / budget) * 100).toFixed(1) : 0}%)
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className={cn("text-lg font-bold", estimasiProfit >= 0 ? "text-emerald-700" : "text-red-600")}>
-                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
-                                                </p>
-                                            </div>
+                                        <div className="space-y-1 border-l pl-4">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Pelaksanaan</p>
+                                            <p className="text-sm font-bold text-indigo-600">
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalPelaksanaan)}
+                                            </p>
+                                            <p className="text-[9px] text-muted-foreground font-medium">({budget > 0 ? ((totalPelaksanaan / budget) * 100).toFixed(1) : 0}%)</p>
+                                        </div>
+                                        <div className="space-y-1 border-l pl-4">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Operational Budget</p>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(opsBudget)}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1 border-l pl-4">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Estimasi Profit</p>
+                                            <p className={cn("text-sm font-bold", estimasiProfit >= 0 ? "text-emerald-600" : "text-red-600")}>
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
+                                            </p>
+                                            <p className="text-[9px] text-muted-foreground font-medium">({budget > 0 ? ((estimasiProfit / budget) * 100).toFixed(1) : 0}%)</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1030,8 +1030,71 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                             </div>
                                             <FileUploadDropzone onFilesChange={(files) => setRabFile(files[0])} />
                                             {rabFile && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {rabFile.name}</p>}
-                                            {errors['documents.0.file'] && <p className="text-xs text-red-500">{errors['documents.0.file']}</p>}
+                                            {errors['documents.RAB.file'] && <p className="text-xs text-red-500">{errors['documents.RAB.file']}</p>}
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Supporting Documents */}
+                                <div className="space-y-4 pt-4 border-t mt-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Label className="text-base font-semibold">Dokumen Pendukung</Label>
+                                            <p className="text-xs text-muted-foreground mt-1">Lampirkan dokumen pendukung lainnya seperti surat penawaran, dll.</p>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={addSupportingDoc}
+                                            className="gap-2 border-dashed hover:border-solid"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Tambah Dokumen
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {supportingDocs.map((doc, idx) => (
+                                            <div key={doc.id} className="border rounded-xl p-3 bg-white shadow-sm flex items-center gap-3 group hover:border-gray-300 transition-colors">
+                                                <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                                                    <div className="md:col-span-4 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nama Dokumen #{idx + 1} <span className="text-red-500">*</span></Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={doc.type}
+                                                            onChange={(e) => updateSupportingDocType(doc.id, e.target.value)}
+                                                            placeholder="Nama dokumen..."
+                                                            className={cn("bg-white h-9 text-xs", errors[`documents.SUPPORTING_${doc.id}.type`] && "border-red-500")}
+                                                        />
+                                                        {errors[`documents.SUPPORTING_${doc.id}.type`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`documents.SUPPORTING_${doc.id}.type`]}</p>}
+                                                    </div>
+                                                    <div className="md:col-span-8 space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">File Dokumen <span className="text-red-500">*</span></Label>
+                                                        <Input
+                                                            type="file"
+                                                            onChange={(e) => handleSupportingDocFile(doc.id, e.target.files?.[0] || null)}
+                                                            className={cn("bg-white h-9 text-xs py-1.5", errors[`documents.SUPPORTING_${doc.id}.file`] && "border-red-500")}
+                                                        />
+                                                        {doc.file && <p className="text-xs font-medium text-green-600 mt-0.5">✓ Terpilih: {doc.file.name}</p>}
+                                                        {doc.original_name && !doc.file && <p className="text-xs text-blue-600 mt-0.5">File saat ini: {doc.original_name}</p>}
+                                                        {errors[`documents.SUPPORTING_${doc.id}.file`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`documents.SUPPORTING_${doc.id}.file`]}</p>}
+                                                    </div>
+                                                </div>
+
+                                                {supportingDocs.length > 0 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => removeSupportingDocLocal(doc.id)}
+                                                        className="h-8 w-8 text-muted-foreground hover:text-red-500 mt-5 shrink-0"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -1082,9 +1145,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                                 value={term.nominal}
                                                                 onValueChange={(vals) => updatePaymentTerm(term.id, 'nominal', vals.floatValue || 0)}
                                                                 placeholder="0"
-                                                                className="pl-10 bg-white h-10"
+                                                                className={cn("pl-10 bg-white h-10", errors[`termin_payments.${idx}.nominal`] && "border-red-500")}
                                                             />
                                                         </div>
+                                                        {errors[`termin_payments.${idx}.nominal`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.nominal`]}</p>}
                                                     </div>
 
                                                     {/* Tanggal */}
@@ -1094,8 +1158,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                             type="date"
                                                             value={term.date}
                                                             onChange={(e) => updatePaymentTerm(term.id, 'date', e.target.value)}
-                                                            className="bg-white h-10"
+                                                            className={cn("bg-white h-10", errors[`termin_payments.${idx}.due_date`] && "border-red-500")}
                                                         />
+                                                        {errors[`termin_payments.${idx}.due_date`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.due_date`]}</p>}
                                                     </div>
 
                                                     {/* Notes */}
@@ -1106,8 +1171,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                             value={term.notes}
                                                             onChange={(e) => updatePaymentTerm(term.id, 'notes', e.target.value)}
                                                             placeholder=""
-                                                            className="bg-white h-10"
+                                                            className={cn("bg-white h-10", errors[`termin_payments.${idx}.notes`] && "border-red-500")}
                                                         />
+                                                        {errors[`termin_payments.${idx}.notes`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.notes`]}</p>}
                                                     </div>
                                                 </div>
                                             </div>
