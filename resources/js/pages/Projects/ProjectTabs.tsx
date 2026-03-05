@@ -164,10 +164,10 @@ export default function ProjectTabs({
 
     const handleSaveDetailBudget = async () => {
         setSavingDetailBudget(true);
-        const currentTotalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
-        if (currentTotalProposal > opsBudget) {
+        const currentTotalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
+        if (currentTotalPelaksanaan > opsBudget) {
             setSavingDetailBudget(false);
-            if (onShowToast) onShowToast('Gagal menyimpan: Total amount proposal melebihi budget operasional. Sesuaikan RAB atau ajukan tambahan operasional.', 'error');
+            if (onShowToast) onShowToast('Gagal menyimpan: Total amount pelaksanaan melebihi budget operasional. Sesuaikan RAB atau ajukan tambahan operasional.', 'error');
             return;
         }
 
@@ -858,28 +858,10 @@ export default function ProjectTabs({
                                 <div className="border rounded-xl p-5 bg-gray-50/50 space-y-4">
                                     <div className="space-y-3">
                                         {detailBudgets.map((detail, idx) => (
-                                            <div key={detail.id} className="bg-white p-4 rounded-lg border shadow-sm space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs font-bold text-muted-foreground">Kegiatan #{idx + 1}</span>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 text-red-500 hover:bg-red-50 hover:text-red-600"
-                                                        onClick={() => {
-                                                            const toDelete = detailBudgets[idx];
-                                                            const newDetails = detailBudgets.filter((_, i) => i !== idx);
-                                                            setDetailBudgets(newDetails);
-                                                            if (!toDelete.isNew && toDelete.id) {
-                                                                setDeleteDetailBudgets([...deleteDetailBudgets, toDelete.id]);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    <div className="md:col-span-2 space-y-1.5">
-                                                        <Label className="text-xs text-muted-foreground">Nama Kegiatan</Label>
+                                            <div key={detail.id} className="bg-white p-3 rounded-lg border shadow-sm flex items-center gap-3 group hover:border-blue-200 transition-colors">
+                                                <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                                                    <div className="md:col-span-4 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Kegiatan #{idx + 1}</Label>
                                                         <Input
                                                             type="text"
                                                             value={detail.item_name || ''}
@@ -888,12 +870,12 @@ export default function ProjectTabs({
                                                                 newDetails[idx].item_name = e.target.value;
                                                                 setDetailBudgets(newDetails);
                                                             }}
-                                                            placeholder="Sewa Gedung, Konsumsi, dll..."
-                                                            className="h-9"
+                                                            placeholder="Nama Kegiatan..."
+                                                            className="h-8 text-xs"
                                                         />
                                                     </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs text-muted-foreground">Amount Proposal</Label>
+                                                    <div className="md:col-span-2 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Proposal</Label>
                                                         <MoneyInput
                                                             value={detail.amount_proposal || 0}
                                                             onValueChange={(vals) => {
@@ -903,12 +885,11 @@ export default function ProjectTabs({
                                                                 setDetailBudgets(newDetails);
                                                             }}
                                                             placeholder="0"
-                                                            prefix="Rp "
-                                                            className="h-9"
+                                                            className="h-8 text-xs"
                                                         />
                                                     </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs text-muted-foreground">Amount Pelaksanaan</Label>
+                                                    <div className="md:col-span-2 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Pelaksanaan</Label>
                                                         <MoneyInput
                                                             value={detail.amount_pelaksanaan || 0}
                                                             onValueChange={(vals) => {
@@ -917,12 +898,11 @@ export default function ProjectTabs({
                                                                 setDetailBudgets(newDetails);
                                                             }}
                                                             placeholder="0"
-                                                            prefix="Rp "
-                                                            className="h-9"
+                                                            className="h-8 text-xs"
                                                         />
                                                     </div>
-                                                    <div className="md:col-span-2 space-y-1.5">
-                                                        <Label className="text-xs text-muted-foreground">Catatan / Keterangan</Label>
+                                                    <div className="md:col-span-4 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Catatan</Label>
                                                         <Input
                                                             type="text"
                                                             value={detail.notes || ''}
@@ -931,13 +911,56 @@ export default function ProjectTabs({
                                                                 newDetails[idx].notes = e.target.value;
                                                                 setDetailBudgets(newDetails);
                                                             }}
-                                                            placeholder="Catatan tambahan (Opsional)..."
-                                                            className="h-9"
+                                                            placeholder="Keterangan..."
+                                                            className="h-8 text-xs"
                                                         />
                                                     </div>
                                                 </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600 mt-5 shrink-0"
+                                                    onClick={() => {
+                                                        const toDelete = detailBudgets[idx];
+                                                        const newDetails = detailBudgets.filter((_, i) => i !== idx);
+                                                        setDetailBudgets(newDetails);
+                                                        if (!toDelete.isNew && toDelete.id) {
+                                                            setDeleteDetailBudgets([...deleteDetailBudgets, toDelete.id]);
+                                                        }
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         ))}
+                                    </div>
+
+                                    {/* Real-time Summary during editing */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-white border rounded-lg shadow-sm">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Proposal</p>
+                                            <p className="text-sm font-bold text-blue-600">
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0))}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1 border-l pl-4">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Pelaksanaan</p>
+                                            <p className="text-sm font-bold text-indigo-600">
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0))}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1 border-l pl-4">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Operational Budget</p>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(opsBudget)}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1 border-l pl-4">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Estimasi Profit</p>
+                                            <p className={`text-sm font-bold ${project.budget_total - detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(project.budget_total - detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0))}
+                                            </p>
+                                        </div>
                                     </div>
 
                                     <div className="flex items-center justify-between pt-2">

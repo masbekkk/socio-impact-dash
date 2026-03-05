@@ -132,7 +132,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
   const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
   const estimasiProfit = budget - totalPelaksanaan;
 
-  const isProposalOverOperational = totalPelaksanaan > opsBudget;
+  const isPelaksanaanOverOperational = totalPelaksanaan > opsBudget;
 
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
@@ -206,7 +206,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
     });
 
     try {
-      if (isProposalOverOperational) {
+      if (isPelaksanaanOverOperational) {
         setGeneralError("Peringatan Anggaran: Project activity memiliki pagu lebih besar dari operational. Update/remove project activity terlebih dahulu atau sesuaikan budget operational.");
         setLoading(false);
         setUploadProgress(0);
@@ -863,114 +863,107 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
 
                   <div className="space-y-3">
                     {detailBudgets.map((detail, idx) => (
-                      <div key={detail.id} className="border rounded-xl p-5 bg-white shadow-sm space-y-4 group hover:border-gray-300 transition-colors">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-sm text-gray-900">Item #{idx + 1}</h4>
-                          {detailBudgets.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeDetailBudget(detail.id)}
-                              className="h-8 w-8 text-muted-foreground hover:text-red-500"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2 md:col-span-2">
-                            <Label className="text-xs font-medium text-muted-foreground">Nama Kegiatan <span className="text-red-500">*</span></Label>
+                      <div key={detail.id} className="border rounded-xl p-3 bg-white shadow-sm flex items-center gap-3 group hover:border-gray-300 transition-colors">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                          <div className="md:col-span-4 space-y-1">
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase">Kegiatan #{idx + 1} <span className="text-red-500">*</span></Label>
                             <Input
                               type="text"
                               value={detail.item_name}
                               onChange={(e) => updateDetailBudget(detail.id, 'item_name', e.target.value)}
-                              placeholder="Masukkan nama kegiatan..."
-                              className="bg-white h-10"
+                              placeholder="Nama kegiatan..."
+                              className="bg-white h-8 text-xs"
                             />
                           </div>
 
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium text-muted-foreground">Amount Proposal</Label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
-                              <MoneyInput
-                                value={detail.amount_proposal}
-                                onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_proposal', vals.floatValue || 0)}
-                                placeholder="0"
-                                className="pl-10 bg-white h-10"
-                              />
-                            </div>
+                          <div className="md:col-span-2 space-y-1">
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase">Proposal</Label>
+                            <MoneyInput
+                              value={detail.amount_proposal}
+                              onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_proposal', vals.floatValue || 0)}
+                              placeholder="0"
+                              className="bg-white h-8 text-xs"
+                            />
                           </div>
 
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium text-muted-foreground">Amount Pelaksanaan</Label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
-                              <MoneyInput
-                                value={detail.amount_pelaksanaan}
-                                onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_pelaksanaan', vals.floatValue || 0)}
-                                placeholder="0"
-                                className="pl-10 bg-white h-10"
-                              />
-                            </div>
+                          <div className="md:col-span-2 space-y-1">
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase">Pelaksanaan</Label>
+                            <MoneyInput
+                              value={detail.amount_pelaksanaan}
+                              onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_pelaksanaan', vals.floatValue || 0)}
+                              placeholder="0"
+                              className="bg-white h-8 text-xs"
+                            />
                           </div>
 
-                          {/* Notes */}
-                          <div className="space-y-2 md:col-span-2">
-                            <Label className="text-xs font-medium text-muted-foreground">Catatan (Opsional)</Label>
+                          <div className="md:col-span-4 space-y-1">
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase">Catatan (Opsional)</Label>
                             <Input
                               type="text"
                               value={detail.notes}
                               onChange={(e) => updateDetailBudget(detail.id, 'notes', e.target.value)}
-                              placeholder="Keterangan tambahan..."
-                              className="bg-white h-10"
+                              placeholder="Keterangan..."
+                              className="bg-white h-8 text-xs"
                             />
                           </div>
                         </div>
+
+                        {detailBudgets.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeDetailBudget(detail.id)}
+                            className="h-8 w-8 text-muted-foreground hover:text-red-500 mt-5 shrink-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
 
                   {/* Summary Detail Budget */}
 
-                  {isProposalOverOperational && (
+                  {isPelaksanaanOverOperational && (
                     <Alert variant="destructive" className="mb-4">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Peringatan Anggaran</AlertTitle>
                       <AlertDescription>
-                        Project activity memiliki pagu ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalProposal)})
+                        Project activity memiliki nominal pelaksanaan ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalPelaksanaan)})
                         lebih besar dari budget operational ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(opsBudget)}).
-                        Update/remove project activity terlebih dahulu atau ajukan tambahan budget operational beserta catatannya (setelah project dibuat).
+                        Update/remove project activity terlebih dahulu atau sesuaikan budget operational.
                       </AlertDescription>
                     </Alert>
                   )}
 
-                  <div className={cn("border rounded-lg p-4", estimasiProfit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200")}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Total Kegiatan Anggaran</p>
-                        <p className="text-xs mt-0.5 text-muted-foreground">{detailBudgets.length} kegiatan</p>
-                      </div>
-                      <div className="text-right">
-                        <p className={cn("text-lg font-bold", isProposalOverOperational ? "text-red-600" : "text-gray-900")}>
-                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Total Proposal ({budget > 0 ? ((totalProposal / budget) * 100).toFixed(1) : 0}%)</p>
-                      </div>
+                  <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-lg shadow-sm bg-white", estimasiProfit < 0 ? "border-red-200" : "border-blue-200")}>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Proposal</p>
+                      <p className="text-sm font-bold text-blue-600">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground font-medium">({budget > 0 ? ((totalProposal / budget) * 100).toFixed(1) : 0}%)</p>
                     </div>
-                    <div className="border-t mt-3 pt-3 flex items-center justify-between">
-                      <div>
-                        <p className={cn("text-sm font-bold", estimasiProfit >= 0 ? "text-emerald-800" : "text-red-800")}>
-                          Estimasi Profit (Total Pagu - Pelaksanaan) ({budget > 0 ? ((estimasiProfit / budget) * 100).toFixed(1) : 0}%)
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className={cn("text-lg font-bold", estimasiProfit >= 0 ? "text-emerald-700" : "text-red-600")}>
-                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
-                        </p>
-                      </div>
+                    <div className="space-y-1 border-l pl-4">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Pelaksanaan</p>
+                      <p className="text-sm font-bold text-indigo-600">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalPelaksanaan)}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground font-medium">({budget > 0 ? ((totalPelaksanaan / budget) * 100).toFixed(1) : 0}%)</p>
+                    </div>
+                    <div className="space-y-1 border-l pl-4">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Operational Budget</p>
+                      <p className="text-sm font-bold text-gray-900">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(opsBudget)}
+                      </p>
+                    </div>
+                    <div className="space-y-1 border-l pl-4">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Estimasi Profit</p>
+                      <p className={cn("text-sm font-bold", estimasiProfit >= 0 ? "text-emerald-600" : "text-red-600")}>
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground font-medium">({budget > 0 ? ((estimasiProfit / budget) * 100).toFixed(1) : 0}%)</p>
                     </div>
                   </div>
                 </div>
