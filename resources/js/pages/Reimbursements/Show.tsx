@@ -605,7 +605,12 @@ export default function Show() {
                         {editingPartitions ? (
                           <MoneyInput
                             value={partitionOps}
-                            onValueChange={(v) => setPartitionOps(v.floatValue || 0)}
+                            onValueChange={(v) => {
+                              const val = v.floatValue || 0;
+                              setPartitionOps(val);
+                              const allowance = (data.project.budget_total || 0) - val - partitionMgmt;
+                              setPartitionAllow(allowance > 0 ? allowance : 0);
+                            }}
                             placeholder="0"
                             className="h-9 text-sm"
                           />
@@ -621,7 +626,12 @@ export default function Show() {
                         {editingPartitions ? (
                           <MoneyInput
                             value={partitionMgmt}
-                            onValueChange={(v) => setPartitionMgmt(v.floatValue || 0)}
+                            onValueChange={(v) => {
+                              const val = v.floatValue || 0;
+                              setPartitionMgmt(val);
+                              const allowance = (data.project.budget_total || 0) - partitionOps - val;
+                              setPartitionAllow(allowance > 0 ? allowance : 0);
+                            }}
                             placeholder="0"
                             className="h-9 text-sm"
                           />

@@ -7,31 +7,42 @@ namespace App\Actions\Projects;
 use App\Models\Project;
 use App\Services\FileUploadService;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 final class CreateProject
 {
-    public function __construct(private FileUploadService $fileUploadService) {}
+    // Constructor removed as FileUploadService is unused
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function handle(array $data, int $userId): Project
     {
-        return DB::transaction(function () use ($data, $userId) {
+        /** @var Project $project */
+        $project = DB::transaction(function () use ($data, $userId) {
             $project = $this->createProjectRecord($data, $userId);
 
             if (isset($data['locations'])) {
-                $this->syncLocations($project, $data['locations']);
+                /** @var array<int, array<string, mixed>> $locations */
+                $locations = $data['locations'];
+                $this->syncLocations($project, $locations);
             }
 
             if (isset($data['termin_payments'])) {
-                $this->syncTerminPayments($project, $data['termin_payments']);
+                /** @var array<int, array<string, mixed>> $terminPayments */
+                $terminPayments = $data['termin_payments'];
+                $this->syncTerminPayments($project, $terminPayments);
             }
 
             if (isset($data['documents'])) {
-                $this->syncDocuments($project, $data['documents'], $userId);
+                /** @var array<int, array<string, mixed>> $documents */
+                $documents = $data['documents'];
+                $this->syncDocuments($project, $documents, $userId);
             }
 
             if (isset($data['detail_budgets'])) {
-                $this->syncDetailBudgets($project, $data['detail_budgets'], $userId);
+                /** @var array<int, array<string, mixed>> $detailBudgets */
+                $detailBudgets = $data['detail_budgets'];
+                $this->syncDetailBudgets($project, $detailBudgets, $userId);
             }
 
             $this->createApprovals($project);
@@ -39,12 +50,18 @@ final class CreateProject
             // Re-fetch project to load all newly created relations properly
             return $project->fresh(['locations', 'terminPayments', 'documents', 'budgetDetails']);
         });
+
+        return $project;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function createProjectRecord(array $data, int $userId): Project
     {
-        $code = $data['code'] ?? null;
-        $budgetTotal = (float) ($data['budget_total'] ?? 0);
+        $code = is_string($data['code'] ?? null) ? $data['code'] : null;
+        $budgetTotalRaw = $data['budget_total'] ?? 0;
+        $budgetTotal = is_numeric($budgetTotalRaw) ? (float) $budgetTotalRaw : 0;
 
         return Project::create([
             'code' => $code,
@@ -55,10 +72,10 @@ final class CreateProject
             'account_manager_id' => $data['account_manager_id'] ?? null,
             'head_id' => $data['head_id'] ?? null,
             'pic_id' => $data['pic_id'] ?? null,
-            'status' => $data['status'] ?? ProjectStatus::Active,
+            'status' => $data['status'] ?? \App\Enums\ProjectStatus::Active,
             'project_type' => $data['project_type'],
             'budget_total' => $budgetTotal,
-            'operational_budget' => $data['operational_budget'] ?? 0,
+            'operational_budget' => is_numeric($data['operational_budget'] ?? null) ? (float) $data['operational_budget'] : 0,
             'management_budget' => $data['management_budget'] ?? 0,
             'allowance_budget' => $data['allowance_budget'] ?? 0,
             'start_date' => $data['start_date'],
@@ -66,15 +83,9 @@ final class CreateProject
         ]);
     }
 
-    private function generateUniqueCode(): string
-    {
-        do {
-            $code = 'PRJ-'.mb_strtoupper(Str::random(6));
-        } while (Project::where('code', $code)->exists());
-
-        return $code;
-    }
-
+    /**
+     * @param  array<int, array<string, mixed>>  $locations
+     */
     private function syncLocations(Project $project, array $locations): void
     {
         foreach ($locations as $location) {
@@ -86,6 +97,9 @@ final class CreateProject
         }
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $terminPayments
+     */
     private function syncTerminPayments(Project $project, array $terminPayments): void
     {
         foreach ($terminPayments as $term) {
@@ -97,6 +111,9 @@ final class CreateProject
         }
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $documents
+     */
     private function syncDocuments(Project $project, array $documents, int $userId): void
     {
         foreach ($documents as $doc) {
@@ -107,6 +124,7 @@ final class CreateProject
                 $tempPath = $file->store("temp/projects/{$project->id}", 'local');
 
                 // Create document record immediately with pending status
+                /** @var \App\Models\ProjectDocument $document */
                 $document = $project->documents()->create([
                     'type' => $doc['type'] ?? 'other',
                     'original_name' => $file->getClientOriginalName(),
@@ -120,7 +138,7 @@ final class CreateProject
 
                 // Dispatch background job to move file to final storage
                 \App\Jobs\ProcessProjectDocumentUpload::dispatch(
-                    $document->id,
+                    (int) $document->id,
                     "projects/{$project->id}/documents"
                 );
             }
@@ -157,6 +175,9 @@ final class CreateProject
         }
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $detailBudgets
+     */
     private function syncDetailBudgets(Project $project, array $detailBudgets, int $userId): void
     {
         foreach ($detailBudgets as $detail) {
