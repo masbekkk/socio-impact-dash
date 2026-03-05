@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Save, User, Briefcase, Building2, Loader2, UserCheck, AlertCircle, CheckCircle2, Receipt } from 'lucide-react';
+import { ArrowLeft, Save, User, Briefcase, Building2, Loader2, UserCheck, AlertCircle, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
 import MoneyInput from '@/components/MoneyInput';
 import { Separator } from '@/components/ui/separator';
@@ -14,7 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
-import { Checkbox } from '@/components/ui/checkbox';
 
 interface Approver {
   id: number;
@@ -50,11 +49,21 @@ interface Atr {
   items: AtrItem[];
 }
 
-interface SelectedEerItem {
-  atr_item_id: number;
-  actual_amount: number;
+interface ChildItem {
+  id: string; // For frontend keys
+  item_name: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
   receipt: File | null;
   notes: string;
+}
+
+interface SelectedActivity {
+  budget_detail_id: number;
+  activity_name: string;
+  expanded: boolean;
+  children: ChildItem[];
 }
 
 const fmt = (v: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
@@ -65,7 +74,7 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
 }) {
   const { authUser, loading, errors, setErrors, clearFieldError, submitReimbursement } = useReimbursementForm([]);
 
-  const [selectedItems, setSelectedItems] = useState<SelectedEerItem[]>([]);
+  const [selectedActivities, setSelectedActivities] = useState<SelectedActivity[]>([]);
 
   const [formData, setFormData] = useState({
     name: authUser?.name ?? '',
@@ -92,7 +101,7 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
     if (!selected) return;
 
     clearFieldError('atr_id');
-    setSelectedItems([]);
+    setSelectedActivities([]);
 
     setFormData(prev => ({
       ...prev,
@@ -119,61 +128,100 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
     return atrs.find(a => a.id.toString() === formData.atr_id) ?? null;
   }, [formData.atr_id, atrs]);
 
-  // Group items by activity
-  const groupedItems = useMemo(() => {
-    if (!selectedAtr?.items?.length) return [];
-    const groups: Record<number, { activity_name: string; items: AtrItem[] }> = {};
-    for (const item of selectedAtr.items) {
-      if (!groups[item.activity_id]) {
-        groups[item.activity_id] = { activity_name: item.activity_name, items: [] };
-      }
-      groups[item.activity_id].items.push(item);
-    }
-    return Object.entries(groups).map(([id, data]) => ({ activity_id: parseInt(id), ...data }));
-  }, [selectedAtr]);
+  // Derived available activities from the selected ATR's items
+  const availableActivities = useMemo(() => {
+    if (!selectedAtr) return [];
 
-  // Toggle item selection
-  const toggleItem = (atrItemId: number, atrItem: AtrItem) => {
-    setSelectedItems(prev => {
-      const exists = prev.find(si => si.atr_item_id === atrItemId);
-      if (exists) {
-        return prev.filter(si => si.atr_item_id !== atrItemId);
+    // Group ATR items to find unique activities
+    const map = new Map<number, { id: number, name: string }>();
+    selectedAtr.items.forEach(item => {
+      if (!map.has(item.activity_id)) {
+        map.set(item.activity_id, { id: item.activity_id, name: item.activity_name });
       }
-      const remaining = atrItem.amount - atrItem.used_eer_amount;
-      return [...prev, { atr_item_id: atrItemId, actual_amount: remaining, receipt: null, notes: '' }];
     });
+
+    // Return activities not yet explicitly added
+    return Array.from(map.values()).filter(
+      act => !selectedActivities.find(sa => sa.budget_detail_id === act.id)
+    );
+  }, [selectedAtr, selectedActivities]);
+
+  // Activity management
+  const addActivity = (budgetDetailId: number, activityName: string) => {
+    if (selectedActivities.find(a => a.budget_detail_id === budgetDetailId)) return;
+    setSelectedActivities(prev => [...prev, {
+      budget_detail_id: budgetDetailId,
+      activity_name: activityName,
+      expanded: true,
+      children: [{ id: crypto.randomUUID(), item_name: '', quantity: 1, unit_price: 0, amount: 0, receipt: null, notes: '' }],
+    }]);
   };
 
-  const updateSelectedItem = (atrItemId: number, field: keyof SelectedEerItem, value: any) => {
-    setSelectedItems(prev => prev.map(si => si.atr_item_id === atrItemId ? { ...si, [field]: value } : si));
+  const removeActivity = (budgetDetailId: number) => {
+    setSelectedActivities(prev => prev.filter(a => a.budget_detail_id !== budgetDetailId));
   };
 
-  const isItemSelected = (atrItemId: number) => !!selectedItems.find(si => si.atr_item_id === atrItemId);
+  const toggleActivity = (budgetDetailId: number) => {
+    setSelectedActivities(prev => prev.map(a =>
+      a.budget_detail_id === budgetDetailId ? { ...a, expanded: !a.expanded } : a
+    ));
+  };
 
-  const getSelectedItem = (atrItemId: number) => selectedItems.find(si => si.atr_item_id === atrItemId);
+  // Child item management
+  const addChildItem = (budgetDetailId: number) => {
+    setSelectedActivities(prev => prev.map(a => {
+      if (a.budget_detail_id !== budgetDetailId) return a;
+      return { ...a, children: [...a.children, { id: crypto.randomUUID(), item_name: '', quantity: 1, unit_price: 0, amount: 0, receipt: null, notes: '' }] };
+    }));
+  };
+
+  const removeChildItem = (budgetDetailId: number, itemId: string) => {
+    setSelectedActivities(prev => prev.map(a => {
+      if (a.budget_detail_id !== budgetDetailId) return a;
+      return { ...a, children: a.children.filter(c => c.id !== itemId) };
+    }));
+  };
+
+  const updateChildItem = (budgetDetailId: number, itemId: string, field: keyof ChildItem, value: any) => {
+    setSelectedActivities(prev => prev.map(a => {
+      if (a.budget_detail_id !== budgetDetailId) return a;
+      return {
+        ...a,
+        children: a.children.map(c => {
+          if (c.id !== itemId) return c;
+          const updated = { ...c, [field]: value };
+          if (field === 'quantity' || field === 'unit_price') {
+            updated.amount = (updated.quantity || 1) * (updated.unit_price || 0);
+          }
+          return updated;
+        }),
+      };
+    }));
+  };
+
+  const getActivityChildrenTotal = (budgetDetailId: number) => {
+    const activity = selectedActivities.find(a => a.budget_detail_id === budgetDetailId);
+    return activity?.children.reduce((sum, c) => sum + (c.amount || 0), 0) ?? 0;
+  };
 
   const totalEerAmount = useMemo(() => {
-    return selectedItems.reduce((sum, si) => sum + (si.actual_amount || 0), 0);
-  }, [selectedItems]);
+    return selectedActivities.reduce((sum, a) => sum + a.children.reduce((s, c) => s + (c.amount || 0), 0), 0);
+  }, [selectedActivities]);
 
-  // Validate: check if any item exceeds its ATR remaining
   const hasOverBudgetItems = useMemo(() => {
     if (!selectedAtr) return false;
-    return selectedItems.some(si => {
-      const atrItem = selectedAtr.items.find(i => i.id === si.atr_item_id);
-      if (!atrItem) return false;
-      return si.actual_amount > (atrItem.amount - atrItem.used_eer_amount);
-    });
-  }, [selectedItems, selectedAtr]);
+    // We enforce that the entire EER amount cannot exceed the ATR amount
+    return totalEerAmount > selectedAtr.amount;
+  }, [totalEerAmount, selectedAtr]);
 
   const handleSubmit = async () => {
-    if (selectedItems.length === 0) {
-      setErrors({ amount: ['Pilih minimal 1 item dari ATR.'] });
+    if (selectedActivities.length === 0 || totalEerAmount <= 0) {
+      setErrors({ amount: ['Tambahkan minimal 1 item pada kegiatan yang dipilih.'] });
       return;
     }
 
     if (hasOverBudgetItems) {
-      setErrors({ amount: ['Ada item dengan nominal melebihi sisa ATR.'] });
+      setErrors({ amount: ['Total nilai EER melebihi total persetujuan ATR.'] });
       return;
     }
 
@@ -182,19 +230,18 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
       return;
     }
 
-    const items = selectedItems.map(si => {
-      const atrItem = selectedAtr?.items.find(i => i.id === si.atr_item_id);
-      return {
-        project_budget_detail_id: atrItem?.activity_id ?? 0,
-        parent_item_id: si.atr_item_id,
-        item_name: atrItem?.item_name ?? '',
-        quantity: 1,
-        unit_price: si.actual_amount,
-        amount: si.actual_amount,
-        receipt: si.receipt ?? undefined,
-        notes: si.notes || undefined,
-      };
-    });
+    const items = selectedActivities.flatMap(a =>
+      a.children.filter(c => c.amount > 0 && c.item_name).map(c => ({
+        project_budget_detail_id: a.budget_detail_id,
+        parent_item_id: null, // Mapped to null because it's manual input, but still linked to budget detail
+        item_name: c.item_name,
+        quantity: c.quantity,
+        unit_price: c.unit_price,
+        amount: c.amount,
+        receipt: c.receipt ?? undefined,
+        notes: c.notes || undefined,
+      }))
+    );
 
     await submitReimbursement({
       type: 'eer',
@@ -222,8 +269,8 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
             <Link href="/reimbursements"><ArrowLeft className="h-5 w-5" /></Link>
           </Button>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">Pengajuan EER</h1>
-            <p className="text-muted-foreground text-sm">Employee Expense Report — klaim biaya berdasarkan ATR yang sudah disetujui.</p>
+            <h1 className="text-xl font-bold tracking-tight">Pengajuan EER (Baru)</h1>
+            <p className="text-muted-foreground text-sm">Employee Expense Report — klaim biaya aktual berdasarkan limit ATR.</p>
           </div>
         </div>
 
@@ -235,8 +282,8 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
           <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
             {/* Employee Information */}
             <div className="p-6 md:p-8 bg-white">
-              <h3 className="text-lg font-semibold mb-1">Informasi Karyawan</h3>
-              <p className="text-sm text-muted-foreground mb-6">Data pribadi dan pilih ATR yang akan diklaim.</p>
+              <h3 className="text-lg font-semibold mb-1">Informasi Karyawan & ATR</h3>
+              <p className="text-sm text-muted-foreground mb-6">Pilih ATR yang akan diselesaikan menggunakan EER.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
@@ -298,123 +345,176 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
 
             <Separator />
 
-            {/* Item Selection */}
+            {/* Item Input Mode */}
             <div className="p-6 md:p-8 bg-white">
-              <h3 className="text-lg font-semibold mb-1">Pilih Item ATR untuk Diklaim</h3>
-              <p className="text-sm text-muted-foreground mb-6">Centang item yang akan diklaim, isi nominal aktual, dan upload bukti kwitansi.</p>
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Rincian Pengeluaran Aktual (EER)</h3>
+                  <p className="text-sm text-muted-foreground">Input pengeluaran aktual secara manual, lampirkan bukti pembayaran, dengan total maksimal sesuai limit ATR terlampir.</p>
+                </div>
+                {selectedAtr && (
+                  <div className="bg-slate-50 border p-3 rounded-lg text-right">
+                    <p className="text-xs text-slate-500 font-medium">Limit ATR Tersedia</p>
+                    <p className="text-lg font-bold text-slate-800">{fmt(selectedAtr.amount)}</p>
+                  </div>
+                )}
+              </div>
 
               {selectedAtr ? (
-                groupedItems.length > 0 ? (
-                  <div className="space-y-4">
-                    {groupedItems.map(group => (
-                      <div key={group.activity_id} className="border rounded-xl overflow-hidden">
-                        <div className="bg-slate-50 p-3 border-b">
-                          <h4 className="font-semibold text-sm text-slate-800">{group.activity_name}</h4>
+                <div className="space-y-4">
+                  {/* Provider Dropdown for Activities related to ATR */}
+                  {availableActivities.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Tambah Kegiatan dari ATR (Opsional untuk pengarsipan)</Label>
+                      <Select onValueChange={(v) => {
+                        const act = availableActivities.find(a => a.id.toString() === v);
+                        if (act) addActivity(act.id, act.name);
+                      }}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Pilih kegiatan terkait (yang diajukan di ATR)..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableActivities.map(act => (
+                            <SelectItem key={act.id} value={act.id.toString()}>
+                              {act.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedActivities.length === 0 && (
+                    <p className="text-sm text-muted-foreground italic py-4 text-center">Pilih kegiatan di atas untuk mulai memasukkan pengeluaran aktual.</p>
+                  )}
+
+                  {/* Selected Activities and Manual Input Form */}
+                  {selectedActivities.map((activity) => {
+                    const childTotal = getActivityChildrenTotal(activity.budget_detail_id);
+
+                    return (
+                      <div key={activity.budget_detail_id} className="border rounded-xl overflow-hidden shadow-sm">
+                        {/* Activity Header */}
+                        <div
+                          className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"
+                          onClick={() => toggleActivity(activity.budget_detail_id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            {activity.expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            <div>
+                              <h4 className="font-semibold text-sm">{activity.activity_name}</h4>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-bold text-emerald-700">{fmt(childTotal)}</span>
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700" onClick={(e) => { e.stopPropagation(); removeActivity(activity.budget_detail_id); }}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="divide-y">
-                          {group.items.map(item => {
-                            const remaining = item.amount - item.used_eer_amount;
-                            const selected = isItemSelected(item.id);
-                            const selectedData = getSelectedItem(item.id);
-                            const overBudget = selectedData ? selectedData.actual_amount > remaining : false;
 
-                            return (
-                              <div key={item.id} className={cn("p-4 transition-colors", selected ? "bg-blue-50/50" : "hover:bg-slate-50/50")}>
-                                <div className="flex items-start gap-3">
-                                  <Checkbox
-                                    id={`eer-item-${item.id}`}
-                                    checked={selected}
-                                    disabled={remaining <= 0}
-                                    onCheckedChange={() => toggleItem(item.id, item)}
-                                    className="mt-1"
-                                  />
-                                  <div className="flex-1 space-y-2">
-                                    <div className="flex items-center justify-between">
-                                      <label htmlFor={`eer-item-${item.id}`} className="cursor-pointer">
-                                        <p className="text-sm font-medium">{item.item_name}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {item.expense_type && <span className="inline-block bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] mr-2">{item.expense_type}</span>}
-                                          ATR: {fmt(item.amount)} · Diklaim: {fmt(item.used_eer_amount)} · <span className={cn(remaining <= 0 && "text-red-500")}>Sisa: {fmt(remaining)}</span>
-                                        </p>
-                                      </label>
-                                      {remaining <= 0 && (
-                                        <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Sudah diklaim penuh</span>
-                                      )}
-                                    </div>
+                        {/* Children */}
+                        {activity.expanded && (
+                          <div className="p-4 space-y-3 bg-white">
+                            {activity.children.map((child, idx) => (
+                              <div key={child.id} className="border rounded-lg p-4 space-y-3 bg-slate-50/50">
+                                <div className="flex items-center justify-between">
+                                  <h5 className="font-medium text-sm text-slate-700">Item #{idx + 1}</h5>
+                                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-red-500 hover:text-red-700" onClick={() => removeChildItem(activity.budget_detail_id, child.id)}>
+                                    Hapus
+                                  </Button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                  <div className="md:col-span-2 space-y-2">
+                                    <Label className="text-xs">Nama Barang / Pengeluaran</Label>
+                                    <Input
+                                      value={child.item_name}
+                                      onChange={(e) => updateChildItem(activity.budget_detail_id, child.id, 'item_name', e.target.value)}
+                                      placeholder="Contoh: Tiket Pesawat JKT-SUB"
+                                      className="h-9 text-sm"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-xs">Kuantitas</Label>
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      value={child.quantity || ''}
+                                      onChange={(e) => updateChildItem(activity.budget_detail_id, child.id, 'quantity', parseInt(e.target.value) || 0)}
+                                      className="h-9 text-sm"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-xs">Harga Satuan</Label>
+                                    <MoneyInput
+                                      value={child.unit_price}
+                                      onValueChange={(v) => updateChildItem(activity.budget_detail_id, child.id, 'unit_price', v.floatValue ?? 0)}
+                                      placeholder="0"
+                                      className="h-9 text-sm"
+                                    />
+                                  </div>
+                                </div>
 
-                                    {selected && selectedData && (
-                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t mt-2">
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">Nominal Aktual <span className="text-red-500">*</span></Label>
-                                          <MoneyInput
-                                            value={selectedData.actual_amount}
-                                            onValueChange={(v) => updateSelectedItem(item.id, 'actual_amount', v.floatValue ?? 0)}
-                                            placeholder="0"
-                                            className={cn("h-9 text-sm", overBudget && "border-red-500")}
-                                          />
-                                          {overBudget && (
-                                            <p className="text-xs text-red-500">Melebihi sisa ATR ({fmt(remaining)})</p>
-                                          )}
-                                          <div className="flex items-center gap-2 mt-1">
-                                            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                                              <div className={cn("h-full rounded-full", overBudget ? "bg-red-500" : "bg-blue-500")} style={{ width: `${Math.min((selectedData.actual_amount / item.amount) * 100, 100)}%` }} />
-                                            </div>
-                                            <span className="text-[10px] text-muted-foreground">{((selectedData.actual_amount / item.amount) * 100).toFixed(0)}%</span>
-                                          </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">Kwitansi/Bukti</Label>
-                                          <FileUploadDropzone
-                                            className="!p-2 !min-h-0 bg-white"
-                                            onFilesChange={(files: File[]) => updateSelectedItem(item.id, 'receipt', files[0] ?? null)}
-                                          />
-                                          {selectedData.receipt && (
-                                            <p className="text-xs text-green-600">✓ {selectedData.receipt.name}</p>
-                                          )}
-                                        </div>
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">Catatan</Label>
-                                          <Input
-                                            value={selectedData.notes}
-                                            onChange={(e) => updateSelectedItem(item.id, 'notes', e.target.value)}
-                                            placeholder="Keterangan..."
-                                            className="h-9 text-sm"
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label className="text-xs">Kwitansi / Bukti Pembayaran</Label>
+                                    <FileUploadDropzone
+                                      className="!p-3 !min-h-0 bg-white"
+                                      onFilesChange={(files: File[]) => updateChildItem(activity.budget_detail_id, child.id, 'receipt', files[0] ?? null)}
+                                    />
+                                    {child.receipt && <p className="text-xs text-green-600">Terlampir: {child.receipt.name}</p>}
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-xs">Catatan Tambahan</Label>
+                                    <Textarea
+                                      value={child.notes}
+                                      onChange={(e) => updateChildItem(activity.budget_detail_id, child.id, 'notes', e.target.value)}
+                                      placeholder="Keterangan..."
+                                      className="h-[60px] text-sm resize-none"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="pt-2 border-t flex justify-end">
+                                  <div className="bg-white px-4 py-2 rounded-md border shadow-sm">
+                                    <span className="text-xs text-slate-500 mr-3">Subtotal:</span>
+                                    <span className="font-bold">{fmt(child.amount)}</span>
                                   </div>
                                 </div>
                               </div>
-                            );
-                          })}
+                            ))}
+
+                            <Button type="button" variant="outline" size="sm" className="w-full border-dashed" onClick={() => addChildItem(activity.budget_detail_id)}>
+                              <Plus className="h-4 w-4 mr-2" /> Tambah Item Lain
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Total Checking */}
+                  {selectedActivities.length > 0 && (
+                    <>
+                      {hasOverBudgetItems && (
+                        <Alert variant="destructive" className="mt-4">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Melebihi Limit ATR</AlertTitle>
+                          <AlertDescription>Total klaim EER saat ini ({fmt(totalEerAmount)}) melebihi total limit ATR ({fmt(selectedAtr.amount)}).</AlertDescription>
+                        </Alert>
+                      )}
+                      <div className={cn("border rounded-lg p-4 flex items-center justify-between mt-4", hasOverBudgetItems ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200")}>
+                        <div>
+                          <p className={cn("text-sm font-medium", hasOverBudgetItems ? "text-red-900" : "text-blue-900")}>Total Klaim EER Keseluruhan</p>
                         </div>
+                        <p className={cn("text-xl font-bold", hasOverBudgetItems ? "text-red-900" : "text-blue-900")}>{fmt(totalEerAmount)}</p>
                       </div>
-                    ))}
-
-                    {/* Total */}
-                    {hasOverBudgetItems && (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Peringatan</AlertTitle>
-                        <AlertDescription>Ada item dengan nominal aktual melebihi sisa ATR. Perbaiki sebelum mengajukan.</AlertDescription>
-                      </Alert>
-                    )}
-
-                    <div className={cn("border rounded-lg p-4 flex items-center justify-between", hasOverBudgetItems ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200")}>
-                      <div>
-                        <p className={cn("text-sm font-medium", hasOverBudgetItems ? "text-red-900" : "text-blue-900")}>Total Klaim EER</p>
-                        <p className={cn("text-xs mt-0.5", hasOverBudgetItems ? "text-red-700" : "text-blue-700")}>{selectedItems.length} item dipilih</p>
-                      </div>
-                      <p className={cn("text-lg font-bold", hasOverBudgetItems ? "text-red-900" : "text-blue-900")}>{fmt(totalEerAmount)}</p>
-                    </div>
-                    {errors.amount && <p className="text-xs text-red-500 font-medium">{errors.amount[0]}</p>}
-                  </div>
-                ) : (
-                  <p className="text-sm text-yellow-600 bg-yellow-50 p-4 rounded-lg border border-yellow-200">ATR ini belum memiliki item. Pastikan ATR telah dibuat dengan flow baru.</p>
-                )
+                    </>
+                  )}
+                  {errors.amount && <p className="text-xs text-red-500 font-medium">{errors.amount[0]}</p>}
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground italic">Pilih ATR terlebih dahulu untuk melihat item yang bisa diklaim.</p>
+                <p className="text-sm text-muted-foreground italic">Pilih ATR terlebih dahulu untuk mulai memasukkan pengeluaran.</p>
               )}
             </div>
 
@@ -475,11 +575,11 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
               <h3 className="text-lg font-semibold mb-1">Keterangan Tambahan</h3>
               <p className="text-sm text-muted-foreground mb-6">Informasi detail mengenai klaim penggunaan EER.</p>
               <div className="space-y-2 max-w-2xl">
-                <Label htmlFor="description">Keterangan Pemakaian</Label>
+                <Label htmlFor="description">Keterangan Singkat</Label>
                 <Textarea
                   id="description"
                   name="description"
-                  placeholder="Detail pemakaian dana lengkap dengan rinciannya..."
+                  placeholder="Ceritakan singkat tentang klaim EER ini..."
                   value={formData.description}
                   onChange={handleChange}
                   className="min-h-[100px]"
