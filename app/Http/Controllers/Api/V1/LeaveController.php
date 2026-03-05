@@ -90,12 +90,21 @@ final class LeaveController
                 ]);
 
                 $role = $actor->getRoleNames()->first();
+                $submitterRole = $leave->user->getRoleNames()->first();
 
                 $newStatus = match (true) {
                     ! $isApprove => LeaveStatus::Rejected,
-                    $role === 'hr' => LeaveStatus::HRApproved,
-                    $role === 'superadmin' => LeaveStatus::SuperAdminApproved,
-                    default => LeaveStatus::HeadApproved,
+                    $submitterRole === 'head' => match (true) {
+                        $role === 'hr' => LeaveStatus::HRApproved,
+                        in_array($role, ['superadmin', 'direktur'], true) => LeaveStatus::SuperAdminApproved,
+                        default => $leave->status,
+                    },
+                    default => match (true) {
+                        $role === 'head' => LeaveStatus::HeadApproved,
+                        $role === 'hr' => LeaveStatus::HRApproved,
+                        in_array($role, ['superadmin', 'direktur'], true) => LeaveStatus::SuperAdminApproved,
+                        default => $leave->status,
+                    },
                 };
 
                 $leave->update(['status' => $newStatus]);
