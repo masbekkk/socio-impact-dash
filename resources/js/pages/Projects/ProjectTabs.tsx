@@ -287,6 +287,8 @@ export default function ProjectTabs({
             // Append the new requested budget as a special budget detail
             const newIndex = detailBudgets.length;
             submitData.append(`detail_budgets[${newIndex}][item_name]`, 'Pengajuan Tambahan Budget Operasional');
+            submitData.append(`detail_budgets[${newIndex}][quantity]`, '1');
+            submitData.append(`detail_budgets[${newIndex}][item_price]`, requestBudgetAmount.toString());
             submitData.append(`detail_budgets[${newIndex}][amount_proposal]`, requestBudgetAmount.toString());
             submitData.append(`detail_budgets[${newIndex}][amount_pelaksanaan]`, '0');
             submitData.append(`detail_budgets[${newIndex}][amount]`, requestBudgetAmount.toString());

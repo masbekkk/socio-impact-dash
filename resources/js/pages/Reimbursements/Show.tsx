@@ -878,6 +878,7 @@ export default function Show() {
                                     <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nama Item</th>
                                     <th className="text-left p-3 font-medium text-muted-foreground text-xs">Kegiatan</th>
                                     <th className="text-right p-3 font-medium text-muted-foreground text-xs">Nominal Klaim</th>
+                                    <th className="text-left p-3 font-medium text-muted-foreground text-xs">Jenis</th>
                                     <th className="text-center p-3 font-medium text-muted-foreground text-xs">Kwitansi</th>
                                   </tr>
                                 </thead>
@@ -887,6 +888,11 @@ export default function Show() {
                                       <td className="p-3 font-medium">{item.item_name}</td>
                                       <td className="p-3 text-muted-foreground">{item.activity_name}</td>
                                       <td className="p-3 text-right font-mono font-semibold">Rp {item.amount.toLocaleString('id-ID')}</td>
+                                      <td className="p-3">
+                                        {item.expense_type && (
+                                          <Badge variant="outline" className="text-[10px] px-1.5 bg-slate-50">{item.expense_type}</Badge>
+                                        )}
+                                      </td>
                                       <td className="p-3 text-center">
                                         {item.receipt_path ? (
                                           <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
@@ -907,7 +913,7 @@ export default function Show() {
                                     <td className="p-3 text-right font-mono font-bold text-blue-700">
                                       Rp {eerItems.reduce((s, i) => s + i.amount, 0).toLocaleString('id-ID')}
                                     </td>
-                                    <td></td>
+                                    <td colSpan={2}></td>
                                   </tr>
                                 </tfoot>
                               </table>

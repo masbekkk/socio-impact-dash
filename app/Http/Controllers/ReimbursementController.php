@@ -77,6 +77,7 @@ final class ReimbursementController
                     'item_name' => $detail->item_name ?? $detail->notes ?? '-',
                     'notes' => $detail->notes,
                     'amount' => (float) $detail->amount,
+                    'amount_pelaksanaan' => (float) $detail->amount_pelaksanaan,
                     'used_amount' => (float) $detail->used_amount,
                     'remaining_amount' => (float) $detail->remaining_amount,
                 ])->values()->all(),
@@ -173,6 +174,10 @@ final class ReimbursementController
             ],
             'atrs' => $atrs,
             'approvers' => $approversGrouped,
+            'expenseTypes' => array_map(fn (\App\Enums\ExpenseType $e) => [
+                'value' => $e->value,
+                'label' => $e->value,
+            ], \App\Enums\ExpenseType::cases()),
         ]);
     }
 
