@@ -97,12 +97,12 @@ final class ReimbursementController
 
         return Inertia::render('Reimbursements/CreateATR', [
             'authUser' => [
-                'name'          => $user->name,
-                'nip'           => $user->nip ?? '-',
-                'email'         => $user->email,
+                'name' => $user->name,
+                'nip' => $user->nip ?? '-',
+                'email' => $user->email,
                 'division_name' => $user->division?->name ?? '-',
-                'position'      => $user->getRoleNames()->first() ?? '-',
-                'join_date'     => $user->created_at?->format('Y-m-d') ?? '-',
+                'position' => $user->getRoleNames()->first() ?? '-',
+                'join_date' => $user->created_at?->format('Y-m-d') ?? '-',
             ],
             'projects' => $projects,
             'approvers' => $approversGrouped,
@@ -165,12 +165,12 @@ final class ReimbursementController
 
         return Inertia::render('Reimbursements/CreateEER', [
             'authUser' => [
-                'name'          => $user->name,
-                'nip'           => $user->nip ?? '-',
-                'email'         => $user->email,
+                'name' => $user->name,
+                'nip' => $user->nip ?? '-',
+                'email' => $user->email,
                 'division_name' => $user->division?->name ?? '-',
-                'position'      => $user->getRoleNames()->first() ?? '-',
-                'join_date'     => $user->created_at?->format('Y-m-d') ?? '-',
+                'position' => $user->getRoleNames()->first() ?? '-',
+                'join_date' => $user->created_at?->format('Y-m-d') ?? '-',
             ],
             'atrs' => $atrs,
             'approvers' => $approversGrouped,

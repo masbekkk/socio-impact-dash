@@ -20,6 +20,28 @@ final readonly class UpdateReimbursementStatus
             $notes = $data['notes'] ?? null;
             $role = $data['role'] ?? 'head';
 
+            if ($action === 'transferred') {
+                $updateData = [
+                    'status' => ReimbursementStatus::Transferred,
+                    'transferred_at' => now(),
+                ];
+                if ($transferProof !== null) {
+                    $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
+                    $updateData['transfer_proof_path'] = $path;
+                }
+                $reimbursement->update($updateData);
+
+                // Option to add a comment about transfer, etc.
+                if ($notes) {
+                    $reimbursement->comments()->create([
+                        'user_id' => $approverId,
+                        'comment' => $notes,
+                    ]);
+                }
+
+                return $reimbursement->fresh(['user', 'project', 'documents', 'approvals.approver', 'comments.user']);
+            }
+
             if ($role === 'direktur') {
                 // Direktur override: update ALL approval records for this reimbursement
                 ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
@@ -45,25 +67,10 @@ final readonly class UpdateReimbursementStatus
             }
 
             if ($action === ApprovalStatus::Approved->value) {
-                // If the approver is a Direktur, they have absolute authority to approve the ATR immediately.
-                if ($role === 'direktur') {
-                    $newStatus = ReimbursementStatus::Transferred; // Or whatever final status is appropriate for direktur override, but typically they bypass to finance
-                    // Usually direktur approval just finalizes it to be ready for transfer, or maybe FinanceApproved is the cap before actual transfer.
-                    // Let's set it to FinanceApproved so Finance can transfer it. Note: If we need a 'DirekturApproved' status, we should add it.
-                    // Based on existing statuses, 'FinanceApproved' is the highest before 'Transferred'.
-                    $newStatus = ReimbursementStatus::FinanceApproved;
-
-                    // Auto-approve pending lower levels (Head, Finance) for history sanity if needed, or simply let the status change bypass them.
-                    // We will just let the status change bypass them.
-                } else {
-                    $newStatus = match ($role) {
-                        'finance' => ReimbursementStatus::FinanceApproved,
-                        'hr' => ReimbursementStatus::HRApproved,
-                        default => ReimbursementStatus::HeadApproved,
-                    };
-                }
-
-                $updateData = ['status' => $newStatus];
+                // Determine if all required approvals are met, but for now user requested status stays submitted
+                // until transferred.
+                
+                $updateData = [];
 
                 if ($transferProof !== null) {
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
@@ -72,7 +79,9 @@ final readonly class UpdateReimbursementStatus
                     $updateData['status'] = ReimbursementStatus::Transferred; // Explicitly set if proof uploaded
                 }
 
-                $reimbursement->update($updateData);
+                if (!empty($updateData)) {
+                    $reimbursement->update($updateData);
+                }
             } elseif ($action === 'revision') {
                 $reimbursement->update([
                     'status' => ReimbursementStatus::Revision,
@@ -85,7 +94,7 @@ final readonly class UpdateReimbursementStatus
                         'comment' => $notes,
                     ]);
                 }
-            } else {
+            } elseif ($action === 'rejected') {
                 $reimbursement->update([
                     'status' => ReimbursementStatus::Rejected,
                     'rejection_reason' => $notes,

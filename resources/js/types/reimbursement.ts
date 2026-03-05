@@ -16,6 +16,7 @@ export interface Project {
         item_name: string;
         notes: string;
         amount: number;
+        amount_pelaksanaan?: number;
         used_amount: number;
         remaining_amount: number;
     }[];
