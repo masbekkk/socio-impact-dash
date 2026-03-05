@@ -636,7 +636,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                     <div className="flex justify-between items-start gap-4">
                                                         <div className="space-y-2 w-full flex flex-col sm:flex-row justify-between sm:items-center">
                                                             <div>
-                                                                <Label className="text-xs font-medium text-muted-foreground">Nama Dokumen Pendukung #{idx + 1}</Label>
+                                                                <Label className="text-xs font-medium text-muted-foreground">Nama Dokumen Pendukung #{idx + 1}<span className="text-red-500">*</span></Label>
                                                                 {doc.isExisting && !doc.file && (
                                                                     <p className="text-xs text-blue-600 mt-1">File saat ini: {doc.original_name}</p>
                                                                 )}

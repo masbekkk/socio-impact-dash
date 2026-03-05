@@ -600,7 +600,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                         <div key={doc.id} className="relative border rounded-lg p-5 space-y-3 hover:bg-muted/30 transition-colors bg-white group animate-in fade-in slide-in-from-top-2">
                           <div className="flex justify-between items-start gap-4">
                             <div className="space-y-2 w-full flex flex-col sm:flex-row justify-between sm:items-center">
-                              <Label className="text-xs font-medium text-muted-foreground">Nama Dokumen Pendukung #{idx + 1}</Label>
+                              <Label className="text-xs font-medium text-muted-foreground">Nama Dokumen Pendukung #{idx + 1}<span className="text-red-500">*</span></Label>
                               <Input
                                 value={doc.type}
                                 onChange={(e) => updateSupportingDocType(doc.id, e.target.value)}
@@ -643,7 +643,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
 
                 {/* TIMELINE */}
                 <div className="space-y-2">
-                  <Label>Deadline <span className="text-red-500">*</span></Label>
+                  <Label>Timeline Kegiatan <span className="text-red-500">*</span></Label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-xs font-normal text-muted-foreground">Tanggal Mulai Kegiatan</Label>
@@ -656,7 +656,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                       {errors.start_date && <p className="text-xs text-red-500">{errors.start_date}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs font-normal text-muted-foreground">Tanggal Deadline Kegiatan</Label>
+                      <Label className="text-xs font-normal text-muted-foreground">Tanggal Kegiatan</Label>
                       <Input
                         type="date"
                         className={cn("bg-white", errors.end_date && 'border-red-500')}

@@ -5,18 +5,36 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Enums\LeaveStatus;
+use App\Enums\LeaveType;
 use App\Models\Leave;
 use App\Services\FileUploadService;
+use App\Services\LeaveService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 final readonly class CreateLeave
 {
-    public function __construct(private FileUploadService $fileUploadService) {}
+    public function __construct(
+        private FileUploadService $fileUploadService,
+        private LeaveService $leaveService,
+    ) {}
 
     public function handle(array $data, int $userId): Leave
     {
         return DB::transaction(function () use ($data, $userId): Leave {
+            if ($data['type'] === LeaveType::Annual->value || $data['type'] === LeaveType::Annual) {
+                $requestedDays = $this->leaveService->calculateTotalDays($data['start_date'], $data['end_date']);
+                $year = (int) date('Y', strtotime($data['start_date']));
+                $usedDays = $this->leaveService->getAnnualLeaveDaysUsed($userId, $year);
+
+                if (($usedDays + $requestedDays) > 12) {
+                    throw ValidationException::withMessages([
+                        'type' => ["Batas cuti tahunan adalah 12 hari per tahun. Anda telah menggunakan {$usedDays} hari, dan pengajuan ini adalah {$requestedDays} hari."],
+                    ]);
+                }
+            }
+
             $leave = Leave::create([
                 'code'               => $this->generateUniqueCode(),
                 'user_id'            => $userId,

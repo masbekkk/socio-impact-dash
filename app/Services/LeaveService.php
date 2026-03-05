@@ -87,4 +87,23 @@ final class LeaveService
 
         return $days;
     }
+
+    public function getAnnualLeaveDaysUsed(int $userId, int $year): int
+    {
+        $leaves = Leave::where('user_id', $userId)
+            ->where('type', \App\Enums\LeaveType::Annual)
+            ->where('status', '!=', \App\Enums\LeaveStatus::Rejected)
+            ->whereYear('start_date', $year)
+            ->get(['start_date', 'end_date']);
+
+        $totalDays = 0;
+        foreach ($leaves as $leave) {
+            $totalDays += $this->calculateTotalDays(
+                $leave->start_date->toDateString(),
+                $leave->end_date->toDateString()
+            );
+        }
+
+        return $totalDays;
+    }
 }
