@@ -110,15 +110,15 @@ final class UpdateProjectRequest extends FormRequest
             }
 
             // Budget Sum Validation
-            if ($this->hasAny(['operational_budget', 'allowance_budget', 'budget_total'])) {
+            if ($this->hasAny(['operational_budget', 'management_budget', 'allowance_budget', 'budget_total'])) {
                 $project = $this->route('project');
                 $total = (float) ($this->input('budget_total') ?? $project->budget_total);
                 $ops = (float) ($this->input('operational_budget') ?? $project->operational_budget);
+                $management = (float) ($this->input('management_budget') ?? $project->management_budget);
                 $allowance = (float) ($this->input('allowance_budget') ?? $project->allowance_budget);
-                $management = $total * 0.3;
 
                 if (($ops + $allowance + $management) > ($total + 0.01)) {
-                    $validator->errors()->add('operational_budget', 'Total operational, allowance, and management (30%) budget cannot exceed the total project budget.');
+                    $validator->errors()->add('operational_budget', 'Total operational, allowance, and management budget cannot exceed the total project budget.');
                 }
             }
             // Detail Budgets Sum Validation

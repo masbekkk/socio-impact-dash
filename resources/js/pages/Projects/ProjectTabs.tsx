@@ -4,14 +4,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Circle, Loader, Hourglass, AlertCircle, Trash2, X, Pencil, FileText, Eye, Download, MapPin, Plus, Calendar, User, Upload, Handshake, Archive, Save, Loader2 } from 'lucide-react'
+import { CheckCircle2, Loader, AlertCircle, Trash2, Pencil, FileText, Eye, Download, MapPin, Plus, User, Upload, Handshake, Archive, Save, Loader2 } from 'lucide-react'
 import MoneyInput from '@/components/MoneyInput'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { usePage, router } from '@inertiajs/react'
-import { SharedData } from '@/types'
+import { usePage } from '@inertiajs/react'
 import axios from 'axios'
 import Editor from '@/components/Editor';
 
@@ -46,7 +46,7 @@ export default function ProjectTabs({
     project,
     currentStatus,
     locations,
-    userRole = (usePage().props as any).auth?.user?.role_name || 'user',
+    userRole: initialUserRole,
     refetchProject,
     onShowToast,
     reportForm,
@@ -99,6 +99,9 @@ export default function ProjectTabs({
     const [savingBudget, setSavingBudget] = useState(false);
     const [localBudgetStatus, setLocalBudgetStatus] = useState(project.budget_partition_status || 'draft');
 
+    const authUserRole = (usePage().props as any).auth?.user?.role_name || 'user';
+    const userRole = initialUserRole || authUserRole;
+
     // Permissions
     const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
     const permissions = (usePage().props as any).auth?.permissions || [];
@@ -111,6 +114,12 @@ export default function ProjectTabs({
     const [editDetailBudget, setEditDetailBudget] = useState(false);
     const [savingDetailBudget, setSavingDetailBudget] = useState(false);
     const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([]);
+
+    // Additional Budget Request State
+    const [isRequestBudgetOpen, setIsRequestBudgetOpen] = useState(false);
+    const [requestBudgetAmount, setRequestBudgetAmount] = useState<number>(0);
+    const [requestBudgetNotes, setRequestBudgetNotes] = useState('');
+    const [isSubmittingRequestBudget, setIsSubmittingRequestBudget] = useState(false);
 
     useEffect(() => {
         setOpsBudget(project.operational_budget || 0);
@@ -155,6 +164,13 @@ export default function ProjectTabs({
 
     const handleSaveDetailBudget = async () => {
         setSavingDetailBudget(true);
+        const currentTotalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
+        if (currentTotalProposal > opsBudget) {
+            setSavingDetailBudget(false);
+            if (onShowToast) onShowToast('Gagal menyimpan: Total amount proposal melebihi budget operasional. Sesuaikan RAB atau ajukan tambahan operasional.', 'error');
+            return;
+        }
+
         try {
             const submitData = new FormData();
             submitData.append('_method', 'PUT');
@@ -243,7 +259,57 @@ export default function ProjectTabs({
         }
     };
 
-    const totalDetailBudgets = detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const handleRequestAdditionalBudget = async () => {
+        if (!requestBudgetAmount || requestBudgetAmount <= 0) {
+            if (onShowToast) onShowToast('Nominal tambahan budget harus diisi', 'error');
+            return;
+        }
+        setIsSubmittingRequestBudget(true);
+        try {
+            // For now, save this request as a new Activity/Budget Detail as a placeholder
+            // In a real scenario, this might be a distinct API endpoint like /api/v1/projects/{uuid}/request-budget
+            const submitData = new FormData();
+            submitData.append('_method', 'PUT');
+
+            detailBudgets.forEach((detail, index) => {
+                if (!detail.isNew) {
+                    submitData.append(`detail_budgets[${index}][id]`, detail.id);
+                }
+                submitData.append(`detail_budgets[${index}][item_name]`, detail.item_name || '');
+                if (detail.quantity) submitData.append(`detail_budgets[${index}][quantity]`, detail.quantity.toString());
+                submitData.append(`detail_budgets[${index}][item_price]`, (detail.item_price || 0).toString());
+                submitData.append(`detail_budgets[${index}][amount]`, (detail.amount || (detail.item_price || 0)).toString());
+                submitData.append(`detail_budgets[${index}][amount_pelaksanaan]`, (detail.amount_pelaksanaan || 0).toString());
+                submitData.append(`detail_budgets[${index}][amount_proposal]`, (detail.amount_proposal || 0).toString());
+                if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
+            });
+
+            // Append the new requested budget as a special budget detail
+            const newIndex = detailBudgets.length;
+            submitData.append(`detail_budgets[${newIndex}][item_name]`, 'Pengajuan Tambahan Budget Operasional');
+            submitData.append(`detail_budgets[${newIndex}][amount_proposal]`, requestBudgetAmount.toString());
+            submitData.append(`detail_budgets[${newIndex}][amount_pelaksanaan]`, '0');
+            submitData.append(`detail_budgets[${newIndex}][amount]`, requestBudgetAmount.toString());
+            submitData.append(`detail_budgets[${newIndex}][notes]`, requestBudgetNotes || 'Pengajuan request tambahan budget');
+
+            await axios.post(`/api/v1/projects/${project.uuid}`, submitData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            setIsRequestBudgetOpen(false);
+            setRequestBudgetAmount(0);
+            setRequestBudgetNotes('');
+            if (onShowToast) onShowToast('Pengajuan tambahan budget berhasil dikirim', 'success');
+            if (refetchProject) refetchProject();
+        } catch (error: any) {
+            console.error('Error requesting additional budget:', error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal mengajukan tambahan budget', 'error');
+        } finally {
+            setIsSubmittingRequestBudget(false);
+        }
+    };
+
+
     const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
     const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
     const estimasiProfit = (project.budget_total || 0) - totalPelaksanaan;
@@ -602,13 +668,25 @@ export default function ProjectTabs({
                                 </div>
                             </div>
 
-                            {opsBudget < totalDetailBudgets && (
+                            {opsBudget < totalPelaksanaan && (
                                 <Alert variant="destructive" className="mb-4">
                                     <AlertCircle className="h-4 w-4" />
-                                    <AlertTitle>Peringatan Anggaran</AlertTitle>
-                                    <AlertDescription>
-                                        project activity memiliki pagu lebih besar dari operational, update/ remove project activity terlebih dahulu
-                                    </AlertDescription>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div className="space-y-1">
+                                            <AlertTitle>Peringatan Anggaran</AlertTitle>
+                                            <AlertDescription>
+                                                Project activity memiliki pagu lebih besar dari operational, update/ remove project activity terlebih dahulu atau ajukan tambahan budget operational beserta catatannya (jika diperlukan).
+                                            </AlertDescription>
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="whitespace-nowrap bg-white text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
+                                            onClick={() => setIsRequestBudgetOpen(true)}
+                                        >
+                                            Ajukan Tambahan
+                                        </Button>
+                                    </div>
                                 </Alert>
                             )}
 
@@ -621,11 +699,13 @@ export default function ProjectTabs({
                                             onValueChange={(values) => {
                                                 const val = values.floatValue || 0;
                                                 setOpsBudget(val);
-                                                const management = project.management_budget || 0;
-                                                const allowance = project.budget_total - val - management;
-                                                setAllowanceBudget(allowance > 0 ? allowance : 0);
+                                                if (userRole === 'finance' || userRole === 'superadmin') {
+                                                    const allowance = project.budget_total - val - mgmtBudget;
+                                                    setAllowanceBudget(allowance > 0 ? allowance : 0);
+                                                }
                                             }}
                                             placeholder="Nilai Operasional"
+                                            disabled={!isAdminOrFinance}
                                         />
                                     ) : (
                                         <div className="text-xl font-bold text-slate-900 tracking-tight">
@@ -642,8 +722,13 @@ export default function ProjectTabs({
                                             onValueChange={(values) => {
                                                 const val = values.floatValue || 0;
                                                 setMgmtBudget(val);
+                                                if (userRole === 'finance' || userRole === 'superadmin') {
+                                                    const allowance = project.budget_total - opsBudget - val;
+                                                    setAllowanceBudget(allowance > 0 ? allowance : 0);
+                                                }
                                             }}
                                             placeholder="Nilai Manajemen"
+                                            disabled={!isAdminOrFinance}
                                         />
                                     ) : (
                                         <div className="text-xl font-bold text-slate-900 tracking-tight">
@@ -660,11 +745,13 @@ export default function ProjectTabs({
                                             onValueChange={(values) => {
                                                 const val = values.floatValue || 0;
                                                 setAllowanceBudget(val);
-                                                const management = project.management_budget || 0;
-                                                const ops = project.budget_total - val - management;
-                                                setOpsBudget(ops > 0 ? ops : 0);
+                                                if (userRole === 'finance' || userRole === 'superadmin') {
+                                                    const ops = project.budget_total - val - mgmtBudget;
+                                                    setOpsBudget(ops > 0 ? ops : 0);
+                                                }
                                             }}
                                             placeholder="Nilai Allowance"
+                                            disabled={!isAdminOrFinance}
                                         />
                                     ) : (
                                         <div className="text-xl font-bold text-slate-900 tracking-tight">
@@ -1102,7 +1189,7 @@ export default function ProjectTabs({
                                 </div>
 
                                 <div className="space-y-3">
-                                    {reportForm.files.map((file: any, idx: number) => (
+                                    {reportForm.files.map((file: any) => (
                                         <div key={file.id} className="flex gap-3 items-center group">
                                             <div className="flex-[5]">
                                                 <Input
@@ -1172,10 +1259,10 @@ export default function ProjectTabs({
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {monitoringList.map((history: any, idx: number) => {
+                                {monitoringList.map((history: any) => {
                                     const documents = history.documents || history.files || [];
                                     return (
-                                        <Card key={idx} className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
+                                        <Card key={history.id || Math.random()} className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
                                             {/* Header Card */}
                                             <div className="bg-white p-5 border-b flex flex-col md:flex-row gap-4 justify-between md:items-center">
                                                 <div className="space-y-1">
@@ -1402,6 +1489,59 @@ export default function ProjectTabs({
                     </CardContent>
                 </Card>
             </TabsContent>
+
+            {/* Request Additional Budget Modal */}
+            <Dialog open={isRequestBudgetOpen} onOpenChange={setIsRequestBudgetOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>Ajukan Tambahan Budget Operasional</DialogTitle>
+                        <DialogDescription>
+                            Silakan masukkan nominal tambahan budget yang dibutuhkan beserta alasannya. Pengajuan ini akan ditambahkan sebagai rincian RAB baru (atau disesuaikan melalui proses approval).
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="req-amount">Nominal Tambahan</Label>
+                            <MoneyInput
+                                id="req-amount"
+                                value={requestBudgetAmount}
+                                onValueChange={(vals) => setRequestBudgetAmount(vals.floatValue || 0)}
+                                placeholder="0"
+                                prefix="Rp "
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="req-notes">Catatan / Alasan Tambahan</Label>
+                            <Textarea
+                                id="req-notes"
+                                value={requestBudgetNotes}
+                                onChange={(e) => setRequestBudgetNotes(e.target.value)}
+                                placeholder="Jelaskan secara singkat mengapa tambahan budget operasional diperlukan..."
+                                className="min-h-[100px]"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsRequestBudgetOpen(false)} disabled={isSubmittingRequestBudget}>
+                            Batal
+                        </Button>
+                        <Button
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={handleRequestAdditionalBudget}
+                            disabled={isSubmittingRequestBudget || requestBudgetAmount <= 0}
+                        >
+                            {isSubmittingRequestBudget ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Mengajukan...
+                                </>
+                            ) : (
+                                'Ajukan Tambahan'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Tabs >
     )
 }

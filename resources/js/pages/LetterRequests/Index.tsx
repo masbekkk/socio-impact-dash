@@ -77,7 +77,7 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
     const [selectedRequest, setSelectedRequest] = useState<LetterRequest | null>(null);
     const [letterNumber, setLetterNumber] = useState('');
     const [processing, setProcessing] = useState(false);
-    const [errors, setErrors] = useState<any>({});
+    const [errors, setErrors] = useState<Record<string, string[]>>({});
 
     // Pagination State
     const [pagination, setPagination] = useState({
@@ -146,9 +146,9 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
             });
             setAssignDialogOpen(false);
             fetchRequests();
-        } catch (error: any) {
-            if (error.response && error.response.data.errors) {
-                setErrors(error.response.data.errors);
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response && error.response.data.errors) {
+                setErrors(error.response.data.errors as Record<string, string[]>);
             } else {
                 console.error("Error assigning number:", error);
             }

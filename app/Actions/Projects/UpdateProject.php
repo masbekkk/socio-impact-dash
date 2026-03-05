@@ -10,27 +10,38 @@ use Illuminate\Support\Facades\DB;
 
 final class UpdateProject
 {
-    public function __construct(private FileUploadService $fileUploadService) {}
-
+    // Constructor removed as FileUploadService is unused
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function handle(Project $project, array $data, int $userId): Project
     {
-        return DB::transaction(function () use ($project, $data, $userId) {
+        /** @var Project $updatedProject */
+        $updatedProject = DB::transaction(function () use ($project, $data, $userId) {
             $this->updateProjectRecord($project, $data);
 
             if (isset($data['locations'])) {
-                $this->syncLocations($project, $data['locations']);
+                /** @var array<int, array<string, mixed>> $locations */
+                $locations = $data['locations'];
+                $this->syncLocations($project, $locations);
             }
 
             if (isset($data['termin_payments'])) {
-                $this->syncTerminPayments($project, $data['termin_payments']);
+                /** @var array<int, array<string, mixed>> $terminPayments */
+                $terminPayments = $data['termin_payments'];
+                $this->syncTerminPayments($project, $terminPayments);
             }
 
             if (isset($data['documents'])) {
-                $this->syncDocuments($project, $data['documents'], $userId);
+                /** @var array<int, array<string, mixed>> $documents */
+                $documents = $data['documents'];
+                $this->syncDocuments($project, $documents, $userId);
             }
 
             if (isset($data['detail_budgets'])) {
-                $this->syncDetailBudgets($project, $data['detail_budgets'], $userId);
+                /** @var array<int, array<string, mixed>> $detailBudgets */
+                $detailBudgets = $data['detail_budgets'];
+                $this->syncDetailBudgets($project, $detailBudgets, $userId);
             }
 
             $this->syncApprovals($project);
@@ -52,8 +63,13 @@ final class UpdateProject
 
             return $project->fresh(['locations', 'terminPayments', 'documents', 'budgetDetails']);
         });
+
+        return $updatedProject;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function updateProjectRecord(Project $project, array $data): void
     {
         $updateData = collect($data)->only([
@@ -65,11 +81,16 @@ final class UpdateProject
         ])->toArray();
 
         if (! empty($updateData)) {
-            $project->update($updateData);
+            /** @var array<string, mixed> $updateArray */
+            $updateArray = $updateData;
+            $project->update($updateArray);
         }
     }
 
     // ... keeping other syncing methods untouched ...
+    /**
+     * @param  array<int, array<string, mixed>>  $locations
+     */
     private function syncLocations(Project $project, array $locations): void
     {
         foreach ($locations as $location) {
@@ -89,6 +110,9 @@ final class UpdateProject
         }
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $terminPayments
+     */
     private function syncTerminPayments(Project $project, array $terminPayments): void
     {
         foreach ($terminPayments as $term) {
@@ -108,6 +132,9 @@ final class UpdateProject
         }
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $documents
+     */
     private function syncDocuments(Project $project, array $documents, int $userId): void
     {
         foreach ($documents as $doc) {
@@ -119,11 +146,12 @@ final class UpdateProject
 
                 // If replacing an existing document
                 if (isset($doc['id'])) {
+                    /** @var \App\Models\ProjectDocument|null $existingDoc */
                     $existingDoc = $project->documents()->find($doc['id']);
                     if ($existingDoc) {
                         // Delete old file from final storage
                         if ($existingDoc->path) {
-                            \Illuminate\Support\Facades\Storage::disk('public')->delete($existingDoc->path);
+                            \Illuminate\Support\Facades\Storage::disk('public')->delete((string) $existingDoc->path);
                         }
 
                         $existingDoc->update([
@@ -137,7 +165,7 @@ final class UpdateProject
                         ]);
 
                         \App\Jobs\ProcessProjectDocumentUpload::dispatch(
-                            $existingDoc->id,
+                            (int) $existingDoc->id,
                             "projects/{$project->id}/documents"
                         );
 
@@ -146,6 +174,7 @@ final class UpdateProject
                 }
 
                 // Create new document record
+                /** @var \App\Models\ProjectDocument $document */
                 $document = $project->documents()->create([
                     'type' => $doc['type'] ?? 'other',
                     'original_name' => $file->getClientOriginalName(),
@@ -158,13 +187,16 @@ final class UpdateProject
                 ]);
 
                 \App\Jobs\ProcessProjectDocumentUpload::dispatch(
-                    $document->id,
+                    (int) $document->id,
                     "projects/{$project->id}/documents"
                 );
             }
         }
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $detailBudgets
+     */
     private function syncDetailBudgets(Project $project, array $detailBudgets, int $userId): void
     {
         foreach ($detailBudgets as $detail) {

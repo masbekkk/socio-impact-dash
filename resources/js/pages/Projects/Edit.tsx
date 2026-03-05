@@ -30,6 +30,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [project, setProject] = useState<any>(null);
     const [step, setStep] = useState('basic')
     const [budget, setBudget] = useState<number>(0)
+    const [opsBudget, setOpsBudget] = useState<number>(0)
+    const [mgmtBudget, setMgmtBudget] = useState<number>(0)
+    const [allowanceBudget, setAllowanceBudget] = useState<number>(0)
     const [status, setStatus] = useState('draft')
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -87,6 +90,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                 const data = response.data.data;
                 setProject(data);
                 setBudget(data.budget_total);
+                setOpsBudget(data.operational_budget || 0);
+                setMgmtBudget(data.management_budget || 0);
+                setAllowanceBudget(data.allowance_budget || 0);
                 setStatus(data.status);
                 setFormData({
                     code: data.code || '',
@@ -243,6 +249,8 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
     const estimasiProfit = budget - totalPelaksanaan;
 
+    const isProposalOverOperational = totalPelaksanaan > opsBudget;
+
     const handleSubmit = async () => {
         setSaving(true);
         setUploadProgress(0);
@@ -258,6 +266,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         });
 
         submitData.append('budget_total', budget.toString());
+        submitData.append('operational_budget', opsBudget.toString());
+        submitData.append('management_budget', mgmtBudget.toString());
+        submitData.append('allowance_budget', allowanceBudget.toString());
         submitData.append('status', status);
 
         let docIndex = 0;
@@ -326,6 +337,13 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         });
 
         try {
+            if (isProposalOverOperational) {
+                setGeneralError("Peringatan Anggaran: Project activity memiliki pagu lebih besar dari operational. Update/remove project activity terlebih dahulu atau sesuaikan budget operational.");
+                setSaving(false);
+                setUploadProgress(0);
+                return;
+            }
+
             await axios.post(`/api/v1/projects/${project_slug}`, submitData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
                 onUploadProgress: (progressEvent) => {
@@ -788,7 +806,16 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900 font-bold z-10">Rp</span>
                                                 <MoneyInput
                                                     value={budget}
-                                                    onValueChange={(vals) => setBudget(vals.floatValue || 0)}
+                                                    onValueChange={(vals) => {
+                                                        const newTotal = vals.floatValue || 0;
+                                                        setBudget(newTotal);
+                                                        // Auto calculation
+                                                        const management = newTotal * 0.3;
+                                                        const operasional = newTotal * 0.7;
+                                                        setMgmtBudget(management);
+                                                        setOpsBudget(operasional);
+                                                        setAllowanceBudget(0);
+                                                    }}
                                                     placeholder="0"
                                                     className="pl-12 text-xl font-bold h-14 bg-white border-gray-200 shadow-sm"
                                                 />
@@ -805,8 +832,48 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                 <p className="text-xs text-muted-foreground pt-1">
                                                     100% dari Total Project
                                                 </p>
-                                                <div className="pt-2 mt-2 border-t space-y-1 text-left">
-                                                    <p className="text-[10px] text-muted-foreground italic">Pembagian anggaran (Operasional, Manajemen, Allowance) diatur pada tab Nilai Kontrak oleh role Finance.</p>
+                                                <div className="pt-2 mt-2 border-t space-y-4 text-left">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Operasional</Label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-xs z-10">Rp</span>
+                                                            <MoneyInput
+                                                                value={opsBudget}
+                                                                disabled
+                                                                placeholder="0"
+                                                                className="pl-8 bg-gray-50 h-8 text-xs border-blue-100 shadow-none"
+                                                            />
+                                                        </div>
+                                                        <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((opsBudget / budget) * 100).toFixed(1) : 0}%</p>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Manajemen</Label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-xs z-10">Rp</span>
+                                                            <MoneyInput
+                                                                value={mgmtBudget}
+                                                                disabled
+                                                                placeholder="0"
+                                                                className="pl-8 bg-gray-50 h-8 text-xs border-purple-100 shadow-none"
+                                                            />
+                                                        </div>
+                                                        <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((mgmtBudget / budget) * 100).toFixed(1) : 0}%</p>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Allowance</Label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-xs z-10">Rp</span>
+                                                            <MoneyInput
+                                                                value={allowanceBudget}
+                                                                disabled
+                                                                placeholder="0"
+                                                                className="pl-8 bg-gray-50 h-8 text-xs border-amber-100 shadow-none"
+                                                            />
+                                                        </div>
+                                                        <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((allowanceBudget / budget) * 100).toFixed(1) : 0}%</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -905,6 +972,19 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     </div>
 
                                     {/* Summary Detail Budget */}
+
+                                    {isProposalOverOperational && (
+                                        <Alert variant="destructive" className="mb-4">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle>Peringatan Anggaran</AlertTitle>
+                                            <AlertDescription>
+                                                Project activity memiliki pagu ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalProposal)})
+                                                lebih besar dari budget operational ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(opsBudget)}).
+                                                Update/remove project activity terlebih dahulu atau ajukan tambahan budget operational beserta catatannya (setelah project dibuat).
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
                                     <div className={cn("border rounded-lg p-4", estimasiProfit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200")}>
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -912,7 +992,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                 <p className="text-xs mt-0.5 text-muted-foreground">{detailBudgets.length} kegiatan</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-lg font-bold text-gray-900">
+                                                <p className={cn("text-lg font-bold", isProposalOverOperational ? "text-red-600" : "text-gray-900")}>
                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">Total Proposal ({budget > 0 ? ((totalProposal / budget) * 100).toFixed(1) : 0}%)</p>
@@ -1025,7 +1105,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                             type="text"
                                                             value={term.notes}
                                                             onChange={(e) => updatePaymentTerm(term.id, 'notes', e.target.value)}
-                                                            placeholder="Contoh: Kwitansi, Invoice, Pelunasan, dll"
+                                                            placeholder=""
                                                             className="bg-white h-10"
                                                         />
                                                     </div>
