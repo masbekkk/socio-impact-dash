@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\ReimbursementStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 
 final class UpdateReimbursementStatusRequest extends FormRequest
 {
@@ -17,16 +19,16 @@ final class UpdateReimbursementStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action' => ['required', 'string', Rule::in(['approved', 'rejected', 'revision', 'transferred'])],
+            'action' => ['required', 'string', new Enum(ReimbursementStatus::class)],
             'notes' => ['nullable', 'string', 'max:1000'],
             'role' => ['nullable', 'string', 'in:head,finance,hr,direktur'],
             'transfer_proof' => [
-                 'nullable',
-                 'file',
-                 'mimes:jpg,jpeg,png,pdf',
-                 'max:5120',
-                 Rule::requiredIf($this->input('action') === 'transferred'),
-             ],
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:5120',
+                Rule::requiredIf($this->input('action') === 'transferred'),
+            ],
         ];
     }
 

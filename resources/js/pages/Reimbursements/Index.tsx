@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ListFilter, Calendar as CalendarIcon, X, MoreHorizontal, Wallet, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, AlertCircle, Trash2 } from 'lucide-react';
+import { FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ListFilter, Calendar as CalendarIcon, X, MoreHorizontal, Wallet, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, AlertCircle, Trash2, Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -182,6 +182,13 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+            {activeTab === 'atr' && (
+              <a href={`/api/v1/reimbursements/export-atr${window.location.search}`} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+                <Button variant="outline" className="gap-2 w-full hover:bg-slate-100">
+                  <Download className="h-4 w-4" /> Export CSV
+                </Button>
+              </a>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="gap-2 bg-sidebar text-white hover:bg-sidebar/90 transition-transform hover:scale-105 active:scale-95 shadow-sm w-full sm:w-auto">
@@ -407,14 +414,20 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                                     <div key={approval.id} className="text-xs flex items-center gap-1.5">
                                       {approval.status === 'approved' ? (
                                         <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                      ) : approval.status === 'revised' ? (
+                                        <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
                                       ) : (
                                         <XCircle className="h-3.5 w-3.5 text-red-500" />
                                       )}
                                       <span className={cn(
                                         "whitespace-nowrap",
-                                        approval.status === 'approved' ? "text-green-700 font-medium" : "text-red-700 font-medium"
+                                        approval.status === 'approved' ? "text-green-700 font-medium" :
+                                          approval.status === 'revised' ? "text-blue-700 font-medium" :
+                                            "text-red-700 font-medium"
                                       )}>
-                                        {approval.status === 'approved' ? 'Disetujui' : 'Menunggu'}{' '}
+                                        {approval.status === 'approved' ? 'Disetujui' :
+                                          approval.status === 'revised' ? 'Sudah Direvisi' :
+                                            'Menunggu'}{' '}
                                         <span className="font-normal text-muted-foreground">{approval.approver?.name}</span>
                                       </span>
                                     </div>

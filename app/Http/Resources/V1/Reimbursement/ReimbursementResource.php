@@ -91,7 +91,7 @@ final class ReimbursementResource extends JsonResource
                         'id' => $item->id,
                         'project_budget_detail_id' => $item->project_budget_detail_id,
                         'amount' => (float) $item->amount,
-                        'notes' => $item->budgetDetail->notes ?? '', // Load the note text
+                        'notes' => $item->notes, // Load the note text from pivot
                     ];
                 });
             }),
@@ -150,94 +150,96 @@ final class ReimbursementResource extends JsonResource
             return true;
         }
 
-        // To prevent users from approving the same state multiple times, we check status transitions.
-        $status = $this->status?->value;
-        $effectiveStatus = $status;
+        // Requester cannot approve their own reimbursement (unless superadmin, checked above)
+        // EXCEPT: if the user is a Head, the user specifically requested they can approve if they are the creator
+        $isCreator = $this->user_id === $user->id;
 
-        // Since the main status stays 'submitted' until transferred, we deduce the effective stage
-        // based on the individual approval records.
-        if ($status === 'submitted') {
-            $headApproval = $this->approvals->where('role', 'head')->first();
-            $hrApproval = $this->approvals->where('role', 'hr')->first();
+        $statusValue = $this->status?->value;
 
-            if ($headApproval && $headApproval->status->value === 'approved') {
-                $effectiveStatus = 'head_approved';
-                if ($hrApproval && $hrApproval->status->value === 'approved') {
-                    $effectiveStatus = 'hr_approved';
-                }
-            }
-        }
-
-        // If a user has already approved at the current stage, hide buttons.
-        $hasApprovedCurrentStage = false;
-
-        if ($effectiveStatus === 'submitted') {
-            $hasApproved = $this->approvals->where('approver_id', $user->id)->where('status', 'approved')->isNotEmpty();
-            if ($hasApproved) {
-                return false;
-            }
-
-            $myPendingApproval = $this->approvals->where('approver_id', $user->id)->where('status', 'pending');
-            if ($myPendingApproval->isNotEmpty()) {
-                return true;
-            }
-
-            // Fallback for project head or generic role if no specific assignment exists
-            if ($this->project?->head_id === $user->id || $user->hasRole('direktur')) {
-                return true;
-            }
-
-            // If there's an assignment for someone else in 'head' role, this user cannot approve unless they are superadmin/direktur
-            $someoneElseAssignedHead = $this->approvals->where('role', 'head')->where('status', 'pending')->isNotEmpty();
-            if (! $someoneElseAssignedHead && $user->hasRole('head')) {
-                return true;
-            }
-        }
-
-        if (in_array($effectiveStatus, ['head_approved', 'hr_approved', 'revision'])) {
-            $hasApproved = $this->approvals->where('approver_id', $user->id)->where('status', 'approved')->isNotEmpty();
-            if ($hasApproved) {
-                return false;
-            }
-
-            $myPendingApproval = $this->approvals->where('approver_id', $user->id)->where('status', 'pending');
-            if ($myPendingApproval->isNotEmpty()) {
-                return true;
-            }
-
-            if ($user->hasRole('direktur')) {
-                return true;
-            }
-
-            // For allowance, next is HR. For ATR, next is Finance.
-            if ($this->type->value === 'allowance') {
-                $someoneElseAssignedHR = $this->approvals->where('role', 'hr')->where('status', 'pending')->isNotEmpty();
-                if (! $someoneElseAssignedHR && $user->hasRole('hr')) {
-                    return true;
-                }
-
-                if ($effectiveStatus === 'hr_approved') {
-                    $someoneElseAssignedFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
-                    if (! $someoneElseAssignedFinance && $user->hasRole('finance')) {
-                        return true;
-                    }
-                }
-            } else {
-                $someoneElseAssignedFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
-                if (! $someoneElseAssignedFinance && $user->hasRole('finance')) {
-                    return true;
-                }
-            }
-        }
-
-        if ($effectiveStatus === 'finance_approved') {
-            return $user->hasRole('direktur') || $user->hasRole('head') || $user->hasRole('superadmin');
-        }
-
-        // Requester cannot approve their own reimbursement unless they are superadmin
-        if ($this->user_id === $user->id) {
-            // / TODO: only if head return true
+        // Final statuses cannot be approved further
+        if (in_array($statusValue, ['transferred', 'rejected'])) {
             return false;
+        }
+
+        // ROLE-BASED CHECK WITH RESTRICTION FOR HEAD
+        $isHeadRole = $user->hasRole('head');
+        $isFinanceRole = $user->hasRole('finance');
+        $isDirekturRole = $user->hasRole('direktur');
+
+        // If user is ONLY a Head (not Finance/Direktur), check assignment or creator
+        if ($isHeadRole && ! $isFinanceRole && ! $isDirekturRole) {
+            $isAssigned = $this->approvals->where('approver_id', $user->id)->where('role', 'head')->isNotEmpty();
+            if (! $isAssigned && ! $isCreator) {
+                return false;
+            }
+        }
+
+        // If user is the creator but NOT a head/finance/direktur, they definitely can't approve
+        if ($isCreator && ! $isHeadRole && ! $isFinanceRole && ! $isDirekturRole) {
+            return false;
+        }
+
+        // Effective stage calculation
+        $effectiveStage = 'submitted';
+        $headApproval = $this->approvals->where('role', 'head')->first();
+        $hrApproval = $this->approvals->where('role', 'hr')->first();
+        $financeApproval = $this->approvals->where('role', 'finance')->first();
+
+        if ($headApproval && $headApproval->status->value === 'approved') {
+            $effectiveStage = 'head_approved';
+            if ($hrApproval && $hrApproval->status->value === 'approved') {
+                $effectiveStage = 'hr_approved';
+            }
+        }
+
+        // Special override for Revision: usually requester should resubmit, but maybe head/finance can still approve?
+        // Actually for now let's assume if status is 'revision', only 'submitted' (after resubmit) can be approved.
+        if ($statusValue === 'revision' || $statusValue === 'draft') {
+            return false;
+        }
+
+        // ROLE-BASED CHECK
+        // If user has the role and that role is PENDING, they can approve.
+
+        // 1. Head Approval Phase
+        if ($effectiveStage === 'submitted' || $effectiveStage === 'revised') {
+            if ($user->hasRole('head') || $user->hasRole('direktur')) {
+                $pendingHead = $this->approvals->where('role', 'head')->where('status', 'pending')->isNotEmpty();
+                if ($pendingHead) {
+                    return true;
+                }
+            }
+        }
+
+        // 2. HR Approval Phase (Allowance only)
+        if ($effectiveStage === 'head_approved' && $this->type->value === 'allowance') {
+            if ($user->hasRole('hr') || $user->hasRole('direktur')) {
+                $pendingHR = $this->approvals->where('role', 'hr')->where('status', 'pending')->isNotEmpty();
+                if ($pendingHR) {
+                    return true;
+                }
+            }
+        }
+
+        // 3. Finance Approval Phase
+        // For ATR: after Head. For Allowance: after HR.
+        $financeStage = ($this->type->value === 'atr') ? 'head_approved' : 'hr_approved';
+        if ($effectiveStage === $financeStage || ($this->type->value === 'atr' && $effectiveStage === 'head_approved')) {
+            if ($user->hasRole('finance') || $user->hasRole('direktur')) {
+                $pendingFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
+                if ($pendingFinance) {
+                    return true;
+                }
+            }
+        }
+
+        // 4. Direktur Final Phase (After Finance)
+        $financeApproved = $financeApproval && $financeApproval->status->value === 'approved';
+        if ($financeApproved) {
+            if ($user->hasRole('direktur')) {
+                // Direktur can always approve if finance is done and it's not final yet
+                return true;
+            }
         }
 
         return false;

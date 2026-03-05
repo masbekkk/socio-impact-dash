@@ -47,6 +47,7 @@ interface ChildItem {
 interface SelectedActivity {
   budget_detail_id: number;
   expanded: boolean;
+  detail_aktivitas: string;
   children: ChildItem[];
 }
 
@@ -112,12 +113,12 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
     return projects.find(p => p.id === parseInt(formData.project_id)) ?? null;
   }, [formData.project_id, projects]);
 
-  // Activity management
   const addActivity = (budgetDetailId: number) => {
     if (selectedActivities.find(a => a.budget_detail_id === budgetDetailId)) return;
     setSelectedActivities(prev => [...prev, {
       budget_detail_id: budgetDetailId,
       expanded: true,
+      detail_aktivitas: '',
       children: [{ id: crypto.randomUUID(), item_name: '', quantity: 1, unit_price: 0, amount: 0, expense_type: '', notes: '' }],
     }]);
   };
@@ -129,6 +130,12 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
   const toggleActivity = (budgetDetailId: number) => {
     setSelectedActivities(prev => prev.map(a =>
       a.budget_detail_id === budgetDetailId ? { ...a, expanded: !a.expanded } : a
+    ));
+  };
+
+  const updateActivityDetail = (budgetDetailId: number, detail: string) => {
+    setSelectedActivities(prev => prev.map(a =>
+      a.budget_detail_id === budgetDetailId ? { ...a, detail_aktivitas: detail } : a
     ));
   };
 
@@ -195,8 +202,8 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
       return;
     }
 
-    if (!formData.approver_head_id || !formData.approver_finance_id || !formData.approver_direktur_id) {
-      setErrors({ _general: ['Persetujuan (Head, Finance, Direktur) wajib dipilih.'] });
+    if (!formData.approver_head_id) {
+      setErrors({ _general: ['Head Approver wajib dipilih.'] });
       return;
     }
 
@@ -224,6 +231,12 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
       }))
     );
 
+    const selected_budget_details = selectedActivities.map(a => ({
+      project_budget_detail_id: a.budget_detail_id,
+      amount: a.children.reduce((s, c) => s + (c.amount || 0), 0),
+      notes: a.detail_aktivitas || undefined
+    })).filter(a => a.amount > 0);
+
     await submitReimbursement({
       type: 'atr',
       project_id: formData.project_id,
@@ -234,11 +247,9 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
       usage_plan: formData.usage_plan,
       urgency: URGENCY_MAP[formData.urgency] ?? 'normal',
       start_date: formData.start_date || undefined,
-      end_date: formData.end_date || undefined,
       items,
+      selected_budget_details,
       approver_head_id: formData.approver_head_id,
-      approver_finance_id: formData.approver_finance_id,
-      approver_direktur_id: formData.approver_direktur_id,
     });
   };
 
@@ -386,7 +397,17 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
 
                         {/* Children */}
                         {activity.expanded && (
-                          <div className="p-4 space-y-3 bg-white">
+                          <div className="p-4 space-y-4 bg-white">
+                            <div className="space-y-1.5 pb-2">
+                              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Detail Aktivitas (Opsional)</Label>
+                              <Input
+                                value={activity.detail_aktivitas}
+                                onChange={(e) => updateActivityDetail(activity.budget_detail_id, e.target.value)}
+                                placeholder="Masukkan detail aktivitas untuk kegiatan ini..."
+                                className="h-9 text-sm"
+                              />
+                            </div>
+
                             {overBudget && (
                               <Alert variant="destructive">
                                 <AlertCircle className="h-4 w-4" />
@@ -482,7 +503,7 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="start_date" className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Tanggal Mulai Penggunaan</Label>
+                    <Label htmlFor="start_date" className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Tanggal Penggunaan</Label>
                     <Input
                       id="start_date"
                       name="start_date"
@@ -492,19 +513,6 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
                       onChange={handleChange}
                     />
                     {errors.start_date && <p className="text-xs text-red-500 font-medium">{errors.start_date[0]}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end_date" className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Tanggal Selesai Penggunaan</Label>
-                    <Input
-                      id="end_date"
-                      name="end_date"
-                      type="date"
-                      className={`h-10 ${errors.end_date ? 'border-red-500' : ''}`}
-                      value={formData.end_date}
-                      min={formData.start_date || undefined}
-                      onChange={handleChange}
-                    />
-                    {errors.end_date && <p className="text-xs text-red-500 font-medium">{errors.end_date[0]}</p>}
                   </div>
                 </div>
 
@@ -574,32 +582,6 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
                     </SelectTrigger>
                     <SelectContent>
                       {approvers['head']?.map((user) => (
-                        <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="approver_finance_id">Finance Approver</Label>
-                  <Select onValueChange={(val) => handleSelectChange('approver_finance_id', val)} value={formData.approver_finance_id}>
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Pilih Finance" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {approvers['finance']?.map((user) => (
-                        <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="approver_direktur_id">Direktur Approver</Label>
-                  <Select onValueChange={(val) => handleSelectChange('approver_direktur_id', val)} value={formData.approver_direktur_id}>
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Pilih Direktur" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {approvers['direktur']?.map((user) => (
                         <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
                       ))}
                     </SelectContent>

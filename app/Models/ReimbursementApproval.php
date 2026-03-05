@@ -14,7 +14,7 @@ final class ReimbursementApproval extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['reimbursement_id', 'approver_id', 'role', 'status', 'notes', 'approved_at'];
+    protected $fillable = ['reimbursement_id', 'approver_id', 'role', 'status', 'notes', 'approved_at', 'updated_by'];
 
     public function casts(): array
     {
@@ -22,6 +22,7 @@ final class ReimbursementApproval extends Model
             'id' => 'integer',
             'reimbursement_id' => 'integer',
             'approver_id' => 'integer',
+            'updated_by' => 'integer',
             'role' => ApprovalRole::class,
             'status' => ApprovalStatus::class,
             'approved_at' => 'datetime',
@@ -36,5 +37,10 @@ final class ReimbursementApproval extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approver_id');
+    }
+
+    public function editor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

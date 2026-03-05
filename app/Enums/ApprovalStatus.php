@@ -10,4 +10,5 @@ enum ApprovalStatus: string
     case Approved = 'approved';
     case Rejected = 'rejected';
     case Revision = 'revision';
+    case Revised = 'revised';
 }

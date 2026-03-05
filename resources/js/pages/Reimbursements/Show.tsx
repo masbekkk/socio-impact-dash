@@ -28,6 +28,21 @@ interface ReimbursementItem {
   activity_name: string;
   activity_id: number;
 }
+
+interface SelectedActivityRevision {
+  budget_detail_id: number;
+  expanded: boolean;
+  detail_aktivitas: string;
+  children: {
+    id: string | number;
+    item_name: string;
+    quantity: number;
+    unit_price: number;
+    amount: number;
+    expense_type: string;
+    notes: string;
+  }[];
+}
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -39,6 +54,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -57,6 +73,10 @@ import {
   DollarSign,
   Loader2,
   Upload,
+  Plus,
+  X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -142,6 +162,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
   head_approved: { label: 'Head Approved', className: 'bg-blue-100 text-blue-700 border-blue-200', icon: CheckCircle },
   hr_approved: { label: 'HR Approved', className: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: CheckCircle },
   finance_approved: { label: 'Finance Approved', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: DollarSign },
+  requested: { label: 'Diminta (Requested)', className: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: DollarSign },
   transferred: { label: 'Transferred', className: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle },
   rejected: { label: 'Rejected', className: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
   revision: { label: 'Revisi', className: 'bg-orange-100 text-orange-700 border-orange-200', icon: AlertCircle },
@@ -163,7 +184,7 @@ const URGENCY_LABELS: Record<string, { label: string; variant: 'destructive' | '
 const APPROVABLE_STATUSES = ['submitted', 'head_approved', 'hr_approved', 'finance_approved'];
 
 export default function Show() {
-  const { code, auth } = usePage().props as unknown as { code: string; auth: any };
+  const { code, auth, expenseTypes = [] } = usePage().props as unknown as { code: string; auth: any; expenseTypes?: { value: string; label: string }[] };
   const userRole = auth?.user?.role_name || 'pegawai';
   const userId = auth?.user?.id || 0;
 
@@ -187,7 +208,19 @@ export default function Show() {
   const [savingBudget, setSavingBudget] = useState(false);
 
   const [revisionEditing, setRevisionEditing] = useState(false);
-  const [revisionForm, setRevisionForm] = useState({ usage_plan: '', start_date: '', end_date: '', revision_note: '' });
+  const [revisionForm, setRevisionForm] = useState<{
+    usage_plan: string;
+    start_date: string;
+    end_date: string;
+    revision_note: string;
+    selected_activities: SelectedActivityRevision[];
+  }>({
+    usage_plan: '',
+    start_date: '',
+    end_date: '',
+    revision_note: '',
+    selected_activities: [],
+  });
   const [resubmitLoading, setResubmitLoading] = useState(false);
 
   const { hasRole, hasPermission } = usePermission();
@@ -236,14 +269,7 @@ export default function Show() {
   // handleFileChange removed as it is no longer needed for approval
 
   const getCurrentUserRole = () => {
-    if (!data || !userId) return null;
-    // Prefer the role that is currently pending for this user
-    const pendingApproval = data.approvals.find(a => a.approver_id === userId && a.status === 'pending');
-    if (pendingApproval) return pendingApproval.role;
-
-    // Fallback to any assigned role
-    const myApproval = data.approvals.find(a => a.approver_id === userId);
-    return myApproval?.role ?? null;
+    return userRole;
   };
 
   const resetApproveDialog = () => {
@@ -263,6 +289,24 @@ export default function Show() {
   const resetTransferDialog = () => {
     setTransferDialogOpen(false);
     setTransferProof(null);
+  };
+
+  const handleRequestFund = async () => {
+    if (!data) return;
+    setActionLoading(true);
+    try {
+      const role = getCurrentUserRole();
+      const payload: any = { action: 'request_fund' };
+      if (role) payload.role = role;
+
+      await axios.post(`/api/v1/reimbursements/${data.code}/status`, payload);
+
+      await fetchDetail();
+    } catch {
+      alert('Gagal memproses request fund.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleApprove = async () => {
@@ -292,6 +336,7 @@ export default function Show() {
       const payload: any = {
         action: 'rejected',
         notes: rejectionReason,
+        role: role
       };
       if (role) payload.role = role;
 
@@ -314,7 +359,9 @@ export default function Show() {
       const payload: any = {
         action: 'revision',
         notes: revisiReason,
+        role: role
       };
+
       if (role) payload.role = role;
 
       await axios.post(`/api/v1/reimbursements/${data.code}/status`, payload);
@@ -337,6 +384,7 @@ export default function Show() {
       formData.append('transfer_proof', transferProof);
 
       const role = getCurrentUserRole();
+
       if (role) formData.append('role', role);
 
       await axios.post(`/api/v1/reimbursements/${data.code}/status`, formData, {
@@ -402,32 +450,186 @@ export default function Show() {
 
   const handleStartRevisionEdit = () => {
     if (!data) return;
+
+    // Map existing ATR items and activity selections
+    const selected_activities: SelectedActivityRevision[] = [];
+
+    if (data.atr_budget_selecteds) {
+      data.atr_budget_selecteds.forEach(abs => {
+        const children = (data.items ?? [])
+          .filter(item => item.activity_id === abs.project_budget_detail_id && !item.parent_item_id)
+          .map(item => ({
+            id: item.id,
+            item_name: item.item_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            amount: item.amount,
+            expense_type: item.expense_type ?? '',
+            notes: item.notes ?? '',
+          }));
+
+        selected_activities.push({
+          budget_detail_id: abs.project_budget_detail_id,
+          expanded: true,
+          detail_aktivitas: abs.notes ?? '',
+          children: children.length > 0 ? children : [{
+            id: crypto.randomUUID(),
+            item_name: '',
+            quantity: 1,
+            unit_price: 0,
+            amount: 0,
+            expense_type: '',
+            notes: ''
+          }],
+        });
+      });
+    }
+
     setRevisionForm({
       usage_plan: data.usage_plan ?? '',
       start_date: data.start_date ?? '',
       end_date: data.end_date ?? '',
       revision_note: '',
+      selected_activities,
     });
     setRevisionEditing(true);
   };
 
   const handleResubmitRevision = async () => {
     if (!data) return;
+
+    // Validate if items are added for each activity
+    for (const act of revisionForm.selected_activities) {
+      if (act.children.length === 0) {
+        alert('Setiap kegiatan minimal harus memiliki 1 item.');
+        return;
+      }
+      for (const child of act.children) {
+        if (!child.item_name.trim()) {
+          alert('Nama item tidak boleh kosong.');
+          return;
+        }
+      }
+    }
+
     setResubmitLoading(true);
+
     try {
+      // Prepare items and selected_budget_details for resubmit
+      const items: any[] = [];
+      const selected_budget_details: any[] = [];
+
+      revisionForm.selected_activities.forEach(act => {
+        let actTotal = 0;
+        act.children.forEach(child => {
+          items.push({
+            project_budget_detail_id: act.budget_detail_id,
+            item_name: child.item_name,
+            quantity: child.quantity,
+            unit_price: child.unit_price,
+            amount: child.quantity * child.unit_price,
+            expense_type: child.expense_type,
+            notes: child.notes,
+          });
+          actTotal += child.quantity * child.unit_price;
+        });
+
+        selected_budget_details.push({
+          project_budget_detail_id: act.budget_detail_id,
+          amount: actTotal,
+          notes: act.detail_aktivitas,
+        });
+      });
+
       await axios.post(`/api/v1/reimbursements/${data.code}/resubmit`, {
         usage_plan: revisionForm.usage_plan,
         start_date: revisionForm.start_date || null,
         end_date: revisionForm.end_date || null,
         revision_note: revisionForm.revision_note || 'Pengajuan telah direvisi dan diajukan kembali.',
+        items,
+        selected_budget_details,
       });
+
       setRevisionEditing(false);
       await fetchDetail();
-    } catch {
-      alert('Gagal mengirim ulang revisi.');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Gagal mengirim ulang revisi.');
     } finally {
       setResubmitLoading(false);
     }
+  };
+
+  // Helper functions for revision editor
+  const addChildItemRevision = (budgetDetailId: number) => {
+    setRevisionForm(prev => ({
+      ...prev,
+      selected_activities: prev.selected_activities.map(a => {
+        if (a.budget_detail_id !== budgetDetailId) return a;
+        return {
+          ...a,
+          children: [...a.children, {
+            id: crypto.randomUUID(),
+            item_name: '',
+            quantity: 1,
+            unit_price: 0,
+            amount: 0,
+            expense_type: '',
+            notes: ''
+          }]
+        };
+      })
+    }));
+  };
+
+  const removeChildItemRevision = (budgetDetailId: number, itemId: string | number) => {
+    setRevisionForm(prev => ({
+      ...prev,
+      selected_activities: prev.selected_activities.map(a => {
+        if (a.budget_detail_id !== budgetDetailId) return a;
+        return {
+          ...a,
+          children: a.children.filter(c => c.id !== itemId)
+        };
+      })
+    }));
+  };
+
+  const updateChildItemRevision = (budgetDetailId: number, itemId: string | number, field: string, value: any) => {
+    setRevisionForm(prev => ({
+      ...prev,
+      selected_activities: prev.selected_activities.map(a => {
+        if (a.budget_detail_id !== budgetDetailId) return a;
+        return {
+          ...a,
+          children: a.children.map(c => {
+            if (c.id !== itemId) return c;
+            const updated = { ...c, [field]: value };
+            if (field === 'quantity' || field === 'unit_price') {
+              updated.amount = updated.quantity * updated.unit_price;
+            }
+            return updated;
+          })
+        };
+      })
+    }));
+  };
+
+  const updateActivityDetailRevision = (budgetDetailId: number, detail: string) => {
+    setRevisionForm(prev => ({
+      ...prev,
+      selected_activities: prev.selected_activities.map(a =>
+        a.budget_detail_id === budgetDetailId ? { ...a, detail_aktivitas: detail } : a
+      )
+    }));
+  };
+
+  const toggleActivityRevision = (budgetDetailId: number) => {
+    setRevisionForm(prev => ({
+      ...prev,
+      selected_activities: prev.selected_activities.map(a =>
+        a.budget_detail_id === budgetDetailId ? { ...a, expanded: !a.expanded } : a
+      )
+    }));
   };
 
   const breadcrumbs = [
@@ -521,12 +723,23 @@ export default function Show() {
               >
                 <AlertCircle className="mr-2 h-4 w-4" /> Revisi
               </Button>
-              <Button
-                className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => setApproveDialogOpen(true)}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" /> Setujui
-              </Button>
+              {userRole === 'finance' && data.type === 'atr' && data.status !== 'requested' ? (
+                <Button
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  onClick={handleRequestFund}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DollarSign className="mr-2 h-4 w-4" />}
+                  Submit to Request
+                </Button>
+              ) : (
+                <Button
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => setApproveDialogOpen(true)}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" /> Setujui
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -639,7 +852,7 @@ export default function Show() {
                             onValueChange={(v) => {
                               const val = v.floatValue || 0;
                               setPartitionOps(val);
-                              const allowance = (data.project.budget_total || 0) - val - partitionMgmt;
+                              const allowance = (data.project?.budget_total || 0) - val - partitionMgmt;
                               setPartitionAllow(allowance > 0 ? allowance : 0);
                             }}
                             placeholder="0"
@@ -660,7 +873,7 @@ export default function Show() {
                             onValueChange={(v) => {
                               const val = v.floatValue || 0;
                               setPartitionMgmt(val);
-                              const allowance = (data.project.budget_total || 0) - partitionOps - val;
+                              const allowance = (data.project?.budget_total || 0) - partitionOps - val;
                               setPartitionAllow(allowance > 0 ? allowance : 0);
                             }}
                             placeholder="0"
@@ -739,16 +952,16 @@ export default function Show() {
                 {(data.start_date || data.end_date) && (
                   <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 space-y-2">
                     <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
-                      <Calendar className="h-4 w-4" /> Jadwal Penggunaan Dana
+                      <Calendar className="h-4 w-4" /> {data.type === 'atr' ? 'Tanggal Penggunaan Dana' : 'Jadwal Penggunaan Dana'}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       {data.start_date && (
                         <div>
-                          <span className="text-muted-foreground text-xs block">Tanggal Mulai</span>
+                          <span className="text-muted-foreground text-xs block">{data.type === 'atr' ? 'Tanggal Penggunaan' : 'Tanggal Mulai'}</span>
                           <span className="font-medium">{format(new Date(data.start_date), 'dd MMMM yyyy', { locale: localeId })}</span>
                         </div>
                       )}
-                      {data.end_date && (
+                      {data.end_date && data.type !== 'atr' && (
                         <div>
                           <span className="text-muted-foreground text-xs block">Tanggal Selesai</span>
                           <span className="font-medium">{format(new Date(data.end_date), 'dd MMMM yyyy', { locale: localeId })}</span>
@@ -772,10 +985,10 @@ export default function Show() {
                       )}
                     </div>
                     {revisionEditing && (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <Label className="text-xs font-medium">Tanggal Mulai</Label>
+                            <Label className="text-xs font-medium">Tanggal Penggunaan</Label>
                             <Input
                               type="date"
                               className="h-9 text-sm"
@@ -783,16 +996,18 @@ export default function Show() {
                               onChange={(e) => setRevisionForm(p => ({ ...p, start_date: e.target.value }))}
                             />
                           </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs font-medium">Tanggal Selesai</Label>
-                            <Input
-                              type="date"
-                              className="h-9 text-sm"
-                              value={revisionForm.end_date}
-                              min={revisionForm.start_date || undefined}
-                              onChange={(e) => setRevisionForm(p => ({ ...p, end_date: e.target.value }))}
-                            />
-                          </div>
+                          {data.type === 'allowance' && (
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Tanggal Selesai</Label>
+                              <Input
+                                type="date"
+                                className="h-9 text-sm"
+                                value={revisionForm.end_date}
+                                min={revisionForm.start_date || undefined}
+                                onChange={(e) => setRevisionForm(p => ({ ...p, end_date: e.target.value }))}
+                              />
+                            </div>
+                          )}
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs font-medium">Keterangan / Rencana Penggunaan</Label>
@@ -803,7 +1018,129 @@ export default function Show() {
                             placeholder="Update rencana penggunaan..."
                           />
                         </div>
-                        <div className="space-y-1">
+
+                        {/* Item Editor (Specifically for ATR) */}
+                        {data.type === 'atr' && (
+                          <div className="space-y-4 pt-2 border-t mt-4">
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Item & Rincian Kegiatan ATR</Label>
+                            {revisionForm.selected_activities.map((activity) => {
+                              const activityName = data.items?.find(i => i.activity_id === activity.budget_detail_id)?.activity_name || 'Kegiatan';
+                              const subtotal = activity.children.reduce((s, c) => s + (c.quantity * c.unit_price), 0);
+
+                              return (
+                                <div key={activity.budget_detail_id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
+                                  <div
+                                    className="flex items-center justify-between p-3 bg-slate-50 border-b cursor-pointer"
+                                    onClick={() => toggleActivityRevision(activity.budget_detail_id)}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {activity.expanded ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+                                      <span className="font-semibold text-sm text-slate-800">{activityName}</span>
+                                    </div>
+                                    <span className="text-sm font-bold text-emerald-700 font-mono">Rp {subtotal.toLocaleString('id-ID')}</span>
+                                  </div>
+
+                                  {activity.expanded && (
+                                    <div className="p-3 space-y-4">
+                                      <div className="space-y-1">
+                                        <Label className="text-[10px] font-medium text-muted-foreground uppercase">Detail Aktivitas</Label>
+                                        <Input
+                                          value={activity.detail_aktivitas}
+                                          onChange={(e) => updateActivityDetailRevision(activity.budget_detail_id, e.target.value)}
+                                          placeholder="Detail aktivitas..."
+                                          className="h-8 text-sm"
+                                        />
+                                      </div>
+
+                                      <div className="space-y-3">
+                                        {activity.children.map((child, idx) => (
+                                          <div key={child.id} className="border rounded-md p-3 space-y-3 bg-slate-50/40 relative">
+                                            {activity.children.length > 1 && (
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-5 w-5 text-red-500 absolute top-2 right-2"
+                                                onClick={() => removeChildItemRevision(activity.budget_detail_id, child.id)}
+                                              >
+                                                <X className="h-3.5 w-3.5" />
+                                              </Button>
+                                            )}
+
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                                              <div className="md:col-span-12 lg:col-span-5 space-y-1">
+                                                <Label className="text-[10px]">Nama Item</Label>
+                                                <Input
+                                                  value={child.item_name}
+                                                  onChange={(e) => updateChildItemRevision(activity.budget_detail_id, child.id, 'item_name', e.target.value)}
+                                                  placeholder="Nama item..."
+                                                  className="h-8 text-sm"
+                                                />
+                                              </div>
+                                              <div className="md:col-span-2 lg:col-span-1 space-y-1">
+                                                <Label className="text-[10px]">Qty</Label>
+                                                <Input
+                                                  type="number"
+                                                  min={1}
+                                                  value={child.quantity}
+                                                  onChange={(e) => updateChildItemRevision(activity.budget_detail_id, child.id, 'quantity', parseInt(e.target.value) || 1)}
+                                                  className="h-8 text-sm px-2"
+                                                />
+                                              </div>
+                                              <div className="md:col-span-5 lg:col-span-3 space-y-1">
+                                                <Label className="text-[10px]">Nominal</Label>
+                                                <MoneyInput
+                                                  value={child.unit_price}
+                                                  onValueChange={(v) => updateChildItemRevision(activity.budget_detail_id, child.id, 'unit_price', v.floatValue || 0)}
+                                                  className="h-8 text-sm"
+                                                />
+                                              </div>
+                                              <div className="md:col-span-5 lg:col-span-3 space-y-1">
+                                                <Label className="text-[10px]">Jenis</Label>
+                                                <Select
+                                                  value={child.expense_type}
+                                                  onValueChange={(v) => updateChildItemRevision(activity.budget_detail_id, child.id, 'expense_type', v)}
+                                                >
+                                                  <SelectTrigger className="h-8 text-xs px-2">
+                                                    <SelectValue placeholder="Pilih..." />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    {expenseTypes.map(et => (
+                                                      <SelectItem key={et.value} value={et.value}>{et.label}</SelectItem>
+                                                    ))}
+                                                  </SelectContent>
+                                                </Select>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => addChildItemRevision(activity.budget_detail_id)}
+                                          className="w-full gap-1 border-dashed h-8 text-xs text-muted-foreground hover:text-primary"
+                                        >
+                                          <Plus className="h-3 w-3" /> Tambah Item
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+
+                            <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100 flex justify-between items-center">
+                              <span className="text-xs font-semibold text-emerald-900">Total Pengajuan Baru</span>
+                              <span className="text-sm font-bold text-emerald-900 font-mono">
+                                Rp {revisionForm.selected_activities.reduce((s, a) => s + a.children.reduce((c_s, c) => c_s + (c.quantity * c.unit_price), 0), 0).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-1 pb-2 border-t pt-4">
                           <Label className="text-xs font-medium">Catatan Revisi untuk Approver</Label>
                           <Textarea
                             className="min-h-[60px] text-sm resize-none"
@@ -812,6 +1149,7 @@ export default function Show() {
                             placeholder="Jelaskan perubahan yang Anda lakukan..."
                           />
                         </div>
+
                         <div className="flex gap-2 justify-end">
                           <Button size="sm" variant="outline" onClick={() => setRevisionEditing(false)} disabled={resubmitLoading}>Batal</Button>
                           <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={handleResubmitRevision} disabled={resubmitLoading}>
@@ -1084,7 +1422,7 @@ export default function Show() {
                   </div>
                 )}
 
-                {data.status === 'submitted' && isFinanceOrAdmin && (
+                {(data.status === 'submitted' || data.status === 'request_fund') && isFinanceOrAdmin && (
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <Button
                       onClick={() => setTransferDialogOpen(true)}
@@ -1265,10 +1603,11 @@ export default function Show() {
                           className={`text-[10px] px-1.5 py-0 h-4 ${approval.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
                             approval.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
                               approval.status === 'revision' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                'bg-slate-50 text-slate-600 border-slate-200'
+                                approval.status === 'revised' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                  'bg-slate-50 text-slate-600 border-slate-200'
                             }`}
                         >
-                          {approval.status}
+                          {approval.status === 'revised' ? 'sudah direvisi' : approval.status}
                         </Badge>
                       </div>
                       <div className="text-sm font-medium flex items-center gap-2">

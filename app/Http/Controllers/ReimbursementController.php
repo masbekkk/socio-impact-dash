@@ -252,6 +252,10 @@ final class ReimbursementController
     {
         return Inertia::render('Reimbursements/Show', [
             'code' => $code,
+            'expenseTypes' => collect(\App\Enums\ExpenseType::cases())->map(fn ($type) => [
+                'value' => $type->value,
+                'label' => $type->value,
+            ])->toArray(),
         ]);
     }
 

@@ -18,7 +18,7 @@ final readonly class UpdateReimbursementStatus
         return DB::transaction(function () use ($reimbursement, $data, $approverId, $transferProof): Reimbursement {
             $action = $data['action'];
             $notes = $data['notes'] ?? null;
-            $role = $data['role'] ?? 'head';
+            $role = $data['role'] ?? null;
 
             if ($action === 'transferred') {
                 $updateData = [
@@ -46,31 +46,45 @@ final readonly class UpdateReimbursementStatus
                 // Direktur override: update ALL approval records for this reimbursement
                 ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
                     ->update([
-                        // 'approver_id' => $approverId,
-                        'status' => $action,
-                        // 'notes' => $notes,
-                        'approved_at' => $action === ApprovalStatus::Approved->value ? now() : null,
+                        'status' => $action === 'request_fund' ? ApprovalStatus::Approved->value : $action,
+                        'approved_at' => in_array($action, [ApprovalStatus::Approved->value, 'request_fund']) ? now() : null,
+                        'updated_by' => $approverId, // Track who actually took the action
                     ]);
             } else {
-                ReimbursementApproval::updateOrCreate(
-                    [
+                $approval = ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                    ->where('role', $role)
+                    ->first();
+
+                if ($approval) {
+                    $approval->update([
+                        'status' => $action === 'request_fund' ? ApprovalStatus::Approved->value : $action,
+                        'notes' => $notes,
+                        'approved_at' => in_array($action, [ApprovalStatus::Approved->value, 'request_fund']) ? now() : null,
+                        'updated_by' => $approverId, // Track who actually took the action
+                    ]);
+                } else {
+                    // Fallback to create if it doesn't exist (e.g. legacy data or single-step update)
+                    ReimbursementApproval::create([
                         'reimbursement_id' => $reimbursement->id,
                         'role' => $role,
-                    ],
-                    [
                         'approver_id' => $approverId,
-                        'status' => $action,
+                        'status' => $action === 'request_fund' ? ApprovalStatus::Approved->value : $action,
                         'notes' => $notes,
-                        'approved_at' => $action === ApprovalStatus::Approved->value ? now() : null,
-                    ]
-                );
+                        'approved_at' => in_array($action, [ApprovalStatus::Approved->value, 'request_fund']) ? now() : null,
+                        'updated_by' => $approverId,
+                    ]);
+                }
             }
 
-            if ($action === ApprovalStatus::Approved->value) {
+            if ($action === ApprovalStatus::Approved->value || $action === 'request_fund') {
                 // Determine if all required approvals are met, but for now user requested status stays submitted
                 // until transferred.
-                
+
                 $updateData = [];
+
+                if ($action === 'request_fund') {
+                    $updateData['status'] = ReimbursementStatus::Requested;
+                }
 
                 if ($transferProof !== null) {
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
@@ -79,7 +93,7 @@ final readonly class UpdateReimbursementStatus
                     $updateData['status'] = ReimbursementStatus::Transferred; // Explicitly set if proof uploaded
                 }
 
-                if (!empty($updateData)) {
+                if (! empty($updateData)) {
                     $reimbursement->update($updateData);
                 }
             } elseif ($action === 'revision') {
