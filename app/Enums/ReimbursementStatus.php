@@ -11,6 +11,7 @@ enum ReimbursementStatus: string
     case HeadApproved = 'head_approved';
     case HRApproved = 'hr_approved';
     case FinanceApproved = 'finance_approved';
+    case Requested = 'requested';
     case Transferred = 'transferred';
     case Rejected = 'rejected';
     case Revision = 'revision';

@@ -161,19 +161,25 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
     submitData.append('management_budget', mgmtBudget.toString());
     submitData.append('allowance_budget', allowanceBudget.toString());
 
-    let docIndex = 0;
-
     if (rabFile) {
-      submitData.append(`documents[${docIndex}][file]`, rabFile);
-      submitData.append(`documents[${docIndex}][type]`, 'RAB');
-      docIndex++;
+      submitData.append('documents[RAB][type]', 'RAB');
+      submitData.append('documents[RAB][file]', rabFile);
     }
 
     if (sowFile) {
-      submitData.append(`documents[${docIndex}][file]`, sowFile);
-      submitData.append(`documents[${docIndex}][type]`, type === 'proposal' ? 'PROPOSAL' : 'KONTRAK');
-      docIndex++;
+      const sowType = type === 'proposal' ? 'PROPOSAL' : 'KONTRAK';
+      submitData.append(`documents[PROPOSAL_KONTRAK][type]`, sowType);
+      submitData.append(`documents[PROPOSAL_KONTRAK][file]`, sowFile);
     }
+
+    // Append supporting documents with stable keys
+    supportingDocs.forEach((doc) => {
+      if (doc.file) { // Only append if a file is actually selected
+        const key = `SUPPORTING_${doc.id}`;
+        submitData.append(`documents[${key}][type]`, doc.type);
+        submitData.append(`documents[${key}][file]`, doc.file);
+      }
+    });
 
     locations.forEach((loc, index) => {
       submitData.append(`locations[${index}][latitude]`, loc.lat.toString());
@@ -197,13 +203,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
       if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
     });
 
-    supportingDocs.forEach((doc: any) => {
-      if (doc.file) {
-        submitData.append(`documents[${docIndex}][file]`, doc.file);
-        submitData.append(`documents[${docIndex}][type]`, doc.type);
-        docIndex++;
-      }
-    });
+    // try block follows...
 
     try {
       if (isPelaksanaanOverOperational) {
@@ -607,6 +607,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                                 placeholder="Masukkan nama dokumen..."
                                 className="h-8 w-full sm:w-[220px] bg-white border-gray-300 text-xs"
                               />
+                              <span className="text-red-500">*</span>
                             </div>
                             {supportingDocs.length > 1 && (
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0 mt-6" onClick={() => removeSupportingDoc(doc.id)}>
@@ -872,8 +873,9 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                               value={detail.item_name}
                               onChange={(e) => updateDetailBudget(detail.id, 'item_name', e.target.value)}
                               placeholder="Nama kegiatan..."
-                              className="bg-white h-8 text-xs"
+                              className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.item_name`] && "border-red-500")}
                             />
+                            {errors[`detail_budgets.${idx}.item_name`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.item_name`]}</p>}
                           </div>
 
                           <div className="md:col-span-2 space-y-1">
@@ -882,8 +884,9 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                               value={detail.amount_proposal}
                               onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_proposal', vals.floatValue || 0)}
                               placeholder="0"
-                              className="bg-white h-8 text-xs"
+                              className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.amount_proposal`] && "border-red-500")}
                             />
+                            {errors[`detail_budgets.${idx}.amount_proposal`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.amount_proposal`]}</p>}
                           </div>
 
                           <div className="md:col-span-2 space-y-1">
@@ -892,8 +895,9 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                               value={detail.amount_pelaksanaan}
                               onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_pelaksanaan', vals.floatValue || 0)}
                               placeholder="0"
-                              className="bg-white h-8 text-xs"
+                              className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.amount_pelaksanaan`] && "border-red-500")}
                             />
+                            {errors[`detail_budgets.${idx}.amount_pelaksanaan`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.amount_pelaksanaan`]}</p>}
                           </div>
 
                           <div className="md:col-span-4 space-y-1">
@@ -982,7 +986,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                       </div>
                       <FileUploadDropzone onFilesChange={(files) => setRabFile(files[0])} />
                       {rabFile && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {rabFile.name}</p>}
-                      {errors['documents.0.file'] && <p className="text-xs text-red-500">{errors['documents.0.file']}</p>}
+                      {errors['documents.RAB.file'] && <p className="text-xs text-red-500">{errors['documents.RAB.file']}</p>}
                     </div>
                   </div>
 
@@ -1029,39 +1033,42 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {/* Nominal */}
                           <div className="space-y-2">
-                            <Label className="text-xs font-medium text-muted-foreground">Nominal Pembayaran</Label>
+                            <Label className="text-xs font-medium text-muted-foreground">Nominal Pembayaran <span className="text-red-500">*</span></Label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm z-10">Rp</span>
                               <MoneyInput
                                 value={term.nominal}
                                 onValueChange={(vals) => updatePaymentTerm(term.id, 'nominal', vals.floatValue || 0)}
                                 placeholder="0"
-                                className="pl-10 bg-white h-10"
+                                className={cn("pl-10 bg-white h-10", errors[`termin_payments.${idx}.nominal`] && "border-red-500")}
                               />
                             </div>
+                            {errors[`termin_payments.${idx}.nominal`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.nominal`]}</p>}
                           </div>
 
                           {/* Tanggal */}
                           <div className="space-y-2">
-                            <Label className="text-xs font-medium text-muted-foreground">Tanggal Jatuh Tempo</Label>
+                            <Label className="text-xs font-medium text-muted-foreground">Tanggal Jatuh Tempo <span className="text-red-500">*</span></Label>
                             <Input
                               type="date"
                               value={term.date}
                               onChange={(e) => updatePaymentTerm(term.id, 'date', e.target.value)}
-                              className="bg-white h-10"
+                              className={cn("bg-white h-10", errors[`termin_payments.${idx}.due_date`] && "border-red-500")}
                             />
+                            {errors[`termin_payments.${idx}.due_date`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.due_date`]}</p>}
                           </div>
 
                           {/* Notes */}
                           <div className="space-y-2 md:col-span-1">
-                            <Label className="text-xs font-medium text-muted-foreground">Deliverables</Label>
+                            <Label className="text-xs font-medium text-muted-foreground">Deliverables <span className="text-red-500">*</span></Label>
                             <Input
                               type="text"
                               value={term.notes}
                               onChange={(e) => updatePaymentTerm(term.id, 'notes', e.target.value)}
                               placeholder=""
-                              className="bg-white h-10"
+                              className={cn("bg-white h-10", errors[`termin_payments.${idx}.notes`] && "border-red-500")}
                             />
+                            {errors[`termin_payments.${idx}.notes`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.notes`]}</p>}
                           </div>
                         </div>
                       </div>

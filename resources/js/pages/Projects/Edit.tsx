@@ -76,6 +76,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const updateSupportingDocType = (id: number | string, type: string) => {
         setSupportingDocs(supportingDocs.map(d => d.id === id ? { ...d, type } : d));
     };
+    const handleSupportingDocFile = (id: number | string, file: File | null) => {
+        setSupportingDocs(supportingDocs.map(d => d.id === id ? { ...d, file: file || undefined } : d));
+    };
     const removeSupportingDocLocal = (id: number | string) => {
         if (supportingDocs.length > 1) {
             setSupportingDocs(supportingDocs.filter(d => d.id !== id));
@@ -271,19 +274,25 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         submitData.append('allowance_budget', allowanceBudget.toString());
         submitData.append('status', status);
 
-        let docIndex = 0;
-
         if (rabFile) {
-            submitData.append(`documents[${docIndex}][file]`, rabFile);
-            submitData.append(`documents[${docIndex}][type]`, 'RAB');
-            docIndex++;
+            submitData.append('documents[RAB][type]', 'RAB');
+            submitData.append('documents[RAB][file]', rabFile);
         }
 
         if (sowFile) {
-            submitData.append(`documents[${docIndex}][file]`, sowFile);
-            submitData.append(`documents[${docIndex}][type]`, status === 'proposal' ? 'PROPOSAL' : 'KONTRAK');
-            docIndex++;
+            const sowType = status === 'proposal' ? 'PROPOSAL' : 'KONTRAK';
+            submitData.append('documents[PROPOSAL_KONTRAK][type]', sowType);
+            submitData.append('documents[PROPOSAL_KONTRAK][file]', sowFile);
         }
+
+        // Append supporting documents with stable keys
+        supportingDocs.forEach((doc: any) => {
+            if (doc.file) { // Only append if a file is actually selected/changed
+                const key = `SUPPORTING_${doc.id}`;
+                submitData.append(`documents[${key}][type]`, doc.type);
+                submitData.append(`documents[${key}][file]`, doc.file);
+            }
+        });
 
         locations.forEach((loc, index) => {
             if (!loc.isNew) {
@@ -298,13 +307,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             submitData.append(`delete_locations[${index}]`, id);
         });
 
-        supportingDocs.forEach((doc: any) => {
-            if (doc.file) {
-                submitData.append(`documents[${docIndex}][file]`, doc.file);
-                submitData.append(`documents[${docIndex}][type]`, doc.type);
-                docIndex++;
-            }
-        });
+        // paymentTerms loop follows...
 
         paymentTerms.forEach((term, index) => {
             if (!term.isNew) {
@@ -911,8 +914,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                             value={detail.item_name}
                                                             onChange={(e) => updateDetailBudget(detail.id, 'item_name', e.target.value)}
                                                             placeholder="Nama kegiatan..."
-                                                            className="bg-white h-8 text-xs"
+                                                            className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.item_name`] && "border-red-500")}
                                                         />
+                                                        {errors[`detail_budgets.${idx}.item_name`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.item_name`]}</p>}
                                                     </div>
 
                                                     <div className="md:col-span-2 space-y-1">
@@ -921,8 +925,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                             value={detail.amount_proposal}
                                                             onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_proposal', vals.floatValue || 0)}
                                                             placeholder="0"
-                                                            className="bg-white h-8 text-xs"
+                                                            className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.amount_proposal`] && "border-red-500")}
                                                         />
+                                                        {errors[`detail_budgets.${idx}.amount_proposal`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.amount_proposal`]}</p>}
                                                     </div>
 
                                                     <div className="md:col-span-2 space-y-1">
@@ -931,8 +936,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                             value={detail.amount_pelaksanaan}
                                                             onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_pelaksanaan', vals.floatValue || 0)}
                                                             placeholder="0"
-                                                            className="bg-white h-8 text-xs"
+                                                            className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.amount_pelaksanaan`] && "border-red-500")}
                                                         />
+                                                        {errors[`detail_budgets.${idx}.amount_pelaksanaan`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.amount_pelaksanaan`]}</p>}
                                                     </div>
 
                                                     <div className="md:col-span-4 space-y-1">
@@ -1024,8 +1030,71 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                             </div>
                                             <FileUploadDropzone onFilesChange={(files) => setRabFile(files[0])} />
                                             {rabFile && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {rabFile.name}</p>}
-                                            {errors['documents.0.file'] && <p className="text-xs text-red-500">{errors['documents.0.file']}</p>}
+                                            {errors['documents.RAB.file'] && <p className="text-xs text-red-500">{errors['documents.RAB.file']}</p>}
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Supporting Documents */}
+                                <div className="space-y-4 pt-4 border-t mt-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Label className="text-base font-semibold">Dokumen Pendukung</Label>
+                                            <p className="text-xs text-muted-foreground mt-1">Lampirkan dokumen pendukung lainnya seperti surat penawaran, dll.</p>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={addSupportingDoc}
+                                            className="gap-2 border-dashed hover:border-solid"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Tambah Dokumen
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {supportingDocs.map((doc, idx) => (
+                                            <div key={doc.id} className="border rounded-xl p-3 bg-white shadow-sm flex items-center gap-3 group hover:border-gray-300 transition-colors">
+                                                <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                                                    <div className="md:col-span-4 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nama Dokumen #{idx + 1} <span className="text-red-500">*</span></Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={doc.type}
+                                                            onChange={(e) => updateSupportingDocType(doc.id, e.target.value)}
+                                                            placeholder="Nama dokumen..."
+                                                            className={cn("bg-white h-9 text-xs", errors[`documents.SUPPORTING_${doc.id}.type`] && "border-red-500")}
+                                                        />
+                                                        {errors[`documents.SUPPORTING_${doc.id}.type`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`documents.SUPPORTING_${doc.id}.type`]}</p>}
+                                                    </div>
+                                                    <div className="md:col-span-8 space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">File Dokumen <span className="text-red-500">*</span></Label>
+                                                        <Input
+                                                            type="file"
+                                                            onChange={(e) => handleSupportingDocFile(doc.id, e.target.files?.[0] || null)}
+                                                            className={cn("bg-white h-9 text-xs py-1.5", errors[`documents.SUPPORTING_${doc.id}.file`] && "border-red-500")}
+                                                        />
+                                                        {doc.file && <p className="text-xs font-medium text-green-600 mt-0.5">✓ Terpilih: {doc.file.name}</p>}
+                                                        {doc.original_name && !doc.file && <p className="text-xs text-blue-600 mt-0.5">File saat ini: {doc.original_name}</p>}
+                                                        {errors[`documents.SUPPORTING_${doc.id}.file`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`documents.SUPPORTING_${doc.id}.file`]}</p>}
+                                                    </div>
+                                                </div>
+
+                                                {supportingDocs.length > 0 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => removeSupportingDocLocal(doc.id)}
+                                                        className="h-8 w-8 text-muted-foreground hover:text-red-500 mt-5 shrink-0"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -1076,9 +1145,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                                 value={term.nominal}
                                                                 onValueChange={(vals) => updatePaymentTerm(term.id, 'nominal', vals.floatValue || 0)}
                                                                 placeholder="0"
-                                                                className="pl-10 bg-white h-10"
+                                                                className={cn("pl-10 bg-white h-10", errors[`termin_payments.${idx}.nominal`] && "border-red-500")}
                                                             />
                                                         </div>
+                                                        {errors[`termin_payments.${idx}.nominal`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.nominal`]}</p>}
                                                     </div>
 
                                                     {/* Tanggal */}
@@ -1088,8 +1158,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                             type="date"
                                                             value={term.date}
                                                             onChange={(e) => updatePaymentTerm(term.id, 'date', e.target.value)}
-                                                            className="bg-white h-10"
+                                                            className={cn("bg-white h-10", errors[`termin_payments.${idx}.due_date`] && "border-red-500")}
                                                         />
+                                                        {errors[`termin_payments.${idx}.due_date`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.due_date`]}</p>}
                                                     </div>
 
                                                     {/* Notes */}
@@ -1100,8 +1171,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                             value={term.notes}
                                                             onChange={(e) => updatePaymentTerm(term.id, 'notes', e.target.value)}
                                                             placeholder=""
-                                                            className="bg-white h-10"
+                                                            className={cn("bg-white h-10", errors[`termin_payments.${idx}.notes`] && "border-red-500")}
                                                         />
+                                                        {errors[`termin_payments.${idx}.notes`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.notes`]}</p>}
                                                     </div>
                                                 </div>
                                             </div>

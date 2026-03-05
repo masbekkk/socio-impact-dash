@@ -102,14 +102,28 @@ final class StoreProjectRequest extends FormRequest
 
                 // Check chronological order
                 $prevDate = null;
-                foreach ($terminPayments as $index => $term) {
-                    $currentDate = $term['due_date'] ?? null;
-                    if ($prevDate && $currentDate && strtotime($currentDate) < strtotime($prevDate)) {
+                foreach ($terminPayments as $index => $termin) {
+                    $currentDate = \Carbon\Carbon::parse($termin['due_date']);
+                    if ($prevDate && $currentDate->lessThan($prevDate)) {
                         $validator->errors()->add("termin_payments.{$index}.due_date", 'Tanggal jatuh tempo termin harus berurutan.');
                     }
                     $prevDate = $currentDate;
                 }
             }
         });
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'termin_payments.*.nominal' => 'Nominal Termin',
+            'termin_payments.*.due_date' => 'Tanggal Jatuh Tempo',
+            'termin_payments.*.notes' => 'Deliverables',
+            'documents.*.type' => 'Nama Dokumen',
+            'documents.*.file' => 'File Dokumen',
+            'detail_budgets.*.item_name' => 'Nama Kegiatan',
+            'detail_budgets.*.amount_proposal' => 'Nominal Proposal',
+            'detail_budgets.*.amount_pelaksanaan' => 'Nominal Pelaksanaan',
+        ];
     }
 }

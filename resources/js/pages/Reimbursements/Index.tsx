@@ -367,7 +367,12 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                       </TableHead>
                       <TableHead>
                         <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
-                          Status <SortIcon column="status" />
+                          Status Approval <SortIcon column="status" />
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
+                          Status ATR <SortIcon column="status" />
                         </button>
                       </TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
@@ -396,10 +401,6 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1.5">
-                              {/* <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
-                                <StatusIcon className="h-3 w-3" />
-                                {statusCfg.label}
-                              </Badge> */}
                               {item.approvals && item.approvals.length > 0 && (
                                 <div className="mt-1 flex flex-col gap-1 inline-flex">
                                   {item.approvals.map((approval) => (
@@ -421,6 +422,12 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                                 </div>
                               )}
                             </div>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
+                              <StatusIcon className="h-3 w-3" />
+                              {statusCfg.label}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>

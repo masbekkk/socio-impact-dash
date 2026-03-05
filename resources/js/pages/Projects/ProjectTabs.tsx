@@ -322,7 +322,7 @@ export default function ProjectTabs({
                 <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max md:w-full min-w-full md:min-w-0">
                     <TabsTrigger value="detail" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Detail & Proposal</TabsTrigger>
                     <TabsTrigger value="timeline" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Timeline</TabsTrigger>
-                    <TabsTrigger value="budget" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Nilai Kontrak</TabsTrigger>
+                    <TabsTrigger value="budget" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Anggaran</TabsTrigger>
                     <TabsTrigger value="monitoring" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Monitoring</TabsTrigger>
                     <TabsTrigger value="closing" className="flex-none md:flex-1 whitespace-nowrap px-4 data-[state=active]:bg-[var(--sidebar)] data-[state=active]:text-white">Closing</TabsTrigger>
                 </TabsList>

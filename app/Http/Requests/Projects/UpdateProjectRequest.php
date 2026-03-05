@@ -87,9 +87,6 @@ final class UpdateProjectRequest extends FormRequest
 
     /**
      * Configure the validator instance.
-     *
-     * @param  \Illuminate\Validation\Validator  $validator
-     * @return void
      */
     public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
@@ -97,7 +94,8 @@ final class UpdateProjectRequest extends FormRequest
             $user = $this->user();
 
             if ($this->has('operational_budget') || $this->has('allowance_budget')) {
-                if (! $user->can('input_budget_partition')) {
+                $project = $this->route('project');
+                if (! $user->can('input_budget_partition') && $user->id !== $project->created_by) {
                     $validator->errors()->add('operational_budget', 'You do not have permission to modify budget partitions.');
                 }
             }
@@ -147,7 +145,7 @@ final class UpdateProjectRequest extends FormRequest
             if (is_array($terminPayments) && count($terminPayments) > 0) {
                 $project = $this->route('project');
                 $budgetTotal = (float) ($this->input('budget_total') ?? $project->budget_total);
-                
+
                 $terminSum = array_reduce($terminPayments, fn (float $carry, array $item): float => $carry + (float) $item['nominal'], 0);
                 if ($terminSum > ($budgetTotal + 0.01)) {
                     $validator->errors()->add('termin_payments', 'Total termin pembayaran tidak boleh melebihi total anggaran proyek.');
@@ -155,14 +153,28 @@ final class UpdateProjectRequest extends FormRequest
 
                 // Check chronological order
                 $prevDate = null;
-                foreach ($terminPayments as $index => $term) {
-                    $currentDate = $term['due_date'] ?? null;
-                    if ($prevDate && $currentDate && strtotime($currentDate) < strtotime($prevDate)) {
+                foreach ($terminPayments as $index => $payment) {
+                    $currentDate = \Carbon\Carbon::parse($payment['due_date']);
+                    if ($prevDate && $currentDate->lessThan($prevDate)) {
                         $validator->errors()->add("termin_payments.{$index}.due_date", 'Tanggal jatuh tempo termin harus berurutan.');
                     }
                     $prevDate = $currentDate;
                 }
             }
         });
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'termin_payments.*.nominal' => 'Nominal Termin',
+            'termin_payments.*.due_date' => 'Tanggal Jatuh Tempo',
+            'termin_payments.*.notes' => 'Deliverables',
+            'documents.*.type' => 'Nama Dokumen',
+            'documents.*.file' => 'File Dokumen',
+            'detail_budgets.*.item_name' => 'Nama Kegiatan',
+            'detail_budgets.*.amount_proposal' => 'Nominal Proposal',
+            'detail_budgets.*.amount_pelaksanaan' => 'Nominal Pelaksanaan',
+        ];
     }
 }

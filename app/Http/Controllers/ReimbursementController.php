@@ -118,7 +118,7 @@ final class ReimbursementController
         $atrs = Reimbursement::with(['project.division', 'project.pic', 'project.head', 'approvals', 'items.budgetDetail'])
             ->where('user_id', $request->user()->id)
             ->where('type', 'atr')
-            ->where('status', 'LIKE', '%approve%')
+            ->where('status', 'transferred')
             ->get()
             ->map(fn (Reimbursement $atr) => [
                 'id' => $atr->id,
