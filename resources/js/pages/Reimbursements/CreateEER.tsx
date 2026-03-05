@@ -21,6 +21,11 @@ interface Approver {
   email: string;
 }
 
+interface ExpenseTypeOption {
+  value: string;
+  label: string;
+}
+
 interface AtrItem {
   id: number;
   item_name: string;
@@ -55,6 +60,7 @@ interface ChildItem {
   quantity: number;
   unit_price: number;
   amount: number;
+  expense_type: string;
   receipt: File | null;
   notes: string;
 }
@@ -68,9 +74,10 @@ interface SelectedActivity {
 
 const fmt = (v: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
 
-export default function CreateEER({ atrs = [], approvers = {} }: {
+export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = [] }: {
   atrs?: Atr[],
-  approvers?: Record<string, Approver[]>
+  approvers?: Record<string, Approver[]>,
+  expenseTypes?: ExpenseTypeOption[],
 }) {
   const { authUser, loading, errors, setErrors, clearFieldError, submitReimbursement } = useReimbursementForm([]);
 
@@ -153,7 +160,7 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
       budget_detail_id: budgetDetailId,
       activity_name: activityName,
       expanded: true,
-      children: [{ id: crypto.randomUUID(), item_name: '', quantity: 1, unit_price: 0, amount: 0, receipt: null, notes: '' }],
+      children: [{ id: crypto.randomUUID(), item_name: '', quantity: 1, unit_price: 0, amount: 0, expense_type: '', receipt: null, notes: '' }],
     }]);
   };
 
@@ -171,7 +178,7 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
   const addChildItem = (budgetDetailId: number) => {
     setSelectedActivities(prev => prev.map(a => {
       if (a.budget_detail_id !== budgetDetailId) return a;
-      return { ...a, children: [...a.children, { id: crypto.randomUUID(), item_name: '', quantity: 1, unit_price: 0, amount: 0, receipt: null, notes: '' }] };
+      return { ...a, children: [...a.children, { id: crypto.randomUUID(), item_name: '', quantity: 1, unit_price: 0, amount: 0, expense_type: '', receipt: null, notes: '' }] };
     }));
   };
 
@@ -238,6 +245,7 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
         quantity: c.quantity,
         unit_price: c.unit_price,
         amount: c.amount,
+        expense_type: c.expense_type || undefined,
         receipt: c.receipt ?? undefined,
         notes: c.notes || undefined,
       }))
@@ -444,7 +452,7 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
                                       className="h-9 text-sm"
                                     />
                                   </div>
-                                  <div className="space-y-2">
+                                  <div className="md:col-span-2 space-y-2">
                                     <Label className="text-xs">Harga Satuan</Label>
                                     <MoneyInput
                                       value={child.unit_price}
@@ -452,6 +460,19 @@ export default function CreateEER({ atrs = [], approvers = {} }: {
                                       placeholder="0"
                                       className="h-9 text-sm"
                                     />
+                                  </div>
+                                  <div className="md:col-span-2 space-y-2">
+                                    <Label className="text-xs">Jenis Expense</Label>
+                                    <Select value={child.expense_type} onValueChange={(v) => updateChildItem(activity.budget_detail_id, child.id, 'expense_type', v)}>
+                                      <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Pilih..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {expenseTypes.map(t => (
+                                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                 </div>
 

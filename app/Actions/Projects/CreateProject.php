@@ -185,7 +185,7 @@ final class CreateProject
                 'quantity' => $detail['quantity'] ?? 1,
                 'item_price' => $detail['item_price'] ?? 0,
                 'item_name' => $detail['item_name'] ?? null,
-                'amount' => $detail['amount'],
+                'amount' => $detail['amount_pelaksanaan'] ?? $detail['amount'],
                 'amount_pelaksanaan' => $detail['amount_pelaksanaan'] ?? null,
                 'amount_proposal' => $detail['amount_proposal'] ?? null,
                 'notes' => $detail['notes'] ?? null,

@@ -202,18 +202,20 @@ final class UpdateProject
         foreach ($detailBudgets as $detail) {
             if (isset($detail['id'])) {
                 $project->budgetDetails()->where('id', $detail['id'])->update([
+                    'item_name' => $detail['item_name'] ?? null,
                     'quantity' => $detail['quantity'] ?? 1,
                     'item_price' => $detail['item_price'] ?? 0,
-                    'amount' => $detail['amount'],
+                    'amount' => $detail['amount_pelaksanaan'] ?? $detail['amount'],
                     'amount_pelaksanaan' => $detail['amount_pelaksanaan'] ?? null,
                     'amount_proposal' => $detail['amount_proposal'] ?? null,
                     'notes' => $detail['notes'] ?? null,
                 ]);
             } else {
                 $project->budgetDetails()->create([
+                    'item_name' => $detail['item_name'] ?? null,
                     'quantity' => $detail['quantity'] ?? 1,
                     'item_price' => $detail['item_price'] ?? 0,
-                    'amount' => $detail['amount'],
+                    'amount' => $detail['amount_pelaksanaan'] ?? $detail['amount'],
                     'amount_pelaksanaan' => $detail['amount_pelaksanaan'] ?? null,
                     'amount_proposal' => $detail['amount_proposal'] ?? null,
                     'notes' => $detail['notes'] ?? null,

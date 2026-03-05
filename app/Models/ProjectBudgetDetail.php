@@ -79,7 +79,8 @@ class ProjectBudgetDetail extends Model
      */
     public function getRemainingAmountAttribute(): float
     {
-        return max(0, $this->amount - $this->used_amount);
+        $base = $this->amount_pelaksanaan > 0 ? $this->amount_pelaksanaan : $this->amount;
+        return max(0, $base - $this->used_amount);
     }
 }
 
