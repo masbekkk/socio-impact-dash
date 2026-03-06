@@ -61,6 +61,8 @@ export interface ReimbursementPayload {
     approver_hr_id?: string;
     start_date?: string;
     end_date?: string;
+    start_time?: string;
+    end_time?: string;
     replacement_pic_id?: string;
     documents?: { file: File; type: string }[];
     selected_budget_details?: {

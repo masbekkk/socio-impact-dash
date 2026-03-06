@@ -207,6 +207,15 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
     return items.reduce((sum, i) => sum + (i.amount || 0), 0);
   }, [items]);
 
+  const eerCalculation = useMemo(() => {
+    if (!selectedAtr) return { type: 'refund' as const, amount: 0 };
+    const diff = totalEerAmount - selectedAtr.amount;
+    return {
+      type: diff > 0 ? ('reimbursement' as const) : ('refund' as const),
+      amount: Math.abs(diff),
+    };
+  }, [totalEerAmount, selectedAtr]);
+
   const hasOverBudgetItems = false;
 
   const handleSubmit = async () => {
@@ -248,8 +257,8 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
 
     await submitReimbursement({
       type: 'eer',
-      eer_type: formData.eer_type,
-      refund_reimburse_amount: formData.refund_reimburse_amount,
+      eer_type: eerCalculation.type,
+      refund_reimburse_amount: eerCalculation.amount,
       atr_id: formData.atr_id,
       project_id: formData.project_id,
       approver_head_id: formData.approver_head_id,
@@ -512,59 +521,48 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3">
                           <Label className="text-sm font-bold flex items-center gap-2">
-                            <Info className="h-4 w-4 text-blue-600" /> Tipe Hasil EER
+                            <Info className="h-4 w-4 text-blue-600" /> Hasil Kalkulasi EER
                           </Label>
-                          <RadioGroup
-                            value={formData.eer_type}
-                            onValueChange={(v: 'refund' | 'reimbursement') => {
-                              const diff = Math.abs(totalEerAmount - (selectedAtr?.amount || 0));
-                              setFormData(p => ({ ...p, eer_type: v, refund_reimburse_amount: diff }));
-                            }}
-                            className="grid grid-cols-1 gap-2"
-                          >
+                          <div className="space-y-2">
                             <div className={cn(
-                              "flex items-center space-x-2 p-3 rounded-lg border bg-white transition-all cursor-pointer hover:border-blue-400",
-                              formData.eer_type === 'refund' && "border-blue-500 ring-1 ring-blue-500/20 bg-blue-50/30"
+                              "flex items-center space-x-2 p-3 rounded-lg border bg-blue-50/30 border-blue-200"
                             )}>
-                              <RadioGroupItem value="refund" id="refund" />
-                              <Label htmlFor="refund" className="flex-1 cursor-pointer">
-                                <div className="font-semibold text-sm">Refund (Pengembalian Kelebihan)</div>
-                                <div className="text-[10px] text-muted-foreground">Total EER lebih kecil dari ATR. Selisih dana dikembalikan ke kantor.</div>
-                              </Label>
+                              <div className="flex-1">
+                                <div className="font-semibold text-sm">
+                                  {eerCalculation.type === 'refund' ? 'Refund (Pengembalian Kelebihan)' : 'Reimbursement (Kekurangan Dana)'}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground">
+                                  {eerCalculation.type === 'refund'
+                                    ? 'Total EER lebih kecil dari ATR. Selisih dana dikembalikan ke kantor.'
+                                    : 'Total EER lebih besar dari ATR. Kantor akan membayarkan selisihnya.'}
+                                </div>
+                              </div>
                             </div>
-                            <div className={cn(
-                              "flex items-center space-x-2 p-3 rounded-lg border bg-white transition-all cursor-pointer hover:border-blue-400",
-                              formData.eer_type === 'reimbursement' && "border-blue-500 ring-1 ring-blue-500/20 bg-blue-50/30"
-                            )}>
-                              <RadioGroupItem value="reimbursement" id="reimbursement" />
-                              <Label htmlFor="reimbursement" className="flex-1 cursor-pointer">
-                                <div className="font-semibold text-sm">Reimbursement (Kekurangan Dana)</div>
-                                <div className="text-[10px] text-muted-foreground">Total EER lebih besar dari ATR. Kantor akan membayarkan selisihnya.</div>
-                              </Label>
-                            </div>
-                          </RadioGroup>
+                          </div>
                         </div>
 
                         <div className="space-y-4">
                           <div className="p-4 bg-white border rounded-lg shadow-sm">
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-xs text-muted-foreground">Selisih ATR & EER</span>
-                              <span className="text-xs font-medium text-slate-500">{totalEerAmount > (selectedAtr?.amount || 0) ? 'EER > ATR' : 'EER < ATR'}</span>
+                              <span className="text-xs font-medium text-slate-500">
+                                {totalEerAmount > (selectedAtr?.amount || 0) ? 'EER > ATR' : 'EER < ATR'}
+                              </span>
                             </div>
                             <div className="text-lg font-bold font-mono text-slate-900 border-b pb-2 mb-2">
-                              {fmt(Math.abs(totalEerAmount - (selectedAtr?.amount || 0)))}
+                              {fmt(eerCalculation.amount)}
                             </div>
 
-                            <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                                Nominal {formData.eer_type === 'refund' ? 'Refund' : 'Reimburse'} <span className="text-red-500">*</span>
-                              </Label>
-                              <MoneyInput
-                                value={formData.refund_reimburse_amount}
-                                onValueChange={(v) => setFormData(p => ({ ...p, refund_reimburse_amount: v.floatValue || 0 }))}
-                                className="h-10 text-lg font-bold text-blue-700 bg-blue-50/50 border-blue-200"
-                              />
-                              <p className="text-[10px] text-muted-foreground">Konfirmasi nominal akhir yang {formData.eer_type === 'refund' ? 'dikembalikan' : 'diajukan klaim'}.</p>
+                            <div className="space-y-2 text-blue-800">
+                              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                Nominal Otomatis ({eerCalculation.type === 'refund' ? 'Refund' : 'Reimburse'})
+                              </p>
+                              <div className="h-10 text-lg font-bold flex items-center px-3 rounded-md bg-blue-50 border border-blue-100">
+                                {fmt(eerCalculation.amount)}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground italic">
+                                *Nominal ini dikalkulasi otomatis dari selisih limit ATR ({fmt(selectedAtr?.amount || 0)}) dan total EER.
+                              </p>
                             </div>
                           </div>
                         </div>

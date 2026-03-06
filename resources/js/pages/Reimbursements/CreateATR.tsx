@@ -208,6 +208,11 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
       return;
     }
 
+    if (!formData.start_date) {
+      setErrors({ start_date: ['Tanggal penggunaan wajib diisi.'] });
+      return;
+    }
+
     if (!formData.approver_head_id) {
       setErrors({ _general: ['Head Approver wajib dipilih.'] });
       return;
