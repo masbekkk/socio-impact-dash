@@ -170,11 +170,11 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="Pengajuan Nomor Surat" />
+            <Head title="Nomor Surat" />
             <div className="p-6 md:p-8 space-y-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Pengajuan Nomor Surat</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Nomor Surat</h1>
                         <p className="text-muted-foreground">Kelola permohonan nomor surat resmi untuk proyek.</p>
                     </div>
 
