@@ -61,7 +61,7 @@ export default function AppSidebar() {
     <aside className={`transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'} bg-muted/50 dark:bg-muted h-screen p-4 flex flex-col hidden md:flex border-r`}>
       <div className="flex items-center justify-between mb-8">
         <h3 className={`font-bold text-lg transition-opacity ${collapsed ? 'hidden' : 'block'}`}>
-          SocioImpact
+          SocialImpact.ID
         </h3>
         <Button
           variant="ghost"

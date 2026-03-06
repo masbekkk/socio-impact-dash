@@ -51,6 +51,21 @@ final class CreateProject
             return $project->fresh(['locations', 'terminPayments', 'documents', 'budgetDetails']);
         });
 
+        // Notify Finance + Direktur about new project
+        $notifier = new \App\Actions\CreateNotification();
+        $recipientIds = $notifier->getUserIdsByRoles(['finance', 'direktur']);
+        if ($recipientIds !== []) {
+            $notifier->handle(
+                type: 'project_created',
+                title: 'Proyek Baru Dibuat',
+                message: "Proyek baru \"{$project->name}\" (#{$project->code}) telah dibuat.",
+                recipientUserIds: $recipientIds,
+                referenceType: 'project',
+                referenceId: $project->id,
+                createdBy: $userId,
+            );
+        }
+
         return $project;
     }
 
