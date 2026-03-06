@@ -20,7 +20,7 @@ final class ProjectMonitoringController extends Controller
             'notes' => ['nullable', 'string', 'max:5000'],
             'documents' => ['nullable', 'array'],
             'documents.*.title' => ['nullable', 'string', 'max:255'],
-            // 'documents.*.file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:51200'], // 50MB limit
+            'documents.*.file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:51200'], // 50MB limit
         ]);
 
         $monitoring = $storeMonitoring->handle($project, $validated, $request->user()->id);

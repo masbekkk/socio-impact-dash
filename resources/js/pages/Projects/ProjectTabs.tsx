@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, Loader, AlertCircle, Trash2, Pencil, FileText, Eye, Download, MapPin, Plus, User, Upload, Handshake, Archive, Save, Loader2 } from 'lucide-react'
 import MoneyInput from '@/components/MoneyInput'
 import { Input } from '@/components/ui/input'
+import DatePicker from '@/components/DatePicker'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { usePage } from '@inertiajs/react'
@@ -1188,11 +1189,9 @@ export default function ProjectTabs({
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label>Tanggal Laporan</Label>
-                                    <Input
-                                        type="date"
+                                    <DatePicker
                                         value={reportForm.date}
-                                        onChange={(e) => setReportForm({ ...reportForm, date: e.target.value })}
-                                        className="bg-white"
+                                        onChange={(v) => setReportForm({ ...reportForm, date: v })}
                                     />
                                 </div>
                                 {/* <div className="space-y-2">

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { usePermission } from '@/hooks/use-permission';
 import MoneyInput from '@/components/MoneyInput';
 import { Input } from '@/components/ui/input';
+import DatePicker from '@/components/DatePicker';
 import { cn } from '@/lib/utils';
 
 interface AtrBudgetSelected {
@@ -1259,21 +1260,17 @@ export default function Show() {
 
                           <div className="space-y-2 md:col-span-full">
                             <Label className="text-xs font-medium">Tanggal Penggunaan</Label>
-                            <Input
-                              type="date"
-                              className="h-9 text-sm"
-                              onChange={(e) => setRevisionForm(p => ({ ...p, start_date: e.target.value }))}
+                            <DatePicker
+                              value={revisionForm.start_date}
+                              onChange={(v) => setRevisionForm(p => ({ ...p, start_date: v }))}
                             />
                           </div>
                           {data.type === 'allowance' && (
                             <div className="space-y-1">
                               <Label className="text-xs font-medium">Tanggal Selesai</Label>
-                              <Input
-                                type="date"
-                                className="h-9 text-sm"
+                              <DatePicker
                                 value={revisionForm.end_date}
-                                min={revisionForm.start_date || undefined}
-                                onChange={(e) => setRevisionForm(p => ({ ...p, end_date: e.target.value }))}
+                                onChange={(v) => setRevisionForm(p => ({ ...p, end_date: v }))}
                               />
                             </div>
                           )}

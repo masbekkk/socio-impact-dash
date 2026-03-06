@@ -17,6 +17,7 @@ import { ArrowLeft, Save, Calendar, MapPin, Briefcase, FileText, Loader2 } from 
 import { differenceInDays } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
+import DatePicker from '@/components/DatePicker';
 import axios from 'axios';
 
 interface SimpleProject {
@@ -101,6 +102,13 @@ export default function CreateTravel({ authUser, projects, users }: Props) {
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleValueChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => { const next = { ...prev }; delete next[name]; return next; });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -225,18 +233,20 @@ export default function CreateTravel({ authUser, projects, users }: Props) {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                   <div className="space-y-2">
                     <Label htmlFor="start_date">Tanggal Berangkat <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input type="date" id="start_date" name="start_date" value={formData.start_date} onChange={handleChange} className="pl-9 h-10" />
-                    </div>
+                    <DatePicker
+                      value={formData.start_date}
+                      onChange={(v) => handleValueChange('start_date', v)}
+                      error={!!errors.start_date}
+                    />
                     {errors.start_date && <p className="text-xs text-red-500">{errors.start_date[0]}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="end_date">Tanggal Kembali <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input type="date" id="end_date" name="end_date" value={formData.end_date} onChange={handleChange} className="pl-9 h-10" />
-                    </div>
+                    <DatePicker
+                      value={formData.end_date}
+                      onChange={(v) => handleValueChange('end_date', v)}
+                      error={!!errors.end_date}
+                    />
                     {errors.end_date && <p className="text-xs text-red-500">{errors.end_date[0]}</p>}
                   </div>
                   <div className="bg-blue-50 text-blue-700 px-4 py-2.5 rounded-md flex items-center justify-between border border-blue-100 h-10">

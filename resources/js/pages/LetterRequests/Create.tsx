@@ -14,6 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import DatePicker from '@/components/DatePicker';
 import { format } from "date-fns";
 import axios from 'axios';
 import { SharedData } from '@/types';
@@ -141,6 +142,10 @@ export default function Create({ projects }: Props) {
                     </div>
                 </div>
 
+                <script>
+                    {/* Placeholder for helper if needed elsewhere, but LetterRequest handles it in setData */}
+                </script>
+
                 <Card className="border-none shadow-sm rounded-xl overflow-hidden">
                     <form onSubmit={handleSubmit}>
                         <CardHeader className="bg-white">
@@ -177,16 +182,10 @@ export default function Create({ projects }: Props) {
 
                                     <div className="space-y-2">
                                         <Label htmlFor="letter_date">Tanggal Surat <span className="text-red-500">*</span></Label>
-                                        <div className="relative">
-                                            <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                id="letter_date"
-                                                type="date"
-                                                className="pl-9 h-10"
-                                                value={data.letter_date}
-                                                onChange={(e) => setData({ ...data, letter_date: e.target.value })}
-                                            />
-                                        </div>
+                                        <DatePicker
+                                            value={data.letter_date}
+                                            onChange={(v) => setData({ ...data, letter_date: v })}
+                                        />
                                         {errors.letter_date && <p className="text-sm text-destructive font-medium">{errors.letter_date}</p>}
                                     </div>
 
