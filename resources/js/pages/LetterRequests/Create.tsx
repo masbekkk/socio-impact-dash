@@ -76,16 +76,12 @@ export default function Create({ projects }: Props) {
                 const allLetterDivs = divisionsRes.data.data;
                 let filteredLetterDivs = allLetterDivs;
 
-                if (userRole === 'direktur' || userRole === 'superadmin') {
-                    filteredLetterDivs = allLetterDivs.filter((d: any) => ['Direktur', 'Finance', 'HCM', 'BOD'].includes(d.code));
-                } else if (userRole === 'hr') {
-                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'HR' || d.code === 'HCM');
-                } else if (userRole === 'finance') {
-                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'Finance' || d.code === 'FA');
+                if (userRole === 'direktur' || userRole === 'superadmin' || userRole === 'hr' || userRole === 'finance' || userRole === 'head') {
+                    filteredLetterDivs = allLetterDivs;
                 } else {
                     // Default to PM or all roles if PM
                     // According to requirements: PM - all roles
-                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'PM');;
+                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'PM');
                 }
 
                 setLetterDivisions(filteredLetterDivs);

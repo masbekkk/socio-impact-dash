@@ -56,6 +56,8 @@ final class ReimbursementResource extends JsonResource
             'rejection_reason' => $this->rejection_reason,
             'start_date' => $this->start_date?->toDateString(),
             'end_date' => $this->end_date?->toDateString(),
+            'start_time' => $this->start_time ? substr($this->start_time, 0, 5) : null,
+            'end_time' => $this->end_time ? substr($this->end_time, 0, 5) : null,
             'documents' => ReimbursementDocumentResource::collection(
                 $this->whenLoaded('documents')
             ),

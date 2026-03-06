@@ -175,6 +175,8 @@ interface ReimbursementDetail {
   atr_items?: { id: number; item_name: string; quantity: number; unit_price: number; amount: number; expense_type: string | null; notes: string | null; activity_name: string; activity_id: number }[];
   start_date: string | null;
   end_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
   refund_reimburse_amount?: number;
 }
 
@@ -254,6 +256,8 @@ export default function Show() {
     usage_plan: string;
     start_date: string;
     end_date: string;
+    start_time: string;
+    end_time: string;
     revision_note: string;
     eer_type: string;
     refund_reimburse_amount: number;
@@ -266,6 +270,8 @@ export default function Show() {
     usage_plan: '',
     start_date: '',
     end_date: '',
+    start_time: '08:00',
+    end_time: '17:00',
     revision_note: '',
     eer_type: 'refund',
     refund_reimburse_amount: 0,
@@ -586,6 +592,8 @@ export default function Show() {
       usage_plan: data.usage_plan ?? '',
       start_date: data.start_date ?? '',
       end_date: data.end_date ?? '',
+      start_time: data.start_time ?? '08:00',
+      end_time: data.end_time ?? '17:00',
       revision_note: '',
       eer_type: data.eer_type ?? 'refund',
       refund_reimburse_amount: data.refund_reimburse_amount ?? 0,
@@ -1167,13 +1175,19 @@ export default function Show() {
                       {data.start_date && (
                         <div>
                           <span className="text-muted-foreground text-xs block">{data.type === 'atr' ? 'Tanggal Penggunaan' : 'Tanggal Mulai'}</span>
-                          <span className="font-medium">{format(new Date(data.start_date), 'dd MMMM yyyy', { locale: localeId })}</span>
+                          <span className="font-medium">
+                            {format(new Date(data.start_date), 'dd MMMM yyyy', { locale: localeId })}
+                            {data.start_time && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">{data.start_time}</span>}
+                          </span>
                         </div>
                       )}
                       {data.end_date && data.type !== 'atr' && (
                         <div>
                           <span className="text-muted-foreground text-xs block">Tanggal Selesai</span>
-                          <span className="font-medium">{format(new Date(data.end_date), 'dd MMMM yyyy', { locale: localeId })}</span>
+                          <span className="font-medium">
+                            {format(new Date(data.end_date), 'dd MMMM yyyy', { locale: localeId })}
+                            {data.end_time && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">{data.end_time}</span>}
+                          </span>
                         </div>
                       )}
                     </div>

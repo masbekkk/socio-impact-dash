@@ -67,6 +67,8 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
         urgency: 'normal',
         start_date: '',
         end_date: '',
+        start_time: '08:00',
+        end_time: '17:00',
         replacement_pic_id: '',
     });
 
@@ -135,6 +137,16 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
             return;
         }
 
+        if (!formData.start_date || !formData.end_date) {
+            setErrors({ _general: ['Tanggal berangkat dan kembali wajib diisi.'] });
+            return;
+        }
+
+        if (!attachmentFile) {
+            setErrors({ _general: ['Dokumen pendukung wajib diunggah.'] });
+            return;
+        }
+
         const selected = projects.find(p => p.id === parseInt(formData.project_id));
         if (selected) {
             const remaining = (selected.allowance_budget ?? 0) - (selected.used_allowance_budget ?? 0);
@@ -157,6 +169,8 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
             approver_head_id: formData.approver_head_id,
             start_date: formData.start_date,
             end_date: formData.end_date,
+            start_time: formData.start_time,
+            end_time: formData.end_time,
             replacement_pic_id: formData.replacement_pic_id,
         });
     };
@@ -260,8 +274,8 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                                    <div className="space-y-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
+                                    <div className="space-y-2 lg:col-span-1 border-r pr-4">
                                         <Label htmlFor="start_date">Tanggal Berangkat <span className="text-red-500">*</span></Label>
                                         <DatePicker
                                             value={formData.start_date}
@@ -270,7 +284,18 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                                         />
                                         {errors.start_date && <p className="text-xs text-red-500">{errors.start_date[0]}</p>}
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 lg:col-span-1">
+                                        <Label htmlFor="start_time">Jam <span className="text-red-500">*</span></Label>
+                                        <Input
+                                            type="time"
+                                            id="start_time"
+                                            name="start_time"
+                                            value={formData.start_time}
+                                            onChange={handleChange}
+                                            className="h-10"
+                                        />
+                                    </div>
+                                    <div className="space-y-2 lg:col-span-1 border-r pr-4">
                                         <Label htmlFor="end_date">Tanggal Kembali <span className="text-red-500">*</span></Label>
                                         <DatePicker
                                             value={formData.end_date}
@@ -279,34 +304,23 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                                         />
                                         {errors.end_date && <p className="text-xs text-red-500">{errors.end_date[0]}</p>}
                                     </div>
-                                    <div className="bg-blue-50 text-blue-700 px-4 py-2.5 rounded-md flex items-center justify-between border border-blue-100 h-10">
+                                    <div className="space-y-2 lg:col-span-1">
+                                        <Label htmlFor="end_time">Jam <span className="text-red-500">*</span></Label>
+                                        <Input
+                                            type="time"
+                                            id="end_time"
+                                            name="end_time"
+                                            value={formData.end_time}
+                                            onChange={handleChange}
+                                            className="h-10"
+                                        />
+                                    </div>
+                                    <div className="bg-blue-50 text-blue-700 px-4 py-2.5 rounded-md flex items-center justify-between border border-blue-100 h-10 lg:col-span-1">
                                         <span className="text-sm font-medium">Durasi:</span>
                                         <span className="font-bold">{totalDays} Hari</span>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="replacement_pic_id">Pengganti PIC (Opsional)</Label>
-                                        <Select value={formData.replacement_pic_id} onValueChange={(val) => handleSelectChange('replacement_pic_id', val)}>
-                                            <SelectTrigger className="h-10">
-                                                <div className="flex items-center gap-2">
-                                                    <UserCheck className="h-4 w-4 text-muted-foreground" />
-                                                    <SelectValue placeholder="Pilih pengganti PIC" />
-                                                </div>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {users.map((u) => (
-                                                    <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.replacement_pic_id && <p className="text-xs text-red-500">{errors.replacement_pic_id[0]}</p>}
-                                    </div>
-                                    <div className="space-y-2">
-                                        {/* Removed Divisi Project from here since it moved up */}
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -332,7 +346,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                         {/* Dokumen Pendukung */}
                         <div className="p-6 md:p-8 bg-white">
                             <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-muted-foreground" /> Dokumen Pendukung (Opsional)
+                                <FileText className="h-5 w-5 text-muted-foreground" /> Dokumen Pendukung <span className="text-red-500">*</span>
                             </h3>
                             <p className="text-sm text-muted-foreground mb-6">Unggah dokumen pendukung untuk allowance.</p>
 

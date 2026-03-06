@@ -56,6 +56,8 @@ final readonly class CreateReimbursement
             'urgency' => $data['urgency'] ?? null,
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
+            'start_time' => $data['start_time'] ?? null,
+            'end_time' => $data['end_time'] ?? null,
             'replacement_pic_id' => $data['replacement_pic_id'] ?? null,
         ]);
     }
