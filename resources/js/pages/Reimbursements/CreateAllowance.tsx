@@ -61,8 +61,6 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
         divisi: '',
         pic_project: '',
         approver_head_id: '',
-        approver_hr_id: '',
-        approver_direktur_id: '',
         usage_plan: '',
         amount: 0,
         urgency: 'normal',
@@ -132,13 +130,8 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
             return;
         }
 
-        if (!formData.approver_head_id || !formData.approver_hr_id || !formData.approver_direktur_id) {
-            setErrors({ _general: ['Persetujuan (Head, HR, Direktur) wajib dipilih.'] });
-            return;
-        }
-
-        if (formData.amount <= 0) {
-            setErrors({ amount: ['Nominal pengajuan wajib diisi.'] });
+        if (!formData.approver_head_id) {
+            setErrors({ _general: ['Persetujuan Head wajib dipilih.'] });
             return;
         }
 
@@ -162,8 +155,6 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
             urgency: URGENCY_MAP[formData.urgency] ?? 'normal',
             documents,
             approver_head_id: formData.approver_head_id,
-            approver_hr_id: formData.approver_hr_id,
-            approver_direktur_id: formData.approver_direktur_id,
             start_date: formData.start_date,
             end_date: formData.end_date,
             replacement_pic_id: formData.replacement_pic_id,
@@ -261,21 +252,11 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                                         {errors.project_id && <p className="text-xs text-red-500 font-medium">{errors.project_id[0]}</p>}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="amount">Nominal Allowance <span className="text-red-500">*</span></Label>
+                                        <Label htmlFor="divisi">Divisi Project</Label>
                                         <div className="relative">
-                                            <Coins className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
-                                            <MoneyInput
-                                                id="amount"
-                                                value={formData.amount}
-                                                onValueChange={handleAmountChange}
-                                                className="h-10 pl-9"
-                                                placeholder="Contoh: 1.000.000"
-                                            />
+                                            <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input id="divisi" name="divisi" className="pl-9 h-10 bg-muted/30" value={formData.divisi} readOnly placeholder="Divisi project otomatis terisi" />
                                         </div>
-                                        {errors.amount && <p className="text-xs text-red-500 font-medium">{errors.amount[0]}</p>}
-                                        {budgetExceeded && (
-                                            <p className="text-xs text-red-600 font-medium mt-1">Nominal pengajuan melebihi batas pagu allowance proyek.</p>
-                                        )}
                                     </div>
                                 </div>
 
@@ -321,11 +302,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                                         {errors.replacement_pic_id && <p className="text-xs text-red-500">{errors.replacement_pic_id[0]}</p>}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="divisi">Divisi Project</Label>
-                                        <div className="relative">
-                                            <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                            <Input id="divisi" name="divisi" className="pl-9 h-10 bg-muted/30" value={formData.divisi} readOnly placeholder="Divisi project otomatis terisi" />
-                                        </div>
+                                        {/* Removed Divisi Project from here since it moved up */}
                                     </div>
                                 </div>
                             </div>
@@ -403,32 +380,6 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                                         </SelectTrigger>
                                         <SelectContent>
                                             {approvers['head']?.map((user) => (
-                                                <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="approver_hr_id">HR Approver <span className="text-red-500">*</span></Label>
-                                    <Select onValueChange={(val) => handleSelectChange('approver_hr_id', val)} value={formData.approver_hr_id}>
-                                        <SelectTrigger className="h-10">
-                                            <SelectValue placeholder="Pilih HR" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {approvers['hr']?.map((user) => (
-                                                <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="approver_direktur_id">Direktur Approver <span className="text-red-500">*</span></Label>
-                                    <Select onValueChange={(val) => handleSelectChange('approver_direktur_id', val)} value={formData.approver_direktur_id}>
-                                        <SelectTrigger className="h-10">
-                                            <SelectValue placeholder="Pilih Direktur" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {approvers['direktur']?.map((user) => (
                                                 <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
                                             ))}
                                         </SelectContent>

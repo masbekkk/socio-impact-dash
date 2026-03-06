@@ -11,7 +11,7 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
-class ProjectClosingController extends Controller
+final class ProjectClosingController extends Controller
 {
     public function close(Request $request, Project $project, CloseProject $closeProject): \Illuminate\Http\JsonResponse
     {

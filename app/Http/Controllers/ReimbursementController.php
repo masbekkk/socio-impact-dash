@@ -250,8 +250,25 @@ final class ReimbursementController
      */
     public function show(string $code): \Inertia\Response
     {
+        $projects = Project::select('id', 'name', 'code', 'operational_budget', 'allowance_budget', 'division_id', 'pic_id')
+            ->with(['division:id,name', 'pic:id,name'])
+            ->get()
+            ->map(fn ($project) => [
+                'id' => $project->id,
+                'name' => $project->name,
+                'code' => $project->code,
+                'operational_budget' => (float) $project->operational_budget,
+                'allowance_budget' => (float) $project->allowance_budget,
+                'division_name' => $project->division?->name ?? 'Tidak ada divisi',
+                'pic_name' => $project->pic?->name ?? 'Belum ada PIC',
+            ]);
+
+        $users = \App\Models\User::select('id', 'name')->get();
+
         return Inertia::render('Reimbursements/Show', [
             'code' => $code,
+            'projects' => $projects,
+            'users' => $users,
             'expenseTypes' => collect(\App\Enums\ExpenseType::cases())->map(fn ($type) => [
                 'value' => $type->value,
                 'label' => $type->value,

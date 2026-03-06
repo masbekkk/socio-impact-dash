@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -17,11 +19,11 @@ return new class extends Migration
         });
 
         // Initialize UUIDs for existing records
-        $projects = \Illuminate\Support\Facades\DB::table('projects')->whereNull('uuid')->get();
+        $projects = Illuminate\Support\Facades\DB::table('projects')->whereNull('uuid')->get();
         foreach ($projects as $project) {
-            \Illuminate\Support\Facades\DB::table('projects')
+            Illuminate\Support\Facades\DB::table('projects')
                 ->where('id', $project->id)
-                ->update(['uuid' => \Illuminate\Support\Str::uuid()->toString()]);
+                ->update(['uuid' => Illuminate\Support\Str::uuid()->toString()]);
         }
 
         // Make it unique and not nullable

@@ -108,6 +108,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
   const { auth } = usePage().props as unknown as { auth: any };
   const userRoles = auth?.user?.role_name || '';
   const isSuperadmin = userRoles.includes('superadmin');
+  const isHR = userRoles.includes('hr') && !isSuperadmin;
 
   const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -168,7 +169,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
       : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
-  const activeTab = filters.type || 'all';
+  const activeTab = filters.type || (isHR ? 'allowance' : 'all');
   const { data, current_page, last_page, total, from, to } = reimbursements;
 
   return (
@@ -234,9 +235,13 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <Tabs value={activeTab} onValueChange={(v) => navigate({ type: v === 'all' ? '' : v, page: 1 })} className="w-full md:w-auto">
                   <TabsList>
-                    <TabsTrigger value="all">Semua</TabsTrigger>
-                    <TabsTrigger value="atr">ATR</TabsTrigger>
-                    <TabsTrigger value="eer">EER</TabsTrigger>
+                    {!isHR && (
+                      <>
+                        <TabsTrigger value="all">Semua</TabsTrigger>
+                        <TabsTrigger value="atr">ATR</TabsTrigger>
+                        <TabsTrigger value="eer">EER</TabsTrigger>
+                      </>
+                    )}
                     <TabsTrigger value="allowance">Allowance</TabsTrigger>
                   </TabsList>
                 </Tabs>

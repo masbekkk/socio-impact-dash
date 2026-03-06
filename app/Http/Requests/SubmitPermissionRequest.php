@@ -8,7 +8,7 @@ use App\Enums\PresenceStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
-class SubmitPermissionRequest extends FormRequest
+final class SubmitPermissionRequest extends FormRequest
 {
     public function authorize(): bool
     {

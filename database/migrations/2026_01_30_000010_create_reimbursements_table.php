@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\ReimbursementStatus;
 use App\Enums\ReimbursementType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -27,7 +26,7 @@ return new class extends Migration
             $table->timestamp('transferred_at')->nullable();
             $table->string('transfer_proof_path')->nullable();
             $table->text('rejection_reason')->nullable();
-            $table->text('usage_plan')->nullable(); 
+            $table->text('usage_plan')->nullable();
             $table->enum('urgency', ['rendah', 'normal', 'tinggi', 'mendesak'])->nullable();
             $table->timestamps();
         });

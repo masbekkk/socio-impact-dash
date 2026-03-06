@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,12 +17,12 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('notification_id')
-                  ->constrained('notifications')
-                  ->cascadeOnDelete();
+                ->constrained('notifications')
+                ->cascadeOnDelete();
 
             $table->foreignId('user_id')
-                  ->constrained('users')
-                  ->cascadeOnDelete();
+                ->constrained('users')
+                ->cascadeOnDelete();
 
             // delivery
             $table->string('channel', 50); // email, whatsapp

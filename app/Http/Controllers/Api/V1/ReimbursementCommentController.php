@@ -9,6 +9,7 @@ use App\Models\Reimbursement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Throwable;
 
 final class ReimbursementCommentController extends Controller
 {
@@ -21,7 +22,7 @@ final class ReimbursementCommentController extends Controller
 
             $reimbursement = Reimbursement::where('code', $code)->firstOrFail();
 
-            if ($reimbursement->user_id !== $request->user()->id && !$request->user()->hasAnyRole(['head', 'finance', 'direktur', 'superadmin'])) {
+            if ($reimbursement->user_id !== $request->user()->id && ! $request->user()->hasAnyRole(['head', 'finance', 'direktur', 'superadmin'])) {
                 return JsonResponseFormatter::error('Unauthorized', 403);
             }
 
@@ -40,7 +41,7 @@ final class ReimbursementCommentController extends Controller
                 ],
                 'Komentar berhasil ditambahkan'
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }
     }

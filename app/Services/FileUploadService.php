@@ -7,9 +7,8 @@ namespace App\Services;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-class FileUploadService
+final class FileUploadService
 {
-
     public function uploadFile(UploadedFile $file, string $storagePath, string $disk = 'public'): array
     {
         return [
@@ -23,16 +22,16 @@ class FileUploadService
     public function uploadFileWithPrefix(UploadedFile $file, string $storagePath, string $prefix = '', string $disk = 'public'): array
     {
         $metadata = $this->uploadFile($file, $storagePath, $disk);
-        
+
         if (empty($prefix)) {
             return $metadata;
         }
 
         return [
-            $prefix . 'path' => $metadata['path'],
-            $prefix . 'original_name' => $metadata['original_name'],
-            $prefix . 'mime' => $metadata['mime'],
-            $prefix . 'size' => $metadata['size'],
+            $prefix.'path' => $metadata['path'],
+            $prefix.'original_name' => $metadata['original_name'],
+            $prefix.'mime' => $metadata['mime'],
+            $prefix.'size' => $metadata['size'],
         ];
     }
 
@@ -45,16 +44,17 @@ class FileUploadService
         return Storage::disk($disk)->delete($filePath);
     }
 
-
     public function replaceFile(UploadedFile $newFile, ?string $oldFilePath, string $storagePath, string $disk = 'public'): array
     {
         $this->deleteFile($oldFilePath, $disk);
+
         return $this->uploadFile($newFile, $storagePath, $disk);
     }
 
     public function replaceFileWithPrefix(UploadedFile $newFile, ?string $oldFilePath, string $storagePath, string $prefix = '', string $disk = 'public'): array
     {
         $this->deleteFile($oldFilePath, $disk);
+
         return $this->uploadFileWithPrefix($newFile, $storagePath, $prefix, $disk);
     }
 }

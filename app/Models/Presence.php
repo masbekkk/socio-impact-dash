@@ -19,19 +19,19 @@ final class Presence extends Model
         'user_id',
         'project_id',
         'activity',
-        'date', 
-        'status', 
-        'check_in_at', 
-        'check_out_at', 
-        'check_in_latitude', 
+        'date',
+        'status',
+        'check_in_at',
+        'check_out_at',
+        'check_in_latitude',
         'check_in_longitude',
-        'check_out_latitude', 
+        'check_out_latitude',
         'check_out_longitude',
-        'photo_path', 
+        'photo_path',
         'attachment_path',
-        'notes'
+        'notes',
     ];
-    
+
     protected $appends = [
         'image_url',
     ];

@@ -206,7 +206,22 @@ const URGENCY_LABELS: Record<string, { label: string; variant: 'destructive' | '
 const APPROVABLE_STATUSES = ['submitted', 'head_approved', 'hr_approved', 'finance_approved'];
 
 export default function Show() {
-  const { code, auth, expenseTypes = [] } = usePage().props as unknown as { code: string; auth: any; expenseTypes?: { value: string; label: string }[] };
+  const {
+    code,
+    auth,
+    expenseTypes = [],
+    projects: propsProjects = [],
+    users: propsUsers = []
+  } = usePage().props as unknown as {
+    code: string;
+    auth: any;
+    expenseTypes?: { value: string; label: string }[];
+    projects?: { id: number; name: string; code: string; division_name: string; pic_name: string }[];
+    users?: { id: number; name: string }[];
+  };
+
+  const [projects, setProjects] = useState(propsProjects);
+  const [users, setUsers] = useState(propsUsers);
   const userRole = auth?.user?.role_name || 'pegawai';
   const userId = auth?.user?.id || 0;
 
@@ -231,6 +246,9 @@ export default function Show() {
 
   const [revisionEditing, setRevisionEditing] = useState(false);
   const [revisionForm, setRevisionForm] = useState<{
+    project_id: string;
+    replacement_pic_id: string;
+    urgency: string;
     usage_plan: string;
     start_date: string;
     end_date: string;
@@ -240,6 +258,9 @@ export default function Show() {
     selected_activities: SelectedActivityRevision[];
     eer_items: EerItemRevision[];
   }>({
+    project_id: '',
+    replacement_pic_id: '',
+    urgency: 'normal',
     usage_plan: '',
     start_date: '',
     end_date: '',
@@ -273,6 +294,8 @@ export default function Show() {
       setLoading(true);
       const response = await axios.get(`/api/v1/reimbursements/${code}`);
       setData(response.data.data);
+      if (response.data.projects) setProjects(response.data.projects);
+      if (response.data.users) setUsers(response.data.users);
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 404) {
         setError('Data pengajuan tidak ditemukan.');
@@ -551,6 +574,9 @@ export default function Show() {
     }
 
     setRevisionForm({
+      project_id: data.project?.id?.toString() ?? '',
+      replacement_pic_id: '', // Unfortunately we don't have this in ReimbursementDetail right now, so we start empty.
+      urgency: data.urgency ?? 'normal',
       usage_plan: data.usage_plan ?? '',
       start_date: data.start_date ?? '',
       end_date: data.end_date ?? '',
@@ -641,6 +667,13 @@ export default function Show() {
       const items: any[] = [];
       const selected_budget_details: any[] = [];
 
+      const payload: any = {
+        action: 'revision',
+        ...(revisionForm.project_id && { project_id: revisionForm.project_id }),
+        ...(revisionForm.replacement_pic_id && { replacement_pic_id: revisionForm.replacement_pic_id }),
+        ...(revisionForm.urgency && { urgency: revisionForm.urgency }),
+      };
+
       if (data.type === 'eer') {
         // Flat EER processing
         const totalsByActivity: Record<number, number> = {};
@@ -692,19 +725,27 @@ export default function Show() {
         });
       }
 
-      const payload: any = {
+      const resubmitData = {
+        action: 'revision',
         type: data.type,
+        ...(revisionForm.project_id && { project_id: revisionForm.project_id }),
+        ...(revisionForm.replacement_pic_id && { replacement_pic_id: revisionForm.replacement_pic_id }),
+        ...(revisionForm.urgency && { urgency: revisionForm.urgency }),
         usage_plan: revisionForm.usage_plan,
         start_date: revisionForm.start_date || null,
         end_date: revisionForm.end_date || null,
         revision_note: revisionForm.revision_note || 'Pengajuan telah direvisi dan diajukan kembali.',
-        items,
-        selected_budget_details,
         eer_type: data.type === 'eer' ? revisionForm.eer_type : undefined,
         refund_reimburse_amount: data.type === 'eer' ? revisionForm.refund_reimburse_amount : undefined,
       };
 
-      await resubmitReimbursement(data.code, payload);
+      if (data.type === 'eer') {
+        Object.assign(resubmitData, { items });
+      } else {
+        Object.assign(resubmitData, { selected_budget_details, items });
+      }
+
+      await resubmitReimbursement(data.code, resubmitData);
 
       setRevisionEditing(false);
       await fetchDetail();
@@ -1143,13 +1184,75 @@ export default function Show() {
                     </div>
                     {revisionEditing && (
                       <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
+                        {/* General Information Revision */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {(data.type === 'atr' || data.type === 'allowance') && (
+                            <div className="space-y-4 md:col-span-full">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-semibold uppercase tracking-tight text-slate-500">Project</Label>
+                                  <Select
+                                    value={revisionForm.project_id || 'none'}
+                                    onValueChange={(v) => setRevisionForm({ ...revisionForm, project_id: v === 'none' ? '' : v })}
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Pilih Project" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">-- Pilih Project --</SelectItem>
+                                      {projects.map(p => (
+                                        <SelectItem key={p.id} value={p.id.toString()}>{p.code} - {p.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-semibold uppercase tracking-tight text-slate-500">Pengganti PIC (Opsional)</Label>
+                                  <Select
+                                    value={revisionForm.replacement_pic_id || 'none'}
+                                    onValueChange={(v) => setRevisionForm({ ...revisionForm, replacement_pic_id: v === 'none' ? '' : v })}
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Pilih Pengganti PIC" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">-- Kosongkan --</SelectItem>
+                                      {users.map(u => (
+                                        <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-sm font-semibold uppercase tracking-tight text-slate-500">Urgensi</Label>
+                                <RadioGroup
+                                  className="flex space-x-4 mt-1"
+                                  value={revisionForm.urgency}
+                                  onValueChange={(v) => setRevisionForm({ ...revisionForm, urgency: v })}
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="normal" id="rev-urgency-normal" />
+                                    <Label htmlFor="rev-urgency-normal" className="font-normal">Normal</Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="tinggi" id="rev-urgency-tinggi" />
+                                    <Label htmlFor="rev-urgency-tinggi" className="font-normal">Tinggi</Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="mendesak" id="rev-urgency-mendesak" />
+                                    <Label htmlFor="rev-urgency-mendesak" className="font-normal text-red-600">Mendesak</Label>
+                                  </div>
+                                </RadioGroup>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-2 md:col-span-full">
                             <Label className="text-xs font-medium">Tanggal Penggunaan</Label>
                             <Input
                               type="date"
                               className="h-9 text-sm"
-                              value={revisionForm.start_date}
                               onChange={(e) => setRevisionForm(p => ({ ...p, start_date: e.target.value }))}
                             />
                           </div>
@@ -1205,13 +1308,14 @@ export default function Show() {
                                           PILIH KEGIATAN <span className="text-red-500">*</span>
                                         </Label>
                                         <Select
-                                          value={item.project_budget_detail_id?.toString() || ''}
-                                          onValueChange={(v) => updateItemEerRevision(item.id, 'project_budget_detail_id', parseInt(v))}
+                                          value={item.project_budget_detail_id?.toString() || 'none'}
+                                          onValueChange={(v) => updateItemEerRevision(item.id, 'project_budget_detail_id', v === 'none' ? null : parseInt(v))}
                                         >
                                           <SelectTrigger className="h-8 text-xs bg-slate-50 border-slate-200">
                                             <SelectValue placeholder="Pilih kegiatan..." />
                                           </SelectTrigger>
                                           <SelectContent>
+                                            <SelectItem value="none">Pilih kegiatan...</SelectItem>
                                             {data.atr_budget_selecteds?.map(act => (
                                               <SelectItem key={act.project_budget_detail_id} value={act.project_budget_detail_id.toString()}>
                                                 {act.activity_name || 'Kegiatan'}
@@ -1401,7 +1505,7 @@ export default function Show() {
                                                         <SelectValue placeholder="Pilih..." />
                                                       </SelectTrigger>
                                                       <SelectContent>
-                                                        {expenseTypes.map(et => (
+                                                        {expenseTypes.filter(et => et.value !== '').map(et => (
                                                           <SelectItem key={et.value} value={et.value}>{et.label}</SelectItem>
                                                         ))}
                                                       </SelectContent>
@@ -1467,10 +1571,10 @@ export default function Show() {
 
                                 <div className="space-y-1">
                                   <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nominal {revisionForm.eer_type === 'refund' ? 'Refund' : 'Reimburse'}</Label>
-                                  <MoneyInput
-                                    value={revisionForm.refund_reimburse_amount}
-                                    onValueChange={(v) => setRevisionForm(p => ({ ...p, refund_reimburse_amount: v.floatValue || 0 }))}
-                                    className="h-9 text-sm font-bold text-blue-700"
+                                  <Textarea
+                                    value={revisionForm.usage_plan}
+                                    onChange={(e) => setRevisionForm(p => ({ ...p, usage_plan: e.target.value }))}
+                                    placeholder="Update rencana penggunaan..."
                                   />
                                 </div>
                               </div>
@@ -1927,12 +2031,12 @@ export default function Show() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </div >
 
           {/* Sidebar Info */}
-          <div className="space-y-6">
+          < div className="space-y-6" >
             {/* Employee Card */}
-            <Card>
+            < Card >
               <CardHeader>
                 <CardTitle className="text-base">Informasi Karyawan</CardTitle>
               </CardHeader>
@@ -1947,49 +2051,51 @@ export default function Show() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card >
 
             {/* Approvers Card */}
-            {data.approvals && data.approvals.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Daftar Approver</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {data.approvals.map((approval) => (
-                    <div key={approval.id} className="flex flex-col gap-1 pb-3 border-b last:border-0 last:pb-0">
-                      <div className="flex justify-between items-start">
-                        <div className="text-xs text-muted-foreground uppercase font-medium">{approval.role}</div>
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] px-1.5 py-0 h-4 ${approval.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
-                            approval.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                              approval.status === 'revision' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                approval.status === 'revised' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                  'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}
-                        >
-                          {approval.status === 'revised' ? 'sudah direvisi' : approval.status}
-                        </Badge>
-                      </div>
-                      <div className="text-sm font-medium flex items-center gap-2">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        {('approver_name' in approval) ? String(approval.approver_name) : '-'}
-                      </div>
-                      {approval.approved_at && (
-                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3 text-green-600" />
-                          {format(new Date(approval.approved_at), 'dd MMM yyyy, HH:mm', { locale: localeId })}
+            {
+              data.approvals && data.approvals.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Daftar Approver</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {data.approvals.map((approval) => (
+                      <div key={approval.id} className="flex flex-col gap-1 pb-3 border-b last:border-0 last:pb-0">
+                        <div className="flex justify-between items-start">
+                          <div className="text-xs text-muted-foreground uppercase font-medium">{approval.role}</div>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] px-1.5 py-0 h-4 ${approval.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                              approval.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                                approval.status === 'revision' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                  approval.status === 'revised' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                    'bg-slate-50 text-slate-600 border-slate-200'
+                              }`}
+                          >
+                            {approval.status === 'revised' ? 'sudah direvisi' : approval.status}
+                          </Badge>
                         </div>
-                      )}
-                      {approval.notes && (
-                        <div className="text-xs text-muted-foreground mt-1 italic bg-muted/40 p-2 rounded border">"{approval.notes}"</div>
-                      )}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
+                        <div className="text-sm font-medium flex items-center gap-2">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          {('approver_name' in approval) ? String(approval.approver_name) : '-'}
+                        </div>
+                        {approval.approved_at && (
+                          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            {format(new Date(approval.approved_at), 'dd MMM yyyy, HH:mm', { locale: localeId })}
+                          </div>
+                        )}
+                        {approval.notes && (
+                          <div className="text-xs text-muted-foreground mt-1 italic bg-muted/40 p-2 rounded border">"{approval.notes}"</div>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )
+            }
 
             {/* Summary Card */}
             <Card>
@@ -2032,7 +2138,8 @@ export default function Show() {
       </div>
 
       {/* Approve Dialog */}
-      <Dialog open={approveDialogOpen} onOpenChange={(open) => { if (!open) resetApproveDialog(); }}>
+      < Dialog open={approveDialogOpen} onOpenChange={(open) => { if (!open) resetApproveDialog(); }
+      }>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-700">
@@ -2059,10 +2166,10 @@ export default function Show() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Reject Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open) resetRejectDialog(); }}>
+      < Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open) resetRejectDialog(); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-700">
@@ -2101,10 +2208,10 @@ export default function Show() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Revisi Dialog */}
-      <Dialog open={revisiDialogOpen} onOpenChange={(open) => { if (!open) resetRevisiDialog(); }}>
+      < Dialog open={revisiDialogOpen} onOpenChange={(open) => { if (!open) resetRevisiDialog(); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-orange-700">
@@ -2142,10 +2249,10 @@ export default function Show() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Transfer Dialog */}
-      <Dialog open={transferDialogOpen} onOpenChange={(open) => { if (!open) resetTransferDialog(); }}>
+      < Dialog open={transferDialogOpen} onOpenChange={(open) => { if (!open) resetTransferDialog(); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-700">
@@ -2188,7 +2295,7 @@ export default function Show() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-    </AppSidebarLayout>
+      </Dialog >
+    </AppSidebarLayout >
   );
 }

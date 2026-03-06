@@ -12,6 +12,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 final class ProcessProjectDocumentUpload implements ShouldQueue
 {
@@ -69,7 +70,7 @@ final class ProcessProjectDocumentUpload implements ShouldQueue
             $tempDisk->delete($document->temp_path);
 
             Log::info("ProcessProjectDocumentUpload: Document #{$this->documentId} uploaded successfully to {$finalPath}");
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error("ProcessProjectDocumentUpload: Failed for document #{$this->documentId}: {$e->getMessage()}");
             $document->update(['upload_status' => 'failed']);
 
@@ -77,7 +78,7 @@ final class ProcessProjectDocumentUpload implements ShouldQueue
         }
     }
 
-    public function failed(\Throwable $exception): void
+    public function failed(Throwable $exception): void
     {
         $document = ProjectDocument::find($this->documentId);
         $document?->update(['upload_status' => 'failed']);

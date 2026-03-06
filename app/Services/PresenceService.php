@@ -8,46 +8,47 @@ use App\Enums\PresenceStatus;
 use App\Models\Presence;
 use App\Models\User;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
-class PresenceService
+final class PresenceService
 {
     public function __construct(
         private FileUploadService $fileUploadService
     ) {}
 
-
     public function checkIn(User $user, array $data): Presence
     {
         return DB::transaction(function () use ($user, $data) {
             $today = Carbon::today();
-            
+
             $existingPresence = $this->getTodayPresence($user);
             if ($existingPresence && $existingPresence->check_in_at) {
-                throw new \Exception('Anda sudah melakukan check-in hari ini.');
+                throw new Exception('Anda sudah melakukan check-in hari ini.');
             }
 
             $presenceData = $this->buildCheckInData($user, $data, $today);
-            
-            if (!empty($data['photo']) && $data['photo'] instanceof UploadedFile) {
+
+            if (! empty($data['photo']) && $data['photo'] instanceof UploadedFile) {
                 $presenceData['photo_path'] = $this->uploadPresencePhoto(
-                    $data['photo'], 
-                    $user->id, 
+                    $data['photo'],
+                    $user->id,
                     'check_in'
                 );
             }
 
-            if (!empty($data['attachment']) && $data['attachment'] instanceof UploadedFile) {
+            if (! empty($data['attachment']) && $data['attachment'] instanceof UploadedFile) {
                 $presenceData['attachment_path'] = $this->uploadAttachment(
-                    $data['attachment'], 
+                    $data['attachment'],
                     $user->id
                 );
             }
 
             if ($existingPresence) {
                 $existingPresence->update($presenceData);
+
                 return $existingPresence->fresh();
             }
 
@@ -55,24 +56,23 @@ class PresenceService
         });
     }
 
-
     public function checkOut(User $user, array $data): Presence
     {
         return DB::transaction(function () use ($user, $data) {
             $presence = $this->getTodayPresence($user);
-            
-            if (!$presence) {
-                throw new \Exception('Anda belum melakukan check-in hari ini.');
+
+            if (! $presence) {
+                throw new Exception('Anda belum melakukan check-in hari ini.');
             }
-            
+
             if ($presence->check_out_at) {
-                throw new \Exception('Anda sudah melakukan check-out hari ini.');
+                throw new Exception('Anda sudah melakukan check-out hari ini.');
             }
 
             $checkOutData = $this->buildCheckOutData($data);
-            
+
             $presence->update($checkOutData);
-            
+
             return $presence->fresh();
         });
     }
@@ -81,10 +81,10 @@ class PresenceService
     {
         return DB::transaction(function () use ($user, $data) {
             $date = Carbon::parse($data['date']);
-            
+
             $existingPresence = $this->getPresenceByDate($user, $date);
             if ($existingPresence) {
-                throw new \Exception('Sudah ada data absensi untuk tanggal tersebut.');
+                throw new Exception('Sudah ada data absensi untuk tanggal tersebut.');
             }
 
             $presenceData = [
@@ -94,9 +94,9 @@ class PresenceService
                 'notes' => $data['notes'] ?? null,
             ];
 
-            if (!empty($data['attachment']) && $data['attachment'] instanceof UploadedFile) {
+            if (! empty($data['attachment']) && $data['attachment'] instanceof UploadedFile) {
                 $presenceData['attachment_path'] = $this->uploadAttachment(
-                    $data['attachment'], 
+                    $data['attachment'],
                     $user->id
                 );
             }
@@ -127,23 +127,23 @@ class PresenceService
             $query->where('user_id', $user->id);
         }
 
-        if (!empty($filters['start_date'])) {
+        if (! empty($filters['start_date'])) {
             $query->whereDate('date', '>=', $filters['start_date']);
         }
 
-        if (!empty($filters['end_date'])) {
+        if (! empty($filters['end_date'])) {
             $query->whereDate('date', '<=', $filters['end_date']);
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['month'])) {
+        if (! empty($filters['month'])) {
             $query->whereMonth('date', $filters['month']);
         }
 
-        if (!empty($filters['year'])) {
+        if (! empty($filters['year'])) {
             $query->whereYear('date', $filters['year']);
         }
 
@@ -170,7 +170,6 @@ class PresenceService
         ];
     }
 
-
     private function buildCheckInData(User $user, array $data, Carbon $today): array
     {
         $checkInTime = Carbon::now();
@@ -188,6 +187,7 @@ class PresenceService
             'notes' => $data['notes'] ?? null,
         ];
     }
+
     private function buildCheckOutData(array $data): array
     {
         return [
@@ -206,13 +206,13 @@ class PresenceService
 
         $configTime = config('presence.check_in_time', '09:00');
         $tolerance = config('presence.tolerance_minutes', 15);
-        
+
         [$hour, $minute] = explode(':', $configTime);
-        
+
         $lateThreshold = Carbon::today()
             ->setTime((int) $hour, (int) $minute, 0)
             ->addMinutes($tolerance);
-        
+
         if ($checkInTime->gt($lateThreshold)) {
             return PresenceStatus::Late;
         }
@@ -224,6 +224,7 @@ class PresenceService
     {
         $storagePath = "presences/{$userId}/{$type}";
         $metadata = $this->fileUploadService->uploadFile($file, $storagePath);
+
         return $metadata['path'];
     }
 
@@ -231,6 +232,7 @@ class PresenceService
     {
         $storagePath = "presences/{$userId}/attachments";
         $metadata = $this->fileUploadService->uploadFile($file, $storagePath);
+
         return $metadata['path'];
     }
 }

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class ProjectBudgetDetail extends Model
+final class ProjectBudgetDetail extends Model
 {
     use HasFactory;
 
@@ -24,17 +24,6 @@ class ProjectBudgetDetail extends Model
         'notes',
         'created_by',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'quantity' => 'integer',
-            'item_price' => 'float',
-            'amount' => 'float',
-            'amount_pelaksanaan' => 'float',
-            'amount_proposal' => 'float',
-        ];
-    }
 
     /**
      * Get the project that owns the budget detail.
@@ -68,7 +57,7 @@ class ProjectBudgetDetail extends Model
         return (float) $this->reimbursementItems()
             ->whereHas('reimbursement', function ($q) {
                 $q->where('type', 'atr')
-                  ->whereNotIn('status', ['rejected', 'draft']);
+                    ->whereNotIn('status', ['rejected', 'draft']);
             })
             ->whereNull('parent_item_id')
             ->sum('amount');
@@ -80,7 +69,18 @@ class ProjectBudgetDetail extends Model
     public function getRemainingAmountAttribute(): float
     {
         $base = $this->amount_pelaksanaan > 0 ? $this->amount_pelaksanaan : $this->amount;
+
         return max(0, $base - $this->used_amount);
     }
-}
 
+    protected function casts(): array
+    {
+        return [
+            'quantity' => 'integer',
+            'item_price' => 'float',
+            'amount' => 'float',
+            'amount_pelaksanaan' => 'float',
+            'amount_proposal' => 'float',
+        ];
+    }
+}

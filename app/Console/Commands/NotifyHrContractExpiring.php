@@ -36,6 +36,7 @@ final class NotifyHrContractExpiring extends Command
 
         if ($expiringUsers->isEmpty()) {
             $this->info('No contracts expiring exactly 1 month from today.');
+
             return;
         }
 
@@ -43,6 +44,7 @@ final class NotifyHrContractExpiring extends Command
 
         if ($hrUsers->isEmpty()) {
             $this->warn('Contracts are expiring, but no users with the HR role were found.');
+
             return;
         }
 

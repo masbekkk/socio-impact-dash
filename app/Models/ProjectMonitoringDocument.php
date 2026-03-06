@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ProjectMonitoringDocument extends Model
+final class ProjectMonitoringDocument extends Model
 {
     protected $fillable = [
         'project_monitoring_id',
@@ -18,16 +20,6 @@ class ProjectMonitoringDocument extends Model
         'temp_path',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'id' => 'integer',
-            'project_monitoring_id' => 'integer',
-            'size' => 'integer',
-            'upload_status' => 'string',
-        ];
-    }
-
     protected $appends = ['url'];
 
     public function monitoring(): BelongsTo
@@ -38,5 +30,15 @@ class ProjectMonitoringDocument extends Model
     public function getUrlAttribute(): string
     {
         return \Illuminate\Support\Facades\Storage::url($this->path);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'id' => 'integer',
+            'project_monitoring_id' => 'integer',
+            'size' => 'integer',
+            'upload_status' => 'string',
+        ];
     }
 }

@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
-class LetterDivisionController
+final class LetterDivisionController
 {
     /**
      * Display a listing of the resource.
@@ -13,6 +15,7 @@ class LetterDivisionController
     public function index(): JsonResponse
     {
         $divisions = \App\Models\LetterDivision::all();
+
         return \App\Formatters\JsonResponseFormatter::success(
             \App\Http\Resources\V1\LetterDivision\LetterDivisionResource::collection($divisions)
         );
@@ -43,7 +46,7 @@ class LetterDivisionController
     {
         $division = \App\Models\LetterDivision::find($id);
 
-        if (!$division) {
+        if (! $division) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Division tidak ditemukan.');
         }
 
@@ -59,12 +62,12 @@ class LetterDivisionController
     {
         $division = \App\Models\LetterDivision::find($id);
 
-        if (!$division) {
+        if (! $division) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Division tidak ditemukan.');
         }
 
         $validated = $request->validate([
-            'code' => 'required|string|unique:letter_divisions,code,' . $division->id,
+            'code' => 'required|string|unique:letter_divisions,code,'.$division->id,
             'description' => 'nullable|string',
         ]);
 
@@ -83,7 +86,7 @@ class LetterDivisionController
     {
         $division = \App\Models\LetterDivision::find($id);
 
-        if (!$division) {
+        if (! $division) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Division tidak ditemukan.');
         }
 

@@ -8,8 +8,6 @@ use App\Enums\UserRole;
 use App\Models\Project;
 use App\Models\ProjectEvent;
 use App\Models\User;
-use App\Policies\ProjectEventPolicy;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Collection;
 
 final readonly class GetCalendarEvents

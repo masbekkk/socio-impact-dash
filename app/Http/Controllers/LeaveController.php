@@ -44,8 +44,6 @@ final class LeaveController
         return Inertia::render('Leave/Index');
     }
 
-
-
     /**
      * Store a newly created resource in storage.
      */
@@ -63,10 +61,10 @@ final class LeaveController
 
         return Inertia::render('Leave/Show', [
             'leaveCode' => $code,
-            'authUser'  => [
-                'id'          => $user->id,
+            'authUser' => [
+                'id' => $user->id,
                 'can_approve' => $user->can('approve_leaves'),
-                'can_reject'  => $user->can('reject_leaves'),
+                'can_reject' => $user->can('reject_leaves'),
             ],
         ]);
     }
@@ -108,15 +106,15 @@ final class LeaveController
 
         return [
             'authUser' => [
-                'name'          => $user->name,
-                'nip'           => $user->nip ?? '-',
-                'email'         => $user->email,
+                'name' => $user->name,
+                'nip' => $user->nip ?? '-',
+                'email' => $user->email,
                 'division_name' => $user->division?->name ?? '-',
-                'position'      => $user->getRoleNames()->first() ?? '-',
-                'join_date'     => $user->created_at?->format('Y-m-d') ?? '-',
+                'position' => $user->getRoleNames()->first() ?? '-',
+                'join_date' => $user->created_at?->format('Y-m-d') ?? '-',
             ],
             'projects' => $projects,
-            'users'    => $users,
+            'users' => $users,
         ];
     }
 }

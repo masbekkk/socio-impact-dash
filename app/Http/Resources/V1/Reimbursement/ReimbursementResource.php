@@ -166,17 +166,18 @@ final class ReimbursementResource extends JsonResource
         $isHeadRole = $user->hasRole('head');
         $isFinanceRole = $user->hasRole('finance');
         $isDirekturRole = $user->hasRole('direktur');
+        $isHrRole = $user->hasRole('hr');
 
         // If user is ONLY a Head (not Finance/Direktur), check assignment or creator
-        if ($isHeadRole && ! $isFinanceRole && ! $isDirekturRole) {
+        if ($isHeadRole && ! $isFinanceRole && ! $isDirekturRole && ! $isHrRole) {
             $isAssigned = $this->approvals->where('approver_id', $user->id)->where('role', 'head')->isNotEmpty();
             if (! $isAssigned && ! $isCreator) {
                 return false;
             }
         }
 
-        // If user is the creator but NOT a head/finance/direktur, they definitely can't approve
-        if ($isCreator && ! $isHeadRole && ! $isFinanceRole && ! $isDirekturRole) {
+        // If user is the creator but NOT a head/finance/direktur/hr, they definitely can't approve
+        if ($isCreator && ! $isHeadRole && ! $isFinanceRole && ! $isDirekturRole && ! $isHrRole) {
             return false;
         }
 

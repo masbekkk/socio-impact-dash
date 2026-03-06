@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Resources\V1\LetterCode;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class LetterCodeResource extends JsonResource
+final class LetterCodeResource extends JsonResource
 {
     /**
      * Transform the resource into an array.

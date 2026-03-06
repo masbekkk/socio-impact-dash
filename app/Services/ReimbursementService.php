@@ -8,39 +8,44 @@ use App\Models\Reimbursement;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class ReimbursementService
+final class ReimbursementService
 {
     public function listReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
-    {   
-
-
+    {
         $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver']);
 
-        if (!$user->hasAnyPermission(['approve_reimbursements', 'reject_reimbursements'])) {
+        if (! $user->hasAnyPermission(['approve_reimbursements', 'reject_reimbursements'])) {
             $query->where('user_id', $user->id);
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['type'])) {
-            $query->where('type', $filters['type']);
+        if (! empty($filters['type'])) {
+            if ($user->hasRole('hr')) {
+                $query->where('type', 'allowance');
+            } else {
+                $query->where('type', $filters['type']);
+            }
+        }
+        if ($user->hasRole('hr')) {
+            $query->where('type', 'allowance');
         }
 
-        if (!empty($filters['project_id'])) {
+        if (! empty($filters['project_id'])) {
             $query->where('project_id', $filters['project_id']);
         }
 
-        if (!empty($filters['start_date'])) {
+        if (! empty($filters['start_date'])) {
             $query->whereDate('created_at', '>=', $filters['start_date']);
         }
 
-        if (!empty($filters['end_date'])) {
+        if (! empty($filters['end_date'])) {
             $query->whereDate('created_at', '<=', $filters['end_date']);
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")

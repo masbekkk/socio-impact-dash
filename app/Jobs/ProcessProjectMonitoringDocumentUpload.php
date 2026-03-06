@@ -12,12 +12,14 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 final class ProcessProjectMonitoringDocumentUpload implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $backoff = 30;
 
     public function __construct(
@@ -32,6 +34,7 @@ final class ProcessProjectMonitoringDocumentUpload implements ShouldQueue
 
         if (! $document || ! $document->temp_path) {
             Log::warning("ProcessProjectMonitoringDocumentUpload: Document #{$this->documentId} not found or no temp_path.");
+
             return;
         }
 
@@ -44,6 +47,7 @@ final class ProcessProjectMonitoringDocumentUpload implements ShouldQueue
             if (! $tempDisk->exists($document->temp_path)) {
                 Log::error("ProcessProjectMonitoringDocumentUpload: Temp file not found at {$document->temp_path}");
                 $document->update(['upload_status' => 'failed']);
+
                 return;
             }
 
@@ -65,14 +69,14 @@ final class ProcessProjectMonitoringDocumentUpload implements ShouldQueue
 
             $tempDisk->delete($document->temp_path);
             Log::info("ProcessProjectMonitoringDocumentUpload: Monitoring Document #{$this->documentId} uploaded successfully to {$finalPath}");
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error("ProcessProjectMonitoringDocumentUpload: Failed for document #{$this->documentId}: {$e->getMessage()}");
             $document->update(['upload_status' => 'failed']);
             throw $e;
         }
     }
 
-    public function failed(\Throwable $exception): void
+    public function failed(Throwable $exception): void
     {
         $document = ProjectMonitoringDocument::find($this->documentId);
         $document?->update(['upload_status' => 'failed']);

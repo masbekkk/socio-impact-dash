@@ -7,13 +7,13 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\LetterRequest;
 use App\Models\Project;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class LetterRequestController extends Controller
+final class LetterRequestController extends Controller
 {
     public function index(): Response
     {
