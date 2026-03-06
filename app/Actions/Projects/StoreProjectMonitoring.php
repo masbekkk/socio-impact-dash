@@ -26,7 +26,7 @@ final class StoreProjectMonitoring
             // Handle Attachments
             if (isset($data['documents']) && is_array($data['documents'])) {
                 foreach ($data['documents'] as $doc) {
-                    if (isset($doc['file']) && $doc['file'] instanceof UploadedFile) {
+                    if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
                         $file = $doc['file'];
 
                         // Save to temp local disk

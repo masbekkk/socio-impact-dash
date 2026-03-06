@@ -6,26 +6,31 @@ import { cn } from '@/lib/utils'
 export default function FileUploadDropzone({ className, onFilesChange }: { className?: string, onFilesChange?: (files: File[]) => void }) {
   const [files, setFiles] = useState<File[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
+  const onFilesChangeRef = useRef(onFilesChange)
+  onFilesChangeRef.current = onFilesChange
+  const isFirstRender = useRef(true)
+
+  React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (onFilesChangeRef.current) onFilesChangeRef.current(files);
+  }, [files])
 
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files) return
-    addFiles(Array.from(e.target.files))
+    const newFiles = Array.from(e.target.files);
+    addFiles(newFiles)
+    if (inputRef.current) inputRef.current.value = '';
   }
 
   function addFiles(newFiles: File[]) {
-    setFiles((prev) => {
-      const updated = [...prev, ...newFiles];
-      if (onFilesChange) onFilesChange(updated);
-      return updated;
-    })
+    setFiles((prev) => [...prev, ...newFiles])
   }
 
   function removeFile(index: number) {
-    setFiles((prev) => {
-      const updated = prev.filter((_, i) => i !== index);
-      if (onFilesChange) onFilesChange(updated);
-      return updated;
-    })
+    setFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
   function formatBytes(bytes: number, decimals = 2) {

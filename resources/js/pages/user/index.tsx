@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import DatePicker from '@/components/DatePicker';
 
 // Define User interface directly here to avoid import issues for now
 interface User {
@@ -218,19 +219,19 @@ export default function Index() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Joined From</Label>
-                                    <Input type="date" value={joinedFrom} onChange={(e) => setJoinedFrom(e.target.value)} className="bg-white" />
+                                    <DatePicker value={joinedFrom} onChange={setJoinedFrom} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Joined To</Label>
-                                    <Input type="date" value={joinedTo} onChange={(e) => setJoinedTo(e.target.value)} className="bg-white" />
+                                    <DatePicker value={joinedTo} onChange={setJoinedTo} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Contract From</Label>
-                                    <Input type="date" value={contractFrom} onChange={(e) => setContractFrom(e.target.value)} className="bg-white" />
+                                    <DatePicker value={contractFrom} onChange={setContractFrom} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Contract To</Label>
-                                    <Input type="date" value={contractTo} onChange={(e) => setContractTo(e.target.value)} className="bg-white" />
+                                    <DatePicker value={contractTo} onChange={setContractTo} />
                                 </div>
                             </div>
                         )}

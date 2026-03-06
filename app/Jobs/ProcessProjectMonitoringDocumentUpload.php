@@ -61,13 +61,15 @@ final class ProcessProjectMonitoringDocumentUpload implements ShouldQueue
                 fclose($stream);
             }
 
+            $tempPath = $document->temp_path;
+
             $document->update([
                 'path' => $finalPath,
                 'upload_status' => 'completed',
                 'temp_path' => null,
             ]);
 
-            $tempDisk->delete($document->temp_path);
+            $tempDisk->delete($tempPath);
             Log::info("ProcessProjectMonitoringDocumentUpload: Monitoring Document #{$this->documentId} uploaded successfully to {$finalPath}");
         } catch (Throwable $e) {
             Log::error("ProcessProjectMonitoringDocumentUpload: Failed for document #{$this->documentId}: {$e->getMessage()}");

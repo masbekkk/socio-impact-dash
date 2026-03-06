@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import MoneyInput from '@/components/MoneyInput'
 import { ArrowLeft, ArrowRight, X, Save, Building2, Plus, AlertCircle } from 'lucide-react'
+import DatePicker from '@/components/DatePicker'
 import { Head, Link, usePage, router } from '@inertiajs/react'
 import axios from 'axios';
 import { cn } from '@/lib/utils';
@@ -690,21 +691,19 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label className="text-xs font-normal text-muted-foreground">Tanggal Mulai</Label>
-                                            <Input
-                                                type="date"
-                                                className={cn("bg-white", errors.start_date && 'border-red-500')}
+                                            <DatePicker
+                                                error={!!errors.start_date}
                                                 value={formData.start_date}
-                                                onChange={(e) => handleInputChange('start_date', e.target.value)}
+                                                onChange={(v) => handleInputChange('start_date', v)}
                                             />
                                             {errors.start_date && <p className="text-xs text-red-500">{errors.start_date}</p>}
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="text-xs font-normal text-muted-foreground">Tanggal Selesai</Label>
-                                            <Input
-                                                type="date"
-                                                className={cn("bg-white", errors.end_date && 'border-red-500')}
+                                            <DatePicker
+                                                error={!!errors.end_date}
                                                 value={formData.end_date}
-                                                onChange={(e) => handleInputChange('end_date', e.target.value)}
+                                                onChange={(v) => handleInputChange('end_date', v)}
                                             />
                                             {errors.end_date && <p className="text-xs text-red-500">{errors.end_date}</p>}
                                         </div>
@@ -1154,11 +1153,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                     {/* Tanggal */}
                                                     <div className="space-y-2">
                                                         <Label className="text-xs font-medium text-muted-foreground">Tanggal Jatuh Tempo</Label>
-                                                        <Input
-                                                            type="date"
+                                                        <DatePicker
+                                                            error={!!errors[`termin_payments.${idx}.due_date`]}
                                                             value={term.date}
-                                                            onChange={(e) => updatePaymentTerm(term.id, 'date', e.target.value)}
-                                                            className={cn("bg-white h-10", errors[`termin_payments.${idx}.due_date`] && "border-red-500")}
+                                                            onChange={(v) => updatePaymentTerm(term.id, 'date', v)}
                                                         />
                                                         {errors[`termin_payments.${idx}.due_date`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.due_date`]}</p>}
                                                     </div>

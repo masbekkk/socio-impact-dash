@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import MoneyInput from '@/components/MoneyInput';
 import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import DatePicker from '@/components/DatePicker';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/types/reimbursement';
 
@@ -137,6 +138,11 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
     setSelectedActivities(prev => prev.map(a =>
       a.budget_detail_id === budgetDetailId ? { ...a, detail_aktivitas: detail } : a
     ));
+  };
+
+  const handleValueChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    clearFieldError(name);
   };
 
   // Child item management
@@ -504,13 +510,10 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="start_date" className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Tanggal Penggunaan</Label>
-                    <Input
-                      id="start_date"
-                      name="start_date"
-                      type="date"
-                      className={`h-10 ${errors.start_date ? 'border-red-500' : ''}`}
+                    <DatePicker
                       value={formData.start_date}
-                      onChange={handleChange}
+                      onChange={(v) => handleValueChange('start_date', v)}
+                      error={!!errors.start_date}
                     />
                     {errors.start_date && <p className="text-xs text-red-500 font-medium">{errors.start_date[0]}</p>}
                   </div>

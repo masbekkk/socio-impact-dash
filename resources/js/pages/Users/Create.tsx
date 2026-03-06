@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save } from 'lucide-react';
+import DatePicker from '@/components/DatePicker';
 import axios from 'axios';
 import { toast } from 'sonner';
 
@@ -53,6 +54,10 @@ export default function Create() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleValueChange = (name: string, value: string) => {
+        setForm(prev => ({ ...prev, [name]: value }));
     };
 
     const breadcrumbs = [
@@ -154,21 +159,17 @@ export default function Create() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label htmlFor="contract_start">Contract Start Date</Label>
-                                        <Input
-                                            id="contract_start"
-                                            type="date"
+                                        <DatePicker
                                             value={form.contract_start}
-                                            onChange={e => setForm({ ...form, contract_start: e.target.value })}
+                                            onChange={(v) => handleValueChange('contract_start', v)}
                                         />
                                         {errors.contract_start && <p className="text-sm text-red-500">{errors.contract_start[0]}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="contract_end">Contract End Date</Label>
-                                        <Input
-                                            id="contract_end"
-                                            type="date"
+                                        <DatePicker
                                             value={form.contract_end}
-                                            onChange={e => setForm({ ...form, contract_end: e.target.value })}
+                                            onChange={(v) => handleValueChange('contract_end', v)}
                                         />
                                         {errors.contract_end && <p className="text-sm text-red-500">{errors.contract_end[0]}</p>}
                                     </div>

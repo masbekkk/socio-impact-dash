@@ -18,6 +18,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import DatePicker from '@/components/DatePicker';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { cn } from '@/lib/utils';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
@@ -343,21 +344,11 @@ export default function CalendarIndex({
                                                         *
                                                     </span>
                                                 </Label>
-                                                <div className="relative">
-                                                    <CalendarIcon className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
-                                                    <Input
-                                                        id="start_date"
-                                                        type="date"
-                                                        className="pl-9"
-                                                        value={data.start_date}
-                                                        onChange={(e) =>
-                                                            setData(
-                                                                'start_date',
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                    />
-                                                </div>
+                                                <DatePicker
+                                                    value={data.start_date}
+                                                    onChange={(v) => setData('start_date', v)}
+                                                    error={!!errors.start_date}
+                                                />
                                                 {errors.start_date && (
                                                     <span className="text-xs text-red-500">
                                                         {errors.start_date}
@@ -368,21 +359,11 @@ export default function CalendarIndex({
                                                 <Label htmlFor="end_date">
                                                     Tanggal Selesai (Opsional)
                                                 </Label>
-                                                <div className="relative">
-                                                    <CalendarIcon className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
-                                                    <Input
-                                                        id="end_date"
-                                                        type="date"
-                                                        className="pl-9"
-                                                        value={data.end_date}
-                                                        onChange={(e) =>
-                                                            setData(
-                                                                'end_date',
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                    />
-                                                </div>
+                                                <DatePicker
+                                                    value={data.end_date}
+                                                    onChange={(v) => setData('end_date', v)}
+                                                    error={!!errors.end_date}
+                                                />
                                                 {errors.end_date && (
                                                     <span className="text-xs text-red-500">
                                                         {errors.end_date}
