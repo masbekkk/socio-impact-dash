@@ -181,7 +181,7 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                     <Button asChild className="gap-2 bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)]">
                         <Link href="/letter-requests/create">
                             <Plus className="h-4 w-4" />
-                            Buat Pengajuan
+                            Buat Nomor Surat
                         </Link>
                     </Button>
                 </div>
@@ -217,7 +217,7 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                         <TableHead>Proyek</TableHead>
                                         <TableHead>Perihal & Tujuan</TableHead>
                                         <TableHead>PIC / Ket</TableHead>
-                                        <TableHead>Kode / Divisi</TableHead>
+                                        {/* <TableHead>Kode / Divisi</TableHead> */}
                                         <TableHead>Nomor Surat</TableHead>
                                         {/* <TableHead>Status</TableHead> */}
                                         <TableHead className="text-right">Aksi</TableHead>
@@ -265,12 +265,12 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                                         )}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>
+                                                {/* <TableCell>
                                                     <div className="flex flex-col gap-1">
                                                         {req.letterCode && <Badge variant="outline" className="w-fit text-xs px-1.5 py-0 bg-slate-50">{req.letterCode.code}</Badge>}
                                                         {req.letterDivision && <Badge variant="outline" className="w-fit text-xs px-1.5 py-0 bg-slate-50">{req.letterDivision.code}</Badge>}
                                                     </div>
-                                                </TableCell>
+                                                </TableCell> */}
                                                 <TableCell>
                                                     {req.letter_number ? (
                                                         <div className="flex items-center gap-1.5 font-mono text-sm bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 w-fit whitespace-nowrap">

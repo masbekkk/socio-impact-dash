@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\LetterDivision;
 use Illuminate\Database\Seeder;
 
 final class LetterDivisionSeeder extends Seeder
@@ -13,12 +14,13 @@ final class LetterDivisionSeeder extends Seeder
      */
     public function run(): void
     {
-        $divisions = ['BOT', 'FA', 'HR', 'PM', 'BOD', 'PKBM', 'HCM'];
+        LetterDivision::query()->delete();
+        $divisions = ['BOD', 'HCM', 'FA', 'PM'];
 
         $uniqueDivisions = array_unique($divisions);
 
         foreach ($uniqueDivisions as $division) {
-            \App\Models\LetterDivision::firstOrCreate(['code' => $division]);
+            LetterDivision::firstOrCreate(['code' => $division]);
         }
     }
 }

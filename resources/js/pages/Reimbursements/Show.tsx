@@ -242,6 +242,7 @@ export default function Show() {
 
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [budgetEdits, setBudgetEdits] = useState<Record<number, number>>({});
+  const [pendingAllowanceAmount, setPendingAllowanceAmount] = useState<number>(0);
   const [savingBudget, setSavingBudget] = useState(false);
 
   const [revisionEditing, setRevisionEditing] = useState(false);
@@ -367,6 +368,9 @@ export default function Show() {
       const role = getCurrentUserRole();
       const payload: any = { action: 'approved' };
       if (role) payload.role = role;
+      if (role === 'hr' && data.type === 'allowance') {
+        payload.amount = pendingAllowanceAmount;
+      }
 
       await axios.post(`/api/v1/reimbursements/${data.code}/status`, payload);
 
@@ -933,7 +937,12 @@ export default function Show() {
               ) : (
                 <Button
                   className="bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => setApproveDialogOpen(true)}
+                  onClick={() => {
+                    if (data.type === 'allowance') {
+                      setPendingAllowanceAmount(data.amount || 0);
+                    }
+                    setApproveDialogOpen(true);
+                  }}
                 >
                   <CheckCircle className="mr-2 h-4 w-4" /> Setujui
                 </Button>
@@ -2061,7 +2070,10 @@ export default function Show() {
                     <CardTitle className="text-base">Daftar Approver</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {data.approvals.map((approval) => (
+                    {[...data.approvals].sort((a, b) => {
+                      const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
+                      return (p[a.role] || 99) - (p[b.role] || 99);
+                    }).map((approval) => (
                       <div key={approval.id} className="flex flex-col gap-1 pb-3 border-b last:border-0 last:pb-0">
                         <div className="flex justify-between items-start">
                           <div className="text-xs text-muted-foreground uppercase font-medium">{approval.role}</div>
@@ -2150,7 +2162,22 @@ export default function Show() {
               Apakah Anda yakin ingin menyetujui pengajuan <strong>{data.type.toUpperCase()}</strong> dengan kode <strong className="font-mono">{data.code}</strong>?
             </DialogDescription>
           </DialogHeader>
-          {/* No inputs needed for simple confirmation */}
+          {userRole === 'hr' && data.type === 'allowance' && (
+            <div className="space-y-3 py-4 border-y my-2">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-500 uppercase">Input Nominal Allowance <span className="text-red-500">*</span></Label>
+                <MoneyInput
+                  value={pendingAllowanceAmount}
+                  onValueChange={(v) => setPendingAllowanceAmount(v.floatValue || 0)}
+                  autoFocus
+                  className="text-lg font-bold text-green-700 h-12"
+                />
+                <p className="text-[10px] text-muted-foreground italic">
+                  * Khusus role HR wajib memastikan nominal allowance sudah sesuai sebelum disetujui.
+                </p>
+              </div>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={resetApproveDialog} disabled={actionLoading}>Tidak</Button>
             <Button

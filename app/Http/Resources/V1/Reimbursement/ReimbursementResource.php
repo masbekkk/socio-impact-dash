@@ -71,13 +71,27 @@ final class ReimbursementResource extends JsonResource
                 });
             }),
             'approvals' => $this->whenLoaded('approvals', function (): \Illuminate\Support\Collection {
-                return $this->approvals->map(function (\App\Models\ReimbursementApproval $item): array {
+                $priority = [
+                    'head' => 1,
+                    'hr' => 2,
+                    'finance' => 3,
+                    'direktur' => 4,
+                ];
+
+                return $this->approvals->sortBy(function ($approval) use ($priority) {
+                    $roleValue = $approval->role instanceof \UnitEnum ? $approval->role->value : (string) $approval->role;
+                    return $priority[strtolower($roleValue)] ?? 99;
+                })->values()->map(function (\App\Models\ReimbursementApproval $item): array {
                     return [
                         'id' => $item->id,
                         'approver_id' => $item->approver_id,
+                        'approver' => [
+                            'id' => $item->approver?->id,
+                            'name' => $item->approver?->name,
+                        ],
                         'approver_name' => $item->approver?->name ?? 'Unknown',
-                        'role' => $item->role,
-                        'status' => $item->status,
+                        'role' => $item->role instanceof \UnitEnum ? $item->role->value : $item->role,
+                        'status' => $item->status instanceof \UnitEnum ? $item->status->value : $item->status,
                         'notes' => $item->notes,
                         'approved_at' => $item->approved_at?->toISOString(),
                     ];

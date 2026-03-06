@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import axios from 'axios';
+import { SharedData } from '@/types';
 
 interface Project {
     id: number;
@@ -28,6 +29,7 @@ interface MasterData {
     code: string;
     description?: string;
     name?: string; // For users
+    names?: { id: number; name: string; description?: string }[]; // For divisions
 }
 
 interface Props {
@@ -36,6 +38,9 @@ interface Props {
 }
 
 export default function Edit({ projects, letterRequestId }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const userRole = auth.user.role_name;
+
     const [data, setData] = useState({
         project_id: '',
         letter_date: '',
@@ -68,7 +73,22 @@ export default function Edit({ projects, letterRequestId }: Props) {
                 ]);
 
                 setLetterCodes(codesRes.data.data);
-                setLetterDivisions(divisionsRes.data.data);
+
+                // Filter letter divisions based on role
+                const allLetterDivs = divisionsRes.data.data;
+                let filteredLetterDivs = allLetterDivs;
+
+                if (userRole === 'direktur' || userRole === 'superadmin') {
+                    filteredLetterDivs = allLetterDivs.filter((d: any) => ['Direktur', 'Finance', 'HCM', 'BOD'].includes(d.code));
+                } else if (userRole === 'hr') {
+                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'HR' || d.code === 'HCM');
+                } else if (userRole === 'finance') {
+                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'Finance' || d.code === 'FA');
+                } else {
+                    filteredLetterDivs = allLetterDivs;
+                }
+
+                setLetterDivisions(filteredLetterDivs);
                 setUsers(usersRes.data.data.data);
                 setDivisions(mainDivRes.data.data.data);
 
@@ -87,19 +107,19 @@ export default function Edit({ projects, letterRequestId }: Props) {
 
             } catch (error) {
                 console.error("Error fetching data:", error);
-                alert("Gagal memuat data pengajuan.");
+                alert("Gagal memuat data nomor surat.");
                 router.visit('/letter-requests');
             } finally {
                 setLoadingData(false);
             }
         };
         fetchAllData();
-    }, [letterRequestId]);
+    }, [letterRequestId, userRole]);
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Nomor Surat', href: '/letter-requests' },
-        { title: 'Edit Pengajuan', href: `/letter-requests/${letterRequestId}/edit` },
+        { title: 'Edit Nomor Surat', href: `/letter-requests/${letterRequestId}/edit` },
     ];
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -115,7 +135,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
                 setErrors(error.response.data.errors);
             } else {
                 console.error("Error updating letter request:", error);
-                alert("Terjadi kesalahan saat memperbarui pengajuan.");
+                alert("Terjadi kesalahan saat memperbarui nomor surat.");
             }
         } finally {
             setProcessing(false);
@@ -124,7 +144,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="Edit Pengajuan Nomor Surat" />
+            <Head title="Edit Nomor Surat" />
 
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex items-center gap-4">
@@ -134,8 +154,8 @@ export default function Edit({ projects, letterRequestId }: Props) {
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">Edit Pengajuan Nomor Surat</h1>
-                        <p className="text-muted-foreground text-sm">Perbarui detail surat untuk pengajuan Anda.</p>
+                        <h1 className="text-xl font-bold tracking-tight">Edit Nomor Surat</h1>
+                        <p className="text-muted-foreground text-sm">Perbarui detail nomor surat Anda.</p>
                     </div>
                 </div>
 
@@ -258,27 +278,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
                                         {errors.subject && <p className="text-sm text-destructive font-medium">{errors.subject}</p>}
                                     </div>
 
-                                    <div className="space-y-2 md:col-span-1">
-                                        <Label htmlFor="pic_id">PIC <span className="text-red-500">*</span></Label>
-                                        <Select onValueChange={(val) => setData({ ...data, pic_id: val })} value={data.pic_id}>
-                                            <SelectTrigger className="h-10">
-                                                <div className="flex items-center gap-2">
-                                                    <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                                    <SelectValue placeholder="Pilih PIC" />
-                                                </div>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {users.map((user) => (
-                                                    <SelectItem key={user.id} value={user.id.toString()}>
-                                                        {user.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.pic_id && <p className="text-sm text-destructive font-medium">{errors.pic_id}</p>}
-                                    </div>
-
-                                    <div className="space-y-2 md:col-span-1">
+                                    <div className="space-y-2 md:col-span-2">
                                         <Label htmlFor="division_id">Divisi Perusahaan <span className="text-red-500">*</span></Label>
                                         <Select onValueChange={(val) => setData({ ...data, division_id: val })} value={data.division_id}>
                                             <SelectTrigger className="h-10">
@@ -288,9 +288,12 @@ export default function Edit({ projects, letterRequestId }: Props) {
                                                 </div>
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {divisions.map((div) => (
-                                                    <SelectItem key={div.id} value={div.id.toString()}>
-                                                        {div.name || div.code}
+                                                {divisions.map((divCode) => (
+                                                    <SelectItem
+                                                        key={divCode.id}
+                                                        value={divCode.names && divCode.names.length > 0 ? divCode.names[0].id.toString() : ''}
+                                                    >
+                                                        {divCode.code}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

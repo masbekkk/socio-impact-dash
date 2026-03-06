@@ -131,9 +131,9 @@ final readonly class CreateReimbursement
     {
         $roles = [
             'head' => $data['approver_head_id'] ?? null,
+            'hr' => $data['approver_hr_id'] ?? null,
             'finance' => $data['approver_finance_id'] ?? null,
             'direktur' => $data['approver_direktur_id'] ?? null,
-            'hr' => $data['approver_hr_id'] ?? null,
         ];
 
         // Default approvers if not provided

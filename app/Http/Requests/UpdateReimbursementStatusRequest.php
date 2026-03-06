@@ -29,6 +29,7 @@ final class UpdateReimbursementStatusRequest extends FormRequest
                 'max:5120',
                 Rule::requiredIf($this->input('action') === 'transferred'),
             ],
+            'amount' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 

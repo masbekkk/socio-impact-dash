@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\LetterCode;
 use Illuminate\Database\Seeder;
 
 final class LetterCodeSeeder extends Seeder
@@ -13,12 +14,35 @@ final class LetterCodeSeeder extends Seeder
      */
     public function run(): void
     {
-        $codes = ['SPm', 'SK', 'SPeng', 'PKS', 'SPK', 'BA', 'SPH', 'SKH', 'SERT', 'SU', 'PKWT', 'PKWTT', 'OJT', 'SPmb', 'ST', 'TAC', 'PROFORMA', 'INV', 'KWT', 'KONTRAK', 'Sertf', 'SK-PKWT', 'SK-PKWTT', 'SK-OJT', 'SK-PKLRG', 'SP', 'I', 'II', 'SPPH'];
+        LetterCode::query()->delete();
+        $codes = [
+            ['code' => 'SPeng', 'description' => 'Surat pengantar'],
+            ['code' => 'SPm', 'description' => 'Surat permohonan'],
+            ['code' => 'SPmb', 'description' => 'Surat Pemberitahuan'],
+            ['code' => 'SK', 'description' => 'Surat Keterangan'],
+            ['code' => 'ST', 'description' => 'Surat Tugas'],
+            ['code' => 'SPPH', 'description' => 'Permintaan penawaran harga'],
+            ['code' => 'SPH', 'description' => 'Surat Penawaran harga'],
+            ['code' => 'SKH', 'description' => 'Persetujuan/kesanggupan harga'],
+            ['code' => 'BA', 'description' => 'Berita Acara'],
+            ['code' => 'Kontrak', 'description' => 'Kontrak/PKS/SPK/MOU'],
+            ['code' => 'INV', 'description' => 'Invoice'],
+            ['code' => 'KWT', 'description' => 'Kuitansi'],
+            ['code' => 'sert', 'description' => 'Sertifikat'],
+            ['code' => 'PKWT', 'description' => 'kontrak pekerja waktu tertentu'],
+            ['code' => 'PKWTT', 'description' => 'kontrak pekerja waktu tidak tertentu'],
+            ['code' => 'TAC', 'description' => 'kontrak TAC'],
+            ['code' => 'SP', 'description' => 'surat peringatan'],
+            ['code' => 'IA', 'description' => 'Impact academy'],
+            ['code' => 'LL', 'description' => 'Lestari learning'],
+            ['code' => 'PKBM', 'description' => 'PKBM'],
+        ];
 
-        $uniqueCodes = array_unique($codes);
-
-        foreach ($uniqueCodes as $code) {
-            \App\Models\LetterCode::firstOrCreate(['code' => $code]);
+        foreach ($codes as $codeData) {
+            LetterCode::updateOrCreate(
+                ['code' => $codeData['code']],
+                ['description' => $codeData['description']]
+            );
         }
     }
 }

@@ -12,6 +12,8 @@ use App\Services\ReimbursementService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+use App\Http\Resources\V1\Reimbursement\ReimbursementResource;
+
 final class ReimbursementController
 {
     public function __construct(
@@ -39,7 +41,7 @@ final class ReimbursementController
         $reimbursements = $this->reimbursementService->listReimbursements($user, $filters, $perPage);
 
         return Inertia::render('Reimbursements/Index', [
-            'reimbursements' => $reimbursements,
+            'reimbursements' => ReimbursementResource::collection($reimbursements),
             'filters' => [
                 'type' => $request->get('type', ''),
                 'status' => $request->get('status', ''),
