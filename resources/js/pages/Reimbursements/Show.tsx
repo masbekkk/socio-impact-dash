@@ -280,6 +280,7 @@ export default function Show() {
   const isCreator = data?.user?.id === userId;
   const isRevisionStatus = data?.status === 'revision';
   const isFinanceOrAdmin = userRole === 'finance' || userRole === 'superadmin';
+  const isHrOrAdmin = userRole === 'hr' || userRole === 'superadmin';
 
   // Budget Partition Editing State
   const [editingPartitions, setEditingPartitions] = useState(false);
@@ -1894,7 +1895,7 @@ export default function Show() {
                   </div>
                 )}
 
-                {(data.status === 'submitted' || data.status === 'request_fund') && isFinanceOrAdmin && (
+                {((data.status === 'submitted' || data.status === 'request_fund') && (isFinanceOrAdmin || (data.type === 'allowance' && isHrOrAdmin))) && (
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <Button
                       onClick={() => setTransferDialogOpen(true)}

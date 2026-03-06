@@ -250,6 +250,14 @@ final class ReimbursementResource extends JsonResource
         }
 
         // 4. Direktur Final Phase (After Finance)
+        // For Allowance, HR is the final phase before transfer.
+        if ($this->type->value === 'allowance') {
+            if ($hrApproval && $hrApproval->status->value === 'approved') {
+                // Once HR approved, it's ready for transfer. HR or Admin can take action.
+                return $user->hasRole('hr') || $user->hasRole('superadmin');
+            }
+        }
+
         $financeApproved = $financeApproval && $financeApproval->status->value === 'approved';
         if ($financeApproved) {
             if ($user->hasRole('direktur')) {

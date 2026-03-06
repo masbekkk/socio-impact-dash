@@ -289,8 +289,9 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lokasi">Alamat Selama Cuti</Label>
+                  <Label htmlFor="lokasi">Alamat Selama Cuti <span className="text-red-500">*</span></Label>
                   <Input id="lokasi" name="lokasi" placeholder="Alamat lengkap tempat anda menghabiskan cuti" value={formData.lokasi} onChange={handleChange} className="h-10" />
+                  {errors.lokasi && <p className="text-xs text-red-500">{errors.lokasi[0]}</p>}
                 </div>
 
                 <div className="space-y-2">
