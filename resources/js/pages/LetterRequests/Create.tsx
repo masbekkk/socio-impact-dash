@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import DatePicker from '@/components/DatePicker';
 import { format } from "date-fns";
-import axios from 'axios';
+import axios, { all } from 'axios';
 import { SharedData } from '@/types';
 
 interface Project {
@@ -85,7 +85,7 @@ export default function Create({ projects }: Props) {
                 } else {
                     // Default to PM or all roles if PM
                     // According to requirements: PM - all roles
-                    filteredLetterDivs = allLetterDivs;
+                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'PM');;
                 }
 
                 setLetterDivisions(filteredLetterDivs);
@@ -274,7 +274,7 @@ export default function Create({ projects }: Props) {
                                                         key={divCode.id}
                                                         value={divCode.names && divCode.names.length > 0 ? divCode.names[0].id.toString() : ''}
                                                     >
-                                                        {divCode.code}
+                                                        {divCode.code} - {divCode.name}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
