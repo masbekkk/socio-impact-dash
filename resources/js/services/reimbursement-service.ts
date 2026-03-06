@@ -19,6 +19,7 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     fd.append('type', payload.type);
 
     if (payload.project_id) fd.append('project_id', payload.project_id);
+    if (payload.revision_note) fd.append('revision_note', payload.revision_note);
     if (payload.amount) fd.append('amount', payload.amount.toString());
     if (payload.bank_name) fd.append('bank_name', payload.bank_name);
     if (payload.bank_account) fd.append('bank_account', payload.bank_account);
@@ -58,4 +59,15 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     });
 
     return fd;
+}
+
+export async function resubmitReimbursement(code: string, payload: any): Promise<any> {
+    const formData = buildFormData(payload);
+    if (payload.revision_note) formData.append('revision_note', payload.revision_note);
+
+    const response = await axios.post(`${API_URL}/${code}/resubmit`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data;
 }

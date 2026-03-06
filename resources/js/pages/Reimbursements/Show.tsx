@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { usePermission } from '@/hooks/use-permission';
 import MoneyInput from '@/components/MoneyInput';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface AtrBudgetSelected {
   id: number;
@@ -16,6 +17,7 @@ interface AtrBudgetSelected {
 }
 
 interface ReimbursementItem {
+  project_budget_detail_id: any;
   id: number;
   parent_item_id: number | null;
   item_name: string;
@@ -40,11 +42,27 @@ interface SelectedActivityRevision {
     unit_price: number;
     amount: number;
     expense_type: string;
+    receipt: File | null;
+    receipt_path?: string | null;
     notes: string;
   }[];
 }
+
+interface EerItemRevision {
+  id: string | number;
+  project_budget_detail_id: number | '';
+  item_name: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  expense_type: string;
+  receipt: File | null;
+  receipt_path?: string | null;
+  notes: string;
+}
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -78,6 +96,8 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+import FileUploadDropzone from '@/components/FileUploadDropzone';
+import { resubmitReimbursement } from '@/services/reimbursement-service';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -153,6 +173,7 @@ interface ReimbursementDetail {
   atr_items?: { id: number; item_name: string; quantity: number; unit_price: number; amount: number; expense_type: string | null; notes: string | null; activity_name: string; activity_id: number }[];
   start_date: string | null;
   end_date: string | null;
+  refund_reimburse_amount?: number;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -213,13 +234,19 @@ export default function Show() {
     start_date: string;
     end_date: string;
     revision_note: string;
+    eer_type: string;
+    refund_reimburse_amount: number;
     selected_activities: SelectedActivityRevision[];
+    eer_items: EerItemRevision[];
   }>({
     usage_plan: '',
     start_date: '',
     end_date: '',
     revision_note: '',
+    eer_type: 'refund',
+    refund_reimburse_amount: 0,
     selected_activities: [],
+    eer_items: [],
   });
   const [resubmitLoading, setResubmitLoading] = useState(false);
 
@@ -451,38 +478,75 @@ export default function Show() {
   const handleStartRevisionEdit = () => {
     if (!data) return;
 
-    // Map existing ATR items and activity selections
+    // Map existing items and activity selections
     const selected_activities: SelectedActivityRevision[] = [];
+    const eer_items: EerItemRevision[] = [];
 
-    if (data.atr_budget_selecteds) {
-      data.atr_budget_selecteds.forEach(abs => {
-        const children = (data.items ?? [])
-          .filter(item => item.activity_id === abs.project_budget_detail_id && !item.parent_item_id)
-          .map(item => ({
-            id: item.id,
-            item_name: item.item_name,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            amount: item.amount,
-            expense_type: item.expense_type ?? '',
-            notes: item.notes ?? '',
-          }));
-
-        selected_activities.push({
-          budget_detail_id: abs.project_budget_detail_id,
-          expanded: true,
-          detail_aktivitas: abs.notes ?? '',
-          children: children.length > 0 ? children : [{
-            id: crypto.randomUUID(),
-            item_name: '',
-            quantity: 1,
-            unit_price: 0,
-            amount: 0,
-            expense_type: '',
-            notes: ''
-          }],
+    if (data.type === 'eer') {
+      // Map EER items directly to a flat list
+      (data.items ?? []).forEach(item => {
+        eer_items.push({
+          id: item.id,
+          project_budget_detail_id: item.activity_id,
+          item_name: item.item_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          amount: item.amount,
+          expense_type: item.expense_type ?? '',
+          receipt: null,
+          receipt_path: item.receipt_path,
+          notes: item.notes ?? '',
         });
       });
+      // Ensure at least one empty item if none exist
+      if (eer_items.length === 0) {
+        eer_items.push({
+          id: crypto.randomUUID(),
+          project_budget_detail_id: '',
+          item_name: '',
+          quantity: 1,
+          unit_price: 0,
+          amount: 0,
+          expense_type: '',
+          receipt: null,
+          notes: ''
+        });
+      }
+    } else {
+      // Original ATR grouping logic
+      if (data.atr_budget_selecteds) {
+        data.atr_budget_selecteds.forEach(abs => {
+          const children = (data.items ?? [])
+            .filter(item => item.activity_id === abs.project_budget_detail_id && !item.parent_item_id)
+            .map(item => ({
+              id: item.id,
+              item_name: item.item_name,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              amount: item.amount,
+              expense_type: item.expense_type ?? '',
+              receipt: null,
+              receipt_path: item.receipt_path,
+              notes: item.notes ?? '',
+            }));
+
+          selected_activities.push({
+            budget_detail_id: abs.project_budget_detail_id,
+            expanded: true,
+            detail_aktivitas: abs.notes ?? '',
+            children: children.length > 0 ? children : [{
+              id: crypto.randomUUID(),
+              item_name: '',
+              quantity: 1,
+              unit_price: 0,
+              amount: 0,
+              expense_type: '',
+              receipt: null,
+              notes: ''
+            }],
+          });
+        });
+      }
     }
 
     setRevisionForm({
@@ -490,24 +554,82 @@ export default function Show() {
       start_date: data.start_date ?? '',
       end_date: data.end_date ?? '',
       revision_note: '',
+      eer_type: data.eer_type ?? 'refund',
+      refund_reimburse_amount: data.refund_reimburse_amount ?? 0,
       selected_activities,
+      eer_items,
     });
     setRevisionEditing(true);
+  };
+
+  const addItemEerRevision = () => {
+    setRevisionForm(prev => ({
+      ...prev,
+      eer_items: [...prev.eer_items, {
+        id: crypto.randomUUID(),
+        project_budget_detail_id: '',
+        item_name: '',
+        quantity: 1,
+        unit_price: 0,
+        amount: 0,
+        expense_type: '',
+        receipt: null,
+        notes: ''
+      }]
+    }));
+  };
+
+  const removeItemEerRevision = (id: string | number) => {
+    setRevisionForm(prev => ({
+      ...prev,
+      eer_items: prev.eer_items.filter(item => item.id !== id)
+    }));
+  };
+
+  const updateItemEerRevision = (id: string | number, field: keyof EerItemRevision, value: any) => {
+    setRevisionForm(prev => ({
+      ...prev,
+      eer_items: prev.eer_items.map(item => {
+        if (item.id !== id) return item;
+        const updated = { ...item, [field]: value };
+        if (field === 'quantity' || field === 'unit_price') {
+          updated.amount = (Number(updated.quantity) || 0) * (Number(updated.unit_price) || 0);
+        }
+        return updated;
+      })
+    }));
   };
 
   const handleResubmitRevision = async () => {
     if (!data) return;
 
-    // Validate if items are added for each activity
-    for (const act of revisionForm.selected_activities) {
-      if (act.children.length === 0) {
-        alert('Setiap kegiatan minimal harus memiliki 1 item.');
+    // Validate
+    if (data.type === 'eer') {
+      if (revisionForm.eer_items.length === 0) {
+        alert('Minimal harus memiliki 1 item.');
         return;
       }
-      for (const child of act.children) {
-        if (!child.item_name.trim()) {
-          alert('Nama item tidak boleh kosong.');
+      for (const item of revisionForm.eer_items) {
+        if (!item.project_budget_detail_id || !item.item_name.trim() || item.unit_price <= 0 || !item.expense_type) {
+          alert('Semua detail item (Kegiatan, Nama, Harga, Jenis) wajib diisi.');
           return;
+        }
+        if (!item.receipt && !item.receipt_path) {
+          alert('Setiap item pengeluaran EER wajib melampirkan kwitansi.');
+          return;
+        }
+      }
+    } else {
+      for (const act of revisionForm.selected_activities) {
+        if (act.children.length === 0) {
+          alert('Setiap kegiatan minimal harus memiliki 1 item.');
+          return;
+        }
+        for (const child of act.children) {
+          if (!child.item_name.trim()) {
+            alert('Nama item tidak boleh kosong.');
+            return;
+          }
         }
       }
     }
@@ -515,40 +637,73 @@ export default function Show() {
     setResubmitLoading(true);
 
     try {
-      // Prepare items and selected_budget_details for resubmit
       const items: any[] = [];
       const selected_budget_details: any[] = [];
 
-      revisionForm.selected_activities.forEach(act => {
-        let actTotal = 0;
-        act.children.forEach(child => {
+      if (data.type === 'eer') {
+        // Flat EER processing
+        const totalsByActivity: Record<number, number> = {};
+        revisionForm.eer_items.forEach(item => {
           items.push({
-            project_budget_detail_id: act.budget_detail_id,
-            item_name: child.item_name,
-            quantity: child.quantity,
-            unit_price: child.unit_price,
-            amount: child.quantity * child.unit_price,
-            expense_type: child.expense_type,
-            notes: child.notes,
+            project_budget_detail_id: item.project_budget_detail_id,
+            item_name: item.item_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            amount: item.amount,
+            expense_type: item.expense_type,
+            receipt: item.receipt ?? undefined,
+            notes: item.notes,
           });
-          actTotal += child.quantity * child.unit_price;
+          const actId = Number(item.project_budget_detail_id);
+          totalsByActivity[actId] = (totalsByActivity[actId] || 0) + item.amount;
         });
 
-        selected_budget_details.push({
-          project_budget_detail_id: act.budget_detail_id,
-          amount: actTotal,
-          notes: act.detail_aktivitas,
+        Object.entries(totalsByActivity).forEach(([actId, total]) => {
+          selected_budget_details.push({
+            project_budget_detail_id: Number(actId),
+            amount: total,
+            notes: '', // Legacy notes not needed here
+          });
         });
-      });
+      } else {
+        // ATR grouping logic
+        revisionForm.selected_activities.forEach(act => {
+          let actTotal = 0;
+          act.children.forEach(child => {
+            items.push({
+              project_budget_detail_id: act.budget_detail_id,
+              item_name: child.item_name,
+              quantity: child.quantity,
+              unit_price: child.unit_price,
+              amount: child.quantity * child.unit_price,
+              expense_type: child.expense_type,
+              receipt: child.receipt ?? undefined,
+              notes: child.notes,
+            });
+            actTotal += child.quantity * child.unit_price;
+          });
 
-      await axios.post(`/api/v1/reimbursements/${data.code}/resubmit`, {
+          selected_budget_details.push({
+            project_budget_detail_id: act.budget_detail_id,
+            amount: actTotal,
+            notes: act.detail_aktivitas,
+          });
+        });
+      }
+
+      const payload: any = {
+        type: data.type,
         usage_plan: revisionForm.usage_plan,
         start_date: revisionForm.start_date || null,
         end_date: revisionForm.end_date || null,
         revision_note: revisionForm.revision_note || 'Pengajuan telah direvisi dan diajukan kembali.',
         items,
         selected_budget_details,
-      });
+        eer_type: data.type === 'eer' ? revisionForm.eer_type : undefined,
+        refund_reimburse_amount: data.type === 'eer' ? revisionForm.refund_reimburse_amount : undefined,
+      };
+
+      await resubmitReimbursement(data.code, payload);
 
       setRevisionEditing(false);
       await fetchDetail();
@@ -574,6 +729,7 @@ export default function Show() {
             unit_price: 0,
             amount: 0,
             expense_type: '',
+            receipt: null,
             notes: ''
           }]
         };
@@ -1019,124 +1175,305 @@ export default function Show() {
                           />
                         </div>
 
-                        {/* Item Editor (Specifically for ATR) */}
-                        {data.type === 'atr' && (
+                        {/* Item Editor (ATR & EER) */}
+                        {(data.type === 'atr' || data.type === 'eer') && (
                           <div className="space-y-4 pt-2 border-t mt-4">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Item & Rincian Kegiatan ATR</Label>
-                            {revisionForm.selected_activities.map((activity) => {
-                              const activityName = data.items?.find(i => i.activity_id === activity.budget_detail_id)?.activity_name || 'Kegiatan';
-                              const subtotal = activity.children.reduce((s, c) => s + (c.quantity * c.unit_price), 0);
-
-                              return (
-                                <div key={activity.budget_detail_id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
-                                  <div
-                                    className="flex items-center justify-between p-3 bg-slate-50 border-b cursor-pointer"
-                                    onClick={() => toggleActivityRevision(activity.budget_detail_id)}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      {activity.expanded ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
-                                      <span className="font-semibold text-sm text-slate-800">{activityName}</span>
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                              {data.type === 'eer' ? 'Klaim Item EER' : 'Item & Rincian Kegiatan ATR'}
+                            </Label>
+                            {data.type === 'eer' ? (
+                              <div className="space-y-4">
+                                {revisionForm.eer_items.map((item, idx) => (
+                                  <div key={item.id} className="border rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow relative group">
+                                    <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="icon"
+                                        className="h-7 w-7 rounded-full shadow-lg"
+                                        onClick={() => removeItemEerRevision(item.id)}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
                                     </div>
-                                    <span className="text-sm font-bold text-emerald-700 font-mono">Rp {subtotal.toLocaleString('id-ID')}</span>
-                                  </div>
 
-                                  {activity.expanded && (
-                                    <div className="p-3 space-y-4">
-                                      <div className="space-y-1">
-                                        <Label className="text-[10px] font-medium text-muted-foreground uppercase">Detail Aktivitas</Label>
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-3">
+                                      {/* Row 1: Activity & Name */}
+                                      <div className="md:col-span-12 lg:col-span-5 space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                          PILIH KEGIATAN <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Select
+                                          value={item.project_budget_detail_id?.toString() || ''}
+                                          onValueChange={(v) => updateItemEerRevision(item.id, 'project_budget_detail_id', parseInt(v))}
+                                        >
+                                          <SelectTrigger className="h-8 text-xs bg-slate-50 border-slate-200">
+                                            <SelectValue placeholder="Pilih kegiatan..." />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {data.atr_budget_selecteds?.map(act => (
+                                              <SelectItem key={act.project_budget_detail_id} value={act.project_budget_detail_id.toString()}>
+                                                {act.activity_name || 'Kegiatan'}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      <div className="md:col-span-12 lg:col-span-7 space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                          NAMA ITEM <span className="text-red-500">*</span>
+                                        </Label>
                                         <Input
-                                          value={activity.detail_aktivitas}
-                                          onChange={(e) => updateActivityDetailRevision(activity.budget_detail_id, e.target.value)}
-                                          placeholder="Detail aktivitas..."
-                                          className="h-8 text-sm"
+                                          value={item.item_name}
+                                          onChange={(e) => updateItemEerRevision(item.id, 'item_name', e.target.value)}
+                                          placeholder="Nama item pengeluaran..."
+                                          className="h-8 text-sm bg-slate-50"
                                         />
                                       </div>
 
-                                      <div className="space-y-3">
-                                        {activity.children.map((child, idx) => (
-                                          <div key={child.id} className="border rounded-md p-3 space-y-3 bg-slate-50/40 relative">
-                                            {activity.children.length > 1 && (
-                                              <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-5 w-5 text-red-500 absolute top-2 right-2"
-                                                onClick={() => removeChildItemRevision(activity.budget_detail_id, child.id)}
-                                              >
-                                                <X className="h-3.5 w-3.5" />
-                                              </Button>
-                                            )}
+                                      {/* Row 2: Qty, Price, Type */}
+                                      <div className="md:col-span-3 lg:col-span-2 space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">QTY <span className="text-red-500">*</span></Label>
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          value={item.quantity}
+                                          onChange={(e) => updateItemEerRevision(item.id, 'quantity', parseInt(e.target.value) || 0)}
+                                          className="h-8 text-sm bg-slate-50"
+                                        />
+                                      </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                                              <div className="md:col-span-12 lg:col-span-5 space-y-1">
-                                                <Label className="text-[10px]">Nama Item</Label>
-                                                <Input
-                                                  value={child.item_name}
-                                                  onChange={(e) => updateChildItemRevision(activity.budget_detail_id, child.id, 'item_name', e.target.value)}
-                                                  placeholder="Nama item..."
-                                                  className="h-8 text-sm"
-                                                />
-                                              </div>
-                                              <div className="md:col-span-2 lg:col-span-1 space-y-1">
-                                                <Label className="text-[10px]">Qty</Label>
-                                                <Input
-                                                  type="number"
-                                                  min={1}
-                                                  value={child.quantity}
-                                                  onChange={(e) => updateChildItemRevision(activity.budget_detail_id, child.id, 'quantity', parseInt(e.target.value) || 1)}
-                                                  className="h-8 text-sm px-2"
-                                                />
-                                              </div>
-                                              <div className="md:col-span-5 lg:col-span-3 space-y-1">
-                                                <Label className="text-[10px]">Nominal</Label>
-                                                <MoneyInput
-                                                  value={child.unit_price}
-                                                  onValueChange={(v) => updateChildItemRevision(activity.budget_detail_id, child.id, 'unit_price', v.floatValue || 0)}
-                                                  className="h-8 text-sm"
-                                                />
-                                              </div>
-                                              <div className="md:col-span-5 lg:col-span-3 space-y-1">
-                                                <Label className="text-[10px]">Jenis</Label>
-                                                <Select
-                                                  value={child.expense_type}
-                                                  onValueChange={(v) => updateChildItemRevision(activity.budget_detail_id, child.id, 'expense_type', v)}
-                                                >
-                                                  <SelectTrigger className="h-8 text-xs px-2">
-                                                    <SelectValue placeholder="Pilih..." />
-                                                  </SelectTrigger>
-                                                  <SelectContent>
-                                                    {expenseTypes.map(et => (
-                                                      <SelectItem key={et.value} value={et.value}>{et.label}</SelectItem>
-                                                    ))}
-                                                  </SelectContent>
-                                                </Select>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        ))}
+                                      <div className="md:col-span-4 lg:col-span-3 space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">HARGA SATUAN <span className="text-red-500">*</span></Label>
+                                        <MoneyInput
+                                          value={item.unit_price}
+                                          onValueChange={(v) => updateItemEerRevision(item.id, 'unit_price', v.floatValue || 0)}
+                                          placeholder="0"
+                                          className="h-8 text-sm bg-slate-50"
+                                        />
+                                      </div>
 
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => addChildItemRevision(activity.budget_detail_id)}
-                                          className="w-full gap-1 border-dashed h-8 text-xs text-muted-foreground hover:text-primary"
+                                      <div className="md:col-span-5 lg:col-span-4 space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">JENIS BIAYA <span className="text-red-500">*</span></Label>
+                                        <Select
+                                          value={item.expense_type}
+                                          onValueChange={(v) => updateItemEerRevision(item.id, 'expense_type', v)}
                                         >
-                                          <Plus className="h-3 w-3" /> Tambah Item
-                                        </Button>
+                                          <SelectTrigger className="h-8 text-xs bg-slate-50 border-slate-200">
+                                            <SelectValue placeholder="Jenis..." />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="Operational">Operational</SelectItem>
+                                            <SelectItem value="Management">Management</SelectItem>
+                                            <SelectItem value="Allowance">Allowance</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      <div className="md:col-span-12 lg:col-span-3 space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">TOTAL</Label>
+                                        <div className="h-8 bg-emerald-50 border border-emerald-100 rounded-md flex items-center px-3 font-bold text-emerald-800 text-xs">
+                                          Rp {item.amount.toLocaleString('id-ID')}
+                                        </div>
+                                      </div>
+
+                                      {/* Row 3: Receipt & Notes */}
+                                      <div className="md:col-span-12 lg:col-span-6 space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                          KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500">*</span>
+                                        </Label>
+                                        <FileUploadDropzone
+                                          className="bg-white h-[80px] overflow-hidden rounded-lg"
+                                          onFilesChange={(files: File[]) => updateItemEerRevision(item.id, 'receipt', files[0] ?? null)}
+                                        />
+                                        {(item.receipt || item.receipt_path) && (
+                                          <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100 italic">
+                                            <CheckCircle className="h-3 w-3" /> {item.receipt ? `Baru: ${item.receipt.name}` : 'Sudah terlampir'}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      <div className="md:col-span-12 lg:col-span-6 space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">CATATAN TAMBAHAN</Label>
+                                        <Textarea
+                                          value={item.notes}
+                                          onChange={(e) => updateItemEerRevision(item.id, 'notes', e.target.value)}
+                                          placeholder="Keterangan item ini..."
+                                          className="min-h-[80px] text-[11px] resize-none bg-slate-50 border-slate-200"
+                                        />
                                       </div>
                                     </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                                  </div>
+                                ))}
+
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="w-full border-dashed h-9 text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-all text-xs"
+                                  onClick={addItemEerRevision}
+                                >
+                                  <Plus className="h-4 w-4 mr-2" /> Tambah Item Klaim Baru
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-4">
+                                {revisionForm.selected_activities.map((activity) => {
+                                  const activityName = data.items?.find(i => i.activity_id === activity.budget_detail_id)?.activity_name || 'Kegiatan';
+                                  const subtotal = activity.children.reduce((s, c) => s + (c.quantity * c.unit_price), 0);
+
+                                  return (
+                                    <div key={activity.budget_detail_id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
+                                      <div
+                                        className="flex items-center justify-between p-3 bg-slate-50 border-b cursor-pointer"
+                                        onClick={() => toggleActivityRevision(activity.budget_detail_id)}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          {activity.expanded ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+                                          <span className="font-semibold text-sm text-slate-800">{activityName}</span>
+                                        </div>
+                                        <span className="text-sm font-bold text-emerald-700 font-mono">Rp {subtotal.toLocaleString('id-ID')}</span>
+                                      </div>
+
+                                      {activity.expanded && (
+                                        <div className="p-3 space-y-4">
+                                          <div className="space-y-1">
+                                            <Label className="text-[10px] font-medium text-muted-foreground uppercase">Detail Aktivitas</Label>
+                                            <Input
+                                              value={activity.detail_aktivitas}
+                                              onChange={(e) => updateActivityDetailRevision(activity.budget_detail_id, e.target.value)}
+                                              placeholder="Detail aktivitas..."
+                                              className="h-8 text-sm"
+                                            />
+                                          </div>
+
+                                          <div className="space-y-3">
+                                            {activity.children.map((child, idx) => (
+                                              <div key={child.id} className="border rounded-md p-3 space-y-3 bg-slate-50/40 relative">
+                                                {activity.children.length > 1 && (
+                                                  <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-5 w-5 text-red-500 absolute top-2 right-2"
+                                                    onClick={() => removeChildItemRevision(activity.budget_detail_id, child.id)}
+                                                  >
+                                                    <X className="h-3.5 w-3.5" />
+                                                  </Button>
+                                                )}
+
+                                                <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-3">
+                                                  <div className="md:col-span-12 lg:col-span-5 space-y-1">
+                                                    <Label className="text-[10px] font-bold uppercase tracking-tight text-slate-500">Nama Item</Label>
+                                                    <Input
+                                                      value={child.item_name}
+                                                      onChange={(e) => updateChildItemRevision(activity.budget_detail_id, child.id, 'item_name', e.target.value)}
+                                                      placeholder="Nama item..."
+                                                      className="h-8 text-sm"
+                                                    />
+                                                  </div>
+                                                  <div className="md:col-span-2 lg:col-span-1 space-y-1">
+                                                    <Label className="text-[10px] font-bold uppercase tracking-tight text-slate-500">Qty</Label>
+                                                    <Input
+                                                      type="number"
+                                                      min={1}
+                                                      value={child.quantity}
+                                                      onChange={(e) => updateChildItemRevision(activity.budget_detail_id, child.id, 'quantity', parseInt(e.target.value) || 1)}
+                                                      className="h-8 text-sm px-2"
+                                                    />
+                                                  </div>
+                                                  <div className="md:col-span-5 lg:col-span-3 space-y-1">
+                                                    <Label className="text-[10px] font-bold uppercase tracking-tight text-slate-500">Nominal</Label>
+                                                    <MoneyInput
+                                                      value={child.unit_price}
+                                                      onValueChange={(v) => updateChildItemRevision(activity.budget_detail_id, child.id, 'unit_price', v.floatValue || 0)}
+                                                      className="h-8 text-sm"
+                                                    />
+                                                  </div>
+                                                  <div className="md:col-span-5 lg:col-span-3 space-y-1">
+                                                    <Label className="text-[10px] font-bold uppercase tracking-tight text-slate-500">Jenis</Label>
+                                                    <Select
+                                                      value={child.expense_type}
+                                                      onValueChange={(v) => updateChildItemRevision(activity.budget_detail_id, child.id, 'expense_type', v)}
+                                                    >
+                                                      <SelectTrigger className="h-8 text-xs px-2">
+                                                        <SelectValue placeholder="Pilih..." />
+                                                      </SelectTrigger>
+                                                      <SelectContent>
+                                                        {expenseTypes.map(et => (
+                                                          <SelectItem key={et.value} value={et.value}>{et.label}</SelectItem>
+                                                        ))}
+                                                      </SelectContent>
+                                                    </Select>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ))}
+
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => addChildItemRevision(activity.budget_detail_id)}
+                                              className="w-full gap-1 border-dashed h-8 text-xs text-muted-foreground hover:text-primary"
+                                            >
+                                              <Plus className="h-3 w-3" /> Tambah Item
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
 
                             <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100 flex justify-between items-center">
-                              <span className="text-xs font-semibold text-emerald-900">Total Pengajuan Baru</span>
+                              <span className="text-xs font-semibold text-emerald-900">Total {data.type === 'eer' ? 'EER' : 'Pengajuan'} Baru</span>
                               <span className="text-sm font-bold text-emerald-900 font-mono">
-                                Rp {revisionForm.selected_activities.reduce((s, a) => s + a.children.reduce((c_s, c) => c_s + (c.quantity * c.unit_price), 0), 0).toLocaleString('id-ID')}
+                                Rp {(data.type === 'eer'
+                                  ? revisionForm.eer_items.reduce((s, i) => s + i.amount, 0)
+                                  : revisionForm.selected_activities.reduce((s, a) => s + a.children.reduce((c_s, c) => c_s + (c.quantity * c.unit_price), 0), 0)
+                                ).toLocaleString('id-ID')}
                               </span>
                             </div>
+
+                            {data.type === 'eer' && (
+                              <div className="mt-4 p-4 border rounded-xl bg-slate-50/50 space-y-4">
+                                <div className="space-y-3">
+                                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tipe Hasil EER</Label>
+                                  <RadioGroup
+                                    value={revisionForm.eer_type}
+                                    onValueChange={(v: string) => setRevisionForm(p => ({ ...p, eer_type: v }))}
+                                    className="grid grid-cols-2 gap-2"
+                                  >
+                                    <div className={cn(
+                                      "flex items-center space-x-2 p-2 rounded-lg border bg-white cursor-pointer",
+                                      revisionForm.eer_type === 'refund' && "border-blue-500 bg-blue-50/30"
+                                    )}>
+                                      <RadioGroupItem value="refund" id="rev-refund" />
+                                      <Label htmlFor="rev-refund" className="text-xs cursor-pointer font-medium">Refund</Label>
+                                    </div>
+                                    <div className={cn(
+                                      "flex items-center space-x-2 p-2 rounded-lg border bg-white cursor-pointer",
+                                      revisionForm.eer_type === 'reimbursement' && "border-blue-500 bg-blue-50/30"
+                                    )}>
+                                      <RadioGroupItem value="reimbursement" id="rev-reimbursement" />
+                                      <Label htmlFor="rev-reimbursement" className="text-xs cursor-pointer font-medium">Reimbursement</Label>
+                                    </div>
+                                  </RadioGroup>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nominal {revisionForm.eer_type === 'refund' ? 'Refund' : 'Reimburse'}</Label>
+                                  <MoneyInput
+                                    value={revisionForm.refund_reimburse_amount}
+                                    onValueChange={(v) => setRevisionForm(p => ({ ...p, refund_reimburse_amount: v.floatValue || 0 }))}
+                                    className="h-9 text-sm font-bold text-blue-700"
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -1224,62 +1561,74 @@ export default function Show() {
                 {data.type === 'eer' && (() => {
                   const eerItems = data.items || [];
                   const atrItems = data.atr_items || [];
-                  const claimedParentIds = new Set(eerItems.map(i => i.parent_item_id).filter(Boolean));
 
-                  // Group ATR items by activity
-                  const grouped: Record<number, { name: string; items: typeof atrItems }> = {};
+                  // Calculate totals per activity for EER claims
+                  const activityClaimTotals: Record<number, number> = {};
+                  eerItems.forEach(item => {
+                    if (item.project_budget_detail_id) {
+                      activityClaimTotals[item.project_budget_detail_id] = (activityClaimTotals[item.project_budget_detail_id] || 0) + item.amount;
+                    }
+                  });
+
+                  // Group ATR items by activity for reference
+                  const groupedAtr: Record<number, { name: string; items: typeof atrItems; plannedAmount: number }> = {};
                   atrItems.forEach(item => {
-                    if (!grouped[item.activity_id]) grouped[item.activity_id] = { name: item.activity_name, items: [] };
-                    grouped[item.activity_id].items.push(item);
+                    if (!groupedAtr[item.activity_id]) {
+                      groupedAtr[item.activity_id] = { name: item.activity_name, items: [], plannedAmount: 0 };
+                    }
+                    groupedAtr[item.activity_id].items.push(item);
+                    groupedAtr[item.activity_id].plannedAmount += item.amount;
                   });
 
                   return (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       {/* EER Claimed Items Table */}
                       {eerItems.length > 0 && (
                         <div className="space-y-3">
-                          <label className="text-xs font-medium text-muted-foreground uppercase">Item Klaim EER</label>
-                          <div className="border rounded-xl overflow-hidden">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500" /> Item Klaim EER (Aktual)
+                          </label>
+                          <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
                             <div className="overflow-x-auto">
                               <table className="w-full text-sm">
                                 <thead>
-                                  <tr className="border-b bg-muted/30">
-                                    <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nama Item</th>
-                                    <th className="text-left p-3 font-medium text-muted-foreground text-xs">Kegiatan</th>
-                                    <th className="text-right p-3 font-medium text-muted-foreground text-xs">Nominal Klaim</th>
-                                    <th className="text-left p-3 font-medium text-muted-foreground text-xs">Jenis</th>
-                                    <th className="text-center p-3 font-medium text-muted-foreground text-xs">Kwitansi</th>
+                                  <tr className="border-b bg-slate-50/50">
+                                    <th className="text-left p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Nama Item</th>
+                                    <th className="text-left p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Kegiatan</th>
+                                    <th className="text-right p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Nominal Klaim</th>
+                                    <th className="text-left p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Jenis</th>
+                                    <th className="text-center p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider w-24">Kwitansi</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {eerItems.map(item => (
-                                    <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20">
-                                      <td className="p-3 font-medium">{item.item_name}</td>
-                                      <td className="p-3 text-muted-foreground">{item.activity_name}</td>
-                                      <td className="p-3 text-right font-mono font-semibold">Rp {item.amount.toLocaleString('id-ID')}</td>
-                                      <td className="p-3">
+                                    <tr key={item.id} className="border-b last:border-0 hover:bg-slate-50/50 transition-colors">
+                                      <td className="p-4 font-semibold text-slate-900">{item.item_name}</td>
+                                      <td className="p-4 text-slate-500 font-medium">{item.activity_name}</td>
+                                      <td className="p-4 text-right font-mono font-bold text-blue-700">Rp {item.amount.toLocaleString('id-ID')}</td>
+                                      <td className="p-4">
                                         {item.expense_type && (
-                                          <Badge variant="outline" className="text-[10px] px-1.5 bg-slate-50">{item.expense_type}</Badge>
+                                          <Badge variant="secondary" className="text-[10px] h-5 bg-blue-50 text-blue-700 border-blue-100">{item.expense_type}</Badge>
                                         )}
                                       </td>
-                                      <td className="p-3 text-center">
+                                      <td className="p-4 text-center">
                                         {item.receipt_path ? (
                                           <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
-                                            <Button size="sm" variant="outline" className="gap-1 text-xs h-7">
+                                            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] gap-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200">
                                               <Download className="h-3 w-3" /> Lihat
                                             </Button>
                                           </a>
                                         ) : (
-                                          <span className="text-xs text-muted-foreground italic">—</span>
+                                          <span className="text-[10px] text-muted-foreground italic">—</span>
                                         )}
                                       </td>
                                     </tr>
                                   ))}
                                 </tbody>
                                 <tfoot>
-                                  <tr className="bg-slate-50">
-                                    <td colSpan={2} className="p-3 text-right font-medium text-xs text-muted-foreground uppercase">Total Klaim</td>
-                                    <td className="p-3 text-right font-mono font-bold text-blue-700">
+                                  <tr className="bg-slate-900 text-white">
+                                    <td colSpan={2} className="p-4 text-right font-bold text-[10px] uppercase tracking-widest text-slate-400">Total Klaim EER</td>
+                                    <td className="p-4 text-right font-mono font-black text-white text-base">
                                       Rp {eerItems.reduce((s, i) => s + i.amount, 0).toLocaleString('id-ID')}
                                     </td>
                                     <td colSpan={2}></td>
@@ -1291,51 +1640,63 @@ export default function Show() {
                         </div>
                       )}
 
-                      {/* All ATR Items - Show which were selected */}
+                      {/* ATR Reference Context */}
                       {atrItems.length > 0 && (
                         <div className="space-y-3">
-                          <label className="text-xs font-medium text-muted-foreground uppercase">Semua Item ATR</label>
-                          <p className="text-xs text-muted-foreground -mt-1">Item yang diklaim pada EER ini ditandai dengan warna hijau.</p>
-                          {Object.entries(grouped).map(([actId, group]) => (
-                            <div key={actId} className="border rounded-xl overflow-hidden">
-                              <div className="bg-slate-50 p-3 border-b">
-                                <h4 className="font-semibold text-sm text-slate-800">{group.name}</h4>
-                              </div>
-                              <div className="divide-y">
-                                {group.items.map(atrItem => {
-                                  const isClaimed = claimedParentIds.has(atrItem.id);
-                                  const eerItem = isClaimed ? eerItems.find(e => e.parent_item_id === atrItem.id) : null;
-                                  return (
-                                    <div key={atrItem.id} className={`flex items-center justify-between p-3 ${isClaimed ? 'bg-green-50/60' : 'bg-white opacity-60'}`}>
-                                      <div className="flex items-center gap-2">
-                                        {isClaimed ? (
-                                          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-                                        ) : (
-                                          <div className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" />
-                                        )}
-                                        <div>
-                                          <span className={`text-sm font-medium ${isClaimed ? 'text-green-900' : 'text-gray-500'}`}>
-                                            {atrItem.item_name}
-                                          </span>
-                                          {atrItem.expense_type && (
-                                            <span className="text-xs text-muted-foreground ml-2">({atrItem.expense_type})</span>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="text-right">
-                                        <span className={`text-sm font-mono font-semibold ${isClaimed ? 'text-green-800' : 'text-gray-400'}`}>
-                                          Rp {atrItem.amount.toLocaleString('id-ID')}
-                                        </span>
-                                        {isClaimed && eerItem && (
-                                          <p className="text-xs text-green-700">Klaim: Rp {eerItem.amount.toLocaleString('id-ID')}</p>
-                                        )}
-                                      </div>
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-slate-400" /> Referensi Persetujuan ATR
+                          </label>
+                          <div className="grid grid-cols-1 gap-4">
+                            {Object.entries(groupedAtr).map(([actId, group]) => {
+                              const actualClaim = activityClaimTotals[parseInt(actId)] || 0;
+                              const isClaimed = actualClaim > 0;
+
+                              return (
+                                <div key={actId} className={cn(
+                                  "border rounded-xl transition-all overflow-hidden",
+                                  isClaimed ? "border-emerald-200 bg-emerald-50/20 shadow-sm" : "border-slate-200 bg-white opacity-60"
+                                )}>
+                                  <div className={cn(
+                                    "p-3 border-b flex items-center justify-between",
+                                    isClaimed ? "bg-emerald-50" : "bg-slate-50"
+                                  )}>
+                                    <div className="flex items-center gap-2">
+                                      {isClaimed ? (
+                                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                                      ) : (
+                                        <div className="h-4 w-4 rounded-full border-2 border-slate-300" />
+                                      )}
+                                      <h4 className={cn("font-bold text-sm", isClaimed ? "text-emerald-900" : "text-slate-600")}>
+                                        {group.name}
+                                      </h4>
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
+                                    <div className="text-right">
+                                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Budget ATR</p>
+                                      <p className="text-sm font-mono font-bold text-slate-700">Rp {group.plannedAmount.toLocaleString('id-ID')}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="p-4">
+                                    <div className="space-y-1.5">
+                                      {group.items.map(atrItem => (
+                                        <div key={atrItem.id} className="flex justify-between items-center text-xs">
+                                          <span className="text-slate-500">• {atrItem.item_name}</span>
+                                          <span className="font-mono text-slate-400">Rp {atrItem.amount.toLocaleString('id-ID')}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    {isClaimed && (
+                                      <div className="mt-3 pt-3 border-t border-emerald-100 flex justify-between items-center">
+                                        <span className="text-[10px] font-bold text-emerald-700 uppercase">Total Aktual (EER)</span>
+                                        <span className="text-sm font-mono font-bold text-emerald-800">Rp {actualClaim.toLocaleString('id-ID')}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>

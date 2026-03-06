@@ -251,6 +251,8 @@ final class ReimbursementController extends Controller
                 'revision_note' => ['nullable', 'string'],
                 'items' => ['nullable', 'array'],
                 'selected_budget_details' => ['nullable', 'array'],
+                'eer_type' => ['nullable', 'string', 'in:refund,reimbursement'],
+                'refund_reimburse_amount' => ['nullable', 'numeric', 'min:0'],
             ]);
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user) {
@@ -264,6 +266,12 @@ final class ReimbursementController extends Controller
                 }
                 if (isset($validated['end_date'])) {
                     $updateData['end_date'] = $validated['end_date'];
+                }
+                if (isset($validated['eer_type'])) {
+                    $updateData['eer_type'] = $validated['eer_type'];
+                }
+                if (isset($validated['refund_reimburse_amount'])) {
+                    $updateData['refund_reimburse_amount'] = $validated['refund_reimburse_amount'];
                 }
 
                 // Sync items if provided

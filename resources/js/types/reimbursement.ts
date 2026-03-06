@@ -68,4 +68,5 @@ export interface ReimbursementPayload {
         amount: number;
     }[];
     items?: ReimbursementItemPayload[];
+    revision_note?: string;
 }
