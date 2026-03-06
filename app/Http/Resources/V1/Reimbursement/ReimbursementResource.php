@@ -224,8 +224,8 @@ final class ReimbursementResource extends JsonResource
 
         // 3. Finance Approval Phase
         // For ATR: after Head. For Allowance: after HR.
-        $financeStage = ($this->type->value === 'atr') ? 'head_approved' : 'hr_approved';
-        if ($effectiveStage === $financeStage || ($this->type->value === 'atr' && $effectiveStage === 'head_approved')) {
+        $financeStage = (in_array($this->type->value, ['atr', 'eer'])) ? 'head_approved' : 'hr_approved';
+        if ($effectiveStage === $financeStage || (in_array($this->type->value, ['atr', 'eer']) && $effectiveStage === 'head_approved')) {
             if ($user->hasRole('finance') || $user->hasRole('direktur')) {
                 $pendingFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
                 if ($pendingFinance) {

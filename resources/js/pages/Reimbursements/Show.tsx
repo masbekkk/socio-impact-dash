@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 interface AtrBudgetSelected {
+  activity_name: string;
   id: number;
   project_budget_detail_id: number;
   amount: number;
