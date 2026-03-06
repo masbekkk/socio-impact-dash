@@ -45,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
         title: 'Cuti',
         href: '/leaves',
         icon: Calendar,
-        roles: ['pegawai', 'hr', 'superadmin', 'head', 'direktur'],
+        roles: ['pegawai', 'hr', 'superadmin', 'head', 'direktur', 'finance'],
     },
     {
         title: 'Kalender',

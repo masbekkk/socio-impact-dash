@@ -715,6 +715,21 @@ export default function ProjectTabs({
                                         </div>
                                     )}
                                     <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu operasional {(project.budget_total > 0 ? ((opsBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
+
+                                    <div className="mt-4 pt-4 border-t border-slate-50 space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] text-muted-foreground">Terpakai ATR</span>
+                                            <span className="text-[10px] font-semibold text-slate-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.used_atr || 0)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] text-muted-foreground">Terpakai EER</span>
+                                            <span className="text-[10px] font-semibold text-slate-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.used_eer || 0)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-blue-50/50 p-1.5 rounded-md">
+                                            <span className="text-[10px] font-bold text-blue-700">Sisa Anggaran</span>
+                                            <span className="text-[10px] font-bold text-blue-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.remaining_operational || 0)}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-purple-200 transition-colors">
                                     <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-2">Manajemen</p>
@@ -761,6 +776,17 @@ export default function ProjectTabs({
                                         </div>
                                     )}
                                     <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu allowance {(project.budget_total > 0 ? ((allowanceBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
+
+                                    <div className="mt-4 pt-4 border-t border-slate-50 space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] text-muted-foreground">Usage Allowance</span>
+                                            <span className="text-[10px] font-semibold text-slate-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.used_allowance || 0)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-amber-50/50 p-1.5 rounded-md">
+                                            <span className="text-[10px] font-bold text-amber-700">Sisa Allowance</span>
+                                            <span className="text-[10px] font-bold text-amber-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.remaining_allowance || 0)}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
