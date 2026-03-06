@@ -86,7 +86,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
                 } else if (userRole === 'finance') {
                     filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'Finance' || d.code === 'FA');
                 } else {
-                    filteredLetterDivs = allLetterDivs;
+                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'PM');;
                 }
 
                 setLetterDivisions(filteredLetterDivs);
@@ -288,7 +288,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
                                                         key={divCode.id}
                                                         value={divCode.names && divCode.names.length > 0 ? divCode.names[0].id.toString() : ''}
                                                     >
-                                                        {divCode.code}
+                                                        {divCode.code} - {divCode.name}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

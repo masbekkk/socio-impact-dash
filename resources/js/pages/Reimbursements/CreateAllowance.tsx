@@ -77,15 +77,9 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
             const start = new Date(formData.start_date);
             const end = new Date(formData.end_date);
             if (start <= end) {
-                let days = 0;
-                const date = new Date(start);
-                while (date <= end) {
-                    if (date.getDay() !== 0 && date.getDay() !== 6) {
-                        days++;
-                    }
-                    date.setDate(date.getDate() + 1);
-                }
-                setTotalDays(days);
+                const diffTime = Math.abs(end.getTime() - start.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                setTotalDays(diffDays);
             } else {
                 setTotalDays(0);
             }
@@ -158,7 +152,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
             project_id: formData.project_id,
             amount: formData.amount,
             usage_plan: formData.usage_plan,
-            urgency: URGENCY_MAP[formData.urgency] ?? 'normal',
+            urgency: 'normal',
             documents,
             approver_head_id: formData.approver_head_id,
             start_date: formData.start_date,
@@ -330,32 +324,6 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                                     {errors.usage_plan && <p className="text-xs text-red-500 font-medium">{errors.usage_plan[0]}</p>}
                                 </div>
 
-                                <div className="space-y-3">
-                                    <Label className="flex items-center gap-2 font-medium"><AlertCircle className="h-4 w-4 text-muted-foreground" /> Opsi Urgensi</Label>
-                                    <RadioGroup value={formData.urgency} onValueChange={(v) => setFormData(prev => ({ ...prev, urgency: v }))} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer text-sm">
-                                            <RadioGroupItem value="low" id="low" />
-                                            <Label htmlFor="low" className="flex-1 cursor-pointer font-normal">
-                                                <div className="font-medium">Rendah</div>
-                                                <div className="text-[10px] text-muted-foreground">Tidak mendesak</div>
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer text-sm">
-                                            <RadioGroupItem value="normal" id="normal" />
-                                            <Label htmlFor="normal" className="flex-1 cursor-pointer font-normal">
-                                                <div className="font-medium">Normal</div>
-                                                <div className="text-[10px] text-muted-foreground">Urgensi standar</div>
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer text-sm">
-                                            <RadioGroupItem value="high" id="high" />
-                                            <Label htmlFor="high" className="flex-1 cursor-pointer font-normal">
-                                                <div className="font-medium">Tinggi</div>
-                                                <div className="text-[10px] text-muted-foreground">Mendesak</div>
-                                            </Label>
-                                        </div>
-                                    </RadioGroup>
-                                </div>
                             </div>
                         </div>
 

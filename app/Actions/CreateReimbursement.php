@@ -136,8 +136,13 @@ final readonly class CreateReimbursement
             'direktur' => $data['approver_direktur_id'] ?? null,
         ];
 
+        // Ensure Allowance skips finance and direktur even if passed in data
+        if ($reimbursement->type->value === 'allowance') {
+            $roles['finance'] = null;
+        }
+
         // Default approvers if not provided
-        if (empty($roles['finance'])) {
+        if (empty($roles['finance']) && $reimbursement->type->value !== 'allowance') {
             $roles['finance'] = \App\Models\User::where('email', 'finance@socio-impact.test')->first()?->id;
         }
 
