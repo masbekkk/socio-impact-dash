@@ -64,4 +64,12 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::get('calendar', [CalendarController::class, 'index'])->name('api.v1.calendar.index');
     Route::post('calendar', [CalendarController::class, 'store'])->name('api.v1.calendar.store');
     Route::delete('calendar/{id}', [CalendarController::class, 'destroy'])->name('api.v1.calendar.destroy');
+
+    // Notifications
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\NotificationController::class, 'index'])->name('api.v1.notifications.index');
+        Route::get('/unread-count', [App\Http\Controllers\Api\V1\NotificationController::class, 'unreadCount'])->name('api.v1.notifications.unread-count');
+        Route::post('/{id}/read', [App\Http\Controllers\Api\V1\NotificationController::class, 'markAsRead'])->name('api.v1.notifications.read');
+        Route::post('/read-all', [App\Http\Controllers\Api\V1\NotificationController::class, 'markAllRead'])->name('api.v1.notifications.read-all');
+    });
 });

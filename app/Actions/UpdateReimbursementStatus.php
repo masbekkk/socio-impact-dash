@@ -119,6 +119,50 @@ final readonly class UpdateReimbursementStatus
                 $reimbursement->update(['amount' => $data['amount']]);
             }
 
+            // Send notifications for status changes
+            if (in_array($action, [ApprovalStatus::Approved->value, 'request_fund', 'revision', 'rejected'], true)) {
+                $notifier = new \App\Actions\CreateNotification();
+
+                $actionLabels = [
+                    ApprovalStatus::Approved->value => 'disetujui',
+                    'request_fund' => 'disetujui (request fund)',
+                    'revision' => 'diminta revisi',
+                    'rejected' => 'ditolak',
+                ];
+                $label = $actionLabels[$action] ?? $action;
+
+                // Collect recipients: assigned head + all finance + all direktur
+                $recipientIds = $notifier->getUserIdsByRoles(['finance', 'direktur']);
+
+                // Add the reimbursement submitter
+                if ($reimbursement->user_id) {
+                    $recipientIds[] = $reimbursement->user_id;
+                }
+
+                // Add head approver if assigned
+                $headApproval = ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                    ->where('role', 'head')
+                    ->first();
+                if ($headApproval?->approver_id) {
+                    $recipientIds[] = $headApproval->approver_id;
+                }
+
+                // Remove the person who took the action
+                $recipientIds = array_filter($recipientIds, fn (int $id) => $id !== $approverId);
+
+                if ($recipientIds !== []) {
+                    $notifier->handle(
+                        type: 'reimbursement_' . $action,
+                        title: 'Update Pengajuan Keuangan',
+                        message: "Pengajuan {$reimbursement->code} telah {$label} oleh " . (\App\Models\User::find($approverId)?->name ?? 'System') . '.',
+                        recipientUserIds: array_values($recipientIds),
+                        referenceType: 'reimbursement',
+                        referenceId: $reimbursement->id,
+                        createdBy: $approverId,
+                    );
+                }
+            }
+
             return $reimbursement->fresh(['user', 'project', 'documents', 'approvals.approver', 'comments.user']);
         });
     }
