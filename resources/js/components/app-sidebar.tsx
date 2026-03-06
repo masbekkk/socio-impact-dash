@@ -39,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
         title: 'Presensi',
         href: '/presences',
         icon: CheckSquare,
-        roles: ['pegawai', 'hr', 'superadmin', 'head'],
+        roles: ['pegawai', 'hr', 'superadmin', 'head', 'direktur', 'finance'],
     },
     {
         title: 'Cuti',

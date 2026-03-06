@@ -385,7 +385,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                       </TableHead>
                       <TableHead>
                         <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
-                          Status ATR <SortIcon column="status" />
+                          Status <SortIcon column="status" />
                         </button>
                       </TableHead>
                       <TableHead className="text-right">Aksi</TableHead>

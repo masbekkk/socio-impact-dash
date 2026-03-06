@@ -279,10 +279,10 @@ export default function CreatePresence({ projects }: PageProps) {
                                                         <Camera className="h-4 w-4" />
                                                         Buka Kamera
                                                     </Button>
-                                                    <Button type="button" onClick={() => fileInputRef.current?.click()} variant="outline" className="gap-2">
+                                                    {/* <Button type="button" onClick={() => fileInputRef.current?.click()} variant="outline" className="gap-2">
                                                         <ImageIcon className="h-4 w-4" />
                                                         Galeri / File
-                                                    </Button>
+                                                    </Button> */}
                                                     <input
                                                         type="file"
                                                         ref={fileInputRef}

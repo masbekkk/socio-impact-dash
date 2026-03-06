@@ -141,7 +141,7 @@ final readonly class CreateReimbursement
             $roles['finance'] = \App\Models\User::where('email', 'finance@socio-impact.test')->first()?->id;
         }
 
-        if (empty($roles['hr'])) {
+        if (empty($roles['hr']) && $reimbursement->type->value === 'allowance') {
             $roles['hr'] = \App\Models\User::where('email', 'hr@socio-impact.test')->first()?->id;
         }
 
