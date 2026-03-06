@@ -88,6 +88,30 @@ final class ProjectResource extends JsonResource
             'monitoring_history' => ProjectMonitoringResource::collection($this->whenLoaded('monitorings')),
             'approvals' => ProjectApprovalResource::collection($this->whenLoaded('approvals')),
             'events' => $this->whenLoaded('events'),
+            'used_atr' => (float) $this->reimbursements()
+                ->where('type', 'atr')
+                ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                ->sum('amount'),
+            'used_eer' => (float) $this->reimbursements()
+                ->where('type', 'eer')
+                ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                ->sum('amount'),
+            'used_allowance' => (float) $this->reimbursements()
+                ->where('type', 'allowance')
+                ->whereNotIn('status', ['rejected', 'submitted', 'draft', 'revision'])
+                ->sum('amount'),
+            'total_used_operational' => (float) $this->reimbursements()
+                ->whereIn('type', ['atr', 'eer'])
+                ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                ->sum('amount'),
+            'remaining_operational' => (float) $this->operational_budget - (float) $this->reimbursements()
+                ->whereIn('type', ['atr', 'eer'])
+                ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                ->sum('amount'),
+            'remaining_allowance' => (float) $this->allowance_budget - (float) $this->reimbursements()
+                ->where('type', 'allowance')
+                ->whereNotIn('status', ['rejected', 'submitted', 'draft', 'revision'])
+                ->sum('amount'),
             'created_at' => $this->created_at->toDateTimeString(),
             'updated_at' => $this->updated_at->toDateTimeString(),
         ];
