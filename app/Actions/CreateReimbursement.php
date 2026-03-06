@@ -20,15 +20,15 @@ final readonly class CreateReimbursement
         return DB::transaction(function () use ($data, $userId) {
             $reimbursement = $this->createReimbursementRecord($data, $userId);
 
-            if (!empty($data['documents'])) {
+            if (! empty($data['documents'])) {
                 $this->syncDocuments($reimbursement, $data['documents'], $userId);
             }
 
-            if (!empty($data['selected_budget_details'])) {
+            if (! empty($data['selected_budget_details'])) {
                 $this->syncSelectedBudgets($reimbursement, $data['selected_budget_details']);
             }
 
-            if (!empty($data['items'])) {
+            if (! empty($data['items'])) {
                 $this->syncReimbursementItems($reimbursement, $data['items']);
             }
 
@@ -63,7 +63,7 @@ final readonly class CreateReimbursement
     private function generateUniqueCode(): string
     {
         do {
-            $code = 'RMB-' . mb_strtoupper(Str::random(6));
+            $code = 'RMB-'.mb_strtoupper(Str::random(6));
         } while (Reimbursement::where('code', $code)->exists());
 
         return $code;
@@ -131,17 +131,20 @@ final readonly class CreateReimbursement
     {
         $roles = [
             'head' => $data['approver_head_id'] ?? null,
+            'hr' => $data['approver_hr_id'] ?? null,
             'finance' => $data['approver_finance_id'] ?? null,
             'direktur' => $data['approver_direktur_id'] ?? null,
-            'hr' => $data['approver_hr_id'] ?? null,
         ];
 
-        // Default approver for Finance if not provided
+        // Default approvers if not provided
         if (empty($roles['finance'])) {
             $roles['finance'] = \App\Models\User::where('email', 'finance@socio-impact.test')->first()?->id;
         }
 
-        // Default approver for Direktur if not provided
+        if (empty($roles['hr'])) {
+            $roles['hr'] = \App\Models\User::where('email', 'hr@socio-impact.test')->first()?->id;
+        }
+
         if (empty($roles['direktur'])) {
             $roles['direktur'] = \App\Models\User::where('email', 'direktur@socio-impact.test')->first()?->id;
         }

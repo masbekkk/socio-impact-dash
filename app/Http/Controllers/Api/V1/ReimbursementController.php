@@ -10,7 +10,9 @@ use App\Formatters\JsonResponseFormatter;
 use App\Http\Requests\StoreReimbursementRequest;
 use App\Http\Requests\UpdateReimbursementStatusRequest;
 use App\Http\Resources\V1\Reimbursement\ReimbursementResource;
+use App\Models\Project;
 use App\Models\Reimbursement;
+use App\Models\User;
 use App\Services\ReimbursementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -128,18 +130,43 @@ final class ReimbursementController extends Controller
         }
     }
 
-    public function show(string $code): JsonResponse
+    public function show(string $code, Request $request): JsonResponse
     {
         try {
             $data = $this->reimbursementService->getReimbursementDetail($code);
+
             if (! $data) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
             }
 
-            return JsonResponseFormatter::success(
-                new ReimbursementResource($data),
-                'Detail reimbursement berhasil diambil'
-            );
+            $user = $request->user();
+
+            if (! $user->hasAnyPermission(['approve_reimbursements', 'reject_reimbursements']) && $data->user_id !== $user->id) {
+                return JsonResponseFormatter::error('Anda tidak memiliki akses ke data ini', 403);
+            }
+
+            // Provide projects and users for the revision editor dropdowns
+            $projects = Project::select('id', 'name', 'code', 'operational_budget', 'allowance_budget', 'division_id', 'pic_id')
+                ->with(['division:id,name', 'pic:id,name'])
+                ->get()
+                ->map(fn ($project) => [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'code' => $project->code,
+                    'operational_budget' => $project->operational_budget,
+                    'allowance_budget' => $project->allowance_budget,
+                    'division_name' => $project->division?->name ?? 'Tidak ada divisi',
+                    'pic_name' => $project->pic?->name ?? 'Belum ada PIC',
+                ]);
+
+            $users = User::select('id', 'name')->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => new ReimbursementResource($data),
+                'projects' => $projects,
+                'users' => $users,
+            ]);
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }
@@ -251,6 +278,11 @@ final class ReimbursementController extends Controller
                 'revision_note' => ['nullable', 'string'],
                 'items' => ['nullable', 'array'],
                 'selected_budget_details' => ['nullable', 'array'],
+                'eer_type' => ['nullable', 'string', 'in:refund,reimbursement'],
+                'refund_reimburse_amount' => ['nullable', 'numeric', 'min:0'],
+                'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+                'replacement_pic_id' => ['nullable', 'integer', 'exists:users,id'],
+                'urgency' => ['nullable', 'string', 'max:20'],
             ]);
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user) {
@@ -264,6 +296,21 @@ final class ReimbursementController extends Controller
                 }
                 if (isset($validated['end_date'])) {
                     $updateData['end_date'] = $validated['end_date'];
+                }
+                if (isset($validated['eer_type'])) {
+                    $updateData['eer_type'] = $validated['eer_type'];
+                }
+                if (isset($validated['refund_reimburse_amount'])) {
+                    $updateData['refund_reimburse_amount'] = $validated['refund_reimburse_amount'];
+                }
+                if (array_key_exists('project_id', $validated)) {
+                    $updateData['project_id'] = $validated['project_id'];
+                }
+                if (array_key_exists('replacement_pic_id', $validated)) {
+                    $updateData['replacement_pic_id'] = $validated['replacement_pic_id'];
+                }
+                if (array_key_exists('urgency', $validated)) {
+                    $updateData['urgency'] = $validated['urgency'];
                 }
 
                 // Sync items if provided

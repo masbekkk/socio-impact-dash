@@ -8,7 +8,6 @@ use App\Formatters\JsonResponseFormatter;
 use App\Http\Requests\Divisions\StoreDivisionRequest;
 use App\Http\Requests\Divisions\UpdateDivisionRequest;
 use App\Http\Resources\V1\Division\DivisionResource;
-use App\Models\Division;
 use App\Models\DivisionCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,10 +23,10 @@ final class DivisionController extends Controller
             $search = $request->get('search');
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")
-                  ->orWhere('name', 'like', "%{$search}%")
-                  ->orWhereHas('divisions', function (\Illuminate\Database\Eloquent\Builder $nq) use ($search) {
-                      $nq->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhereHas('divisions', function (\Illuminate\Database\Eloquent\Builder $nq) use ($search) {
+                        $nq->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -42,12 +41,12 @@ final class DivisionController extends Controller
     public function store(StoreDivisionRequest $request): JsonResponse
     {
         $validated = $request->validated();
-        
+
         $divisionCode = DivisionCode::create([
             'code' => $validated['code'],
             'name' => $validated['name'],
         ]);
-        
+
         foreach ($validated['names'] as $nameData) {
             $divisionCode->divisions()->create($nameData);
         }
@@ -62,7 +61,7 @@ final class DivisionController extends Controller
     public function show(string $id): JsonResponse
     {
         $divisionCode = DivisionCode::with('divisions')->findOrFail($id);
-        
+
         return JsonResponseFormatter::success(
             new DivisionResource($divisionCode),
             'Division retrieved successfully'
@@ -73,12 +72,12 @@ final class DivisionController extends Controller
     {
         $divisionCode = DivisionCode::findOrFail($id);
         $validated = $request->validated();
-        
+
         $divisionCode->update([
             'code' => $validated['code'],
             'name' => $validated['name'],
         ]);
-        
+
         // Replace all names with the newly provided ones
         $divisionCode->divisions()->delete();
         foreach ($validated['names'] as $nameData) {

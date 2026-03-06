@@ -8,7 +8,7 @@ use App\Models\Project;
 use App\Models\ProjectApproval;
 use Illuminate\Support\Facades\DB;
 
-class RejectProject
+final class RejectProject
 {
     public function handle(Project $project, int $userId, ?string $notes = null): Project
     {

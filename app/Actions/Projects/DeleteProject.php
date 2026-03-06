@@ -7,7 +7,7 @@ namespace App\Actions\Projects;
 use App\Models\Project;
 use Illuminate\Support\Facades\DB;
 
-class DeleteProject
+final class DeleteProject
 {
     public function handle(Project $project): bool
     {

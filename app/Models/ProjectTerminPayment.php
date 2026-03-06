@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +23,8 @@ final class ProjectTerminPayment extends Model
         'due_date' => 'date',
     ];
 
+    protected $appends = ['proof_payment_url'];
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
@@ -30,8 +34,6 @@ final class ProjectTerminPayment extends Model
     {
         return $this->belongsTo(User::class, 'verified_by');
     }
-
-    protected $appends = ['proof_payment_url'];
 
     public function getProofPaymentUrlAttribute(): ?string
     {

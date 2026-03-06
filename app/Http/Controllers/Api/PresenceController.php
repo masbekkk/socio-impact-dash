@@ -10,10 +10,11 @@ use App\Http\Requests\CheckOutRequest;
 use App\Http\Requests\SubmitPermissionRequest;
 use App\Http\Resources\PresenceResource;
 use App\Services\PresenceService;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class PresenceController
+final class PresenceController
 {
     public function __construct(
         private PresenceService $presenceService
@@ -31,7 +32,7 @@ class PresenceController
                 new PresenceResource($presence),
                 'Check-in berhasil.'
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return JsonResponseFormatter::error($e->getMessage());
         }
     }
@@ -48,7 +49,7 @@ class PresenceController
                 new PresenceResource($presence),
                 'Check-out berhasil.'
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return JsonResponseFormatter::error($e->getMessage());
         }
     }
@@ -65,7 +66,7 @@ class PresenceController
                 new PresenceResource($presence),
                 'Pengajuan berhasil disimpan.'
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return JsonResponseFormatter::error($e->getMessage());
         }
     }

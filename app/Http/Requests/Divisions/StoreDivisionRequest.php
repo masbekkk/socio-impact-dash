@@ -32,4 +32,3 @@ final class StoreDivisionRequest extends FormRequest
         ];
     }
 }
-

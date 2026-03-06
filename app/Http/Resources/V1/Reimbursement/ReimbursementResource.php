@@ -43,6 +43,7 @@ final class ReimbursementResource extends JsonResource
             ]),
             'type' => $this->type?->value,
             'eer_type' => $this->eer_type,
+            'refund_reimburse_amount' => $this->amount,
             'status' => $this->status?->value,
             'amount' => (float) $this->amount,
             'bank_name' => $this->bank_name,
@@ -70,13 +71,27 @@ final class ReimbursementResource extends JsonResource
                 });
             }),
             'approvals' => $this->whenLoaded('approvals', function (): \Illuminate\Support\Collection {
-                return $this->approvals->map(function (\App\Models\ReimbursementApproval $item): array {
+                $priority = [
+                    'head' => 1,
+                    'hr' => 2,
+                    'finance' => 3,
+                    'direktur' => 4,
+                ];
+
+                return $this->approvals->sortBy(function ($approval) use ($priority) {
+                    $roleValue = $approval->role instanceof \UnitEnum ? $approval->role->value : (string) $approval->role;
+                    return $priority[strtolower($roleValue)] ?? 99;
+                })->values()->map(function (\App\Models\ReimbursementApproval $item): array {
                     return [
                         'id' => $item->id,
                         'approver_id' => $item->approver_id,
+                        'approver' => [
+                            'id' => $item->approver?->id,
+                            'name' => $item->approver?->name,
+                        ],
                         'approver_name' => $item->approver?->name ?? 'Unknown',
-                        'role' => $item->role,
-                        'status' => $item->status,
+                        'role' => $item->role instanceof \UnitEnum ? $item->role->value : $item->role,
+                        'status' => $item->status instanceof \UnitEnum ? $item->status->value : $item->status,
                         'notes' => $item->notes,
                         'approved_at' => $item->approved_at?->toISOString(),
                     ];
@@ -165,17 +180,18 @@ final class ReimbursementResource extends JsonResource
         $isHeadRole = $user->hasRole('head');
         $isFinanceRole = $user->hasRole('finance');
         $isDirekturRole = $user->hasRole('direktur');
+        $isHrRole = $user->hasRole('hr');
 
         // If user is ONLY a Head (not Finance/Direktur), check assignment or creator
-        if ($isHeadRole && ! $isFinanceRole && ! $isDirekturRole) {
+        if ($isHeadRole && ! $isFinanceRole && ! $isDirekturRole && ! $isHrRole) {
             $isAssigned = $this->approvals->where('approver_id', $user->id)->where('role', 'head')->isNotEmpty();
             if (! $isAssigned && ! $isCreator) {
                 return false;
             }
         }
 
-        // If user is the creator but NOT a head/finance/direktur, they definitely can't approve
-        if ($isCreator && ! $isHeadRole && ! $isFinanceRole && ! $isDirekturRole) {
+        // If user is the creator but NOT a head/finance/direktur/hr, they definitely can't approve
+        if ($isCreator && ! $isHeadRole && ! $isFinanceRole && ! $isDirekturRole && ! $isHrRole) {
             return false;
         }
 
@@ -223,8 +239,8 @@ final class ReimbursementResource extends JsonResource
 
         // 3. Finance Approval Phase
         // For ATR: after Head. For Allowance: after HR.
-        $financeStage = ($this->type->value === 'atr') ? 'head_approved' : 'hr_approved';
-        if ($effectiveStage === $financeStage || ($this->type->value === 'atr' && $effectiveStage === 'head_approved')) {
+        $financeStage = (in_array($this->type->value, ['atr', 'eer'])) ? 'head_approved' : 'hr_approved';
+        if ($effectiveStage === $financeStage || (in_array($this->type->value, ['atr', 'eer']) && $effectiveStage === 'head_approved')) {
             if ($user->hasRole('finance') || $user->hasRole('direktur')) {
                 $pendingFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
                 if ($pendingFinance) {

@@ -19,7 +19,7 @@ final class LeaveFactory extends Factory
     public function definition(): array
     {
         return [
-            'code' => 'LV-' . $this->faker->unique()->numberBetween(1000, 9999),
+            'code' => 'LV-'.$this->faker->unique()->numberBetween(1000, 9999),
             'user_id' => \App\Models\User::factory(),
             'type' => \App\Enums\LeaveType::Annual,
             'status' => \App\Enums\LeaveStatus::Submitted,

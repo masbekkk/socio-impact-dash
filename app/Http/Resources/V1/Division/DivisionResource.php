@@ -25,7 +25,7 @@ final class DivisionResource extends JsonResource
     {
         /** @var \App\Models\DivisionCode $this */
         $this->loadMissing('divisions');
-        
+
         return [
             'id' => $this->id,
             'code' => $this->code,

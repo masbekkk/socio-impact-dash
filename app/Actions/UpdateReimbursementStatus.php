@@ -115,6 +115,10 @@ final readonly class UpdateReimbursementStatus
                 ]);
             }
 
+            if (isset($data['amount'])) {
+                $reimbursement->update(['amount' => $data['amount']]);
+            }
+
             return $reimbursement->fresh(['user', 'project', 'documents', 'approvals.approver', 'comments.user']);
         });
     }

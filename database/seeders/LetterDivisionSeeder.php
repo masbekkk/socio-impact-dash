@@ -1,23 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\LetterDivision;
 use Illuminate\Database\Seeder;
 
-class LetterDivisionSeeder extends Seeder
+final class LetterDivisionSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        $divisions = ['BOT', 'FA', 'HR', 'PM', 'BOD', 'PKBM', 'HCM'];
+        LetterDivision::query()->delete();
+        $divisions = ['BOD', 'HCM', 'FA', 'PM'];
 
         $uniqueDivisions = array_unique($divisions);
 
         foreach ($uniqueDivisions as $division) {
-            \App\Models\LetterDivision::firstOrCreate(['code' => $division]);
+            LetterDivision::firstOrCreate(['code' => $division]);
         }
     }
 }

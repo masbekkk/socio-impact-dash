@@ -6,42 +6,42 @@ namespace App\Formatters;
 
 use Illuminate\Http\JsonResponse;
 
-class JsonResponseFormatter
+final class JsonResponseFormatter
 {
     public static function success(
-        mixed $data = null, 
-        ?string $message = null, 
+        mixed $data = null,
+        ?string $message = null,
         int $statusCode = 200
     ): JsonResponse {
         $response = [];
-        
+
         if ($message !== null) {
             $response['message'] = $message;
         }
-        
+
         $response['data'] = $data;
-        
+
         return response()->json($response, $statusCode);
     }
 
     public static function created(
-        mixed $data = null, 
+        mixed $data = null,
         ?string $message = null
     ): JsonResponse {
         return self::success($data, $message, 201);
     }
 
     public static function error(
-        string $message, 
-        int $statusCode = 400, 
+        string $message,
+        int $statusCode = 400,
         ?array $errors = null
     ): JsonResponse {
         $response = ['message' => $message];
-        
+
         if ($errors !== null) {
             $response['errors'] = $errors;
         }
-        
+
         return response()->json($response, $statusCode);
     }
 

@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Resources\V1\LetterDivision;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class LetterDivisionResource extends JsonResource
+final class LetterDivisionResource extends JsonResource
 {
     /**
      * Transform the resource into an array.

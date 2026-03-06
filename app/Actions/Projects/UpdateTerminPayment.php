@@ -6,14 +6,12 @@ namespace App\Actions\Projects;
 
 use App\Models\ProjectTerminPayment;
 use App\Services\FileUploadService;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 
-class UpdateTerminPayment
+final class UpdateTerminPayment
 {
-    public function __construct(protected FileUploadService $fileUploadService)
-    {
-    }
+    public function __construct(private FileUploadService $fileUploadService) {}
 
     public function handle(ProjectTerminPayment $termin, array $data, int $userId): ProjectTerminPayment
     {
@@ -29,18 +27,18 @@ class UpdateTerminPayment
             if (isset($data['proof_file']) && $data['proof_file'] instanceof UploadedFile) {
                 // If replacing existing proof?
                 if ($termin->proof_payment) {
-                     // Optionally delete old file
+                    // Optionally delete old file
                 }
 
                 $meta = $this->fileUploadService->uploadFile(
                     $data['proof_file'],
                     "projects/{$termin->project_id}/termins/{$termin->id}"
                 );
-                
+
                 $updateData['proof_payment'] = $meta['path'];
             }
 
-            if (!empty($updateData)) {
+            if (! empty($updateData)) {
                 $termin->update($updateData);
             }
 

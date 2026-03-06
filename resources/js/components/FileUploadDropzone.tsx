@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { UploadCloud, FileText, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export default function FileUploadDropzone({ className, onFilesChange }: { className?: string, onFilesChange?: (files: File[]) => void }) {
   const [files, setFiles] = useState<File[]>([])
@@ -58,10 +59,12 @@ export default function FileUploadDropzone({ className, onFilesChange }: { class
   }
 
   return (
-    <div className={className}>
+    <div className={cn("relative flex flex-col", className)}>
       <div
-        className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'hover:bg-muted/50 border-muted-foreground/25'
-          }`}
+        className={cn(
+          "border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-colors flex-1 w-full",
+          isDragging ? 'border-primary bg-primary/5' : 'hover:bg-muted/50 border-muted-foreground/25'
+        )}
         onClick={() => inputRef.current?.click()}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
@@ -74,11 +77,11 @@ export default function FileUploadDropzone({ className, onFilesChange }: { class
           ref={inputRef}
           onChange={onChange}
         />
-        <div className="bg-primary/10 p-3 rounded-full mb-3">
-          <UploadCloud className="h-6 w-6 text-primary" />
+        <div className="bg-primary/10 p-2 rounded-full mb-2">
+          <UploadCloud className="h-5 w-5 text-primary" />
         </div>
         <p className="text-sm font-medium">Klik untuk upload atau drag & drop</p>
-        <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, JPG (Max 50MB)</p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">PDF, DOCX, JPG (Max 50MB)</p>
       </div>
 
       {files.length > 0 && (

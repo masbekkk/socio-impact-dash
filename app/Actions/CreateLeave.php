@@ -36,19 +36,19 @@ final readonly class CreateLeave
             }
 
             $leave = Leave::create([
-                'code'               => $this->generateUniqueCode(),
-                'user_id'            => $userId,
-                'project_id'         => $data['project_id'] ?? null,
+                'code' => $this->generateUniqueCode(),
+                'user_id' => $userId,
+                'project_id' => $data['project_id'] ?? null,
                 'replacement_pic_id' => $data['replacement_pic_id'] ?? null,
-                'phone'              => $data['phone'] ?? null,
-                'destination'        => $data['destination'] ?? null,
-                'lokasi'             => $data['lokasi'] ?? null,
-                'type'               => $data['type'],
-                'status'             => LeaveStatus::Submitted,
-                'start_date'         => $data['start_date'],
-                'end_date'           => $data['end_date'],
-                'reason'             => $data['reason'] ?? null,
-                'attachment_path'    => $this->storeAttachment($data['attachment'] ?? null, $userId),
+                'phone' => $data['phone'] ?? null,
+                'destination' => $data['destination'] ?? null,
+                'lokasi' => $data['lokasi'] ?? null,
+                'type' => $data['type'],
+                'status' => LeaveStatus::Submitted,
+                'start_date' => $data['start_date'],
+                'end_date' => $data['end_date'],
+                'reason' => $data['reason'] ?? null,
+                'attachment_path' => $this->storeAttachment($data['attachment'] ?? null, $userId),
             ]);
 
             return $leave->load(['user', 'project', 'replacementPic']);
@@ -72,7 +72,7 @@ final readonly class CreateLeave
             $nextNumber = $lastNumber + 1;
         }
 
-        return $prefix . str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
+        return $prefix.mb_str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
     }
 
     private function storeAttachment(?UploadedFile $file, int $userId): ?string

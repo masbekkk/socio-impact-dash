@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import axios from 'axios';
+import { SharedData } from '@/types';
 
 interface Project {
     id: number;
@@ -28,6 +29,7 @@ interface MasterData {
     code: string;
     description?: string;
     name?: string; // For users
+    names?: { id: number; name: string; description?: string }[]; // For divisions
 }
 
 interface Props {
@@ -35,6 +37,9 @@ interface Props {
 }
 
 export default function Create({ projects }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const userRole = auth.user.role_name;
+
     const [data, setData] = useState({
         project_id: '',
         letter_date: format(new Date(), 'yyyy-MM-dd'),
@@ -65,7 +70,24 @@ export default function Create({ projects }: Props) {
                     axios.get('/api/v1/divisions?per_page=1000')
                 ]);
                 setLetterCodes(codesRes.data.data);
-                setLetterDivisions(divisionsRes.data.data);
+
+                // Filter letter divisions based on role
+                const allLetterDivs = divisionsRes.data.data;
+                let filteredLetterDivs = allLetterDivs;
+
+                if (userRole === 'direktur' || userRole === 'superadmin') {
+                    filteredLetterDivs = allLetterDivs.filter((d: any) => ['Direktur', 'Finance', 'HCM', 'BOD'].includes(d.code));
+                } else if (userRole === 'hr') {
+                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'HR' || d.code === 'HCM');
+                } else if (userRole === 'finance') {
+                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'Finance' || d.code === 'FA');
+                } else {
+                    // Default to PM or all roles if PM
+                    // According to requirements: PM - all roles
+                    filteredLetterDivs = allLetterDivs;
+                }
+
+                setLetterDivisions(filteredLetterDivs);
                 setUsers(usersRes.data.data.data);
                 setDivisions(mainDivRes.data.data.data);
             } catch (error) {
@@ -75,12 +97,12 @@ export default function Create({ projects }: Props) {
             }
         };
         fetchMasterData();
-    }, []);
+    }, [userRole]);
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Nomor Surat', href: '/letter-requests' },
-        { title: 'Buat Pengajuan', href: '/letter-requests/create' },
+        { title: 'Buat Nomor Surat', href: '/letter-requests/create' },
     ];
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -104,7 +126,7 @@ export default function Create({ projects }: Props) {
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
-            <Head title="Buat Pengajuan Nomor Surat" />
+            <Head title="Buat Nomor Surat" />
 
             <div className="p-6 md:p-10 space-y-6">
                 <div className="flex items-center gap-4">
@@ -114,7 +136,7 @@ export default function Create({ projects }: Props) {
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">Pengajuan Nomor Surat</h1>
+                        <h1 className="text-xl font-bold tracking-tight">Buat Nomor Surat</h1>
                         <p className="text-muted-foreground text-sm">Lengkapi detail surat untuk mendapatkan nomor resmi.</p>
                     </div>
                 </div>
@@ -238,27 +260,7 @@ export default function Create({ projects }: Props) {
                                         {errors.subject && <p className="text-sm text-destructive font-medium">{errors.subject}</p>}
                                     </div>
 
-                                    <div className="space-y-2 md:col-span-1">
-                                        <Label htmlFor="pic_id">PIC <span className="text-red-500">*</span></Label>
-                                        <Select onValueChange={(val) => setData({ ...data, pic_id: val })} value={data.pic_id}>
-                                            <SelectTrigger className="h-10">
-                                                <div className="flex items-center gap-2">
-                                                    <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                                    <SelectValue placeholder="Pilih PIC" />
-                                                </div>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {users.map((user) => (
-                                                    <SelectItem key={user.id} value={user.id.toString()}>
-                                                        {user.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.pic_id && <p className="text-sm text-destructive font-medium">{errors.pic_id}</p>}
-                                    </div>
-
-                                    <div className="space-y-2 md:col-span-1">
+                                    <div className="space-y-2 md:col-span-2">
                                         <Label htmlFor="division_id">Divisi Perusahaan <span className="text-red-500">*</span></Label>
                                         <Select onValueChange={(val) => setData({ ...data, division_id: val })} value={data.division_id}>
                                             <SelectTrigger className="h-10">
@@ -268,9 +270,12 @@ export default function Create({ projects }: Props) {
                                                 </div>
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {divisions.map((div) => (
-                                                    <SelectItem key={div.id} value={div.id.toString()}>
-                                                        {div.code}
+                                                {divisions.map((divCode) => (
+                                                    <SelectItem
+                                                        key={divCode.id}
+                                                        value={divCode.names && divCode.names.length > 0 ? divCode.names[0].id.toString() : ''}
+                                                    >
+                                                        {divCode.code}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -298,7 +303,7 @@ export default function Create({ projects }: Props) {
                             </Button>
                             <Button type="submit" disabled={processing || loadingData} className="bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)]/90">
                                 {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Kirim Pengajuan
+                                Simpan
                             </Button>
                         </CardFooter>
                     </form>

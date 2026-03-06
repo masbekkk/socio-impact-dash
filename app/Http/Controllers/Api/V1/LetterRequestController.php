@@ -68,7 +68,7 @@ final class LetterRequestController extends Controller
             'letter_date' => 'required|date',
             'recipient' => 'required|string|max:255',
             'subject' => 'required|string|max:255',
-            'pic_id' => 'required|exists:users,id',
+            // 'pic_id' => 'required|exists:users,id',
             'division_id' => 'required|exists:divisions,id',
             'letter_code_id' => 'required|exists:letter_codes,id',
             'letter_division_id' => 'required|exists:letter_divisions,id',
@@ -102,6 +102,7 @@ final class LetterRequestController extends Controller
         $letterRequest = LetterRequest::create([
             ...$validated,
             'requester_id' => $request->user()->id,
+            'pic_id' => $request->user()->id,
             'status' => 'pending',
             'letter_number' => $letterNumber,
         ]);
@@ -131,7 +132,7 @@ final class LetterRequestController extends Controller
             'letter_date' => 'required|date',
             'recipient' => 'required|string|max:255',
             'subject' => 'required|string|max:255',
-            'pic_id' => 'required|exists:users,id',
+            // 'pic_id' => 'required|exists:users,id',
             'division_id' => 'required|exists:divisions,id',
             'letter_code_id' => 'required|exists:letter_codes,id',
             'letter_division_id' => 'required|exists:letter_divisions,id',

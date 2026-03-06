@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -14,11 +16,11 @@ return new class extends Migration
     {
         // For development robustness and SQLite compatibility, we'll recreate the table
         // since we want to transform the whole structure for the new Calendar system.
-        
+
         $existingEvents = DB::table('project_events')->get();
-        
+
         Schema::dropIfExists('project_events');
-        
+
         Schema::create('project_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->nullable()->constrained()->onDelete('cascade');
@@ -30,7 +32,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
         });
-        
+
         foreach ($existingEvents as $event) {
             DB::table('project_events')->insert([
                 'id' => $event->id,
@@ -51,7 +53,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // We don't necessarily need to perfectly reverse it for dev, but 
+        // We don't necessarily need to perfectly reverse it for dev, but
         // to be safe we'll recreate the old structure.
         Schema::dropIfExists('project_events');
         Schema::create('project_events', function (Blueprint $table) {

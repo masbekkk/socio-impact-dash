@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read string|null $description
  * @property-read CarbonInterface $created_at
  * @property-read CarbonInterface $updated_at
- * @property-read \App\Models\DivisionCode $divisionCode
+ * @property-read DivisionCode $divisionCode
  */
 final class Division extends Model
 {

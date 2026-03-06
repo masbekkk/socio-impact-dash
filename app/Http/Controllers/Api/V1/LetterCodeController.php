@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
-class LetterCodeController
+final class LetterCodeController
 {
     /**
      * Display a listing of the resource.
@@ -13,6 +15,7 @@ class LetterCodeController
     public function index(): JsonResponse
     {
         $codes = \App\Models\LetterCode::all();
+
         return \App\Formatters\JsonResponseFormatter::success(
             \App\Http\Resources\V1\LetterCode\LetterCodeResource::collection($codes)
         );
@@ -43,7 +46,7 @@ class LetterCodeController
     {
         $code = \App\Models\LetterCode::find($id);
 
-        if (!$code) {
+        if (! $code) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Code tidak ditemukan.');
         }
 
@@ -59,12 +62,12 @@ class LetterCodeController
     {
         $code = \App\Models\LetterCode::find($id);
 
-        if (!$code) {
+        if (! $code) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Code tidak ditemukan.');
         }
 
         $validated = $request->validate([
-            'code' => 'required|string|unique:letter_codes,code,' . $code->id,
+            'code' => 'required|string|unique:letter_codes,code,'.$code->id,
             'description' => 'nullable|string',
         ]);
 
@@ -83,7 +86,7 @@ class LetterCodeController
     {
         $code = \App\Models\LetterCode::find($id);
 
-        if (!$code) {
+        if (! $code) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Code tidak ditemukan.');
         }
 

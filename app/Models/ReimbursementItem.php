@@ -27,19 +27,6 @@ final class ReimbursementItem extends Model
         'notes',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'reimbursement_id' => 'integer',
-            'project_budget_detail_id' => 'integer',
-            'parent_item_id' => 'integer',
-            'quantity' => 'integer',
-            'unit_price' => 'float',
-            'amount' => 'float',
-            'expense_type' => ExpenseType::class,
-        ];
-    }
-
     public function reimbursement(): BelongsTo
     {
         return $this->belongsTo(Reimbursement::class);
@@ -58,5 +45,18 @@ final class ReimbursementItem extends Model
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_item_id');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'reimbursement_id' => 'integer',
+            'project_budget_detail_id' => 'integer',
+            'parent_item_id' => 'integer',
+            'quantity' => 'integer',
+            'unit_price' => 'float',
+            'amount' => 'float',
+            'expense_type' => ExpenseType::class,
+        ];
     }
 }

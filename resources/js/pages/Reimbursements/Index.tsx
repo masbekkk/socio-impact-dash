@@ -43,6 +43,7 @@ import { DateFilterPresets } from '@/components/DateFilterPresets';
 
 interface ReimbursementApproval {
   id: number;
+  role: string;
   status: string;
   notes: string | null;
   approved_at: string | null;
@@ -108,6 +109,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
   const { auth } = usePage().props as unknown as { auth: any };
   const userRoles = auth?.user?.role_name || '';
   const isSuperadmin = userRoles.includes('superadmin');
+  const isHR = userRoles.includes('hr') && !isSuperadmin;
 
   const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -168,7 +170,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
       : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
-  const activeTab = filters.type || 'all';
+  const activeTab = filters.type || (isHR ? 'allowance' : 'all');
   const { data, current_page, last_page, total, from, to } = reimbursements;
 
   return (
@@ -234,9 +236,13 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <Tabs value={activeTab} onValueChange={(v) => navigate({ type: v === 'all' ? '' : v, page: 1 })} className="w-full md:w-auto">
                   <TabsList>
-                    <TabsTrigger value="all">Semua</TabsTrigger>
-                    <TabsTrigger value="atr">ATR</TabsTrigger>
-                    <TabsTrigger value="eer">EER</TabsTrigger>
+                    {!isHR && (
+                      <>
+                        <TabsTrigger value="all">Semua</TabsTrigger>
+                        <TabsTrigger value="atr">ATR</TabsTrigger>
+                        <TabsTrigger value="eer">EER</TabsTrigger>
+                      </>
+                    )}
                     <TabsTrigger value="allowance">Allowance</TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -410,7 +416,10 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                             <div className="flex flex-col gap-1.5">
                               {item.approvals && item.approvals.length > 0 && (
                                 <div className="mt-1 flex flex-col gap-1 inline-flex">
-                                  {item.approvals.map((approval) => (
+                                  {[...item.approvals].sort((a, b) => {
+                                    const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
+                                    return (p[a.role] || 99) - (p[b.role] || 99);
+                                  }).map((approval) => (
                                     <div key={approval.id} className="text-xs flex items-center gap-1.5">
                                       {approval.status === 'approved' ? (
                                         <CheckCircle className="h-3.5 w-3.5 text-green-500" />
