@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import { ArrowLeft, Save } from 'lucide-react';
 import DatePicker from '@/components/DatePicker';
 import axios from 'axios';
@@ -164,16 +165,12 @@ export default function Edit({ userId }: EditProps) {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="role">Role <span className="text-red-500">*</span></Label>
-                                    <Select value={form.role} onValueChange={(val) => setForm({ ...form, role: val })} required>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select a role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {roles.map(r => (
-                                                <SelectItem key={r.id} value={r.name} className="capitalize">{r.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchableSelect
+                                        options={roles.map(r => ({ value: r.name, label: r.name }))}
+                                        value={form.role}
+                                        onValueChange={(val) => setForm({ ...form, role: val })}
+                                        placeholder="Select a role"
+                                    />
                                     {errors.role && <p className="text-sm text-red-500">{errors.role[0]}</p>}
                                 </div>
                             </div>
@@ -181,16 +178,16 @@ export default function Edit({ userId }: EditProps) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
                                 <div className="space-y-2">
                                     <Label htmlFor="employee_type">Employee Type</Label>
-                                    <Select value={form.employee_type} onValueChange={(val) => setForm({ ...form, employee_type: val })}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select type" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="pegawai_tetap">Pegawai Tetap</SelectItem>
-                                            <SelectItem value="kontrak">Kontrak</SelectItem>
-                                            <SelectItem value="intern">Intern</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchableSelect
+                                        options={[
+                                            { value: 'pegawai_tetap', label: 'Pegawai Tetap' },
+                                            { value: 'kontrak', label: 'Kontrak' },
+                                            { value: 'intern', label: 'Intern' },
+                                        ]}
+                                        value={form.employee_type}
+                                        onValueChange={(val) => setForm({ ...form, employee_type: val })}
+                                        placeholder="Select type"
+                                    />
                                 </div>
                             </div>
 

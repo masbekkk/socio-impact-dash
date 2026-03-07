@@ -16,12 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import {
     ArrowLeft,
     Calendar as CalendarIcon,
@@ -402,40 +399,17 @@ export default function CalendarShow() {
                             <Label htmlFor="type" className="text-sm font-medium">
                                 Tipe
                             </Label>
-                            <Select
+                            <SearchableSelect
+                                options={[
+                                    { label: 'Meeting', value: 'meeting' },
+                                    { label: 'Task', value: 'task' },
+                                    { label: 'Deadline', value: 'deadline' },
+                                    { label: 'Project', value: 'project' },
+                                ]}
                                 value={formData.type}
                                 onValueChange={(value) => handleInputChange('type', value)}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Pilih tipe" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="meeting">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded bg-blue-500" />
-                                            <span>Meeting</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="task">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded bg-slate-500" />
-                                            <span>Task</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="deadline">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded bg-red-500" />
-                                            <span>Deadline</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="project">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded bg-emerald-600" />
-                                            <span>Project</span>
-                                        </div>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                                placeholder="Pilih tipe"
+                            />
                         </div>
 
                         {/* Location - OPTIONAL */}

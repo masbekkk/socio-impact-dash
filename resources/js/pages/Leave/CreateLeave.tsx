@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import { Card, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, Save, FileText, Loader2 } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
@@ -215,31 +216,23 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="type">Jenis Cuti <span className="text-red-500">*</span></Label>
-                    <Select value={formData.type} onValueChange={(val) => handleSelectChange('type', val)}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Pilih jenis cuti" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LEAVE_TYPES.map(t => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={LEAVE_TYPES}
+                      value={formData.type}
+                      onValueChange={(val) => handleSelectChange('type', val)}
+                      placeholder="Pilih jenis cuti"
+                    />
                     {errors.type && <p className="text-xs text-red-500">{errors.type[0]}</p>}
                   </div>
-                  {/* <div className="space-y-2">
+                  <div className="space-y-2">
                     <Label htmlFor="project_id">Nama Project (Jika ada)</Label>
-                    <Select value={formData.project_id} onValueChange={(val) => handleSelectChange('project_id', val)}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Pilih project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projects.map((p) => (
-                          <SelectItem key={p.id} value={p.id.toString()}>{p.code} - {p.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div> */}
+                    <SearchableSelect
+                      options={projects.map((p) => ({ label: `${p.code} - ${p.name}`, value: p.id.toString() }))}
+                      value={formData.project_id}
+                      onValueChange={(val) => handleSelectChange('project_id', val)}
+                      placeholder="Pilih project"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
@@ -270,16 +263,12 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="replacement_pic_id">Pengganti PIC Cuti</Label>
-                    <Select value={formData.replacement_pic_id} onValueChange={(val) => handleSelectChange('replacement_pic_id', val)}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Pilih pengganti PIC" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users.map((u) => (
-                          <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={users.map(u => ({ value: u.id.toString(), label: u.name }))}
+                      value={formData.replacement_pic_id}
+                      onValueChange={(val) => handleSelectChange('replacement_pic_id', val)}
+                      placeholder="Pilih pengganti PIC"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">No. HP (Dapat dihubungi) <span className="text-red-500">*</span></Label>

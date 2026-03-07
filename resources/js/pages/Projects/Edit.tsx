@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SearchableSelect } from '@/components/SearchableSelect'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import FileUploadDropzone from '@/components/FileUploadDropzone'
 import { Button } from '@/components/ui/button'
@@ -469,39 +470,33 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label>Jenis Project <span className="text-red-500">*</span></Label>
-                                        <Select value={formData.project_type} onValueChange={(v) => handleInputChange('project_type', v)}>
-                                            <SelectTrigger className={errors.project_type ? 'border-red-500' : ''}>
-                                                <SelectValue placeholder="Pilih Jenis Project" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="pendampingan">Pendampingan</SelectItem>
-                                                <SelectItem value="pelatihan">Pelatihan</SelectItem>
-                                                <SelectItem value="dokumen">Dokumen</SelectItem>
-                                                <SelectItem value="event">Event</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={[
+                                                { value: 'pendampingan', label: 'Pendampingan' },
+                                                { value: 'pelatihan', label: 'Pelatihan' },
+                                                { value: 'dokumen', label: 'Dokumen' },
+                                                { value: 'event', label: 'Event' },
+                                            ]}
+                                            value={formData.project_type}
+                                            onValueChange={(v) => handleInputChange('project_type', v)}
+                                            placeholder="Pilih Jenis Project"
+                                        />
                                         {errors.project_type && <p className="text-xs text-red-500">{errors.project_type}</p>}
                                     </div>
 
                                     <div className="space-y-2">
                                         <Label>Divisi & Anak Perusahaan <span className="text-red-500">*</span></Label>
-                                        <Select value={formData.division_id} onValueChange={(v) => handleInputChange('division_id', v)}>
-                                            <SelectTrigger className={errors.division_id ? 'border-red-500 h-auto' : 'h-auto'}>
-                                                <SelectValue placeholder="Pilih Divisi & Anak Perusahaan" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {divisions.map((divCode) => (
-                                                    <SelectGroup key={divCode.id}>
-                                                        <SelectLabel className="text-muted-foreground">{divCode.code}</SelectLabel>
-                                                        {divCode.divisions?.map((n: any) => (
-                                                            <SelectItem key={n.id} value={n.id.toString()} className="pl-6">
-                                                                {n.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectGroup>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={divisions.flatMap(divCode =>
+                                                (divCode.divisions || []).map((n: any) => ({
+                                                    value: n.id.toString(),
+                                                    label: `${divCode.code} — ${n.name}`
+                                                }))
+                                            )}
+                                            value={formData.division_id}
+                                            onValueChange={(v) => handleInputChange('division_id', v)}
+                                            placeholder="Pilih Divisi & Anak Perusahaan"
+                                        />
                                         {errors.division_id && <p className="text-xs text-red-500">{errors.division_id}</p>}
                                     </div>
                                 </div>
@@ -551,44 +546,32 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="space-y-2">
                                         <Label>Account Manager <span className="text-red-500">*</span></Label>
-                                        <Select value={formData.account_manager_id} onValueChange={(v) => handleInputChange('account_manager_id', v)}>
-                                            <SelectTrigger className={errors.account_manager_id ? 'border-red-500' : ''}>
-                                                <SelectValue placeholder="Pilih Account Manager" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {headUsers.map((emp) => (
-                                                    <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={headUsers.map(emp => ({ value: emp.id.toString(), label: emp.name }))}
+                                            value={formData.account_manager_id}
+                                            onValueChange={(v) => handleInputChange('account_manager_id', v)}
+                                            placeholder="Pilih Account Manager"
+                                        />
                                         {errors.account_manager_id && <p className="text-xs text-red-500">{errors.account_manager_id}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Head Implementation <span className="text-red-500">*</span></Label>
-                                        <Select value={formData.head_id} onValueChange={(v) => handleInputChange('head_id', v)}>
-                                            <SelectTrigger className={errors.head_id ? 'border-red-500' : ''}>
-                                                <SelectValue placeholder="Pilih Head Implementation" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {headUsers.map((emp) => (
-                                                    <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={headUsers.map(emp => ({ value: emp.id.toString(), label: emp.name }))}
+                                            value={formData.head_id}
+                                            onValueChange={(v) => handleInputChange('head_id', v)}
+                                            placeholder="Pilih Head Implementation"
+                                        />
                                         {errors.head_id && <p className="text-xs text-red-500">{errors.head_id}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label>PIC <span className="text-red-500">*</span></Label>
-                                        <Select value={formData.pic_id} onValueChange={(v) => handleInputChange('pic_id', v)}>
-                                            <SelectTrigger className={errors.pic_id ? 'border-red-500' : ''}>
-                                                <SelectValue placeholder="Pilih PIC" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {picUsers.map((emp) => (
-                                                    <SelectItem key={emp.id} value={emp.id.toString()}>{emp.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={picUsers.map(emp => ({ value: emp.id.toString(), label: emp.name }))}
+                                            value={formData.pic_id}
+                                            onValueChange={(v) => handleInputChange('pic_id', v)}
+                                            placeholder="Pilih PIC"
+                                        />
                                         {errors.pic_id && <p className="text-xs text-red-500">{errors.pic_id}</p>}
                                     </div>
                                 </div>

@@ -10,6 +10,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -400,12 +401,13 @@ function LeaveTable({ title, description, hook }: LeaveTableProps) {
             <div className="flex w-full items-center gap-8 lg:w-fit">
               <div className="hidden items-center gap-2 lg:flex">
                 <Label className="text-sm font-medium">Baris per halaman</Label>
-                <Select value={`${perPage}`} onValueChange={(v) => setPerPage(Number(v))}>
-                  <SelectTrigger className="w-16 h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent side="top">
-                    {[10, 20, 30, 50].map(s => <SelectItem key={s} value={`${s}`}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={[10, 20, 30, 50].map(s => ({ label: s.toString(), value: s.toString() }))}
+                  value={`${perPage}`}
+                  onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}
+                  className="w-20 h-8"
+                  placeholder={`${perPage}`}
+                />
               </div>
               <div className="flex w-fit items-center justify-center text-sm font-medium">
                 Halaman {meta.current_page} dari {meta.last_page}

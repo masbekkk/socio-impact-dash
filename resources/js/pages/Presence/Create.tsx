@@ -12,6 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import { Label } from '@/components/ui/label';
 import { MapPin, Loader2, FileText, ArrowLeft, Save, Camera, RotateCcw, X, Image as ImageIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -211,19 +212,12 @@ export default function CreatePresence({ projects }: PageProps) {
                                         <Label htmlFor="project">
                                             Proyek <span className="text-destructive">*</span>
                                         </Label>
-                                        <Select
+                                        <SearchableSelect
+                                            options={projects.map(p => ({ value: p.id.toString(), label: p.name }))}
                                             value={data.project_id}
                                             onValueChange={(val) => setData('project_id', val)}
-                                        >
-                                            <SelectTrigger id="project" className="h-10">
-                                                <SelectValue placeholder="Pilih Proyek..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {projects.map(p => (
-                                                    <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                            placeholder="Pilih Proyek..."
+                                        />
                                         {errors.project_id && <p className="text-sm text-destructive">{errors.project_id}</p>}
                                     </div>
 

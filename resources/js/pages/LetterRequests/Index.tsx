@@ -27,12 +27,9 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import axios from 'axios';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from '@/components/SearchableSelect';
 
 interface LetterRequest {
     id: number;
@@ -337,21 +334,15 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                             <div className="flex w-full items-center gap-8 lg:w-fit">
                                 <div className="hidden items-center gap-2 lg:flex">
                                     <Label htmlFor="rows-per-page" className="text-sm font-medium">Baris per halaman</Label>
-                                    <Select
+                                    <SearchableSelect
+                                        options={[10, 20, 30, 40, 50].map(s => ({ label: s.toString(), value: s.toString() }))}
                                         value={`${pagination.per_page}`}
-                                        onValueChange={(value) => {
-                                            setPagination(prev => ({ ...prev, per_page: parseInt(value), current_page: 1 }));
+                                        onValueChange={(v) => {
+                                            setPagination(prev => ({ ...prev, per_page: Number(v), current_page: 1 }));
                                         }}
-                                    >
-                                        <SelectTrigger className="w-20 h-8 text-xs" id="rows-per-page">
-                                            <SelectValue placeholder={pagination.per_page} />
-                                        </SelectTrigger>
-                                        <SelectContent side="top">
-                                            {[10, 20, 30, 40, 50].map((pageSize) => (
-                                                <SelectItem key={pageSize} value={`${pageSize}`}>{pageSize}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                        className="w-20 h-8 text-xs"
+                                        placeholder={`${pagination.per_page}`}
+                                    />
                                 </div>
                                 <div className="flex w-fit items-center justify-center text-sm font-medium">
                                     Halaman {pagination.current_page} dari {pagination.last_page}
