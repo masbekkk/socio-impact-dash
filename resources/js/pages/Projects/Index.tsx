@@ -34,12 +34,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SearchableSelect } from '@/components/SearchableSelect';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -277,27 +274,16 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
             </DropdownMenu>
 
             <div className="flex-none">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant={filters?.status || filters?.division ? "default" : "outline"} className="gap-2 px-3 sm:px-4">
-                    <Filter className="h-4 w-4" />
-                    <span className="hidden sm:inline">Filter</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>Filter by Divisi</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleFilterChange('division', 'all')}>
-                    Semua Divisi
-                  </DropdownMenuItem>
-                  {(divisions || []).map((divCode: any) => (
-                    <DropdownMenuItem key={divCode.id} onClick={() => handleFilterChange('division', divCode.code)}>
-                      {divCode.code}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <SearchableSelect
+                options={[
+                  { label: 'Semua Divisi', value: 'all' },
+                  ...(divisions || []).map((div: any) => ({ label: div.code, value: div.code }))
+                ]}
+                value={division}
+                onValueChange={(val) => handleFilterChange('division', val)}
+                placeholder="Filter Divisi"
+                className="w-40"
+              />
             </div>
           </div>
         </CardHeader>
@@ -476,24 +462,16 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                 <Label htmlFor="rows-per-page" className="text-sm font-medium">
                   Baris per halaman
                 </Label>
-                <Select
+                <SearchableSelect
+                  options={[10, 20, 30, 40, 50].map(s => ({ label: s.toString(), value: s.toString() }))}
                   value={`${pagination.per_page}`}
                   onValueChange={(value) => {
                     setPerPage(parseInt(value));
                     setCurrentPage(1);
                   }}
-                >
-                  <SelectTrigger className="w-20 h-8 text-xs" id="rows-per-page">
-                    <SelectValue>{pagination.per_page}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent side="top">
-                    {[10, 20, 30, 40, 50].map((pageSize) => (
-                      <SelectItem key={pageSize} value={`${pageSize}`}>
-                        {pageSize}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  className="w-20 h-8"
+                  placeholder={`${pagination.per_page}`}
+                />
               </div>
               <div className="flex w-fit items-center justify-center text-sm font-medium gap-1">
                 {renderPagination()}

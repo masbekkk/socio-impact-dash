@@ -28,6 +28,7 @@ import MoneyInput from '@/components/MoneyInput';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import { Textarea } from '@/components/ui/textarea';
 import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -313,21 +314,15 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="atr_id">Pilih ATR</Label>
-                  <Select onValueChange={handleAtrChange} value={formData.atr_id}>
-                    <SelectTrigger className="h-10">
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Pilih ATR terkait" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {atrs.map((atr) => (
-                        <SelectItem key={atr.id} value={atr.id.toString()}>
-                          {atr.code} — {fmt(atr.amount)} ({atr.project_name})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={atrs.map(atr => ({
+                      value: atr.id.toString(),
+                      label: `${atr.code} — ${fmt(atr.amount)} (${atr.project_name})`
+                    }))}
+                    value={formData.atr_id}
+                    onValueChange={handleAtrChange}
+                    placeholder="Pilih ATR terkait"
+                  />
                   {errors.atr_id && <p className="text-xs text-red-500">{errors.atr_id[0]}</p>}
                 </div>
                 <div className="space-y-2">
@@ -393,21 +388,12 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
                           <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                             Pilih Kegiatan <span className="text-red-500">*</span>
                           </Label>
-                          <Select
+                          <SearchableSelect
+                            options={availableActivities.map(act => ({ value: act.id.toString(), label: act.name }))}
                             value={item.project_budget_detail_id.toString()}
                             onValueChange={(v) => updateItem(item.id, 'project_budget_detail_id', parseInt(v))}
-                          >
-                            <SelectTrigger className="h-10 text-sm bg-white border-slate-200">
-                              <SelectValue placeholder="Pilih kegiatan dari ATR..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableActivities.map(act => (
-                                <SelectItem key={act.id} value={act.id.toString()}>
-                                  {act.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            placeholder="Pilih kegiatan dari ATR..."
+                          />
                         </div>
 
                         <div className="md:col-span-12 lg:col-span-7 space-y-2">
@@ -452,16 +438,13 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
                           <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                             Jenis Expense <span className="text-red-500">*</span>
                           </Label>
-                          <Select value={item.expense_type} onValueChange={(v) => updateItem(item.id, 'expense_type', v)}>
-                            <SelectTrigger className="h-10 text-sm bg-white">
-                              <SelectValue placeholder="Pilih..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {expenseTypes.map(t => (
-                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <SearchableSelect
+                            options={expenseTypes.map(t => ({ value: t.value, label: t.label }))}
+                            value={item.expense_type}
+                            onValueChange={(v) => updateItem(item.id, 'expense_type', v)}
+                            placeholder="Pilih..."
+                            className="h-10"
+                          />
                         </div>
 
                         <div className="md:col-span-12 lg:col-span-3 space-y-2">
@@ -591,16 +574,12 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
                   <Label className="text-sm font-medium flex items-center gap-2">
                     <User className="h-4 w-4 text-blue-600" /> Head Approver
                   </Label>
-                  <Select onValueChange={(val) => setFormData(p => ({ ...p, approver_head_id: val }))} value={formData.approver_head_id}>
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Pilih Head Divisi" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {approvers['head']?.map((user) => (
-                        <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={(approvers['head'] || []).map(u => ({ value: u.id.toString(), label: u.name }))}
+                    value={formData.approver_head_id}
+                    onValueChange={(val) => setFormData(p => ({ ...p, approver_head_id: val }))}
+                    placeholder="Pilih Head Divisi"
+                  />
                   <p className="text-[10px] text-muted-foreground mt-1">Head divisi yang bertanggung jawab atas kegiatan ini.</p>
                 </div>
               </div>

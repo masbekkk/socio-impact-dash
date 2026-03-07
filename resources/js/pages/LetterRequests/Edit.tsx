@@ -14,6 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from '@/components/SearchableSelect';
 import DatePicker from '@/components/DatePicker';
 import { format } from "date-fns";
 import axios from 'axios';
@@ -176,21 +177,12 @@ export default function Edit({ projects, letterRequestId }: Props) {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label htmlFor="project_id">Proyek Terkait <span className="text-red-500">*</span></Label>
-                                        <Select onValueChange={(val) => setData({ ...data, project_id: val })} value={data.project_id}>
-                                            <SelectTrigger className="h-10">
-                                                <div className="flex items-center gap-2">
-                                                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                                    <SelectValue placeholder="Pilih proyek" />
-                                                </div>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {projects.map((p) => (
-                                                    <SelectItem key={p.id} value={p.id.toString()}>
-                                                        {p.code} - {p.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.name}` }))}
+                                            value={data.project_id}
+                                            onValueChange={(val) => setData({ ...data, project_id: val })}
+                                            placeholder="Pilih proyek"
+                                        />
                                         {errors.project_id && <p className="text-sm text-destructive font-medium">{errors.project_id}</p>}
                                     </div>
 
@@ -205,41 +197,29 @@ export default function Edit({ projects, letterRequestId }: Props) {
 
                                     <div className="space-y-2">
                                         <Label htmlFor="letter_code_id">Kode Surat <span className="text-red-500">*</span></Label>
-                                        <Select onValueChange={(val) => setData({ ...data, letter_code_id: val })} value={data.letter_code_id}>
-                                            <SelectTrigger className="h-10">
-                                                <div className="flex items-center gap-2">
-                                                    <Tag className="h-4 w-4 text-muted-foreground" />
-                                                    <SelectValue placeholder="Pilih kode surat" />
-                                                </div>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {letterCodes.map((code) => (
-                                                    <SelectItem key={code.id} value={code.id.toString()}>
-                                                        {code.code} {code.description && `- ${code.description}`}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={letterCodes.map(code => ({
+                                                value: code.id.toString(),
+                                                label: `${code.code} ${code.description ? `- ${code.description}` : ''}`
+                                            }))}
+                                            value={data.letter_code_id}
+                                            onValueChange={(val) => setData({ ...data, letter_code_id: val })}
+                                            placeholder="Pilih kode surat"
+                                        />
                                         {errors.letter_code_id && <p className="text-sm text-destructive font-medium">{errors.letter_code_id}</p>}
                                     </div>
 
                                     <div className="space-y-2">
                                         <Label htmlFor="letter_division_id">Divisi Surat <span className="text-red-500">*</span></Label>
-                                        <Select onValueChange={(val) => setData({ ...data, letter_division_id: val })} value={data.letter_division_id}>
-                                            <SelectTrigger className="h-10">
-                                                <div className="flex items-center gap-2">
-                                                    <Layers className="h-4 w-4 text-muted-foreground" />
-                                                    <SelectValue placeholder="Pilih divisi" />
-                                                </div>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {letterDivisions.map((div) => (
-                                                    <SelectItem key={div.id} value={div.id.toString()}>
-                                                        {div.code} {div.description && `- ${div.description}`}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={letterDivisions.map(div => ({
+                                                value: div.id.toString(),
+                                                label: `${div.code} ${div.description ? `- ${div.description}` : ''}`
+                                            }))}
+                                            value={data.letter_division_id}
+                                            onValueChange={(val) => setData({ ...data, letter_division_id: val })}
+                                            placeholder="Pilih divisi"
+                                        />
                                         {errors.letter_division_id && <p className="text-sm text-destructive font-medium">{errors.letter_division_id}</p>}
                                     </div>
 
@@ -275,24 +255,15 @@ export default function Edit({ projects, letterRequestId }: Props) {
 
                                     <div className="space-y-2 md:col-span-2">
                                         <Label htmlFor="division_id">Divisi Perusahaan <span className="text-red-500">*</span></Label>
-                                        <Select onValueChange={(val) => setData({ ...data, division_id: val })} value={data.division_id}>
-                                            <SelectTrigger className="h-10">
-                                                <div className="flex items-center gap-2">
-                                                    <Layers className="h-4 w-4 text-muted-foreground" />
-                                                    <SelectValue placeholder="Pilih divisi perusahaan" />
-                                                </div>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {divisions.map((divCode) => (
-                                                    <SelectItem
-                                                        key={divCode.id}
-                                                        value={divCode.names && divCode.names.length > 0 ? divCode.names[0].id.toString() : ''}
-                                                    >
-                                                        {divCode.code} - {divCode.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={divisions.map(divCode => ({
+                                                value: divCode.names && divCode.names.length > 0 ? divCode.names[0].id.toString() : '',
+                                                label: `${divCode.code} - ${divCode.name}`
+                                            }))}
+                                            value={data.division_id}
+                                            onValueChange={(val) => setData({ ...data, division_id: val })}
+                                            placeholder="Pilih divisi perusahaan"
+                                        />
                                         {errors.division_id && <p className="text-sm text-destructive font-medium">{errors.division_id}</p>}
                                     </div>
 

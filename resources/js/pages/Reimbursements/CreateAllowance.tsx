@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import DatePicker from '@/components/DatePicker';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import MoneyInput from '@/components/MoneyInput';
 import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import type { Project } from '@/types/reimbursement';
@@ -248,21 +249,12 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label htmlFor="project_id">Nama Project <span className="text-red-500">*</span></Label>
-                                        <Select onValueChange={handleProjectChange} value={formData.project_id}>
-                                            <SelectTrigger className="h-10">
-                                                <div className="flex items-center gap-2">
-                                                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                                    <SelectValue placeholder="Pilih project" />
-                                                </div>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {projects.map((project) => (
-                                                    <SelectItem key={project.id} value={project.id.toString()}>
-                                                        {project.code} - {project.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.name}` }))}
+                                            value={formData.project_id}
+                                            onValueChange={handleProjectChange}
+                                            placeholder="Pilih project"
+                                        />
                                         {errors.project_id && <p className="text-xs text-red-500 font-medium">{errors.project_id[0]}</p>}
                                     </div>
                                     <div className="space-y-2">
@@ -364,16 +356,12 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="approver_head_id">Head Approver <span className="text-red-500">*</span></Label>
-                                    <Select onValueChange={(val) => handleSelectChange('approver_head_id', val)} value={formData.approver_head_id}>
-                                        <SelectTrigger className="h-10">
-                                            <SelectValue placeholder="Pilih Head Divisi" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {approvers['head']?.map((user) => (
-                                                <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchableSelect
+                                        options={(approvers['head'] || []).map(u => ({ value: u.id.toString(), label: u.name }))}
+                                        value={formData.approver_head_id}
+                                        onValueChange={(val) => handleSelectChange('approver_head_id', val)}
+                                        placeholder="Pilih Head Divisi"
+                                    />
                                 </div>
                             </div>
                         </div>

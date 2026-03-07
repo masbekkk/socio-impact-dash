@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import { Card, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, Save, Calendar, MapPin, Briefcase, FileText, Loader2 } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
@@ -214,19 +215,12 @@ export default function CreateTravel({ authUser, projects, users }: Props) {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="project_id">Nama Project (Jika ada)</Label>
-                    <Select value={formData.project_id} onValueChange={(val) => handleSelectChange('project_id', val)}>
-                      <SelectTrigger className="h-10">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="h-4 w-4 text-muted-foreground" />
-                          <SelectValue placeholder="Pilih project" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projects.map((p) => (
-                          <SelectItem key={p.id} value={p.id.toString()}>{p.code} - {p.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.name}` }))}
+                      value={formData.project_id}
+                      onValueChange={(val) => handleSelectChange('project_id', val)}
+                      placeholder="Pilih project"
+                    />
                   </div>
                 </div>
 
@@ -258,16 +252,12 @@ export default function CreateTravel({ authUser, projects, users }: Props) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="replacement_pic_id">Pengganti PIC (Opsional)</Label>
-                    <Select value={formData.replacement_pic_id} onValueChange={(val) => handleSelectChange('replacement_pic_id', val)}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Pilih pengganti PIC" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users.map((u) => (
-                          <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={users.map(u => ({ value: u.id.toString(), label: u.name }))}
+                      value={formData.replacement_pic_id}
+                      onValueChange={(val) => handleSelectChange('replacement_pic_id', val)}
+                      placeholder="Pilih pengganti PIC"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">No. HP (Dapat dihubungi) <span className="text-red-500">*</span></Label>

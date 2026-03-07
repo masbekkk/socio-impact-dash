@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import DatePicker from '@/components/DatePicker';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { cn } from '@/lib/utils';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
@@ -301,40 +302,25 @@ export default function CalendarIndex({
                                             )}
                                         </div>
 
-                                        {/* <div className="grid gap-2">
+                                        <div className="grid gap-2">
                                             <Label htmlFor="project_id">
                                                 Pilih Project (Opsional)
                                             </Label>
-                                            <Select
+                                            <SearchableSelect
+                                                options={[
+                                                    { label: '-- Tidak ada Project (Umum) --', value: 'none' },
+                                                    ...projects.map(proj => ({ label: proj.name, value: proj.id.toString() }))
+                                                ]}
                                                 value={data.project_id}
-                                                onValueChange={(val) =>
-                                                    setData('project_id', val)
-                                                }
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Pilih Project" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="none">
-                                                        -- Tidak ada Project
-                                                        (Umum) --
-                                                    </SelectItem>
-                                                    {projects.map((proj) => (
-                                                        <SelectItem
-                                                            key={proj.id}
-                                                            value={proj.id.toString()}
-                                                        >
-                                                            {proj.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                                onValueChange={(val) => setData('project_id', val)}
+                                                placeholder="Pilih Project"
+                                            />
                                             {errors.project_id && (
                                                 <span className="text-xs text-red-500">
                                                     {errors.project_id}
                                                 </span>
                                             )}
-                                        </div> */}
+                                        </div>
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="grid gap-2">

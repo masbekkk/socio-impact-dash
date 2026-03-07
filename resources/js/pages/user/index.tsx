@@ -18,6 +18,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, Plus, Search, Filter } from 'lucide-react';
@@ -186,15 +187,16 @@ export default function Index() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
                                 <div className="space-y-2">
                                     <Label>Role</Label>
-                                    <Select value={roleFilter || 'all'} onValueChange={setRoleFilter}>
-                                        <SelectTrigger className="bg-white"><SelectValue placeholder="All Roles" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Roles</SelectItem>
-                                            {roles.map(r => (
-                                                <SelectItem key={r.id} value={r.name} className="capitalize">{r.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchableSelect
+                                        options={[
+                                            { label: 'All Roles', value: 'all' },
+                                            ...roles.map(r => ({ label: r.name, value: r.name }))
+                                        ]}
+                                        value={roleFilter || 'all'}
+                                        onValueChange={setRoleFilter}
+                                        placeholder="All Roles"
+                                        className="bg-white"
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Position</Label>
@@ -207,15 +209,18 @@ export default function Index() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Employment Type</Label>
-                                    <Select value={employeeTypeFilter} onValueChange={setEmployeeTypeFilter}>
-                                        <SelectTrigger className="bg-white"><SelectValue placeholder="All Types" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Types</SelectItem>
-                                            <SelectItem value="pegawai_tetap">Pegawai Tetap</SelectItem>
-                                            <SelectItem value="kontrak">Kontrak</SelectItem>
-                                            <SelectItem value="intern">Intern</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchableSelect
+                                        options={[
+                                            { label: 'All Types', value: 'all' },
+                                            { label: 'Pegawai Tetap', value: 'pegawai_tetap' },
+                                            { label: 'Kontrak', value: 'kontrak' },
+                                            { label: 'Intern', value: 'intern' },
+                                        ]}
+                                        value={employeeTypeFilter}
+                                        onValueChange={setEmployeeTypeFilter}
+                                        placeholder="All Types"
+                                        className="bg-white"
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Joined From</Label>
@@ -342,12 +347,13 @@ export default function Index() {
                                 <div className="flex w-full items-center gap-8 lg:w-fit">
                                     <div className="hidden items-center gap-2 lg:flex">
                                         <Label className="text-sm font-medium">Baris per halaman</Label>
-                                        <Select value={`${perPage}`} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
-                                            <SelectTrigger className="w-16 h-8 text-xs"><SelectValue /></SelectTrigger>
-                                            <SelectContent side="top">
-                                                {[10, 20, 30, 50].map(s => <SelectItem key={s} value={`${s}`}>{s}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            options={[10, 20, 30, 50].map(s => ({ label: s.toString(), value: s.toString() }))}
+                                            value={`${perPage}`}
+                                            onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}
+                                            className="w-20 h-8"
+                                            placeholder={`${perPage}`}
+                                        />
                                     </div>
                                     <div className="flex w-fit items-center justify-center text-sm font-medium">
                                         Halaman {meta.current_page} dari {meta.last_page}

@@ -120,7 +120,7 @@ final class UserController extends Controller
         $role = $data['role'];
 
         unset($data['role']);
-
+        $data['email_verified_at'] = now();
         $user->update($data);
 
         if (isset($role)) {

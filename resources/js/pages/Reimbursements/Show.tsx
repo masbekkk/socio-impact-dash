@@ -75,6 +75,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -1216,37 +1217,21 @@ export default function Show() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                   <Label className="text-sm font-semibold uppercase tracking-tight text-slate-500">Project</Label>
-                                  <Select
+                                  <SearchableSelect
+                                    options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.name}` }))}
                                     value={revisionForm.project_id || 'none'}
                                     onValueChange={(v) => setRevisionForm({ ...revisionForm, project_id: v === 'none' ? '' : v })}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="Pilih Project" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">-- Pilih Project --</SelectItem>
-                                      {projects.map(p => (
-                                        <SelectItem key={p.id} value={p.id.toString()}>{p.code} - {p.name}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                    placeholder="Pilih Project"
+                                  />
                                 </div>
                                 <div className="space-y-2">
                                   <Label className="text-sm font-semibold uppercase tracking-tight text-slate-500">Pengganti PIC (Opsional)</Label>
-                                  <Select
+                                  <SearchableSelect
+                                    options={users.map(u => ({ value: u.id.toString(), label: u.name }))}
                                     value={revisionForm.replacement_pic_id || 'none'}
                                     onValueChange={(v) => setRevisionForm({ ...revisionForm, replacement_pic_id: v === 'none' ? '' : v })}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="Pilih Pengganti PIC" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">-- Kosongkan --</SelectItem>
-                                      {users.map(u => (
-                                        <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                    placeholder="Pilih Pengganti PIC"
+                                  />
                                 </div>
                               </div>
                               <div className="space-y-2">
@@ -1328,22 +1313,13 @@ export default function Show() {
                                         <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                                           PILIH KEGIATAN <span className="text-red-500">*</span>
                                         </Label>
-                                        <Select
+                                        <SearchableSelect
+                                          options={(data.atr_budget_selecteds || []).map(act => ({ value: act.project_budget_detail_id.toString(), label: act.activity_name || 'Kegiatan' }))}
                                           value={item.project_budget_detail_id?.toString() || 'none'}
                                           onValueChange={(v) => updateItemEerRevision(item.id, 'project_budget_detail_id', v === 'none' ? null : parseInt(v))}
-                                        >
-                                          <SelectTrigger className="h-8 text-xs bg-slate-50 border-slate-200">
-                                            <SelectValue placeholder="Pilih kegiatan..." />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="none">Pilih kegiatan...</SelectItem>
-                                            {data.atr_budget_selecteds?.map(act => (
-                                              <SelectItem key={act.project_budget_detail_id} value={act.project_budget_detail_id.toString()}>
-                                                {act.activity_name || 'Kegiatan'}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
+                                          placeholder="Pilih kegiatan..."
+                                          className="h-8 text-xs bg-slate-50 border-slate-200"
+                                        />
                                       </div>
 
                                       <div className="md:col-span-12 lg:col-span-7 space-y-1">
@@ -1382,19 +1358,17 @@ export default function Show() {
 
                                       <div className="md:col-span-5 lg:col-span-4 space-y-1">
                                         <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">JENIS BIAYA <span className="text-red-500">*</span></Label>
-                                        <Select
+                                        <SearchableSelect
+                                          options={[
+                                            { value: 'Operational', label: 'Operational' },
+                                            { value: 'Management', label: 'Management' },
+                                            { value: 'Allowance', label: 'Allowance' },
+                                          ]}
                                           value={item.expense_type}
                                           onValueChange={(v) => updateItemEerRevision(item.id, 'expense_type', v)}
-                                        >
-                                          <SelectTrigger className="h-8 text-xs bg-slate-50 border-slate-200">
-                                            <SelectValue placeholder="Jenis..." />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="Operational">Operational</SelectItem>
-                                            <SelectItem value="Management">Management</SelectItem>
-                                            <SelectItem value="Allowance">Allowance</SelectItem>
-                                          </SelectContent>
-                                        </Select>
+                                          placeholder="Jenis..."
+                                          className="h-8 text-xs bg-slate-50 border-slate-200"
+                                        />
                                       </div>
 
                                       <div className="md:col-span-12 lg:col-span-3 space-y-1">
@@ -1518,19 +1492,13 @@ export default function Show() {
                                                   </div>
                                                   <div className="md:col-span-5 lg:col-span-3 space-y-1">
                                                     <Label className="text-[10px] font-bold uppercase tracking-tight text-slate-500">Jenis</Label>
-                                                    <Select
+                                                    <SearchableSelect
+                                                      options={expenseTypes.filter(et => et.value !== '').map(et => ({ value: et.value, label: et.label }))}
                                                       value={child.expense_type}
                                                       onValueChange={(v) => updateChildItemRevision(activity.budget_detail_id, child.id, 'expense_type', v)}
-                                                    >
-                                                      <SelectTrigger className="h-8 text-xs px-2">
-                                                        <SelectValue placeholder="Pilih..." />
-                                                      </SelectTrigger>
-                                                      <SelectContent>
-                                                        {expenseTypes.filter(et => et.value !== '').map(et => (
-                                                          <SelectItem key={et.value} value={et.value}>{et.label}</SelectItem>
-                                                        ))}
-                                                      </SelectContent>
-                                                    </Select>
+                                                      placeholder="Pilih..."
+                                                      className="h-8 text-xs px-2"
+                                                    />
                                                   </div>
                                                 </div>
                                               </div>
