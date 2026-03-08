@@ -102,7 +102,7 @@ export function SearchableSelect({
                                         value === option.value && "bg-accent/50 text-accent-foreground font-medium"
                                     )}
                                 >
-                                    <span className="flex-1 truncate text-left">{option.label}</span>
+                                    <span className="flex-1 truncate text-left text-wrap">{option.label}</span>
                                     {value === option.value && (
                                         <Check className="ml-2 h-4 w-4 shrink-0" />
                                     )}
