@@ -93,7 +93,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Reimbursement', href: '/reimbursements' },
+        { title: 'Keuangan', href: '/reimbursements' },
         { title: 'Buat Allowance', href: '/reimbursements/create/allowance' },
     ];
 

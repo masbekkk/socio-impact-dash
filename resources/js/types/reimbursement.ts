@@ -71,4 +71,5 @@ export interface ReimbursementPayload {
     }[];
     items?: ReimbursementItemPayload[];
     revision_note?: string;
+    transfer_proof?: File | null;
 }

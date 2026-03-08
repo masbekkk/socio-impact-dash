@@ -14,7 +14,7 @@ interface MenuItem {
 const pegawaiMenu: MenuItem[] = [
   { key: 'dashboard', label: 'Dashboard', icon: Home, href: '/dashboard' },
   { key: 'projects', label: 'Proyek', icon: Grid, href: '/projects' },
-  { key: 'reimbursement', label: 'Reimbursement', icon: DollarSign, href: '/reimbursements' },
+  { key: 'reimbursement', label: 'Keuangan', icon: DollarSign, href: '/reimbursements' },
   { key: 'leave', label: 'Cuti', icon: Calendar, href: '/leaves' },
   { key: 'presence', label: 'Presensi', icon: CheckSquare, href: '/presences' },
 ]
@@ -29,7 +29,7 @@ const headMenu: MenuItem[] = [
 
 const financeMenu: MenuItem[] = [
   { key: 'dashboard', label: 'Dashboard', icon: Home, href: '/dashboard' },
-  { key: 'reimburse-approve', label: 'Persetujuan Reimbursement', icon: DollarSign, href: '/reimbursements/approvals' },
+  { key: 'reimburse-approve', label: 'Persetujuan Keuangan', icon: DollarSign, href: '/reimbursements/approvals' },
   { key: 'transfers', label: 'Transfer', icon: FileText, href: '/reimbursements' },
   { key: 'reports', label: 'Laporan', icon: FileText, href: '/reports' },
 ]

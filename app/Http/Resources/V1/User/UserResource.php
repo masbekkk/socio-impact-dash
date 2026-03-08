@@ -20,6 +20,8 @@ final class UserResource extends JsonResource
             'name' => $this->name,
             'position' => $this->position,
             'email' => $this->email,
+            'nip' => $this->nip,
+            'division_id' => $this->division_id,
             'employee_type' => $this->employee_type,
             'contract_start' => $this->contract_start ? $this->contract_start->toDateString() : null,
             'contract_end' => $this->contract_end ? $this->contract_end->toDateString() : null,

@@ -25,6 +25,8 @@ export default function Edit({ userId }: EditProps) {
     const [form, setForm] = useState({
         name: '',
         position: '',
+        nip: '',
+        division_id: '',
         email: '',
         password: '',
         password_confirmation: '',
@@ -35,21 +37,33 @@ export default function Edit({ userId }: EditProps) {
     });
 
     const [errors, setErrors] = useState<any>({});
+    const [divisions, setDivisions] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [rolesRes, userRes] = await Promise.all([
+                const [rolesRes, userRes, divisionsRes] = await Promise.all([
                     axios.get('/api/rbac/roles'),
-                    axios.get(`/api/v1/users/${userId}`)
+                    axios.get(`/api/v1/users/${userId}`),
+                    axios.get('/api/v1/divisions?per_page=100')
                 ]);
 
                 setRoles(rolesRes.data.data);
+
+                const allDivisions = divisionsRes.data.data.flatMap((dc: any) =>
+                    dc.names.map((d: any) => ({
+                        value: d.id.toString(),
+                        label: `${dc.code} - ${d.name}`
+                    }))
+                );
+                setDivisions(allDivisions);
 
                 const u = userRes.data.data;
                 setForm({
                     name: u.name || '',
                     position: u.position || '',
+                    nip: u.nip || '',
+                    division_id: u.division_id ? u.division_id.toString() : '',
                     email: u.email || '',
                     password: '',
                     password_confirmation: '',
@@ -151,6 +165,26 @@ export default function Edit({ userId }: EditProps) {
                                         placeholder="e.g. Director, CID Officer"
                                     />
                                     {errors.position && <p className="text-sm text-red-500">{errors.position[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="nip">NIP</Label>
+                                    <Input
+                                        id="nip"
+                                        value={form.nip}
+                                        onChange={e => setForm({ ...form, nip: e.target.value })}
+                                        placeholder="e.g. 19900101..."
+                                    />
+                                    {errors.nip && <p className="text-sm text-red-500">{errors.nip[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="division_id">Division</Label>
+                                    <SearchableSelect
+                                        options={divisions}
+                                        value={form.division_id}
+                                        onValueChange={(val) => setForm({ ...form, division_id: val })}
+                                        placeholder="Select a division"
+                                    />
+                                    {errors.division_id && <p className="text-sm text-red-500">{errors.division_id[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>

@@ -119,7 +119,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Reimbursement', href: '/reimbursements' },
+    { title: 'Keuangan', href: '/reimbursements' },
   ];
 
   const navigate = (params: Record<string, string | number | undefined>) => {
@@ -159,7 +159,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
       await axios.delete(`/api/v1/reimbursements/${code}`);
       router.reload({ only: ['reimbursements'] });
     } catch {
-      alert('Gagal menghapus reimbursement.');
+      alert('Gagal menghapus Keuangan.');
     }
   };
 
@@ -175,11 +175,11 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
-      <Head title="Reimbursement" />
+      <Head title="Keuangan" />
       <div className="p-6 md:p-8 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Reimbursement</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Keuangan</h1>
             <p className="text-muted-foreground">Pengelolaan ATR, EER & Allowance</p>
           </div>
 

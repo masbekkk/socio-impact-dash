@@ -59,6 +59,12 @@ final readonly class CreateReimbursement
             'start_time' => $data['start_time'] ?? null,
             'end_time' => $data['end_time'] ?? null,
             'replacement_pic_id' => $data['replacement_pic_id'] ?? null,
+            'transfer_proof_path' => isset($data['transfer_proof']) && $data['transfer_proof'] instanceof UploadedFile
+                ? $data['transfer_proof']->store('reimbursements/transfer-proofs', 'public')
+                : null,
+            'transferred_at' => isset($data['transfer_proof']) && $data['transfer_proof'] instanceof UploadedFile
+                ? now()
+                : null,
         ]);
     }
 

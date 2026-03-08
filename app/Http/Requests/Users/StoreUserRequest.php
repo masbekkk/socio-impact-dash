@@ -29,6 +29,8 @@ final class StoreUserRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'role' => ['required', 'string', 'exists:roles,name'],
+            'nip' => ['nullable', 'string', 'max:255', 'unique:users,nip'],
+            'division_id' => ['nullable', 'integer', 'exists:divisions,id'],
             'employee_type' => ['nullable', new \Illuminate\Validation\Rules\Enum(\App\Enums\EmployeeType::class)],
             'contract_start' => ['nullable', 'date'],
             'contract_end' => ['nullable', 'date', 'after_or_equal:contract_start'],

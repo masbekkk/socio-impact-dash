@@ -117,7 +117,7 @@ final class ReimbursementController extends Controller
             $user = $request->user();
 
             $reimbursement = $createReimbursement->handle(
-                $request->validated(),
+                $request->all(),
                 $user->id
             );
 
