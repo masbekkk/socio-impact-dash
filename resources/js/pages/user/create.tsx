@@ -24,7 +24,7 @@ export default function Register() {
                 <div className="absolute inset-0 z-0">
                     <img
                         src="/assets/loginimg.webp"
-                        alt="Socio Impact Background"
+                        alt="SocialImpact.ID Background"
                         className="h-full w-full object-cover opacity-90"
                     />
                     <div className="absolute inset-0 bg-gradient-to-br from-[#0a3825]/90 to-[#06251b]/95 mix-blend-multiply" />
@@ -33,7 +33,7 @@ export default function Register() {
                 {/* Logo */}
                 <div className="relative z-10 flex items-center gap-2 text-lg font-medium opacity-90">
                     <AppLogoIcon className="h-10 w-10 text-white" />
-                    <span className="text-xl font-bold tracking-tight">Socio Impact</span>
+                    <span className="text-xl font-bold tracking-tight">SocialImpact.ID</span>
                 </div>
 
                 {/* Main Content */}
@@ -46,7 +46,7 @@ export default function Register() {
                     </p>
 
                     {/* Community Badge */}
-                    <div className="mt-8 flex items-center gap-4 rounded-lg bg-transparent p-3 backdrop-blur-0 border w-fit">
+                    {/* <div className="mt-8 flex items-center gap-4 rounded-lg bg-transparent p-3 backdrop-blur-0 border w-fit">
                         <div className="flex -space-x-3">
                             {[1, 2, 3].map((i) => (
                                 <div key={i} className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#0a3825] bg-gray-200">
@@ -61,16 +61,16 @@ export default function Register() {
                             <p className="font-semibold text-white/60 text-xs uppercase tracking-wider">Komunitas</p>
                             <p className="font-bold">Bergabung dengan 2rb+ mitra</p>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Footer */}
                 <div className="relative z-10 flex items-center justify-between text-xs text-white/50">
-                    <p>&copy; 2026 Socio Impact Inc.</p>
-                    <div className="space-x-4">
+                    <p>&copy; 2026 SocialImpact.ID</p>
+                    {/* <div className="space-x-4">
                         <a href="#" className="hover:text-white">Privacy</a>
                         <a href="#" className="hover:text-white">Terms</a>
-                    </div>
+                    </div> */}
                 </div>
             </div>
 
@@ -79,7 +79,7 @@ export default function Register() {
                 {/* Mobile Logo */}
                 <div className="mb-8 flex items-center gap-2 text-lg font-medium lg:hidden">
                     <AppLogoIcon className="h-10 w-10 text-[#0a3825]" />
-                    <span className="text-xl font-bold tracking-tight text-[#0a3825]">Socio Impact</span>
+                    <span className="text-xl font-bold tracking-tight text-[#0a3825]">SocialImpact.ID</span>
                 </div>
 
                 <div className="mx-auto w-full max-w-[400px] space-y-6">
