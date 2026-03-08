@@ -277,7 +277,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               <SearchableSelect
                 options={[
                   { label: 'Semua Divisi', value: 'all' },
-                  ...(divisions || []).map((div: any) => ({ label: div.code, value: div.code }))
+                  ...(divisions || []).map((div: any) => ({ label: div.name, value: div.code }))
                 ]}
                 value={division}
                 onValueChange={(val) => handleFilterChange('division', val)}
