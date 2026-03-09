@@ -163,7 +163,8 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
     }
 
     const duration = durationDays(leave.start_date, leave.end_date);
-    const isOwner = leave.user?.id === authUser.id;
+    const isOwner = !authUser.can_approve && leave.user?.id === authUser.id;
+
     const canAction = ['submitted', 'head_approved', 'revision'].includes(leave.status)
         && !isOwner
         && (authUser.can_approve || authUser.can_reject);

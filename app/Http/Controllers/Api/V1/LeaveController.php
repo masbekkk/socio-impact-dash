@@ -76,7 +76,7 @@ final class LeaveController
                 return response()->json(['message' => 'Anda tidak memiliki izin untuk melakukan aksi ini.'], 403);
             }
 
-            if ($leave->user_id === $actor->id) {
+            if ($leave->user_id === $actor->id && ! $actor->can('approve_leaves')) {
                 return response()->json(['message' => 'Anda tidak dapat menyetujui pengajuan milik sendiri.'], 403);
             }
 
@@ -92,7 +92,7 @@ final class LeaveController
                 $actionStatus = match ($validated['action']) {
                     'approve' => ApprovalStatus::Approved,
                     'reject' => ApprovalStatus::Rejected,
-                    'revision' => 'revision', // Using string loosely if defined
+                    'revision' => ApprovalStatus::Revision,
                     default => ApprovalStatus::Pending,
                 };
 
@@ -138,5 +138,4 @@ final class LeaveController
             return response()->json(['err' => $th->getMessage()], 500);
         }
     }
-
 }
