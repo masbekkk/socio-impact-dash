@@ -109,7 +109,11 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
   const { auth } = usePage().props as unknown as { auth: any };
   const userRoles = auth?.user?.role_name || '';
   const isSuperadmin = userRoles.includes('superadmin');
+  const isFinance = userRoles.includes('finance');
+  const isDirektur = userRoles.includes('direktur');
   const isHR = userRoles.includes('hr') && !isSuperadmin;
+  const isHead = userRoles.includes('head') && !isSuperadmin;
+  const isPegawai = userRoles.includes('pegawai') && !isSuperadmin && !isHead && !isFinance && !isDirektur && !isHR;
 
   const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -170,7 +174,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
       : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
-  const activeTab = filters.type || (isHR ? 'allowance' : 'all');
+  const activeTab = filters.type || (isHR ? 'allowance' : isPegawai ? 'atr' : 'all');
   const { data, current_page, last_page, total, from, to } = reimbursements;
 
   return (
@@ -201,21 +205,27 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Pilih Jenis Pengajuan</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/reimbursements/create/atr" className="cursor-pointer">
-                    <FileText className="mr-2 h-4 w-4" /> Pengajuan ATR
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/reimbursements/create/eer" className="cursor-pointer">
-                    <Receipt className="mr-2 h-4 w-4" /> Pengajuan EER
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/reimbursements/create/allowance" className="cursor-pointer">
-                    <Wallet className="mr-2 h-4 w-4" /> Pengajuan Allowance
-                  </Link>
-                </DropdownMenuItem>
+                {(isSuperadmin || isFinance || isDirektur || isHead || isPegawai) && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/reimbursements/create/atr" className="cursor-pointer">
+                      <FileText className="mr-2 h-4 w-4" /> Pengajuan ATR
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {(isSuperadmin || isFinance || isDirektur || isHead) && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/reimbursements/create/eer" className="cursor-pointer">
+                      <Receipt className="mr-2 h-4 w-4" /> Pengajuan EER
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {(isSuperadmin || isFinance || isDirektur || isHead || isHR) && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/reimbursements/create/allowance" className="cursor-pointer">
+                      <Wallet className="mr-2 h-4 w-4" /> Pengajuan Allowance
+                    </Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -236,14 +246,17 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <Tabs value={activeTab} onValueChange={(v) => navigate({ type: v === 'all' ? '' : v, page: 1 })} className="w-full md:w-auto">
                   <TabsList>
-                    {!isHR && (
+                    {(isSuperadmin || isFinance || isDirektur || isHead || isPegawai) && (
                       <>
                         <TabsTrigger value="all">Semua</TabsTrigger>
                         <TabsTrigger value="atr">ATR</TabsTrigger>
                         <TabsTrigger value="eer">EER</TabsTrigger>
                       </>
                     )}
-                    <TabsTrigger value="allowance">Allowance</TabsTrigger>
+
+                    {(isSuperadmin || isFinance || isDirektur || isHead || isHR) && (
+                      <TabsTrigger value="allowance">Allowance</TabsTrigger>
+                    )}
                   </TabsList>
                 </Tabs>
 
