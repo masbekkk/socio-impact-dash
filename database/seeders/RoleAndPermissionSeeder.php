@@ -74,7 +74,6 @@ final class RoleAndPermissionSeeder extends Seeder
             'reject_leaves',
             'view_reimbursements',
             'view_leaves',
-            'view_all_leaves',
             'manage_detail_budget',
             'create_event',
             'edit_atr_budget',

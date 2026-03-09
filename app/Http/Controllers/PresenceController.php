@@ -23,7 +23,8 @@ final class PresenceController
         $user = auth()->user();
 
         // Define permission for viewing all presences
-        $canViewAll = $user->hasRole(['superadmin', 'direktur', 'head', 'hr']);
+        // Heads will now go through team-based filtering in the service if they don't have view_all_leaves
+        $canViewAll = $user->hasAnyPermission(['view_all_leaves']) || $user->hasRole(['superadmin', 'direktur', 'hr']);
 
         $presences = $presenceService->getPresenceHistory(
             $canViewAll ? null : $user,

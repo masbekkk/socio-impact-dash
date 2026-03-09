@@ -124,7 +124,13 @@ final class PresenceService
         $query = Presence::with(['user', 'project']);
 
         if ($user) {
-            $query->where('user_id', $user->id);
+            if ($user->hasRole(\App\Enums\UserRole::Head->value) && ! $user->hasAnyPermission(['view_all_leaves'])) {
+                // If it's a head without "view all" permission, show their own + team members
+                $teamMemberIds = $user->teamMembers()->pluck('id')->push($user->id)->toArray();
+                $query->whereIn('user_id', $teamMemberIds);
+            } else {
+                $query->where('user_id', $user->id);
+            }
         }
 
         if (! empty($filters['start_date'])) {
