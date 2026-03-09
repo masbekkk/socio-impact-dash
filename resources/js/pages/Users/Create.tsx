@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 export default function Create() {
     const [roles, setRoles] = useState<any[]>([]);
     const [divisions, setDivisions] = useState<any[]>([]);
+    const [heads, setHeads] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Form State
@@ -23,6 +24,7 @@ export default function Create() {
         position: '',
         nip: '',
         division_id: '',
+        head_id: '',
         email: '',
         password: '',
         password_confirmation: '',
@@ -37,17 +39,26 @@ export default function Create() {
     useEffect(() => {
         Promise.all([
             axios.get('/api/rbac/roles'),
-            axios.get('/api/v1/divisions?per_page=100')
-        ]).then(([rolesRes, divisionsRes]) => {
+            axios.get('/api/v1/divisions?per_page=100'),
+            axios.get('/api/v1/users?role=head&per_page=100'),
+        ]).then(([rolesRes, divisionsRes, headsRes]) => {
             setRoles(rolesRes.data.data);
 
-            const allDivisions = divisionsRes.data.data.flatMap((dc: any) =>
+            const allDivisions = divisionsRes.data.flatMap ? divisionsRes.data.flatMap((dc: any) =>
+                dc.names.map((d: any) => ({
+                    value: d.id.toString(),
+                    label: `${dc.code} - ${d.name}`
+                }))
+            ) : divisionsRes.data.data.flatMap((dc: any) =>
                 dc.names.map((d: any) => ({
                     value: d.id.toString(),
                     label: `${dc.code} - ${d.name}`
                 }))
             );
             setDivisions(allDivisions);
+
+            const headUsers = headsRes.data?.data?.data ?? headsRes.data?.data ?? [];
+            setHeads(headUsers.map((u: any) => ({ value: u.id.toString(), label: u.name })));
         }).catch(err => console.error(err));
     }, []);
 
@@ -168,6 +179,18 @@ export default function Create() {
                                     />
                                     {errors.role && <p className="text-sm text-red-500">{errors.role[0]}</p>}
                                 </div>
+                                {!['head', 'superadmin', 'direktur'].includes(form.role) && form.role && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="head_id">Head (Atasan)</Label>
+                                        <SearchableSelect
+                                            options={heads}
+                                            value={form.head_id}
+                                            onValueChange={(val) => setForm({ ...form, head_id: val })}
+                                            placeholder="Select head"
+                                        />
+                                        {errors.head_id && <p className="text-sm text-red-500">{errors.head_id[0]}</p>}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">

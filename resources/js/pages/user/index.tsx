@@ -41,6 +41,9 @@ interface User {
     contract_end: string | null;
     status: string;
     created_at: string;
+    head_id: number | null;
+    head: { id: number; name: string; email: string } | null;
+    team_members_count: number | null;
 }
 
 export default function Index() {
@@ -248,6 +251,7 @@ export default function Index() {
                                     <TableHead className="w-[300px]">User</TableHead>
                                     <TableHead>Role</TableHead>
                                     <TableHead>Position</TableHead>
+                                    <TableHead>Head / Team</TableHead>
                                     <TableHead>Employment</TableHead>
                                     <TableHead>Joined</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
@@ -256,13 +260,13 @@ export default function Index() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                             Loading users...
                                         </TableCell>
                                     </TableRow>
                                 ) : users.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                             No users found.
                                         </TableCell>
                                     </TableRow>
@@ -295,6 +299,21 @@ export default function Index() {
                                             </TableCell>
                                             <TableCell>
                                                 <span className="text-sm font-medium">{user.position || '-'}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                {user.head ? (
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs text-muted-foreground">Atasan:</span>
+                                                        <span className="text-sm font-medium">{user.head.name}</span>
+                                                    </div>
+                                                ) : user.team_members_count && user.team_members_count > 0 ? (
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs text-muted-foreground">Team:</span>
+                                                        <span className="text-sm font-medium">{user.team_members_count} anggota</span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-sm text-muted-foreground">-</span>
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col">

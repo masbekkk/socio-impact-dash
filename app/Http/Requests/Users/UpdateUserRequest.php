@@ -33,6 +33,7 @@ final class UpdateUserRequest extends FormRequest
             'role' => ['required', 'string', 'exists:roles,name'],
             'nip' => ['nullable', 'string', 'max:255', 'unique:users,nip,'.$userId],
             'division_id' => ['nullable', 'integer', 'exists:divisions,id'],
+            'head_id' => ['nullable', 'integer', 'exists:users,id'],
             'employee_type' => ['nullable', new \Illuminate\Validation\Rules\Enum(\App\Enums\EmployeeType::class)],
             'contract_start' => ['nullable', 'date'],
             'contract_end' => ['nullable', 'date', 'after_or_equal:contract_start'],

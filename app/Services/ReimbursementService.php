@@ -14,7 +14,27 @@ final class ReimbursementService
     {
         $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver']);
 
-        if (! $user->hasAnyPermission(['approve_reimbursements', 'reject_reimbursements'])) {
+        // Apply Role-based filtering
+        if ($user->hasRole('superadmin') || $user->hasRole('finance') || $user->hasRole('direktur')) {
+            // Can view all, no extra where needed
+        } elseif ($user->hasRole('hr')) {
+            // HR can only see allowances
+            $query->where('type', \App\Enums\ReimbursementType::ALLOWANCE);
+        } elseif ($user->hasRole('head')) {
+            // Head can see:
+            // 1. Their own reimbursements
+            // 2. Their team members' reimbursements
+            // 3. Reimbursements where they are an approver
+            $query->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                    ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $user->id))
+                    ->orWhereHas('approvals', fn ($aq) => $aq->where('approver_id', $user->id));
+            });
+        } elseif ($user->hasRole('pegawai')) {
+            // Pegawai can only see their own ATRs
+            $query->where('user_id', $user->id);
+        } else {
+            // Default fallback for any other roles (only own data)
             $query->where('user_id', $user->id);
         }
 
@@ -23,14 +43,7 @@ final class ReimbursementService
         }
 
         if (! empty($filters['type'])) {
-            if ($user->hasRole('hr')) {
-                $query->where('type', 'allowance');
-            } else {
-                $query->where('type', $filters['type']);
-            }
-        }
-        if ($user->hasRole('hr')) {
-            $query->where('type', 'allowance');
+            $query->where('type', $filters['type']);
         }
 
         if (! empty($filters['project_id'])) {

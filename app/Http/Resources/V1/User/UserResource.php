@@ -22,6 +22,13 @@ final class UserResource extends JsonResource
             'email' => $this->email,
             'nip' => $this->nip,
             'division_id' => $this->division_id,
+            'head_id' => $this->head_id,
+            'head' => $this->whenLoaded('head', fn () => $this->head ? [
+                'id' => $this->head->id,
+                'name' => $this->head->name,
+                'email' => $this->head->email,
+            ] : null),
+            'team_members_count' => $this->whenCounted('teamMembers'),
             'employee_type' => $this->employee_type,
             'contract_start' => $this->contract_start ? $this->contract_start->toDateString() : null,
             'contract_end' => $this->contract_end ? $this->contract_end->toDateString() : null,
