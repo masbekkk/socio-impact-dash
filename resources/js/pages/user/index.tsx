@@ -45,6 +45,7 @@ interface User {
     head: { id: number; name: string; email: string } | null;
     team_members_count: number | null;
     nip: string | null;
+    division: any | null;
 }
 
 export default function Index() {
@@ -252,6 +253,7 @@ export default function Index() {
                                     <TableHead className="w-[300px]">User</TableHead>
                                     <TableHead>Role</TableHead>
                                     <TableHead>Position</TableHead>
+                                    <TableHead>Divisi</TableHead>
                                     <TableHead>Head / Team</TableHead>
                                     <TableHead>Employment</TableHead>
                                     <TableHead>Joined</TableHead>
@@ -301,6 +303,9 @@ export default function Index() {
                                             </TableCell>
                                             <TableCell>
                                                 <span className="text-sm font-medium">{user.position || '-'}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="text-sm font-medium">{user.division ? user.division.division_code.code + ' - ' + user.division.name : '-'}</span>
                                             </TableCell>
                                             <TableCell>
                                                 {user.head ? (

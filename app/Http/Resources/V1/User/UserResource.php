@@ -35,6 +35,16 @@ final class UserResource extends JsonResource
             'roles' => $this->whenLoaded('roles', function () {
                 return $this->roles->pluck('name');
             }),
+            'division' => $this->whenLoaded('division', function () {
+                return $this->division ? [
+                    'id' => $this->division->id,
+                    'name' => $this->division->name,
+                    'division_code' => $this->division->divisionCode ? [
+                        'id' => $this->division->divisionCode->id,
+                        'code' => $this->division->divisionCode->code,
+                    ] : null,
+                ] : null;
+            }),
             'status' => 'active', // Placeholder if no status column physically exists
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
