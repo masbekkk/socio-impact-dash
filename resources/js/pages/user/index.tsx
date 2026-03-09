@@ -44,6 +44,7 @@ interface User {
     head_id: number | null;
     head: { id: number; name: string; email: string } | null;
     team_members_count: number | null;
+    nip: string | null;
 }
 
 export default function Index() {
@@ -283,6 +284,7 @@ export default function Index() {
                                                     <div className="flex flex-col">
                                                         <span className="font-medium">{user.name}</span>
                                                         <span className="text-xs text-muted-foreground">{user.email}</span>
+                                                        <span className="text-xs text-muted-foreground">{user.nip}</span>
                                                     </div>
                                                 </div>
                                             </TableCell>

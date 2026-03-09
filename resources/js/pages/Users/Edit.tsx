@@ -53,12 +53,13 @@ export default function Edit({ userId }: EditProps) {
 
                 setRoles(rolesRes.data.data);
 
-                const allDivisions = divisionsRes.data.data.flatMap((dc: any) =>
+                const divisionsData = divisionsRes.data?.data?.data ?? divisionsRes.data?.data ?? [];
+                const allDivisions = Array.isArray(divisionsData) ? divisionsData.flatMap((dc: any) =>
                     dc.names.map((d: any) => ({
                         value: d.id.toString(),
                         label: `${dc.code} - ${d.name}`
                     }))
-                );
+                ) : [];
                 setDivisions(allDivisions);
 
                 const headUsers = headsRes.data?.data?.data ?? headsRes.data?.data ?? [];
@@ -172,6 +173,26 @@ export default function Edit({ userId }: EditProps) {
                                         placeholder="e.g. Director, CID Officer"
                                     />
                                     {errors.position && <p className="text-sm text-red-500">{errors.position[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="nip">NIP</Label>
+                                    <Input
+                                        id="nip"
+                                        value={form.nip}
+                                        onChange={e => setForm({ ...form, nip: e.target.value })}
+                                        placeholder="e.g. 19900101..."
+                                    />
+                                    {errors.nip && <p className="text-sm text-red-500">{errors.nip[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="division_id">Division</Label>
+                                    <SearchableSelect
+                                        options={divisions}
+                                        value={form.division_id}
+                                        onValueChange={(val) => setForm({ ...form, division_id: val })}
+                                        placeholder="Select a division"
+                                    />
+                                    {errors.division_id && <p className="text-sm text-red-500">{errors.division_id[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
