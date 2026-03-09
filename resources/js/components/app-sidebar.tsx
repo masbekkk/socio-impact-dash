@@ -27,7 +27,7 @@ const NAV_ITEMS: NavItem[] = [
         title: 'Proyek',
         href: '/projects',
         icon: Folder,
-        roles: ['head', 'hr', 'direktur', 'superadmin', 'finance'],
+        roles: ['head', 'direktur', 'superadmin', 'finance'],
     },
     {
         title: 'Keuangan',
