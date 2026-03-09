@@ -21,7 +21,7 @@ final class UserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = User::with('roles');
+        $query = User::with(['roles', 'head'])->withCount('teamMembers');
 
         if ($request->filled('role')) {
             $query->role($request->get('role'));
@@ -76,14 +76,16 @@ final class UserController extends Controller
 
         $data['password'] = Hash::make($data['password']);
         $role = $data['role'];
+        $headId = $data['head_id'] ?? null;
 
-        unset($data['role']);
+        unset($data['role'], $data['head_id']);
         $data['email_verified_at'] = now();
+        $data['head_id'] = $headId;
         $user = User::create($data);
 
         $user->assignRole($role);
 
-        $user->load('roles');
+        $user->load(['roles', 'head'])->loadCount('teamMembers');
 
         return JsonResponseFormatter::success(
             new UserResource($user),
@@ -118,8 +120,10 @@ final class UserController extends Controller
             unset($data['password']);
         }
         $role = $data['role'];
+        $headId = array_key_exists('head_id', $data) ? $data['head_id'] : $user->head_id;
 
-        unset($data['role']);
+        unset($data['role'], $data['head_id']);
+        $data['head_id'] = $headId;
         $data['email_verified_at'] = now();
         $user->update($data);
 
@@ -127,7 +131,7 @@ final class UserController extends Controller
             $user->syncRoles([$role]);
         }
 
-        $user->load('roles');
+        $user->load(['roles', 'head'])->loadCount('teamMembers');
 
         return JsonResponseFormatter::success(
             new UserResource($user),

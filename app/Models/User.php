@@ -51,6 +51,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         'password',
         'nip',
         'division_id',
+        'head_id',
         'employee_type',
         'contract_start',
         'contract_end',
@@ -123,5 +124,15 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function notificationRecipients(): HasMany
     {
         return $this->hasMany(NotificationRecipient::class, 'user_id');
+    }
+
+    public function head(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'head_id');
+    }
+
+    public function teamMembers(): HasMany
+    {
+        return $this->hasMany(self::class, 'head_id');
     }
 }
