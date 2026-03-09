@@ -40,12 +40,15 @@ interface AuthUser {
   division_name: string;
   position: string;
   join_date: string;
+  remaining_annual_leaves?: number;
+  is_pegawai?: boolean;
 }
 
 interface Props {
   authUser: AuthUser;
   projects: SimpleProject[];
   users: SimpleUser[];
+  approvers: Record<string, SimpleUser[]>;
 }
 
 const LEAVE_TYPES: { label: string; value: string }[] = [
@@ -58,7 +61,7 @@ const LEAVE_TYPES: { label: string; value: string }[] = [
   { label: 'Cuti Tanpa Gaji', value: 'unpaid' },
 ];
 
-export default function CreateLeave({ authUser, projects, users }: Props) {
+export default function CreateLeave({ authUser, projects, users, approvers }: Props) {
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Cuti', href: '/leaves' },
@@ -73,6 +76,7 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
     type: 'annual',
     start_date: '',
     end_date: '',
+    approver_head_id: '',
     reason: '',
   });
 
@@ -134,6 +138,7 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
       fd.append('end_date', formData.end_date);
       if (formData.project_id) fd.append('project_id', formData.project_id);
       if (formData.replacement_pic_id) fd.append('replacement_pic_id', formData.replacement_pic_id);
+      if (formData.approver_head_id) fd.append('approver_head_id', formData.approver_head_id);
       if (formData.phone) fd.append('phone', formData.phone);
       if (formData.lokasi) fd.append('lokasi', formData.lokasi);
       if (formData.reason) fd.append('reason', formData.reason);
@@ -150,10 +155,13 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
       } else if (axios.isAxiosError(error)) {
         setErrors({ _general: [error.response?.data?.message ?? 'Terjadi kesalahan.'] });
       }
-    } finally {
       setLoading(false);
     }
   };
+
+  const isExceedingQuota = formData.type === 'annual'
+    && typeof authUser.remaining_annual_leaves === 'number'
+    && totalDays > authUser.remaining_annual_leaves;
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -254,11 +262,19 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
                     />
                     {errors.end_date && <p className="text-xs text-red-500">{errors.end_date[0]}</p>}
                   </div>
-                  <div className="bg-blue-50 text-blue-700 px-4 py-2.5 rounded-md flex items-center justify-between border border-blue-100 h-10">
-                    <span className="text-sm font-medium">Total Cuti:</span>
-                    <span className="font-bold">{totalDays} Hari</span>
+                  <div className={`bg-blue-50 text-blue-700 px-4 py-2.5 rounded-md flex flex-col justify-center border h-10 ${isExceedingQuota ? 'border-red-300 bg-red-50 text-red-700' : 'border-blue-100'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Total Cuti:</span>
+                      <span className="font-bold">{totalDays} Hari</span>
+                    </div>
                   </div>
                 </div>
+
+                {isExceedingQuota && (
+                  <div className="text-xs text-red-500 font-medium">
+                    Total hari cuti melebihi sisa kuota Cuti Tahunan Anda ({authUser.remaining_annual_leaves} Hari).
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -277,10 +293,24 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="lokasi">Alamat Selama Cuti <span className="text-red-500">*</span></Label>
-                  <Input id="lokasi" name="lokasi" placeholder="Alamat lengkap tempat anda menghabiskan cuti" value={formData.lokasi} onChange={handleChange} className="h-10" />
-                  {errors.lokasi && <p className="text-xs text-red-500">{errors.lokasi[0]}</p>}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {authUser.is_pegawai && (
+                    <div className="space-y-2">
+                      <Label htmlFor="approver_head_id">Head Approver <span className="text-red-500">*</span></Label>
+                      <SearchableSelect
+                        options={(approvers['head'] || []).map(u => ({ value: u.id.toString(), label: u.name }))}
+                        value={formData.approver_head_id}
+                        onValueChange={(val) => handleSelectChange('approver_head_id', val)}
+                        placeholder="Pilih Head Divisi Anda"
+                      />
+                      {errors.approver_head_id && <p className="text-xs text-red-500">{errors.approver_head_id[0]}</p>}
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="lokasi">Alamat Selama Cuti <span className="text-red-500">*</span></Label>
+                    <Input id="lokasi" name="lokasi" placeholder="Alamat lengkap tempat anda menghabiskan cuti" value={formData.lokasi} onChange={handleChange} className="h-10" />
+                    {errors.lokasi && <p className="text-xs text-red-500">{errors.lokasi[0]}</p>}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -312,7 +342,7 @@ export default function CreateLeave({ authUser, projects, users }: Props) {
                 <Button variant="outline" asChild size="lg">
                   <Link href="/leaves">Batal</Link>
                 </Button>
-                <Button type="submit" size="lg" disabled={loading || totalDays <= 0} className="bg-sidebar hover:bg-sidebar/90 min-w-[150px]">
+                <Button type="submit" size="lg" disabled={loading || totalDays <= 0 || isExceedingQuota} className="bg-sidebar hover:bg-sidebar/90 min-w-[150px]">
                   {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Ajukan Cuti</>}
                 </Button>
               </div>

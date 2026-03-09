@@ -78,43 +78,35 @@ jobs:
           # The secrets.GITHUB_TOKEN is automatically provided by GitHub Actions
           git push origin build --force
 
-      - name: Deploy to Hostinger via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          PROJECT_PATH: "/home/u592892738/domains/manajemensiid.id/public_html/"
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
-          key: ${{ secrets.HOSTINGER_SSH_KEY }}
-          port: 65002
-          timeout: 120s
-          command_timeout: 300s
-          proxy_timeout: 120s
-          debug: true
-          envs: PROJECT_PATH
-          script: |
-            set -e
+      - name: Deploy to Hostinger via Webhook
+        run: |
+          MAX_RETRIES=3
+          RETRY=0
 
-            mkdir -p ~/.ssh
-            ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null
+          until [ $RETRY -ge $MAX_RETRIES ]; do
+            HTTP_CODE=$(curl -s -o /tmp/deploy_response.json -w "%{http_code}" \
+              --max-time 300 \
+              --connect-timeout 30 \
+              -X POST \
+              -H "X-Deploy-Token: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}" \
+              -H "Content-Type: application/json" \
+              "${{ secrets.DEPLOY_WEBHOOK_URL }}")
 
-            cd $PROJECT_PATH
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Deployment successful!"
+              cat /tmp/deploy_response.json
+              exit 0
+            fi
 
-            MAX_RETRIES=3
-            RETRY=0
-            until git fetch origin build --depth 1; do
-              RETRY=$((RETRY + 1))
-              if [ $RETRY -ge $MAX_RETRIES ]; then
-                echo "❌ git fetch failed after $MAX_RETRIES attempts"
-                exit 1
-              fi
-              echo "⚠️ git fetch failed, retrying ($RETRY/$MAX_RETRIES)..."
-              sleep 5
-            done
+            RETRY=$((RETRY + 1))
+            echo "⚠️ Deploy returned HTTP $HTTP_CODE (attempt $RETRY/$MAX_RETRIES)"
+            cat /tmp/deploy_response.json 2>/dev/null || true
 
-            git checkout build
-            git reset --hard origin/build
-            git clean -fd -e .htaccess -e .env
+            if [ $RETRY -lt $MAX_RETRIES ]; then
+              echo "Retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
 
-            php artisan migrate --force --no-interaction
-            php artisan optimize:clear
+          echo "❌ Deployment failed after $MAX_RETRIES attempts"
+          exit 1

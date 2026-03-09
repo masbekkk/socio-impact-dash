@@ -62,15 +62,16 @@ final class LeaveController
     {
         try {
             $validated = $request->validate([
-                'action' => ['required', Rule::in(['approve', 'reject'])],
+                'action' => ['required', Rule::in(['approve', 'reject', 'revision'])],
                 'notes' => ['nullable', 'string', 'max:1000'],
             ]);
 
             $leave = $this->leaveService->findByCode($code);
             $actor = $request->user();
             $isApprove = $validated['action'] === 'approve';
+            $isRevision = $validated['action'] === 'revision';
 
-            $requiredPermission = $isApprove ? 'approve_leaves' : 'reject_leaves';
+            $requiredPermission = $isApprove || $isRevision ? 'approve_leaves' : 'reject_leaves';
             if (! $actor->can($requiredPermission)) {
                 return response()->json(['message' => 'Anda tidak memiliki izin untuk melakukan aksi ini.'], 403);
             }
@@ -80,20 +81,41 @@ final class LeaveController
             }
 
             return DB::transaction(function () use ($leave, $actor, $validated, $isApprove): JsonResponse {
-                LeaveApproval::create([
-                    'leave_id' => $leave->id,
-                    'approver_id' => $actor->id,
-                    'role' => $actor->getRoleNames()->first(),
-                    'status' => $isApprove ? ApprovalStatus::Approved : ApprovalStatus::Rejected,
-                    'notes' => $validated['notes'] ?? null,
-                    'approved_at' => now(),
-                ]);
-
                 $role = $actor->getRoleNames()->first();
                 $submitterRole = $leave->user->getRoleNames()->first();
 
+                // Find existing pending approval for this role
+                $approval = LeaveApproval::where('leave_id', $leave->id)
+                    ->where('role', $role)
+                    ->first();
+
+                $actionStatus = match ($validated['action']) {
+                    'approve' => ApprovalStatus::Approved,
+                    'reject' => ApprovalStatus::Rejected,
+                    'revision' => 'revision', // Using string loosely if defined
+                    default => ApprovalStatus::Pending,
+                };
+
+                if ($approval) {
+                    $approval->update([
+                        'status' => $actionStatus,
+                        'notes' => $validated['notes'] ?? null,
+                        'approved_at' => $isApprove ? now() : null,
+                    ]);
+                } else {
+                    LeaveApproval::create([
+                        'leave_id' => $leave->id,
+                        'approver_id' => $actor->id,
+                        'role' => $role,
+                        'status' => $actionStatus,
+                        'notes' => $validated['notes'] ?? null,
+                        'approved_at' => $isApprove ? now() : null,
+                    ]);
+                }
+
                 $newStatus = match (true) {
-                    ! $isApprove => LeaveStatus::Rejected,
+                    $validated['action'] === 'reject' => LeaveStatus::Rejected,
+                    $validated['action'] === 'revision' => LeaveStatus::Revision ?? LeaveStatus::Rejected,
                     $submitterRole === 'head' => match (true) {
                         $role === 'hr' => LeaveStatus::HRApproved,
                         in_array($role, ['superadmin', 'direktur'], true) => LeaveStatus::SuperAdminApproved,
@@ -116,4 +138,5 @@ final class LeaveController
             return response()->json(['err' => $th->getMessage()], 500);
         }
     }
+
 }

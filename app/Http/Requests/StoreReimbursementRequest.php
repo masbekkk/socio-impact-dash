@@ -56,6 +56,7 @@ final class StoreReimbursementRequest extends FormRequest
             'items.*.expense_type' => ['nullable', 'string'],
             'items.*.receipt' => ['nullable', 'file', 'max:10240'],
             'items.*.notes' => ['nullable', 'string'],
+            'transfer_proof' => ['nullable', 'file', 'max:10240'],
         ];
     }
 

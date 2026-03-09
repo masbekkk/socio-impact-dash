@@ -51,7 +51,9 @@ final readonly class CreateLeave
                 'attachment_path' => $this->storeAttachment($data['attachment'] ?? null, $userId),
             ]);
 
-            return $leave->load(['user', 'project', 'replacementPic']);
+            $this->assignApprovers($leave, $data, $userId);
+
+            return $leave->load(['user', 'project', 'replacementPic', 'approvals.approver']);
         });
     }
 
@@ -82,5 +84,33 @@ final readonly class CreateLeave
         }
 
         return $this->fileUploadService->uploadFile($file, "leaves/{$userId}/attachments")['path'];
+    }
+
+    private function assignApprovers(Leave $leave, array $data, int $userId): void
+    {
+        $user = \App\Models\User::find($userId);
+        if (! $user) {
+            return;
+        }
+
+        $roles = [
+            'head' => null,
+            'hr' => \App\Models\User::where('email', 'hr@socio-impact.test')->first()?->id,
+            'direktur' => \App\Models\User::where('email', 'direktur@socio-impact.test')->first()?->id,
+        ];
+
+        if ($user->hasRole('pegawai')) {
+            $roles['head'] = $data['approver_head_id'] ?? null;
+        }
+
+        foreach ($roles as $role => $approverId) {
+            if ($approverId) {
+                $leave->approvals()->create([
+                    'approver_id' => $approverId,
+                    'role' => $role,
+                    'status' => \App\Enums\ApprovalStatus::Pending->value,
+                ]);
+            }
+        }
     }
 }

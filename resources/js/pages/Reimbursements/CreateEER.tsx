@@ -22,6 +22,7 @@ import {
   X,
   Loader2,
   Briefcase,
+  Upload,
 } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
 import MoneyInput from '@/components/MoneyInput';
@@ -115,10 +116,11 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
     eer_type: 'refund' as 'refund' | 'reimbursement',
     refund_reimburse_amount: 0,
   });
+  const [transferProof, setTransferProof] = useState<File | null>(null);
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Reimbursement', href: '/reimbursements' },
+    { title: 'Keuangan', href: '/reimbursements' },
     { title: 'Buat EER', href: '/reimbursements/create/eer' },
   ];
 
@@ -240,13 +242,18 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
       return;
     }
 
+    if (eerCalculation.type === 'refund' && !transferProof) {
+      setErrors({ _general: ['Bukti transfer refund wajib diunggah.'] });
+      return;
+    }
+
     if (!formData.approver_head_id) {
       setErrors({ _general: ['Head Approver wajib dipilih.'] });
       return;
     }
 
     const payloadItems = items.map(i => ({
-      project_budget_detail_id: i.project_budget_detail_id,
+      project_budget_detail_id: Number(i.project_budget_detail_id),
       item_name: i.item_name,
       quantity: i.quantity,
       unit_price: i.unit_price,
@@ -266,6 +273,7 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
       amount: totalEerAmount,
       usage_plan: formData.description,
       items: payloadItems,
+      transfer_proof: transferProof,
     } as any);
   };
 
@@ -550,6 +558,56 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
                           </div>
                         </div>
                       </div>
+
+                      {eerCalculation.type === 'refund' && eerCalculation.amount > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t">
+                          <div className="space-y-4">
+                            <Label className="text-sm font-bold flex items-center gap-2 text-rose-600">
+                              <Info className="h-4 w-4" /> Informasi Rekening Refund (Socim Group)
+                            </Label>
+                            <div className="space-y-3 text-xs bg-rose-50/50 border border-rose-100 p-4 rounded-lg">
+                              <div>
+                                <p className="font-bold text-rose-800">Rek Socim - PT Dampak Sosial Indonesia</p>
+                                <p className="text-rose-600 font-mono">BCA 5035288896</p>
+                              </div>
+                              <div>
+                                <p className="font-bold text-rose-800">Rek Lestari - Yayasan Biru Hijau lestari</p>
+                                <p className="text-rose-600 font-mono">BNI 2023999001</p>
+                              </div>
+                              <div>
+                                <p className="font-bold text-rose-800">Rek Sustim - Yayasan Dampak Keberlanjutan Indonesia</p>
+                                <p className="text-rose-600 font-mono">BNI 2024111915</p>
+                              </div>
+                              <div>
+                                <p className="font-bold text-rose-800">Rek Bamboo - PT Bamboo Karya Mandiri</p>
+                                <p className="text-rose-600 font-mono">BCA 5035880001</p>
+                              </div>
+                              <div>
+                                <p className="font-bold text-rose-800">Rek EBLI - Ekosistem Berdaya Lestari Indonesia, YYS</p>
+                                <p className="text-rose-600 font-mono">Mandiri 1410055445050</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <Label className="text-sm font-bold flex items-center gap-2 text-emerald-600">
+                              <Upload className="h-4 w-4" /> Upload Bukti Transfer Refund <span className="text-rose-500">*</span>
+                            </Label>
+                            <FileUploadDropzone
+                              className="h-[120px] bg-white border-2 border-dashed"
+                              onFilesChange={(files) => setTransferProof(files[0] || null)}
+                            />
+                            {transferProof && (
+                              <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-2 rounded border border-emerald-100">
+                                <CheckCircle className="h-3 w-3" /> Terpilih: {transferProof.name}
+                              </div>
+                            )}
+                            <p className="text-[10px] text-muted-foreground italic">
+                              Harap transfer ke salah satu rekening di atas sesuai entitas project, kemudian lampirkan buktinya di sini.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   {errors._general && <p className="text-xs text-red-500 font-medium bg-red-50 p-2 rounded border border-red-100">{errors._general[0]}</p>}

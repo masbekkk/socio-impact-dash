@@ -59,6 +59,7 @@ interface Props {
         can_approve: boolean;
         can_reject: boolean;
     };
+    submitterRemainingLeaves: number;
 }
 
 const LEAVE_TYPE_LABELS: Record<string, string> = {
@@ -89,12 +90,12 @@ function durationDays(start: string, end: string): number {
     return days;
 }
 
-export default function LeaveShow({ leaveCode, authUser }: Props) {
+export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeaves }: Props) {
     const [leave, setLeave] = useState<LeaveData | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
 
-    const [actionDialog, setActionDialog] = useState<{ open: boolean; type: 'approve' | 'reject' | null }>({
+    const [actionDialog, setActionDialog] = useState<{ open: boolean; type: 'approve' | 'reject' | 'revision' | null }>({
         open: false,
         type: null,
     });
@@ -163,7 +164,7 @@ export default function LeaveShow({ leaveCode, authUser }: Props) {
 
     const duration = durationDays(leave.start_date, leave.end_date);
     const isOwner = leave.user?.id === authUser.id;
-    const canAction = leave.status === 'submitted'
+    const canAction = ['submitted', 'head_approved', 'revision'].includes(leave.status)
         && !isOwner
         && (authUser.can_approve || authUser.can_reject);
 
@@ -190,28 +191,43 @@ export default function LeaveShow({ leaveCode, authUser }: Props) {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <StatusBadge status={leave.status as 'submitted' | 'head_approved' | 'hr_approved' | 'superadmin_approved' | 'rejected' | 'draft'} />
+                        <StatusBadge status={leave.status as any} />
                         {canAction && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="gap-2">
-                                        Aksi <ChevronDown className="h-4 w-4" />
+                            <div className="flex items-center gap-2">
+                                {authUser.can_approve && (
+                                    <Button
+                                        variant="outline"
+                                        className="h-9 px-4 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 gap-2"
+                                        onClick={() => setActionDialog({ open: true, type: 'approve' })}
+                                        disabled={actionLoading}
+                                    >
+                                        <CheckCircle className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Setujui</span>
                                     </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    {authUser.can_approve && (
-                                        <DropdownMenuItem className="text-emerald-600 focus:text-emerald-600 cursor-pointer" onClick={() => setActionDialog({ open: true, type: 'approve' })}>
-                                            <CheckCircle className="mr-2 h-4 w-4" /> Setujui
-                                        </DropdownMenuItem>
-                                    )}
-                                    {authUser.can_approve && authUser.can_reject && <DropdownMenuSeparator />}
-                                    {authUser.can_reject && (
-                                        <DropdownMenuItem className="text-rose-600 focus:text-rose-600 cursor-pointer" onClick={() => setActionDialog({ open: true, type: 'reject' })}>
-                                            <XCircle className="mr-2 h-4 w-4" /> Tolak
-                                        </DropdownMenuItem>
-                                    )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                                )}
+                                {authUser.can_approve && (
+                                    <Button
+                                        variant="outline"
+                                        className="h-9 px-4 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 gap-2"
+                                        onClick={() => setActionDialog({ open: true, type: 'revision' })}
+                                        disabled={actionLoading}
+                                    >
+                                        <FileText className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Revisi</span>
+                                    </Button>
+                                )}
+                                {authUser.can_reject && (
+                                    <Button
+                                        variant="outline"
+                                        className="h-9 px-4 border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 gap-2"
+                                        onClick={() => setActionDialog({ open: true, type: 'reject' })}
+                                        disabled={actionLoading}
+                                    >
+                                        <XCircle className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Tolak</span>
+                                    </Button>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -224,6 +240,12 @@ export default function LeaveShow({ leaveCode, authUser }: Props) {
                                 <CardTitle className="text-lg">
                                     {isTravel ? 'Detail Perjalanan Dinas' : 'Detail Pengajuan Cuti'}
                                 </CardTitle>
+                                {leave.type === 'annual' && (
+                                    <div className="mt-2 bg-emerald-50 border border-emerald-100 rounded-md py-1.5 px-3 flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-emerald-700">Sisa Cuti Pemohon</span>
+                                        <span className="text-sm font-bold text-emerald-800">{submitterRemainingLeaves} Hari</span>
+                                    </div>
+                                )}
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 {leave.project && (
@@ -330,14 +352,16 @@ export default function LeaveShow({ leaveCode, authUser }: Props) {
                                 <CardContent className="space-y-4">
                                     {leave.approvals.map((a) => (
                                         <div key={a.id} className="flex items-start gap-3 p-4 rounded-lg border bg-muted/30">
-                                            {a.status === 'approved' ? (
-                                                <CheckCircle className="h-5 w-5 text-emerald-600 mt-0.5" />
-                                            ) : (
-                                                <XCircle className="h-5 w-5 text-rose-600 mt-0.5" />
-                                            )}
+                                            {a.status === 'approved' && <CheckCircle className="h-5 w-5 text-emerald-600 mt-0.5" />}
+                                            {a.status === 'rejected' && <XCircle className="h-5 w-5 text-rose-600 mt-0.5" />}
+                                            {a.status === 'revision' && <FileText className="h-5 w-5 text-amber-600 mt-0.5" />}
+                                            {a.status === 'pending' && <Loader2 className="h-5 w-5 text-blue-600 mt-0.5 animate-spin" />}
                                             <div className="flex-1">
                                                 <p className="font-medium">
-                                                    {a.status === 'approved' ? 'Disetujui' : 'Ditolak'}
+                                                    {a.status === 'approved' && 'Disetujui'}
+                                                    {a.status === 'rejected' && 'Ditolak'}
+                                                    {a.status === 'revision' && 'Revisi'}
+                                                    {a.status === 'pending' && 'Menunggu Persetujuan'}
                                                     <span className="text-xs text-muted-foreground ml-2">({a.role})</span>
                                                 </p>
                                                 {a.approver && (
@@ -395,11 +419,24 @@ export default function LeaveShow({ leaveCode, authUser }: Props) {
                                 </div>
                                 {leave.approvals?.map((a) => (
                                     <div key={a.id} className="flex items-center gap-3 text-sm">
-                                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${a.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                                            {a.status === 'approved' ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${a.status === 'approved' ? 'bg-emerald-100 text-emerald-600' :
+                                            a.status === 'rejected' ? 'bg-rose-100 text-rose-600' :
+                                                a.status === 'revision' ? 'bg-amber-100 text-amber-600' :
+                                                    'bg-blue-100 text-blue-600'
+                                            }`}>
+                                            {a.status === 'approved' && <CheckCircle className="h-4 w-4" />}
+                                            {a.status === 'rejected' && <XCircle className="h-4 w-4" />}
+                                            {a.status === 'revision' && <FileText className="h-4 w-4" />}
+                                            {a.status === 'pending' && <Loader2 className="h-4 w-4 animate-spin" />}
                                         </div>
                                         <div>
-                                            <p className="font-medium">{a.status === 'approved' ? 'Disetujui' : 'Ditolak'} ({a.role})</p>
+                                            <p className="font-medium">
+                                                {a.status === 'approved' && 'Disetujui'}
+                                                {a.status === 'rejected' && 'Ditolak'}
+                                                {a.status === 'revision' && 'Revisi'}
+                                                {a.status === 'pending' && 'Menunggu Persetujuan'}
+                                                {' '}({a.role})
+                                            </p>
                                             <p className="text-xs text-muted-foreground">
                                                 {a.approved_at ? format(new Date(a.approved_at), 'dd MMM yyyy HH:mm', { locale: localeId }) : '-'}
                                             </p>
@@ -425,7 +462,7 @@ export default function LeaveShow({ leaveCode, authUser }: Props) {
                             Konfirmasi Aksi
                         </DialogTitle>
                         <DialogDescription>
-                            Apakah Anda yakin ingin {actionDialog.type === 'approve' ? 'menyetujui' : 'menolak'} {isTravel ? 'perjalanan dinas' : 'cuti'} dari <b>{leave.user?.name}</b>?
+                            Apakah Anda yakin ingin {actionDialog.type === 'approve' ? 'menyetujui' : actionDialog.type === 'reject' ? 'menolak' : 'mengembalikan (revisi)'} {isTravel ? 'perjalanan dinas' : 'cuti'} dari <b>{leave.user?.name}</b>?
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
@@ -434,7 +471,7 @@ export default function LeaveShow({ leaveCode, authUser }: Props) {
                             Durasi: {format(new Date(leave.start_date), 'dd MMM yyyy', { locale: localeId })} - {format(new Date(leave.end_date), 'dd MMM yyyy', { locale: localeId })} ({duration} Hari)
                         </p>
                         <Textarea
-                            placeholder={actionDialog.type === 'reject' ? 'Alasan penolakan...' : 'Catatan persetujuan (opsional)'}
+                            placeholder={actionDialog.type === 'reject' ? 'Alasan penolakan...' : actionDialog.type === 'revision' ? 'Catatan revisi yang diperlukan...' : 'Catatan persetujuan (opsional)'}
                             className="mt-4"
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
@@ -454,8 +491,10 @@ export default function LeaveShow({ leaveCode, authUser }: Props) {
                                 <><Loader2 className="h-4 w-4 animate-spin" /> Memproses...</>
                             ) : actionDialog.type === 'approve' ? (
                                 <><CheckCircle className="h-4 w-4" /> Setujui</>
-                            ) : (
+                            ) : actionDialog.type === 'reject' ? (
                                 <><XCircle className="h-4 w-4" /> Tolak</>
+                            ) : (
+                                <><FileText className="h-4 w-4" /> Revisi</>
                             )}
                         </Button>
                     </DialogFooter>

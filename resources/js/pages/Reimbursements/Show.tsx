@@ -86,6 +86,7 @@ import {
   FileText,
   User,
   Calendar,
+  Info,
   CreditCard,
   Briefcase,
   Building2,
@@ -847,14 +848,14 @@ export default function Show() {
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Reimbursement', href: '/reimbursements' },
+    { title: 'Keuangan', href: '/reimbursements' },
     { title: data ? `Detail ${data.type.toUpperCase()}` : 'Detail', href: '#' },
   ];
 
   if (loading) {
     return (
       <AppSidebarLayout breadcrumbs={breadcrumbs}>
-        <Head title="Detail Reimbursement" />
+        <Head title="Detail Keuangan" />
         <div className="flex h-[50vh] flex-col items-center justify-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           <p className="text-muted-foreground">Memuat data...</p>
@@ -866,7 +867,7 @@ export default function Show() {
   if (error || !data) {
     return (
       <AppSidebarLayout breadcrumbs={breadcrumbs}>
-        <Head title="Detail Reimbursement" />
+        <Head title="Detail Keuangan" />
         <div className="flex h-[50vh] flex-col items-center justify-center gap-4">
           <div className="bg-muted p-4 rounded-full">
             <FileText className="h-8 w-8 text-muted-foreground" />
@@ -1924,30 +1925,68 @@ export default function Show() {
                   )}
                 </div>
 
-                {/* Transfer Proof */}
+                {/* Transfer / Refund Proof */}
                 {data.transfer_proof_path && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Bukti Transfer</label>
-                      <Badge variant="outline" className="text-xs">Finance</Badge>
+                      <label className="text-xs font-medium text-muted-foreground uppercase">
+                        {data.eer_type === 'refund' ? 'Bukti Refund (User)' : 'Bukti Transfer (Finance)'}
+                      </label>
+                      <Badge variant="outline" className={cn("text-xs", data.eer_type === 'refund' ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-blue-50 text-blue-700 border-blue-200")}>
+                        {data.eer_type === 'refund' ? 'User' : 'Finance'}
+                      </Badge>
                     </div>
-                    <div className="bg-green-50/50 p-4 rounded-lg border border-green-200 space-y-3">
+                    <div className={cn("p-4 rounded-lg border space-y-3", data.eer_type === 'refund' ? "bg-emerald-50/50 border-emerald-200" : "bg-blue-50/50 border-blue-200")}>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-green-800 font-medium text-sm">
+                        <div className={cn("flex items-center gap-2 font-medium text-sm", data.eer_type === 'refund' ? "text-emerald-800" : "text-blue-800")}>
                           <CheckCircle className="h-4 w-4" />
-                          Transfer Telah Dilakukan
+                          {data.eer_type === 'refund' ? 'Refund Telah Dilakukan' : 'Transfer Telah Dilakukan'}
                         </div>
                         <a href={`/storage/${data.transfer_proof_path}`} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="outline" className="gap-1.5 text-green-700 border-green-300 hover:bg-green-100">
+                          <Button size="sm" variant="outline" className={cn("gap-1.5", data.eer_type === 'refund' ? "text-emerald-700 border-emerald-300 hover:bg-emerald-100" : "text-blue-700 border-blue-300 hover:bg-blue-100")}>
                             <Download className="h-3.5 w-3.5" /> Lihat Bukti
                           </Button>
                         </a>
                       </div>
                       {data.transferred_at && (
-                        <div className="text-xs text-muted-foreground">
-                          Ditransfer pada: {format(new Date(data.transferred_at), 'dd MMMM yyyy, HH:mm', { locale: localeId })}
+                        <div className="text-xs text-muted-foreground italic">
+                          {data.eer_type === 'refund' ? 'Diunggah' : 'Ditransfer'} pada: {format(new Date(data.transferred_at), 'dd MMMM yyyy, HH:mm', { locale: localeId })}
                         </div>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Refund Bank Info Reminder (if manual check needed) */}
+                {data.type === 'eer' && data.eer_type === 'refund' && data.status !== 'transferred' && (
+                  <div className="bg-rose-50/50 p-4 rounded-lg border border-rose-100 space-y-3">
+                    <div className="flex items-center gap-2 text-rose-800 font-medium text-sm">
+                      <Info className="h-4 w-4" /> Rekening Refund (Reminder)
+                    </div>
+                    <div className="space-y-4 text-xs">
+                      <p className="text-rose-700 italic">Harap pastikan transfer dilakukan ke salah satu rekening di bawah ini:</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="p-2 bg-white rounded border border-rose-100 shadow-sm">
+                          <p className="font-bold text-rose-800">BCA 5035288896</p>
+                          <p className="text-rose-600">Rek Socim - PT Dampak Sosial Indonesia</p>
+                        </div>
+                        <div className="p-2 bg-white rounded border border-rose-100 shadow-sm">
+                          <p className="font-bold text-rose-800">BNI 2023999001</p>
+                          <p className="text-rose-600">Rek Lestari - Yayasan Biru Hijau lestari</p>
+                        </div>
+                        <div className="p-2 bg-white rounded border border-rose-100 shadow-sm">
+                          <p className="font-bold text-rose-800">BNI 2024111915</p>
+                          <p className="text-rose-600">Rek Sustim - Yayasan Dampak Keberlanjutan Indonesia</p>
+                        </div>
+                        <div className="p-2 bg-white rounded border border-rose-100 shadow-sm">
+                          <p className="font-bold text-rose-800">BCA 5035880001</p>
+                          <p className="text-rose-600">Rek Bamboo - PT Bamboo Karya Mandiri</p>
+                        </div>
+                        <div className="p-2 bg-white rounded border border-rose-100 shadow-sm">
+                          <p className="font-bold text-rose-800">Mandiri 1410055445050</p>
+                          <p className="text-rose-600">Rek EBLI - Ekosistem Berdaya Lestari Indonesia</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2271,33 +2310,55 @@ export default function Show() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>
-                Bukti Transfer (Image/PDF) <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                type="file"
-                accept=".jpg,.jpeg,.png,.pdf"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    setTransferProof(e.target.files[0]);
-                  }
-                }}
-              />
-              <p className="text-xs text-muted-foreground">Maksimal 5MB.</p>
-            </div>
+            {!(data?.eer_type === 'refund' && data?.transfer_proof_path) ? (
+              <div className="space-y-2">
+                <Label>
+                  Bukti Transfer (Image/PDF) <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setTransferProof(e.target.files[0]);
+                    }
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">Maksimal 5MB.</p>
+              </div>
+            ) : (
+              <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200 space-y-3">
+                <div className="flex items-center gap-2 text-emerald-800 font-medium text-sm">
+                  <CheckCircle className="h-4 w-4" /> Bukti Refund Tersedia
+                </div>
+                <p className="text-xs text-emerald-700">
+                  Pihak pengaju telah melampirkan bukti transfer refund. Silakan tekan tombol di bawah untuk memverifikasi dan menandai sebagai "Transferred".
+                </p>
+                <a href={`/storage/${data.transfer_proof_path}`} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm" className="w-full text-emerald-700 border-emerald-300 hover:bg-emerald-100">
+                    <Download className="h-3 w-3 mr-2" /> Lihat Bukti Terlampir
+                  </Button>
+                </a>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={resetTransferDialog} disabled={actionLoading}>Batal</Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
-              disabled={!transferProof || actionLoading}
+              className={cn(
+                data?.eer_type === 'refund' && data?.transfer_proof_path
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              )}
+              disabled={(!(data?.eer_type === 'refund' && data?.transfer_proof_path) && !transferProof) || actionLoading}
               onClick={handleTransfer}
             >
               {actionLoading ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
               ) : (
-                <><Upload className="mr-2 h-4 w-4" /> Upload & Selesai</>
+                data?.eer_type === 'refund' && data?.transfer_proof_path
+                  ? <><CheckCircle className="mr-2 h-4 w-4" /> Verifikasi & Selesai</>
+                  : <><Upload className="mr-2 h-4 w-4" /> Upload & Selesai</>
               )}
             </Button>
           </DialogFooter>

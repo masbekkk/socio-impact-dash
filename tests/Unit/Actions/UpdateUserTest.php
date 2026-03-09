@@ -13,12 +13,17 @@ it('may update a user', function (): void {
 
     $action = app(UpdateUser::class);
 
+    $division = \App\Models\Division::factory()->create();
     $action->handle($user, [
         'name' => 'New Name',
+        'nip' => '987654321',
+        'division_id' => $division->id,
     ]);
 
     expect($user->refresh()->name)->toBe('New Name')
-        ->and($user->email)->toBe('old@email.com');
+        ->and($user->email)->toBe('old@email.com')
+        ->and($user->nip)->toBe('987654321')
+        ->and($user->division_id)->toBe($division->id);
 });
 
 it('resets email verification when email changes', function (): void {
