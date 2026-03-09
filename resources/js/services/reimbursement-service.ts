@@ -35,6 +35,7 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     if (payload.start_date) fd.append('start_date', payload.start_date);
     if (payload.end_date) fd.append('end_date', payload.end_date);
     if (payload.replacement_pic_id) fd.append('replacement_pic_id', payload.replacement_pic_id);
+    if (payload.transfer_proof) fd.append('transfer_proof', payload.transfer_proof);
 
     payload.documents?.forEach((doc, index) => {
         fd.append(`documents[${index}][file]`, doc.file);

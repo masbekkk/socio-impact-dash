@@ -81,18 +81,33 @@ final class LetterRequestController extends Controller
 
         $kode = LetterCode::find($validated['letter_code_id'])->code;
         $divisi = LetterDivision::find($validated['letter_division_id'])->code;
-        $perusahaan = Division::where('id', $validated['division_id'])->with('divisionCode')->first()->divisionCode->code;
+        $division = Division::where('id', $validated['division_id'])->with('divisionCode')->first();
+        $perusahaan = $division->divisionCode->code;
+
+        $startNumbers = [
+            'Socim.id' => 247,
+            'Lestari' => 63,
+            'Sustim.id' => 27,
+            'BKM' => 11,
+            'EBLI' => 8,
+        ];
 
         $latestRequest = LetterRequest::whereYear('letter_date', $year)
             ->whereNotNull('letter_number')
-            ->orderBy('id', 'desc')
+            ->whereHas('division', function ($query) use ($perusahaan) {
+                $query->whereHas('divisionCode', function ($q) use ($perusahaan) {
+                    $q->where('code', $perusahaan);
+                });
+            })
+            ->orderByRaw('CAST(SUBSTRING_INDEX(letter_number, "/", 1) AS UNSIGNED) DESC')
             ->first();
 
-        $nextNo = 1;
+        $nextNo = $startNumbers[$perusahaan] ?? 1;
         if ($latestRequest) {
             $parts = explode('/', $latestRequest->letter_number);
             if (count($parts) > 0 && is_numeric($parts[0])) {
-                $nextNo = (int) $parts[0] + 1;
+                $currentSeq = (int) $parts[0];
+                $nextNo = max($nextNo, $currentSeq + 1);
             }
         }
 
@@ -160,11 +175,50 @@ final class LetterRequestController extends Controller
             $month = $newDate->month;
             $kode = LetterCode::find($validated['letter_code_id'])->code;
             $divisi = LetterDivision::find($validated['letter_division_id'])->code;
-            $perusahaan = Division::where('id', $validated['division_id'])->with('divisionCode')->first()->divisionCode->code;
+            $division = Division::where('id', $validated['division_id'])->with('divisionCode')->first();
+            $perusahaan = $division->divisionCode->code;
 
-            // Safer to just re-use the current sequence number from the existing string
-            $currentParts = explode('/', $letterRequest->letter_number);
-            $seqNo = (count($currentParts) > 0 && is_numeric($currentParts[0])) ? $currentParts[0] : '001';
+            $startNumbers = [
+                'Socim.id' => 247,
+                'Lestari' => 63,
+                'Sustim.id' => 27,
+                'BKM' => 11,
+                'EBLI' => 8,
+            ];
+
+            // If company didn't change and year didn't change, we can potentially keep the sequence number.
+            // But if it did, or if we want to be safe and always get the latest sequence for that company/year:
+
+            $oldDivision = Division::where('id', $letterRequest->division_id)->with('divisionCode')->first();
+            $oldPerusahaan = $oldDivision->divisionCode->code;
+
+            if ($oldPerusahaan === $perusahaan && $oldDate->year === $newDate->year) {
+                // Keep same sequence number if same company and year
+                $currentParts = explode('/', $letterRequest->letter_number);
+                $seqNo = (count($currentParts) > 0 && is_numeric($currentParts[0])) ? $currentParts[0] : '001';
+            } else {
+                // Get next number for the new company/year
+                $latestRequest = LetterRequest::whereYear('letter_date', $year)
+                    ->whereNotNull('letter_number')
+                    ->where('id', '!=', $letterRequest->id) // Don't count itself
+                    ->whereHas('division', function ($query) use ($perusahaan) {
+                        $query->whereHas('divisionCode', function ($q) use ($perusahaan) {
+                            $q->where('code', $perusahaan);
+                        });
+                    })
+                    ->orderByRaw('CAST(SUBSTRING_INDEX(letter_number, "/", 1) AS UNSIGNED) DESC')
+                    ->first();
+
+                $nextNo = $startNumbers[$perusahaan] ?? 1;
+                if ($latestRequest) {
+                    $parts = explode('/', $latestRequest->letter_number);
+                    if (count($parts) > 0 && is_numeric($parts[0])) {
+                        $currentSeq = (int) $parts[0];
+                        $nextNo = max($nextNo, $currentSeq + 1);
+                    }
+                }
+                $seqNo = mb_str_pad((string) $nextNo, 3, '0', STR_PAD_LEFT);
+            }
 
             $letterNumber = "{$seqNo}/{$kode}.{$divisi}/{$perusahaan}/{$month}-{$year}";
             $validated['letter_number'] = $letterNumber;

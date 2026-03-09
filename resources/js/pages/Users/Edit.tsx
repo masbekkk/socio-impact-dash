@@ -174,6 +174,26 @@ export default function Edit({ userId }: EditProps) {
                                     {errors.position && <p className="text-sm text-red-500">{errors.position[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
+                                    <Label htmlFor="nip">NIP</Label>
+                                    <Input
+                                        id="nip"
+                                        value={form.nip}
+                                        onChange={e => setForm({ ...form, nip: e.target.value })}
+                                        placeholder="e.g. 19900101..."
+                                    />
+                                    {errors.nip && <p className="text-sm text-red-500">{errors.nip[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="division_id">Division</Label>
+                                    <SearchableSelect
+                                        options={divisions}
+                                        value={form.division_id}
+                                        onValueChange={(val) => setForm({ ...form, division_id: val })}
+                                        placeholder="Select a division"
+                                    />
+                                    {errors.division_id && <p className="text-sm text-red-500">{errors.division_id[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
                                     <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                                     <Input
                                         id="email"

@@ -18,9 +18,16 @@ final class LeaveController
     /**
      * Display a listing of the resource.
      */
-    public function index(): \Inertia\Response
+    public function index(Request $request): \Inertia\Response
     {
-        return Inertia::render('Leave/Index');
+        $user = $request->user();
+        $leaveService = app(\App\Services\LeaveService::class);
+        $usedDays = $leaveService->getAnnualLeaveDaysUsed($user->id, (int) date('Y'));
+        $remainingAnnualLeaves = max(0, 12 - $usedDays);
+
+        return Inertia::render('Leave/Index', [
+            'remainingAnnualLeaves' => $remainingAnnualLeaves,
+        ]);
     }
 
     /**
@@ -58,6 +65,11 @@ final class LeaveController
     public function show(string $code): \Inertia\Response
     {
         $user = Auth::user();
+        $leave = Leave::where('code', $code)->firstOrFail();
+        
+        $leaveService = app(\App\Services\LeaveService::class);
+        $submitterUsedDays = $leaveService->getAnnualLeaveDaysUsed($leave->user_id, (int) date('Y', strtotime($leave->start_date->toDateString())));
+        $submitterRemainingLeaves = max(0, 12 - $submitterUsedDays);
 
         return Inertia::render('Leave/Show', [
             'leaveCode' => $code,
@@ -66,6 +78,7 @@ final class LeaveController
                 'can_approve' => $user->can('approve_leaves'),
                 'can_reject' => $user->can('reject_leaves'),
             ],
+            'submitterRemainingLeaves' => $submitterRemainingLeaves,
         ]);
     }
 
@@ -104,6 +117,14 @@ final class LeaveController
         $users = User::where('id', '!=', $user->id)
             ->get(['id', 'name', 'email']);
 
+        $leaveService = app(\App\Services\LeaveService::class);
+        $usedDays = $leaveService->getAnnualLeaveDaysUsed($user->id, (int) date('Y'));
+        $remainingAnnualLeaves = max(0, 12 - $usedDays);
+
+        $approvers = [
+            'head' => User::role('head')->get(['id', 'name', 'email']),
+        ];
+
         return [
             'authUser' => [
                 'name' => $user->name,
@@ -112,9 +133,12 @@ final class LeaveController
                 'division_name' => $user->division?->name ?? '-',
                 'position' => $user->getRoleNames()->first() ?? '-',
                 'join_date' => $user->created_at?->format('Y-m-d') ?? '-',
+                'remaining_annual_leaves' => $remainingAnnualLeaves,
+                'is_pegawai' => $user->hasRole('pegawai'),
             ],
             'projects' => $projects,
             'users' => $users,
+            'approvers' => $approvers,
         ];
     }
 }

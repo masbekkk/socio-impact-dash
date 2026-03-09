@@ -84,7 +84,7 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Reimbursement', href: '/reimbursements' },
+    { title: 'Keuangan', href: '/reimbursements' },
     { title: 'Buat ATR', href: '/reimbursements/create/atr' },
   ];
 

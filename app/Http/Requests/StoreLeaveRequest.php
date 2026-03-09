@@ -22,6 +22,11 @@ final class StoreLeaveRequest extends FormRequest
             'start_date' => ['required', 'date', 'before_or_equal:end_date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'reason' => ['nullable', 'string', 'max:2000'],
+            'approver_head_id' => [
+                'nullable',
+                Rule::requiredIf(fn () => request()->user()?->hasRole('pegawai')),
+                'exists:users,id'
+            ],
             'attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ];
     }

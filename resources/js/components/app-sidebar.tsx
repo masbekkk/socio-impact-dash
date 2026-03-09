@@ -79,7 +79,7 @@ const NAV_ITEMS: NavItem[] = [
         title: 'Manajemen User',
         href: '/admin/users',
         icon: Users,
-        roles: ['superadmin'],
+        roles: ['superadmin', 'hr'],
     },
     {
         title: 'RBAC Control',
