@@ -12,4 +12,5 @@ enum LeaveStatus: string
     case HRApproved = 'hr_approved';
     case SuperAdminApproved = 'superadmin_approved';
     case Rejected = 'rejected';
+    case Revision = 'revision';
 }

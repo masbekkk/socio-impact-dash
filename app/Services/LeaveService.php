@@ -15,7 +15,12 @@ final class LeaveService
         $query = Leave::with(['user', 'project', 'replacementPic', 'approvals.approver']);
 
         if (! $user->hasAnyPermission(['view_all_leaves'])) {
-            $query->where('user_id', $user->id);
+            if ($user->hasRole(\App\Enums\UserRole::Head->value)) {
+                $teamMemberIds = $user->teamMembers()->pluck('id')->push($user->id)->toArray();
+                $query->whereIn('user_id', $teamMemberIds);
+            } else {
+                $query->where('user_id', $user->id);
+            }
         }
 
         if (! empty($filters['type'])) {

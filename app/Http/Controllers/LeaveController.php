@@ -66,7 +66,7 @@ final class LeaveController
     {
         $user = Auth::user();
         $leave = Leave::where('code', $code)->firstOrFail();
-        
+
         $leaveService = app(\App\Services\LeaveService::class);
         $submitterUsedDays = $leaveService->getAnnualLeaveDaysUsed($leave->user_id, (int) date('Y', strtotime($leave->start_date->toDateString())));
         $submitterRemainingLeaves = max(0, 12 - $submitterUsedDays);
