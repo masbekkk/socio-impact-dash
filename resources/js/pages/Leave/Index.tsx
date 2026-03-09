@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import {
   MoreHorizontal, Eye, FileText, Calendar, Search, Filter,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, ArrowUpDown,
+  CheckCircle, XCircle,
 } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { format } from 'date-fns';
@@ -166,7 +167,7 @@ function useLeaveData(typeFilter: string | null) {
   };
 }
 
-export default function LeaveIndex() {
+export default function LeaveIndex({ remainingAnnualLeaves }: { remainingAnnualLeaves: number }) {
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Cuti', href: '/leaves' },
@@ -185,13 +186,19 @@ export default function LeaveIndex() {
             <p className="text-muted-foreground text-sm md:text-base">Kelola pengajuan cuti Anda.</p>
           </div>
 
-          <div className="flex gap-2">
-            <Button asChild className="gap-2 bg-sidebar text-white hover:bg-sidebar/90 transition-transform hover:scale-105 active:scale-95 shadow-sm">
-              <Link href="/leaves/create">
-                <Calendar className="h-4 w-4" />
-                Buat Pengajuan Cuti
-              </Link>
-            </Button>
+          <div className="flex flex-col sm:flex-row gap-4 items-end sm:items-center">
+            <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-2 flex flex-col items-center justify-center shadow-sm min-w-[140px]">
+              <span className="text-[10px] uppercase tracking-wider text-emerald-600 font-bold">Sisa Cuti Tahunan</span>
+              <span className="text-2xl font-black text-emerald-700">{remainingAnnualLeaves} <span className="text-xs font-normal">Hari</span></span>
+            </div>
+            <div className="flex gap-2">
+              <Button asChild className="gap-2 bg-sidebar text-white hover:bg-sidebar/90 transition-transform hover:scale-105 active:scale-95 shadow-sm">
+                <Link href="/leaves/create">
+                  <Calendar className="h-4 w-4" />
+                  Buat Pengajuan Cuti
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -315,6 +322,7 @@ function LeaveTable({ title, description, hook }: LeaveTableProps) {
                   <SortHeader col="type">Jenis Cuti</SortHeader>
                   <SortHeader col="start_date">Durasi</SortHeader>
                   <TableHead>Keterangan</TableHead>
+                  <TableHead>Status Approval</TableHead>
                   <SortHeader col="status">Status</SortHeader>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -349,6 +357,40 @@ function LeaveTable({ title, description, hook }: LeaveTableProps) {
                     </TableCell>
                     <TableCell className="max-w-[200px]">
                       <div className="truncate text-sm text-muted-foreground" title={item.reason ?? ''}>{item.reason ?? '-'}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1.5 min-w-[150px] py-1">
+                        {item.approvals?.map((a) => (
+                          <div key={a.id} className="flex items-center gap-2">
+                            {a.status === 'approved' ? (
+                              <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+                            ) : a.status === 'rejected' ? (
+                              <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                            ) : a.status === 'revision' ? (
+                              <FileText className="h-4 w-4 text-amber-500 shrink-0" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                            )}
+                            <div className="flex items-center gap-1 text-[11px] leading-tight">
+                              <span className={cn(
+                                "font-bold",
+                                a.status === 'approved' ? 'text-emerald-600' :
+                                  a.status === 'rejected' ? 'text-rose-600' :
+                                    a.status === 'revision' ? 'text-amber-600' :
+                                      'text-rose-600'
+                              )}>
+                                {a.status === 'approved' ? 'Disetujui' :
+                                  a.status === 'rejected' ? 'Ditolak' :
+                                    a.status === 'revision' ? 'Revisi' :
+                                      'Menunggu'}
+                              </span>
+                              <span className="text-muted-foreground truncate max-w-[80px]" title={a.approver?.name ?? a.role}>
+                                {a.approver?.name ?? a.role}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={['head_approved', 'hr_approved', 'superadmin_approved'].includes(item.status) ? 'approved' : item.status} />
