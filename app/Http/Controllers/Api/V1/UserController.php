@@ -21,7 +21,7 @@ final class UserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = User::with(['roles', 'head'])->withCount('teamMembers');
+        $query = User::with(['roles', 'head', 'division.divisionCode'])->withCount('teamMembers');
 
         if ($request->filled('role')) {
             $query->role($request->get('role'));
@@ -55,7 +55,8 @@ final class UserController extends Controller
             $search = $request->get('search');
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('nip', 'like', "%{$search}%");
             });
         }
 

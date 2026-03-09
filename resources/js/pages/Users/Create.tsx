@@ -44,17 +44,13 @@ export default function Create() {
         ]).then(([rolesRes, divisionsRes, headsRes]) => {
             setRoles(rolesRes.data.data);
 
-            const allDivisions = divisionsRes.data.flatMap ? divisionsRes.data.flatMap((dc: any) =>
+            const divisionsData = divisionsRes.data?.data?.data ?? divisionsRes.data?.data ?? [];
+            const allDivisions = Array.isArray(divisionsData) ? divisionsData.flatMap((dc: any) =>
                 dc.names.map((d: any) => ({
                     value: d.id.toString(),
                     label: `${dc.code} - ${d.name}`
                 }))
-            ) : divisionsRes.data.data.flatMap((dc: any) =>
-                dc.names.map((d: any) => ({
-                    value: d.id.toString(),
-                    label: `${dc.code} - ${d.name}`
-                }))
-            );
+            ) : [];
             setDivisions(allDivisions);
 
             const headUsers = headsRes.data?.data?.data ?? headsRes.data?.data ?? [];
