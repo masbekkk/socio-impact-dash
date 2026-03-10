@@ -59,7 +59,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::apiResource('letter-codes', App\Http\Controllers\Api\V1\LetterCodeController::class)->names('api.letter-codes');
     Route::apiResource('letter-divisions', App\Http\Controllers\Api\V1\LetterDivisionController::class)->names('api.letter-divisions');
     // Leaves
-    Route::apiResource('leaves', LeaveController::class)->only(['index', 'store', 'show'])->names('api.leaves');
+    Route::apiResource('leaves', LeaveController::class)->only(['index', 'store', 'show', 'update', 'destroy'])->names('api.leaves');
     Route::post('leaves/{code}/status', [LeaveController::class, 'updateStatus']);
     // Calendar
     Route::get('calendar', [CalendarController::class, 'index'])->name('api.v1.calendar.index');
