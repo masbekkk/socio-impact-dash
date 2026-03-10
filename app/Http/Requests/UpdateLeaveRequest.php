@@ -13,12 +13,16 @@ final class UpdateLeaveRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $leave = $this->route('leave');
-        if (is_string($leave)) {
-            $leave = \App\Models\Leave::where('code', $leave)->first();
+        $leaveCode = $this->route('leaf') ?? $this->route('leave');
+        
+        $leave = \App\Models\Leave::where('code', $leaveCode)->first();
+
+        if (!$leave) {
+            return false;
         }
 
-        return $leave && $leave->user_id === $this->user()->id && $leave->status === \App\Enums\LeaveStatus::Revision;
+        return $leave->user_id === $this->user()->id && 
+               in_array($leave->status, [\App\Enums\LeaveStatus::Revision, \App\Enums\LeaveStatus::Revised], true);
     }
 
     /**
