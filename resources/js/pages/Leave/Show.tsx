@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     ArrowLeft, Calendar, Briefcase, FileText, CheckCircle, XCircle,
-    MapPin, Plane, Loader2, Phone, Download, Edit, Trash2, Save, X,
+    MapPin, Plane, Loader2, Phone, Download, Edit, Trash2, Save, X, Plus,
 } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
+import { Separator } from '@/components/ui/separator';
+import FileUploadDropzone from '@/components/FileUploadDropzone';
 import {
     Dialog,
     DialogContent,
@@ -56,12 +58,23 @@ interface Props {
     leaveCode: string;
     authUser: {
         id: number;
+        name: string;
+        nip: string;
+        email: string;
+        division_name: string;
+        position: string;
+        join_date: string;
+        remaining_annual_leaves?: number;
+        is_pegawai?: boolean;
         can_approve: boolean;
         can_reject: boolean;
         can_delete: boolean;
         is_owner: boolean;
     };
     submitterRemainingLeaves: number;
+    projects: { id: number; code: string; name: string }[];
+    users: { id: number; name: string; email: string }[];
+    approvers: Record<string, { id: number; name: string; email: string }[]>;
 }
 
 const LEAVE_TYPES = [
@@ -90,7 +103,7 @@ function durationDays(start: string, end: string): number {
     return days;
 }
 
-export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeaves }: Props) {
+export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeaves, projects, users, approvers }: Props) {
     const [leave, setLeave] = useState<LeaveData | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
@@ -106,12 +119,16 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
     const [editMode, setEditMode] = useState(false);
     const [editForm, setEditForm] = useState({
         type: '',
+        project_id: '',
+        replacement_pic_id: '',
+        approver_head_id: '',
         start_date: '',
         end_date: '',
         phone: '',
         lokasi: '',
         reason: '',
     });
+    const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
     const [editLoading, setEditLoading] = useState(false);
     const [editErrors, setEditErrors] = useState<Record<string, string[]>>({});
 
@@ -123,6 +140,9 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
             setLeave(data);
             setEditForm({
                 type: data.type ?? '',
+                project_id: data.project?.id?.toString() ?? '',
+                replacement_pic_id: data.replacement_pic?.id?.toString() ?? '',
+                approver_head_id: data.approvals?.find((a: any) => a.role === 'head')?.approver?.id?.toString() ?? '',
                 start_date: data.start_date ?? '',
                 end_date: data.end_date ?? '',
                 phone: data.phone ?? '',
@@ -184,9 +204,14 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
             fd.append('type', editForm.type);
             fd.append('start_date', editForm.start_date);
             fd.append('end_date', editForm.end_date);
+            if (editForm.project_id) fd.append('project_id', editForm.project_id);
+            if (editForm.replacement_pic_id) fd.append('replacement_pic_id', editForm.replacement_pic_id);
+            if (editForm.approver_head_id) fd.append('approver_head_id', editForm.approver_head_id);
             if (editForm.phone) fd.append('phone', editForm.phone);
             if (editForm.lokasi) fd.append('lokasi', editForm.lokasi);
             if (editForm.reason) fd.append('reason', editForm.reason);
+            if (attachmentFile) fd.append('attachment', attachmentFile);
+
             // Laravel needs PUT method spoofing via POST
             fd.append('_method', 'PUT');
 
@@ -353,6 +378,29 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
                                 <CardContent className="space-y-5">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
+                                            <Label>Project (Optional)</Label>
+                                            <SearchableSelect
+                                                options={projects.map(p => ({ label: `${p.code} - ${p.name}`, value: p.id.toString() }))}
+                                                value={editForm.project_id}
+                                                onValueChange={v => setEditForm(p => ({ ...p, project_id: v }))}
+                                                placeholder="Pilih project"
+                                            />
+                                            {editErrors.project_id && <p className="text-xs text-red-500">{editErrors.project_id[0]}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Pengganti PIC *</Label>
+                                            <SearchableSelect
+                                                options={users.map(u => ({ label: u.name, value: u.id.toString() }))}
+                                                value={editForm.replacement_pic_id}
+                                                onValueChange={v => setEditForm(p => ({ ...p, replacement_pic_id: v }))}
+                                                placeholder="Pilih PIC pengganti"
+                                            />
+                                            {editErrors.replacement_pic_id && <p className="text-xs text-red-500">{editErrors.replacement_pic_id[0]}</p>}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
                                             <Label>Jenis Cuti *</Label>
                                             <SearchableSelect
                                                 options={LEAVE_TYPES}
@@ -368,6 +416,7 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
                                             {editErrors.phone && <p className="text-xs text-red-500">{editErrors.phone[0]}</p>}
                                         </div>
                                     </div>
+
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label>Tanggal Mulai *</Label>
@@ -380,11 +429,13 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
                                             {editErrors.end_date && <p className="text-xs text-red-500">{editErrors.end_date[0]}</p>}
                                         </div>
                                     </div>
+
                                     <div className="space-y-2">
                                         <Label>Alamat Selama Cuti *</Label>
                                         <Input value={editForm.lokasi} onChange={e => setEditForm(p => ({ ...p, lokasi: e.target.value }))} placeholder="Alamat lengkap" />
                                         {editErrors.lokasi && <p className="text-xs text-red-500">{editErrors.lokasi[0]}</p>}
                                     </div>
+
                                     <div className="space-y-2">
                                         <Label>Alasan Cuti</Label>
                                         <Textarea
@@ -393,7 +444,31 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
                                             placeholder="Jelaskan alasan cuti..."
                                             className="min-h-[80px]"
                                         />
+                                        {editErrors.reason && <p className="text-xs text-red-500">{editErrors.reason[0]}</p>}
                                     </div>
+
+                                    {authUser.is_pegawai && (
+                                        <div className="space-y-2">
+                                            <Label>Pilih Atasan Direct *</Label>
+                                            <SearchableSelect
+                                                options={(approvers.head || []).map(u => ({ label: u.name, value: u.id.toString() }))}
+                                                value={editForm.approver_head_id}
+                                                onValueChange={v => setEditForm(p => ({ ...p, approver_head_id: v }))}
+                                                placeholder="Pilih atasan"
+                                            />
+                                            {editErrors.approver_head_id && <p className="text-xs text-red-500">{editErrors.approver_head_id[0]}</p>}
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2">
+                                        <Label>Lampiran Dokumen (Opsional)</Label>
+                                        <FileUploadDropzone
+                                            className="w-full"
+                                            onFilesChange={files => setAttachmentFile(files[0] || null)}
+                                        />
+                                        {editErrors.attachment && <p className="text-xs text-red-500">{editErrors.attachment[0]}</p>}
+                                    </div>
+
                                     <div className="flex gap-3 pt-2">
                                         <Button
                                             onClick={handleEditSubmit}

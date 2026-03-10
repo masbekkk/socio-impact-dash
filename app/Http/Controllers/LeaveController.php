@@ -62,7 +62,7 @@ final class LeaveController
     /**
      * Display the specified resource.
      */
-    public function show(string $code): \Inertia\Response
+    public function show(Request $request, string $code): \Inertia\Response
     {
         $user = Auth::user();
         $leave = Leave::where('code', $code)->firstOrFail();
@@ -71,16 +71,21 @@ final class LeaveController
         $submitterUsedDays = $leaveService->getAnnualLeaveDaysUsed($leave->user_id, (int) date('Y', strtotime($leave->start_date->toDateString())));
         $submitterRemainingLeaves = max(0, 12 - $submitterUsedDays);
 
+        $formProps = $this->getFormProps($request);
+
         return Inertia::render('Leave/Show', [
             'leaveCode' => $code,
-            'authUser' => [
+            'authUser' => array_merge($formProps['authUser'], [
                 'id' => $user->id,
                 'can_approve' => $user->can('approve_leaves'),
                 'can_reject' => $user->can('reject_leaves'),
                 'can_delete' => $user->hasAnyRole(['hr', 'superadmin']),
                 'is_owner' => $leave->user_id === $user->id,
-            ],
+            ]),
             'submitterRemainingLeaves' => $submitterRemainingLeaves,
+            'projects' => $formProps['projects'],
+            'users' => $formProps['users'],
+            'approvers' => $formProps['approvers'],
         ]);
     }
 
