@@ -9,6 +9,7 @@ interface NotificationItem {
     message: string;
     reference_type: string | null;
     reference_id: number | null;
+    url: string | null;
     priority: string;
     status: string;
     read_at: string | null;

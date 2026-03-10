@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Formatters\JsonResponseFormatter;
 use App\Models\NotificationRecipient;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -33,6 +34,7 @@ final class NotificationController extends Controller
                 'message' => $n->message,
                 'reference_type' => $n->reference_type,
                 'reference_id' => $n->reference_id,
+                'url' => $this->resolveUrl($n->reference_type, $n->reference_id),
                 'priority' => $n->priority,
                 'status' => $nr->status,
                 'read_at' => $nr->read_at?->toISOString(),
@@ -89,5 +91,27 @@ final class NotificationController extends Controller
             ]);
 
         return JsonResponseFormatter::success(null, 'All notifications marked as read');
+    }
+
+    private function resolveUrl(?string $referenceType, ?int $referenceId): ?string
+    {
+        if ($referenceType === null || $referenceId === null) {
+            return null;
+        }
+
+        return match ($referenceType) {
+            'reimbursement' => "/reimbursements/{$referenceId}",
+            'project' => $this->resolveProjectUrl($referenceId),
+            'leave' => "/leaves/{$referenceId}",
+            'letter_request' => "/letter-requests/{$referenceId}",
+            default => null,
+        };
+    }
+
+    private function resolveProjectUrl(int $projectId): ?string
+    {
+        $project = Project::select('uuid')->find($projectId);
+
+        return $project ? "/projects/{$project->uuid}" : null;
     }
 }
