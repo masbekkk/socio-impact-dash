@@ -8,6 +8,7 @@ use App\Actions\CreateLeave;
 use App\Enums\ApprovalStatus;
 use App\Enums\LeaveStatus;
 use App\Http\Requests\StoreLeaveRequest;
+use App\Http\Requests\UpdateLeaveRequest;
 use App\Http\Resources\V1\Leave\LeaveResource;
 use App\Models\LeaveApproval;
 use App\Services\LeaveService;
@@ -23,6 +24,7 @@ final class LeaveController
     public function __construct(
         private readonly LeaveService $leaveService,
         private readonly CreateLeave $createLeave,
+        private readonly \App\Actions\CreateNotification $createNotification,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -141,8 +143,7 @@ final class LeaveController
 
     public function update(
         UpdateLeaveRequest $request,
-        string $code,
-        \App\Actions\CreateNotification $createNotification
+        string $code
     ): JsonResponse {
         try {
             $leave = $this->leaveService->findByCode($code);
@@ -178,9 +179,9 @@ final class LeaveController
                 ]);
 
                 // Notify HR roles
-                $hrUserIds = $createNotification->getUserIdsByRoles(['hr']);
+                $hrUserIds = $this->createNotification->getUserIdsByRoles(['hr']);
                 if (! empty($hrUserIds)) {
-                    $createNotification->handle(
+                    $this->createNotification->handle(
                         type: 'leave_revised',
                         title: 'Pengajuan Cuti Direvisi',
                         message: "Pengajuan cuti {$leave->code} telah diperbaiki oleh {$leave->user->name}.",
