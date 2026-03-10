@@ -62,7 +62,14 @@ function runCommand(string $command, string $cwd, array &$output): bool
         2 => ['pipe', 'w'],
     ];
 
-    $process = proc_open($command, $descriptors, $pipes, $cwd);
+    // Ensure HOME and COMPOSER_HOME are set for web server users (e.g. www-data)
+    $env = array_merge($_ENV, getenv() ?: [], [
+        'HOME' => getenv('HOME') ?: sys_get_temp_dir(),
+        'COMPOSER_HOME' => getenv('COMPOSER_HOME') ?: sys_get_temp_dir().'/.composer',
+        'PATH' => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin',
+    ]);
+
+    $process = proc_open($command, $descriptors, $pipes, $cwd, $env);
 
     if (! is_resource($process)) {
         $output[] = ['command' => $command, 'status' => 'error', 'message' => 'Failed to start process'];
