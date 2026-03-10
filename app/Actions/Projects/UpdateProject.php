@@ -73,7 +73,7 @@ final class UpdateProject
     private function updateProjectRecord(Project $project, array $data): void
     {
         $updateData = collect($data)->only([
-            'code', 'name', 'description', 'division_id',
+            'code', 'name', 'client_name', 'initial_project', 'description', 'division_id',
             'status', 'project_type', 'budget_total', 'head_id', 'account_manager_id', 'pic_id',
             'start_date', 'end_date', 'actual_budget',
             'operational_budget', 'management_budget', 'allowance_budget', 'budget_partition_status',

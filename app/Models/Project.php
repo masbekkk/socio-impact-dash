@@ -38,7 +38,7 @@ final class Project extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'code', 'name', 'description',
+        'code', 'name', 'client_name', 'initial_project', 'description',
         'division_id', 'account_manager_id', 'head_id', 'pic_id',
         'status', 'project_type',
         'budget_total', 'operational_budget', 'management_budget', 'allowance_budget', 'actual_budget', 'budget_partition_status',

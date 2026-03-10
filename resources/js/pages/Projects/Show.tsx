@@ -39,7 +39,9 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
   // Project Code State
   const [projectCode, setProjectCode] = useState('');
+  const [initialProject, setInitialProject] = useState('');
   const [isUpdatingCode, setIsUpdatingCode] = useState(false);
+  const [isUpdatingInitialProject, setIsUpdatingInitialProject] = useState(false);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const breadcrumbs = [
@@ -86,6 +88,7 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
 
       // Initialize project code
       setProjectCode(data.code || '');
+      setInitialProject(data.initial_project || '');
 
       // Initialize closing form with saved data
       setClosingForm(prev => ({
@@ -310,6 +313,30 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
     }
   };
 
+  const handleUpdateInitialProject = async () => {
+    if (!initialProject || initialProject === project.initial_project) return;
+
+    setIsUpdatingInitialProject(true);
+    try {
+      await axios.post(`/api/v1/projects/${project_slug}`, {
+        _method: 'PUT',
+        initial_project: initialProject
+      });
+
+      setToast({ show: true, message: 'Initial project berhasil diperbarui.', type: 'success' });
+      fetchProject(false);
+    } catch (error: any) {
+      console.error("Error updating initial project:", error);
+      setToast({
+        show: true,
+        message: error.response?.data?.message || 'Gagal memperbarui initial project.',
+        type: 'error'
+      });
+    } finally {
+      setIsUpdatingInitialProject(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -439,8 +466,8 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
               </CardHeader>
               <CardContent className="pt-6 px-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Left Column: Project Code */}
-                  <div className="space-y-4">
+                  {/* Left Column: Project Code & Initial Project */}
+                  <div className="space-y-6">
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor="project-code" className="text-sm font-bold flex items-center gap-2">
                         <Hash className="h-3.5 w-3.5 text-muted-foreground" />
@@ -482,6 +509,46 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
                       <p className="text-[10px] text-muted-foreground italic pl-1">
                         *Kode unik internal untuk identifikasi proyek.
                       </p>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="initial-project" className="text-sm font-bold flex items-center gap-2">
+                        <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                        Initial Project
+                      </Label>
+                      {canUpdateCode ? (
+                        <div className="flex gap-2 group">
+                          <div className="relative flex-1">
+                            <Input
+                              id="initial-project"
+                              className="bg-white border-gray-200 font-mono text-sm h-10 transition-all focus:ring-2 focus:ring-emerald-500/20"
+                              placeholder="Initial Project ..."
+                              value={initialProject}
+                              onChange={(e) => setInitialProject(e.target.value)}
+                            />
+                            {initialProject === project.initial_project && project.initial_project && (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500 absolute right-3 top-3" />
+                            )}
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="default"
+                            className="h-10 w-10 shrink-0 bg-emerald-600 hover:bg-emerald-700 transition-transform active:scale-95 shadow-sm"
+                            onClick={handleUpdateInitialProject}
+                            disabled={isUpdatingInitialProject || !initialProject || initialProject === project.initial_project}
+                          >
+                            {isUpdatingInitialProject ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Plus className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="h-10 px-3 bg-muted/30 rounded-lg flex items-center border border-muted/50 font-mono text-sm text-slate-600">
+                          {project.initial_project || 'BELUM DITETAPKAN'}
+                        </div>
+                      )}
                     </div>
                   </div>
 

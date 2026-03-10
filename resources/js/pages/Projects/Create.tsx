@@ -48,6 +48,7 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
   const [formData, setFormData] = useState({
     code: '',
     name: '',
+    client_name: '',
     description: '',
     division_id: '',
     account_manager_id: '',
@@ -422,6 +423,17 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                       className={errors.name ? 'border-red-500' : ''}
                     />
                     {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Nama Client / Perusahaan (Opsional)</Label>
+                    <Input
+                      placeholder="Masukkan nama client atau perusahaan ..."
+                      value={formData.client_name}
+                      onChange={(e) => handleInputChange('client_name', e.target.value)}
+                      className={errors.client_name ? 'border-red-500' : ''}
+                    />
+                    {errors.client_name && <p className="text-xs text-red-500">{errors.client_name}</p>}
                   </div>
                 </div>
 

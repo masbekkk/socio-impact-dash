@@ -28,6 +28,7 @@ final class StoreProjectRequest extends FormRequest
         return [
             'code' => ['nullable', 'string', 'max:50', Rule::unique('projects', 'code')],
             'name' => ['required', 'string', 'max:255'],
+            'client_name' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'division_id' => ['required', 'exists:divisions,id'],
             'account_manager_id' => ['required', 'exists:users,id'],

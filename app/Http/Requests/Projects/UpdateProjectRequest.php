@@ -28,6 +28,8 @@ final class UpdateProjectRequest extends FormRequest
         return [
             'code' => ['nullable', 'string', 'max:50', Rule::unique('projects', 'code')->ignore($this->route('project'))],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'client_name' => ['nullable', 'string', 'max:255'],
+            'initial_project' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'division_id' => ['sometimes', 'required', 'exists:divisions,id'],
             'account_manager_id' => ['sometimes', 'required', 'exists:users,id'],

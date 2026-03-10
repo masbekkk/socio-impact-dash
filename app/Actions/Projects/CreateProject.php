@@ -81,6 +81,7 @@ final class CreateProject
         return Project::create([
             'code' => $code,
             'name' => $data['name'],
+            'client_name' => $data['client_name'] ?? null,
             'description' => $data['description'] ?? null,
             'created_by' => $userId,
             'division_id' => $data['division_id'],

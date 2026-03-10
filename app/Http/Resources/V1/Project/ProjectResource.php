@@ -20,6 +20,8 @@ final class ProjectResource extends JsonResource
             'uuid' => $this->uuid,
             'code' => $this->code,
             'name' => $this->name,
+            'client_name' => $this->client_name,
+            'initial_project' => $this->initial_project,
             'description' => $this->description,
             'status' => $this->status,
             'project_type' => $this->project_type,

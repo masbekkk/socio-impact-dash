@@ -45,6 +45,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [formData, setFormData] = useState({
         code: '',
         name: '',
+        client_name: '',
         description: '',
         division_id: '',
         account_manager_id: '',
@@ -102,6 +103,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                 setFormData({
                     code: data.code || '',
                     name: data.name,
+                    client_name: data.client_name || '',
                     description: data.description || '',
                     division_id: data.division_id ? data.division_id.toString() : '',
                     account_manager_id: data.account_manager_id ? data.account_manager_id.toString() : '',
@@ -522,6 +524,17 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                             className={errors.name ? 'border-red-500' : ''}
                                         />
                                         {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                                    </div>
+
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label>Nama Client / Perusahaan (Opsional)</Label>
+                                        <Input
+                                            placeholder="Masukkan nama client atau perusahaan ..."
+                                            value={formData.client_name}
+                                            onChange={(e) => handleInputChange('client_name', e.target.value)}
+                                            className={errors.client_name ? 'border-red-500' : ''}
+                                        />
+                                        {errors.client_name && <p className="text-xs text-red-500">{errors.client_name}</p>}
                                     </div>
                                 </div>
                             </CardContent>

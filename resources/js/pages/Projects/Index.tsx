@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import StatusBadge from '@/components/StatusBadge'
-import { Head, Link, router } from '@inertiajs/react'
+import { Head, Link, router, usePage } from '@inertiajs/react'
 import {
   Table,
   TableBody,
@@ -44,6 +44,10 @@ import { DateFilterPresets } from '@/components/DateFilterPresets';
 import axios from 'axios';
 
 export default function ProjectsIndex({ filters, divisions }: { filters?: any, divisions?: any[] }) {
+  const { auth } = usePage().props as any;
+  const permissions = auth.permissions || [];
+  const canUpdateCode = permissions.includes('create_code_project');
+
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Proyek', href: '/projects' },
@@ -304,6 +308,12 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-semibold text-gray-900">{p.name}</h3>
+                        {p.client_name && (
+                          <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">
+                            <Building className="h-3 w-3" />
+                            {p.client_name}
+                          </div>
+                        )}
                         <p className="text-xs text-muted-foreground">{p.code}</p>
                       </div>
                       <StatusBadge status={p.status} />
@@ -340,6 +350,8 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Kode</TableHead>
                   <TableHead>Nama Proyek</TableHead>
+                  <TableHead>Client</TableHead>
+                  {canUpdateCode && <TableHead>Initial Project</TableHead>}
                   <TableHead>Divisi</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Status</TableHead>
@@ -351,7 +363,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               <TableBody>
                 {projects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={canUpdateCode ? 10 : 9} className="h-24 text-center">
                       Belum ada proyek. Silakan tambah proyek baru.
                     </TableCell>
                   </TableRow>
@@ -362,6 +374,16 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                       <TableCell>
                         <div className="font-medium">{p.name}</div>
                       </TableCell>
+                      <TableCell>
+                        <div className="text-xs text-muted-foreground italic">{p.client_name || '-'}</div>
+                      </TableCell>
+                      {canUpdateCode && (
+                        <TableCell>
+                          <div className="text-xs font-mono bg-emerald-50 text-emerald-700 px-2 py-1 rounded inline-block">
+                            {p.initial_project || '-'}
+                          </div>
+                        </TableCell>
+                      )}
                       <TableCell>
                         {(() => {
                           const divName = (p.division_name || (p.division ? p.division.name : '')).toLowerCase();

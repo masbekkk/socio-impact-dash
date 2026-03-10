@@ -21,7 +21,7 @@ final class ProjectTest extends TestCase
         $response = $this->actingAs($user)->postJson(route('api.projects.store'), [
             'code' => 'TEST-001',
             'name' => 'Test Project',
-            'client' => 'Test Client',
+            'client_name' => 'Test Client',
             'division_id' => $division->id,
             'account_manager_id' => $user->id,
             'head_id' => $user->id,
@@ -33,7 +33,7 @@ final class ProjectTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $this->assertDatabaseHas('projects', ['name' => 'Test Project']);
+        $this->assertDatabaseHas('projects', ['name' => 'Test Project', 'client_name' => 'Test Client']);
     }
 
     public function test_finance_can_create_project(): void
@@ -44,7 +44,7 @@ final class ProjectTest extends TestCase
         $response = $this->actingAs($user)->postJson(route('api.projects.store'), [
             'code' => 'TEST-002',
             'name' => 'Test Project',
-            'client' => 'Test Client',
+            'client_name' => 'Test Client',
             'division_id' => $division->id,
             'account_manager_id' => $user->id,
             'head_id' => $user->id,
