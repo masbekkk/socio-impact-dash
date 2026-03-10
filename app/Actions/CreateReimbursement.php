@@ -42,7 +42,7 @@ final readonly class CreateReimbursement
     {
         return Reimbursement::create([
             'code' => $this->generateUniqueCode(),
-            'user_id' => $userId,
+            'user_id' => $data['user_id'] ?? $userId,
             'project_id' => $data['project_id'] ?? null,
             'atr_id' => $data['atr_id'] ?? null,
             'type' => $data['type'],

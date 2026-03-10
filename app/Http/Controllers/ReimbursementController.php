@@ -115,6 +115,7 @@ final class ReimbursementController
                 'value' => $e->value,
                 'label' => $e->value,
             ], \App\Enums\ExpenseType::cases()),
+            'users' => \App\Models\User::select('id', 'name', 'email', 'nip')->get(),
         ]);
     }
 
@@ -183,6 +184,7 @@ final class ReimbursementController
                 'value' => $e->value,
                 'label' => $e->value,
             ], \App\Enums\ExpenseType::cases()),
+            'users' => \App\Models\User::select('id', 'name', 'email', 'nip')->get(),
         ]);
     }
 
@@ -225,7 +227,7 @@ final class ReimbursementController
                 'hr' => \App\Models\User::role('hr')->get(['id', 'name', 'email']),
                 'direktur' => \App\Models\User::role('direktur')->get(['id', 'name', 'email']),
             ],
-            'users' => \App\Models\User::where('id', '!=', $user->id)->get(['id', 'name', 'email']),
+            'users' => \App\Models\User::select('id', 'name', 'email', 'nip')->get(),
         ]);
     }
 

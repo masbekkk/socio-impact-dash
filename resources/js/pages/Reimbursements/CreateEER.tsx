@@ -34,6 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
+import { usePermission } from '@/hooks/use-permission';
 
 interface Approver {
   id: number;
@@ -94,16 +95,19 @@ interface SelectedActivity {
 
 const fmt = (v: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
 
-export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = [] }: {
+export default function CreateEER({ atrs = [], approvers = {}, users = [], expenseTypes = [] }: {
   atrs?: Atr[],
   approvers?: Record<string, Approver[]>,
+  users?: { id: number; name: string; email: string; nip: string }[],
   expenseTypes?: ExpenseTypeOption[],
 }) {
   const { authUser, loading, errors, setErrors, clearFieldError, submitReimbursement } = useReimbursementForm([]);
+  const { hasRole } = usePermission();
 
   const [items, setItems] = useState<({ id: string } & ChildItem & { project_budget_detail_id: number | '' })[]>([]);
 
   const [formData, setFormData] = useState({
+    user_id: '',
     name: authUser?.name ?? '',
     nip: authUser?.nip ?? '',
     atr_id: '',
@@ -157,6 +161,19 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     clearFieldError(name);
+  };
+
+  const handleUserChange = (userId: string) => {
+    const selectedUser = users.find(u => u.id.toString() === userId);
+    if (selectedUser) {
+      setFormData(prev => ({
+        ...prev,
+        user_id: userId,
+        name: selectedUser.name,
+        nip: selectedUser.nip ?? '-',
+      }));
+    }
+    clearFieldError('user_id');
   };
 
   const selectedAtr = useMemo(() => {
@@ -274,6 +291,7 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
       usage_plan: formData.description,
       items: payloadItems,
       transfer_proof: transferProof,
+      user_id: formData.user_id || undefined,
     } as any);
   };
 
@@ -306,6 +324,18 @@ export default function CreateEER({ atrs = [], approvers = {}, expenseTypes = []
               <p className="text-sm text-muted-foreground mb-6">Pilih ATR yang akan diselesaikan menggunakan EER.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {hasRole(['finance', 'superadmin']) && (
+                  <div className="md:col-span-3 space-y-2">
+                    <Label htmlFor="user_id">Pilih Pegawai (Pemohon)</Label>
+                    <SearchableSelect
+                      options={users.map(u => ({ value: u.id.toString(), label: `${u.nip ?? '-'} - ${u.name}` }))}
+                      value={formData.user_id}
+                      onValueChange={handleUserChange}
+                      placeholder="Cari pegawai..."
+                    />
+                    <p className="text-xs text-muted-foreground">Opsi ini hanya muncul untuk peran Finance.</p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="name">Nama Lengkap</Label>
                   <div className="relative">

@@ -17,6 +17,7 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     const fd = new FormData();
 
     fd.append('type', payload.type);
+    if (payload.user_id) fd.append('user_id', payload.user_id);
 
     if (payload.project_id) fd.append('project_id', payload.project_id);
     if (payload.revision_note) fd.append('revision_note', payload.revision_note);

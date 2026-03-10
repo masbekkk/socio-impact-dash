@@ -16,6 +16,7 @@ import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import DatePicker from '@/components/DatePicker';
 import { cn } from '@/lib/utils';
+import { usePermission } from '@/hooks/use-permission';
 import type { Project } from '@/types/reimbursement';
 
 const URGENCY_MAP: Record<string, string> = {
@@ -55,16 +56,19 @@ interface SelectedActivity {
 
 const fmt = (v: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
 
-export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
+export default function CreateATR({ projects, approvers, users = [], expenseTypes = [] }: {
   projects: Project[],
   approvers: Record<string, Approver[]>,
+  users?: { id: number; name: string; email: string; nip: string }[],
   expenseTypes?: ExpenseTypeOption[],
 }) {
   const { authUser, loading, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
+  const { hasRole } = usePermission();
 
   const [selectedActivities, setSelectedActivities] = useState<SelectedActivity[]>([]);
 
   const [formData, setFormData] = useState({
+    user_id: '',
     nama: authUser?.name ?? '',
     nip: authUser?.nip ?? '',
     project_id: '',
@@ -108,6 +112,19 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
     clearFieldError(name);
+  };
+
+  const handleUserChange = (userId: string) => {
+    const selectedUser = users.find(u => u.id.toString() === userId);
+    if (selectedUser) {
+      setFormData(prev => ({
+        ...prev,
+        user_id: userId,
+        nama: selectedUser.name,
+        nip: selectedUser.nip ?? '-',
+      }));
+    }
+    clearFieldError('user_id');
   };
 
   const selectedProject = useMemo(() => {
@@ -262,6 +279,7 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
       items,
       selected_budget_details,
       approver_head_id: formData.approver_head_id,
+      user_id: formData.user_id || undefined,
     });
   };
 
@@ -294,6 +312,18 @@ export default function CreateATR({ projects, approvers, expenseTypes = [] }: {
               <p className="text-sm text-muted-foreground mb-6">Data diri pemohon dan informasi proyek terkait.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {hasRole(['finance', 'superadmin']) && (
+                  <div className="md:col-span-2 space-y-2">
+                    <Label htmlFor="user_id">Pilih Pegawai (Pemohon)</Label>
+                    <SearchableSelect
+                      options={users.map(u => ({ value: u.id.toString(), label: `${u.nip ?? '-'} - ${u.name}` }))}
+                      value={formData.user_id}
+                      onValueChange={handleUserChange}
+                      placeholder="Cari pegawai..."
+                    />
+                    <p className="text-xs text-muted-foreground">Opsi ini hanya muncul untuk peran Finance.</p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="nama">Nama Lengkap</Label>
                   <div className="relative">

@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/SearchableSelect';
 import MoneyInput from '@/components/MoneyInput';
 import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
+import { usePermission } from '@/hooks/use-permission';
 import type { Project } from '@/types/reimbursement';
 
 const URGENCY_MAP: Record<string, string> = {
@@ -37,6 +38,7 @@ interface SimpleUser {
     id: number;
     name: string;
     email: string;
+    nip?: string;
 }
 
 interface AuthUser {
@@ -55,10 +57,17 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
     users: SimpleUser[]
 }) {
     const { loading, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
+    const { hasRole } = usePermission();
 
     const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
     const [formData, setFormData] = useState({
+        user_id: '',
+        name: authUser?.name ?? '',
+        nip: authUser?.nip ?? '',
+        division_name: authUser?.division_name ?? '',
+        position: authUser?.position ?? '',
+        join_date: authUser?.join_date ?? '',
         project_id: '',
         divisi: '',
         pic_project: '',
@@ -113,9 +122,17 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
         clearFieldError(name);
     };
 
-    const handleSelectChange = (name: string, value: string) => {
-        setFormData(prev => ({ ...prev, [name]: value }));
-        clearFieldError(name);
+    const handleUserChange = (userId: string) => {
+        const selectedUser = users.find(u => u.id.toString() === userId);
+        if (selectedUser) {
+            setFormData(prev => ({
+                ...prev,
+                user_id: userId,
+                name: selectedUser.name,
+                nip: selectedUser.nip ?? '-',
+            }));
+        }
+        clearFieldError('user_id');
     };
 
     const handleValueChange = (name: string, value: string) => {
@@ -173,6 +190,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
             start_time: formData.start_time,
             end_time: formData.end_time,
             replacement_pic_id: formData.replacement_pic_id,
+            user_id: formData.user_id || undefined,
         });
     };
 
@@ -215,25 +233,37 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                             <p className="text-sm text-muted-foreground mb-6">Informasi data diri Anda saat ini.</p>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {hasRole(['hr', 'superadmin']) && (
+                                    <div className="md:col-span-3 space-y-2">
+                                        <Label htmlFor="user_id">Pilih Pegawai (Pemohon)</Label>
+                                        <SearchableSelect
+                                            options={users.map(u => ({ value: u.id.toString(), label: `${u.nip ?? '-'} - ${u.name}` }))}
+                                            value={formData.user_id}
+                                            onValueChange={handleUserChange}
+                                            placeholder="Cari pegawai..."
+                                        />
+                                        <p className="text-xs text-muted-foreground">Opsi ini hanya muncul untuk peran HR.</p>
+                                    </div>
+                                )}
                                 <div className="space-y-2">
                                     <Label className="text-xs text-muted-foreground uppercase tracking-wider">Nama Lengkap</Label>
-                                    <Input value={authUser.name} readOnly className="bg-muted/50 border-transparent font-medium" />
+                                    <Input value={formData.name} readOnly className="bg-muted/50 border-transparent font-medium" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-xs text-muted-foreground uppercase tracking-wider">NIP</Label>
-                                    <Input value={authUser.nip} readOnly className="bg-muted/50 border-transparent font-medium" />
+                                    <Input value={formData.nip} readOnly className="bg-muted/50 border-transparent font-medium" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-xs text-muted-foreground uppercase tracking-wider">Tanggal Bergabung</Label>
-                                    <Input value={authUser.join_date} readOnly className="bg-muted/50 border-transparent font-medium" />
+                                    <Input value={formData.join_date} readOnly className="bg-muted/50 border-transparent font-medium" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-xs text-muted-foreground uppercase tracking-wider">Posisi / Jabatan</Label>
-                                    <Input value={authUser.position} readOnly className="bg-muted/50 border-transparent font-medium" />
+                                    <Input value={formData.position} readOnly className="bg-muted/50 border-transparent font-medium" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-xs text-muted-foreground uppercase tracking-wider">Divisi</Label>
-                                    <Input value={authUser.division_name} readOnly className="bg-muted/50 border-transparent font-medium" />
+                                    <Input value={formData.division_name} readOnly className="bg-muted/50 border-transparent font-medium" />
                                 </div>
                             </div>
                         </div>
@@ -359,7 +389,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                                     <SearchableSelect
                                         options={(approvers['head'] || []).map(u => ({ value: u.id.toString(), label: u.name }))}
                                         value={formData.approver_head_id}
-                                        onValueChange={(val) => handleSelectChange('approver_head_id', val)}
+                                        onValueChange={(val) => handleValueChange('approver_head_id', val)}
                                         placeholder="Pilih Head Divisi"
                                     />
                                 </div>

@@ -46,6 +46,7 @@ export interface ReimbursementItemPayload {
 
 export interface ReimbursementPayload {
     type: ReimbursementType;
+    user_id?: string;
     project_id?: string;
     amount?: number;
     bank_name?: string;
