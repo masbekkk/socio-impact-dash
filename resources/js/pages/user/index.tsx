@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,7 @@ import {
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, Plus, Search, Filter } from 'lucide-react';
+import { MoreHorizontal, Plus, Search, Filter, UserCheck } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
@@ -49,6 +49,7 @@ interface User {
 }
 
 export default function Index() {
+    const { auth } = usePage<any>().props;
     const [users, setUsers] = useState<User[]>([]);
     const [meta, setMeta] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -349,6 +350,19 @@ export default function Index() {
                                                         <DropdownMenuItem asChild>
                                                             <Link href={`/admin/users/${user.id}/edit`}>Edit</Link>
                                                         </DropdownMenuItem>
+                                                        {auth.user.role_name.includes('superadmin') && auth.user.id !== user.id && (
+                                                            <DropdownMenuItem asChild>
+                                                                <Link
+                                                                    href={route('admin.users.impersonate', user.id)}
+                                                                    method="post"
+                                                                    as="button"
+                                                                    className="w-full text-left"
+                                                                >
+                                                                    <UserCheck className="mr-2 h-4 w-4" />
+                                                                    Impersonate
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                        )}
                                                         <DropdownMenuItem
                                                             className="text-destructive focus:text-destructive cursor-pointer"
                                                             onClick={() => handleDelete(user.id)}

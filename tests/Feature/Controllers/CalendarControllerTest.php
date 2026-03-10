@@ -57,7 +57,7 @@ it('fetches only own events for pegawai', function (): void {
         ->get(route('calendar.index'))
         ->assertInertia(fn ($page) => $page
             ->has('events', 1)
-            ->where('events.0.id', 'event_' . $ownEvent->id)
+            ->where('events.0.id', 'event_'.$ownEvent->id)
         );
 });
 

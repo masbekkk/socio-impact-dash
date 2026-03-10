@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use App\Services\UserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Inertia\Middleware;
 
 final class HandleInertiaRequests extends Middleware
@@ -39,6 +40,8 @@ final class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => Auth::check() ? UserService::loggedUser() : null,
                 'permissions' => Auth::check() ? Auth::user()->getPermissionsViaRoles()->pluck('name') : [],
+                'is_impersonating' => Session::has('impersonated_by'),
+                'original_user' => Session::has('impersonated_by') ? \App\Models\User::find(Session::get('impersonated_by'))?->name : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

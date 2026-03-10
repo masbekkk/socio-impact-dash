@@ -6,6 +6,8 @@ import { route as ziggyRoute } from 'ziggy-js';
 export interface Auth {
     user: User;
     permissions: string[];
+    is_impersonating: boolean;
+    original_user: string | null;
 }
 
 export interface BreadcrumbItem {

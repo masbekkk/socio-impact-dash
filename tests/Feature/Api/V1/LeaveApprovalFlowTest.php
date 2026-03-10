@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Api\V1;
 
 use App\Enums\LeaveStatus;
-use App\Enums\LeaveType;
 use App\Enums\UserRole;
 use App\Models\Leave;
 use App\Models\User;

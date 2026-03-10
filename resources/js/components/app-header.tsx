@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Menu, Search, UserCheck } from 'lucide-react';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
 
@@ -70,6 +70,22 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const getInitials = useInitials();
     return (
         <>
+            {auth.is_impersonating && (
+                <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                        <UserCheck className="h-4 w-4" />
+                        <span>Impersonating <strong>{auth.user.name}</strong> (Original: {auth.original_user})</span>
+                    </div>
+                    <Link
+                        href={route('admin.stop-impersonating')}
+                        method="post"
+                        as="button"
+                        className="bg-white text-amber-600 px-3 py-1 rounded-md hover:bg-amber-50 transition-colors"
+                    >
+                        Stop Impersonating
+                    </Link>
+                </div>
+            )}
             <div className="border-b border-sidebar-border/80">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Mobile Menu */}
@@ -120,7 +136,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                     key={item.title}
                                                     href={
                                                         typeof item.href ===
-                                                        'string'
+                                                            'string'
                                                             ? item.href
                                                             : item.href.url
                                                     }
@@ -166,11 +182,11 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
                                                 page.url ===
-                                                    (typeof item.href ===
+                                                (typeof item.href ===
                                                     'string'
-                                                        ? item.href
-                                                        : item.href.url) &&
-                                                    activeItemStyles,
+                                                    ? item.href
+                                                    : item.href.url) &&
+                                                activeItemStyles,
                                                 'h-9 cursor-pointer px-3',
                                             )}
                                         >
@@ -211,7 +227,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                 <a
                                                     href={
                                                         typeof item.href ===
-                                                        'string'
+                                                            'string'
                                                             ? item.href
                                                             : item.href.url
                                                     }

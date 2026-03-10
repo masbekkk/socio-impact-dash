@@ -20,7 +20,7 @@ final class ProjectVisibilityTest extends TestCase
         parent::setUp();
         $this->seed(RoleAndPermissionSeeder::class);
         \App\Models\Division::factory()->create();
-        
+
         // Create at least one user for each role used in ProjectFactory
         User::factory()->create()->assignRole(UserRole::Pegawai->value);
         User::factory()->create()->assignRole(UserRole::Head->value);
@@ -30,7 +30,7 @@ final class ProjectVisibilityTest extends TestCase
     {
         $head = User::factory()->create();
         $head->assignRole(UserRole::Head->value);
-        
+
         $otherUser = User::factory()->create();
         $otherUser->assignRole(UserRole::Pegawai->value);
 
@@ -48,7 +48,7 @@ final class ProjectVisibilityTest extends TestCase
     {
         $pegawai = User::factory()->create();
         $pegawai->assignRole(UserRole::Pegawai->value);
-        
+
         $otherUser = User::factory()->create();
         $otherUser->assignRole(UserRole::Head->value);
 
@@ -66,7 +66,7 @@ final class ProjectVisibilityTest extends TestCase
     {
         $direktur = User::factory()->create();
         $direktur->assignRole(UserRole::Direktur->value);
-        
+
         $user1 = User::factory()->create();
 
         Project::factory()->create(['created_by' => $user1->id, 'name' => 'P1']);
@@ -81,7 +81,7 @@ final class ProjectVisibilityTest extends TestCase
     {
         $finance = User::factory()->create();
         $finance->assignRole(UserRole::Finance->value);
-        
+
         $user1 = User::factory()->create();
 
         Project::factory()->create(['created_by' => $user1->id, 'name' => 'P1']);
@@ -96,7 +96,7 @@ final class ProjectVisibilityTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole(UserRole::Superadmin->value);
-        
+
         $user1 = User::factory()->create();
         $user2 = User::factory()->create();
 

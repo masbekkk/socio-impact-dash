@@ -12,8 +12,11 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
+    }
 
-        // Seed roles and permissions for every test
+    protected function afterRefreshingDatabase()
+    {
+        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         $this->seed(RoleAndPermissionSeeder::class);
     }
 }

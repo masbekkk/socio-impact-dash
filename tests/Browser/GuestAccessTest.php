@@ -19,9 +19,8 @@ it('redirects guest to login for protected routes', function (string $route): vo
     $response->assertRedirectToRoute('login');
 })->with('protected_routes');
 
-it('allows guest access to welcome page', function (): void {
+it('redirects guest from root to login page', function (): void {
     $response = $this->get('/');
 
-    $response->assertSuccessful();
-    $response->assertSee('Laravel');
+    $response->assertRedirect('/login');
 });

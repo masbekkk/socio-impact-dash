@@ -69,7 +69,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('letter-codes', App\Http\Controllers\Admin\LetterCodeController::class)->except(['store', 'update', 'destroy']);
         Route::resource('letter-divisions', App\Http\Controllers\Admin\LetterDivisionController::class)->except(['store', 'update', 'destroy']);
         Route::get('rbac', fn () => Inertia::render('admin/rbac/index'))->name('admin.rbac');
+
+        // Impersonation
+        Route::post('users/{user}/impersonate', [App\Http\Controllers\Admin\ImpersonationController::class, 'impersonate'])->name('admin.users.impersonate');
     });
+
+    Route::post('admin/stop-impersonating', [App\Http\Controllers\Admin\ImpersonationController::class, 'stop'])->name('admin.stop-impersonating');
 });
 
 Route::middleware('auth')->group(function (): void {
