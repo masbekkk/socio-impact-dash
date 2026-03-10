@@ -192,13 +192,11 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-            {activeTab === 'atr' && (
-              <a href={`/api/v1/reimbursements/export-atr${window.location.search}`} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-                <Button variant="outline" className="gap-2 w-full hover:bg-slate-100">
-                  <Download className="h-4 w-4" /> Export CSV
-                </Button>
-              </a>
-            )}
+            <a href={`/reimbursements/export-excel${window.location.search}`} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+              <Button variant="outline" className="gap-2 w-full hover:bg-slate-100">
+                <Download className="h-4 w-4" /> Export ATR & EER
+              </Button>
+            </a>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="gap-2 bg-sidebar text-white hover:bg-sidebar/90 transition-transform hover:scale-105 active:scale-95 shadow-sm w-full sm:w-auto">

@@ -51,66 +51,23 @@ final class ReimbursementController extends Controller
         }
     }
 
-    public function exportAtr(Request $request)
+    public function exportExcel(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         $user = $request->user();
         $filters = [
             'status' => $request->get('status'),
-            'type' => 'atr',
             'project_id' => $request->get('project_id'),
             'start_date' => $request->get('start_date'),
             'end_date' => $request->get('end_date'),
             'division_id' => $request->get('division_id'),
         ];
 
-        // Fetch without strict pagination limiting
-        $reimbursements = $this->reimbursementService->listReimbursements($user, $filters, 10000);
+        $filename = 'export-reimbursement-'.now()->format('Y-m-d').'.xlsx';
 
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="export-atr-'.now()->format('Y-m-d').'.csv"',
-        ];
-
-        $callback = function () use ($reimbursements) {
-            $file = fopen('php://output', 'w');
-
-            // CSV Header
-            fputcsv($file, [
-                'Kode ATR',
-                'Nama Pemohon',
-                'Project',
-                'Status',
-                'Urgensi',
-                'Tanggal Pengajuan',
-                'Tanggal Penggunaan',
-                'Total Nominal',
-                'Bank',
-                'No. Rekening',
-                'Atas Nama',
-                'Keterangan',
-            ]);
-
-            foreach ($reimbursements as $r) {
-                fputcsv($file, [
-                    $r->code,
-                    $r->user?->name ?? '-',
-                    $r->project?->name ?? '-',
-                    $r->status->value ?? '-',
-                    $r->urgency ?? '-',
-                    $r->created_at->format('Y-m-d H:i'),
-                    $r->start_date ? \Carbon\Carbon::parse($r->start_date)->format('Y-m-d') : '-',
-                    $r->amount,
-                    $r->bank_name ?? '-',
-                    $r->bank_account ?? '-',
-                    $r->account_holder ?? '-',
-                    $r->usage_plan ?? '-',
-                ]);
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\ReimbursementExport($user, $filters),
+            $filename
+        );
     }
 
     public function store(StoreReimbursementRequest $request, CreateReimbursement $createReimbursement): JsonResponse

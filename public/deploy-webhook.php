@@ -115,6 +115,7 @@ $steps = [
     'git checkout build',
     'git reset --hard origin/build',
     'git clean -fd -e .htaccess -e .env',
+    'composer install --no-interaction --no-dev --prefer-dist',
     'php artisan migrate --force --no-interaction',
     'php artisan optimize:clear',
 ];

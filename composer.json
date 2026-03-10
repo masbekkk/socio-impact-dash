@@ -16,6 +16,7 @@
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.11.0",
         "laravel/wayfinder": "^0.1.13",
+        "maatwebsite/excel": "^3.1.67",
         "nunomaduro/essentials": "^1.0.1",
         "spatie/laravel-permission": "^6.24",
         "tightenco/ziggy": "^2.6"

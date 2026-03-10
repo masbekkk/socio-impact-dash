@@ -35,7 +35,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::apiResource('projects', App\Http\Controllers\Api\V1\ProjectController::class)->names('api.projects');
     Route::apiResource('reimbursements', ReimbursementController::class)->only(['index', 'store', 'destroy'])->names('api.reimbursements');
     Route::prefix('reimbursements')->group(function () {
-        Route::get('/export-atr', [ReimbursementController::class, 'exportAtr'])->name('api.reimbursements.exportAtr');
+        Route::get('/export-excel', [ReimbursementController::class, 'exportExcel'])->name('api.reimbursements.exportExcel');
         Route::get('/{code}', [ReimbursementController::class, 'show'])->name('api.reimbursements.show');
         Route::post('/{code}/status', [ReimbursementController::class, 'updateStatus'])->name('api.reimbursements.status');
         Route::patch('/{code}/budgets', [ReimbursementController::class, 'updateBudgets'])->name('api.reimbursements.budgets.update');

@@ -39,6 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('reimbursements/create/eer', [ReimbursementController::class, 'createEER'])->name('reimbursements.create.eer');
     Route::get('reimbursements/create/allowance', [ReimbursementController::class, 'createAllowance'])->name('reimbursements.create.allowance');
     Route::get('reimbursements/approvals', [ReimbursementController::class, 'approvals'])->name('reimbursements.approvals');
+    Route::get('reimbursements/export-excel', [\App\Http\Controllers\Api\V1\ReimbursementController::class, 'exportExcel'])->name('reimbursements.export-excel');
     Route::resource('reimbursements', ReimbursementController::class);
     Route::post('reimbursements/{reimbursement}/approve', [ReimbursementController::class, 'approve'])->name('reimbursements.approve');
     Route::post('reimbursements/{reimbursement}/reject', [ReimbursementController::class, 'reject'])->name('reimbursements.reject');
