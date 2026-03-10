@@ -188,7 +188,7 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
             if (editForm.lokasi) fd.append('lokasi', editForm.lokasi);
             if (editForm.reason) fd.append('reason', editForm.reason);
             // Laravel needs PUT method spoofing via POST
-            fd.append('_method', 'PUT');
+            fd.append('_method', 'POST');
 
             await axios.post(`/api/v1/leaves/${leave.code}`, fd, {
                 headers: { 'Content-Type': 'multipart/form-data' },
