@@ -13,7 +13,12 @@ final class UpdateLeaveRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        $leave = $this->route('leave');
+        if (is_string($leave)) {
+            $leave = \App\Models\Leave::where('code', $leave)->first();
+        }
+
+        return $leave && $leave->user_id === $this->user()->id && $leave->status === \App\Enums\LeaveStatus::Revision;
     }
 
     /**
@@ -24,7 +29,21 @@ final class UpdateLeaveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'type' => ['required', 'string', \Illuminate\Validation\Rule::enum(\App\Enums\LeaveType::class)],
+            'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'replacement_pic_id' => ['required', 'integer', 'exists:users,id'],
+            'phone' => ['required', 'string', 'max:20'],
+            'destination' => ['nullable', 'string', 'max:255'],
+            'lokasi' => ['required', 'string', 'max:255'],
+            'start_date' => ['required', 'date', 'before_or_equal:end_date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'reason' => ['nullable', 'string', 'max:2000'],
+            'approver_head_id' => [
+                'nullable',
+                \Illuminate\Validation\Rule::requiredIf(fn () => $this->user()?->hasRole('pegawai')),
+                'exists:users,id'
+            ],
+            'attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ];
     }
 }

@@ -138,4 +138,65 @@ final class LeaveController
             return response()->json(['err' => $th->getMessage()], 500);
         }
     }
+
+    public function update(UpdateLeaveRequest $request, string $code): JsonResponse
+    {
+        try {
+            $leave = $this->leaveService->findByCode($code);
+            $data = $request->validated();
+
+            return DB::transaction(function () use ($leave, $data, $request): JsonResponse {
+                if ($request->hasFile('attachment')) {
+                    $data['attachment_path'] = app(\App\Services\FileUploadService::class)->uploadFile(
+                        $request->file('attachment'),
+                        "leaves/{$request->user()->id}/attachments"
+                    )['path'];
+                }
+
+                $leave->update([
+                    'project_id' => $data['project_id'] ?? $leave->project_id,
+                    'replacement_pic_id' => $data['replacement_pic_id'] ?? $leave->replacement_pic_id,
+                    'phone' => $data['phone'] ?? $leave->phone,
+                    'destination' => $data['destination'] ?? $leave->destination,
+                    'lokasi' => $data['lokasi'] ?? $leave->lokasi,
+                    'type' => $data['type'] ?? $leave->type,
+                    'status' => LeaveStatus::Submitted,
+                    'start_date' => $data['start_date'] ?? $leave->start_date,
+                    'end_date' => $data['end_date'] ?? $leave->end_date,
+                    'reason' => $data['reason'] ?? $leave->reason,
+                    'attachment_path' => $data['attachment_path'] ?? $leave->attachment_path,
+                ]);
+
+                // Reset all approvals to pending
+                $leave->approvals()->update([
+                    'status' => ApprovalStatus::Pending,
+                    'notes' => null,
+                    'approved_at' => null,
+                ]);
+
+                return (new LeaveResource($leave->load(['user', 'project', 'replacementPic', 'approvals.approver'])))
+                    ->response()
+                    ->setStatusCode(200);
+            });
+        } catch (Throwable $th) {
+            return response()->json(['err' => $th->getMessage()], 500);
+        }
+    }
+
+    public function destroy(Request $request, string $code): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (! $user->hasAnyRole(['hr', 'superadmin'])) {
+                return response()->json(['message' => 'Hanya HR dan Superadmin yang dapat menghapus data cuti.'], 403);
+            }
+
+            $leave = $this->leaveService->findByCode($code);
+            $leave->delete();
+
+            return response()->json(['message' => 'Data cuti berhasil dihapus.'], 200);
+        } catch (Throwable $th) {
+            return response()->json(['err' => $th->getMessage()], 500);
+        }
+    }
 }
