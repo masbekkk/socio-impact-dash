@@ -139,8 +139,11 @@ final class LeaveController
         }
     }
 
-    public function update(UpdateLeaveRequest $request, string $code): JsonResponse
-    {
+    public function update(
+        UpdateLeaveRequest $request,
+        string $code,
+        \App\Actions\CreateNotification $createNotification
+    ): JsonResponse {
         try {
             $leave = $this->leaveService->findByCode($code);
             $data = $request->validated();
@@ -160,7 +163,7 @@ final class LeaveController
                     'destination' => $data['destination'] ?? $leave->destination,
                     'lokasi' => $data['lokasi'] ?? $leave->lokasi,
                     'type' => $data['type'] ?? $leave->type,
-                    'status' => LeaveStatus::Submitted,
+                    'status' => LeaveStatus::Revised,
                     'start_date' => $data['start_date'] ?? $leave->start_date,
                     'end_date' => $data['end_date'] ?? $leave->end_date,
                     'reason' => $data['reason'] ?? $leave->reason,
@@ -173,6 +176,20 @@ final class LeaveController
                     'notes' => null,
                     'approved_at' => null,
                 ]);
+
+                // Notify HR roles
+                $hrUserIds = $createNotification->getUserIdsByRoles(['hr']);
+                if (! empty($hrUserIds)) {
+                    $createNotification->handle(
+                        type: 'leave_revised',
+                        title: 'Pengajuan Cuti Direvisi',
+                        message: "Pengajuan cuti {$leave->code} telah diperbaiki oleh {$leave->user->name}.",
+                        recipientUserIds: $hrUserIds,
+                        referenceType: 'leave',
+                        referenceId: $leave->id,
+                        createdBy: $request->user()->id
+                    );
+                }
 
                 return (new LeaveResource($leave->load(['user', 'project', 'replacementPic', 'approvals.approver'])))
                     ->response()

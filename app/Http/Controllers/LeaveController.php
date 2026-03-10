@@ -77,6 +77,8 @@ final class LeaveController
                 'id' => $user->id,
                 'can_approve' => $user->can('approve_leaves'),
                 'can_reject' => $user->can('reject_leaves'),
+                'can_delete' => $user->hasAnyRole(['hr', 'superadmin']),
+                'is_owner' => $leave->user_id === $user->id,
             ],
             'submitterRemainingLeaves' => $submitterRemainingLeaves,
         ]);

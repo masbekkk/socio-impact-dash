@@ -1,18 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Calendar, Briefcase, FileText, ChevronDown, CheckCircle, XCircle, MapPin, Plane, Loader2, Phone, Download } from 'lucide-react';
-import StatusBadge from '@/components/StatusBadge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-    DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+    ArrowLeft, Calendar, Briefcase, FileText, CheckCircle, XCircle,
+    MapPin, Plane, Loader2, Phone, Download, Edit, Trash2, Save, X,
+} from 'lucide-react';
+import StatusBadge from '@/components/StatusBadge';
 import {
     Dialog,
     DialogContent,
@@ -23,7 +21,9 @@ import {
 } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import DatePicker from '@/components/DatePicker';
 import axios from 'axios';
+import { SearchableSelect } from '@/components/SearchableSelect';
 
 interface LeaveData {
     id: number;
@@ -58,33 +58,33 @@ interface Props {
         id: number;
         can_approve: boolean;
         can_reject: boolean;
+        can_delete: boolean;
+        is_owner: boolean;
     };
     submitterRemainingLeaves: number;
 }
 
-const LEAVE_TYPE_LABELS: Record<string, string> = {
-    annual: 'Cuti Tahunan',
-    sick: 'Cuti Sakit',
-    unpaid: 'Cuti Tanpa Gaji',
-    travel: 'Perjalanan Dinas',
-    berduka: 'Cuti Berduka',
-    wedding: 'Cuti Menikah',
-    birth: 'Cuti Melahirkan',
-    important: 'Cuti Alasan Penting',
-};
+const LEAVE_TYPES = [
+    { label: 'Cuti Tahunan', value: 'annual' },
+    { label: 'Cuti Sakit', value: 'sick' },
+    { label: 'Cuti Menikah', value: 'wedding' },
+    { label: 'Cuti Melahirkan', value: 'birth' },
+    { label: 'Cuti Berduka', value: 'berduka' },
+    { label: 'Cuti Alasan Penting', value: 'important' },
+    { label: 'Cuti Tanpa Gaji', value: 'unpaid' },
+];
+
+const LEAVE_TYPE_LABELS: Record<string, string> = Object.fromEntries(LEAVE_TYPES.map(t => [t.value, t.label]));
 
 function durationDays(start: string, end: string): number {
     const s = new Date(start);
     const e = new Date(end);
     if (s > e) return 0;
-
     let days = 0;
     const curr = new Date(s);
     while (curr <= e) {
         const day = curr.getDay();
-        if (day !== 0 && day !== 6) {
-            days++;
-        }
+        if (day !== 0 && day !== 6) days++;
         curr.setDate(curr.getDate() + 1);
     }
     return days;
@@ -99,13 +99,36 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
         open: false,
         type: null,
     });
+    const [deleteDialog, setDeleteDialog] = useState(false);
     const [notes, setNotes] = useState('');
+
+    // Edit mode state
+    const [editMode, setEditMode] = useState(false);
+    const [editForm, setEditForm] = useState({
+        type: '',
+        start_date: '',
+        end_date: '',
+        phone: '',
+        lokasi: '',
+        reason: '',
+    });
+    const [editLoading, setEditLoading] = useState(false);
+    const [editErrors, setEditErrors] = useState<Record<string, string[]>>({});
 
     const fetchLeave = useCallback(async () => {
         setLoading(true);
         try {
             const res = await axios.get(`/api/v1/leaves/${leaveCode}`);
-            setLeave(res.data.data);
+            const data = res.data.data;
+            setLeave(data);
+            setEditForm({
+                type: data.type ?? '',
+                start_date: data.start_date ?? '',
+                end_date: data.end_date ?? '',
+                phone: data.phone ?? '',
+                lokasi: data.lokasi ?? '',
+                reason: data.reason ?? '',
+            });
         } catch {
             setLeave(null);
         } finally {
@@ -116,6 +139,10 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
     useEffect(() => { fetchLeave(); }, [fetchLeave]);
 
     const isTravel = leave?.type === 'travel' || !!leave?.destination;
+    const canRevisionEdit = authUser.is_owner && leave?.status === 'revision';
+    const canAction = ['submitted', 'head_approved', 'revision'].includes(leave?.status ?? '')
+        && !authUser.is_owner
+        && (authUser.can_approve || authUser.can_reject);
 
     const handleActionConfirm = async () => {
         if (!actionDialog.type || !leave) return;
@@ -132,6 +159,48 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
             // handle silently
         } finally {
             setActionLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!leave) return;
+        setActionLoading(true);
+        try {
+            await axios.delete(`/api/v1/leaves/${leave.code}`);
+            router.visit('/leaves');
+        } catch {
+            setDeleteDialog(false);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleEditSubmit = async () => {
+        if (!leave) return;
+        setEditLoading(true);
+        setEditErrors({});
+        try {
+            const fd = new FormData();
+            fd.append('type', editForm.type);
+            fd.append('start_date', editForm.start_date);
+            fd.append('end_date', editForm.end_date);
+            if (editForm.phone) fd.append('phone', editForm.phone);
+            if (editForm.lokasi) fd.append('lokasi', editForm.lokasi);
+            if (editForm.reason) fd.append('reason', editForm.reason);
+            // Laravel needs PUT method spoofing via POST
+            fd.append('_method', 'PUT');
+
+            await axios.post(`/api/v1/leaves/${leave.code}`, fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            setEditMode(false);
+            await fetchLeave();
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err) && err.response?.status === 422) {
+                setEditErrors(err.response.data.errors ?? {});
+            }
+        } finally {
+            setEditLoading(false);
         }
     };
 
@@ -163,11 +232,6 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
     }
 
     const duration = durationDays(leave.start_date, leave.end_date);
-    const isOwner = !authUser.can_approve && leave.user?.id === authUser.id;
-
-    const canAction = ['submitted', 'head_approved', 'revision'].includes(leave.status)
-        && !isOwner
-        && (authUser.can_approve || authUser.can_reject);
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -191,8 +255,34 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                         <StatusBadge status={leave.status as any} />
+
+                        {/* Delete button for HR/Superadmin */}
+                        {authUser.can_delete && (
+                            <Button
+                                variant="outline"
+                                className="h-9 px-4 border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 gap-2"
+                                onClick={() => setDeleteDialog(true)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                <span className="hidden sm:inline">Hapus</span>
+                            </Button>
+                        )}
+
+                        {/* Edit button when revision + owner */}
+                        {canRevisionEdit && !editMode && (
+                            <Button
+                                variant="outline"
+                                className="h-9 px-4 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 gap-2"
+                                onClick={() => setEditMode(true)}
+                            >
+                                <Edit className="h-4 w-4" />
+                                <span className="hidden sm:inline">Edit & Resubmit</span>
+                            </Button>
+                        )}
+
+                        {/* Approver actions */}
                         {canAction && (
                             <div className="flex items-center gap-2">
                                 {authUser.can_approve && (
@@ -233,116 +323,201 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
                     </div>
                 </div>
 
+                {/* Revision banner */}
+                {canRevisionEdit && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-amber-600 shrink-0" />
+                        <div>
+                            <p className="text-sm font-semibold text-amber-800">Pengajuan ini memerlukan revisi.</p>
+                            {leave.approvals?.find(a => a.status === 'revision')?.notes && (
+                                <p className="text-xs text-amber-700 mt-0.5">
+                                    Catatan: {leave.approvals.find(a => a.status === 'revision')?.notes}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column */}
                     <div className="lg:col-span-2 space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">
-                                    {isTravel ? 'Detail Perjalanan Dinas' : 'Detail Pengajuan Cuti'}
-                                </CardTitle>
-                                {leave.type === 'annual' && (
-                                    <div className="mt-2 bg-emerald-50 border border-emerald-100 rounded-md py-1.5 px-3 flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-emerald-700">Sisa Cuti Pemohon</span>
-                                        <span className="text-sm font-bold text-emerald-800">{submitterRemainingLeaves} Hari</span>
-                                    </div>
-                                )}
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                {leave.project && (
-                                    <div className="grid gap-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Nama Project</h4>
-                                        <div className="flex items-center gap-2 font-medium text-base">
-                                            <Briefcase className="h-4 w-4 text-primary" />
-                                            {leave.project.name}
+
+                        {/* Edit form */}
+                        {editMode ? (
+                            <Card className="border-amber-200">
+                                <CardHeader>
+                                    <CardTitle className="text-lg text-amber-800 flex items-center gap-2">
+                                        <Edit className="h-5 w-5" /> Edit Pengajuan Cuti
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-5">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Jenis Cuti *</Label>
+                                            <SearchableSelect
+                                                options={LEAVE_TYPES}
+                                                value={editForm.type}
+                                                onValueChange={v => setEditForm(p => ({ ...p, type: v }))}
+                                                placeholder="Pilih jenis cuti"
+                                            />
+                                            {editErrors.type && <p className="text-xs text-red-500">{editErrors.type[0]}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>No. HP *</Label>
+                                            <Input value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} placeholder="08xxx" />
+                                            {editErrors.phone && <p className="text-xs text-red-500">{editErrors.phone[0]}</p>}
                                         </div>
                                     </div>
-                                )}
-
-                                {isTravel ? (
-                                    <div className="grid gap-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Kota / Negara Tujuan</h4>
-                                        <div className="flex items-center gap-2 font-medium text-base">
-                                            <Plane className="h-4 w-4 text-primary" />
-                                            {leave.destination}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Tanggal Mulai *</Label>
+                                            <DatePicker value={editForm.start_date} onChange={v => setEditForm(p => ({ ...p, start_date: v }))} />
+                                            {editErrors.start_date && <p className="text-xs text-red-500">{editErrors.start_date[0]}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Tanggal Selesai *</Label>
+                                            <DatePicker value={editForm.end_date} onChange={v => setEditForm(p => ({ ...p, end_date: v }))} />
+                                            {editErrors.end_date && <p className="text-xs text-red-500">{editErrors.end_date[0]}</p>}
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="grid gap-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Jenis Cuti</h4>
-                                        <div className="flex items-center gap-2 font-medium text-base">
-                                            <Calendar className="h-4 w-4 text-primary" />
-                                            {LEAVE_TYPE_LABELS[leave.type] ?? leave.type}
-                                        </div>
+                                    <div className="space-y-2">
+                                        <Label>Alamat Selama Cuti *</Label>
+                                        <Input value={editForm.lokasi} onChange={e => setEditForm(p => ({ ...p, lokasi: e.target.value }))} placeholder="Alamat lengkap" />
+                                        {editErrors.lokasi && <p className="text-xs text-red-500">{editErrors.lokasi[0]}</p>}
                                     </div>
-                                )}
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">{isTravel ? 'Tanggal Berangkat' : 'Tanggal Mulai'}</h4>
-                                        <p className="text-sm font-medium">{format(new Date(leave.start_date), 'dd MMMM yyyy', { locale: localeId })}</p>
+                                    <div className="space-y-2">
+                                        <Label>Alasan Cuti</Label>
+                                        <Textarea
+                                            value={editForm.reason}
+                                            onChange={e => setEditForm(p => ({ ...p, reason: e.target.value }))}
+                                            placeholder="Jelaskan alasan cuti..."
+                                            className="min-h-[80px]"
+                                        />
                                     </div>
-                                    <div className="grid gap-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">{isTravel ? 'Tanggal Kembali' : 'Tanggal Selesai'}</h4>
-                                        <p className="text-sm font-medium">{format(new Date(leave.end_date), 'dd MMMM yyyy', { locale: localeId })}</p>
-                                    </div>
-                                </div>
-
-                                <div className="grid gap-1">
-                                    <h4 className="text-sm font-medium text-muted-foreground">{isTravel ? 'Total Hari' : 'Durasi'}</h4>
-                                    <p className="text-sm font-medium">{duration} Hari</p>
-                                </div>
-
-                                {leave.reason && (
-                                    <div className="grid gap-2">
-                                        <h4 className="text-sm font-medium text-muted-foreground">{isTravel ? 'Agenda / Keperluan' : 'Alasan Cuti'}</h4>
-                                        <p className="text-sm leading-relaxed bg-muted/30 p-4 rounded-lg border">{leave.reason}</p>
-                                    </div>
-                                )}
-
-                                {leave.lokasi && (
-                                    <div className="grid gap-2">
-                                        <h4 className="text-sm font-medium text-muted-foreground">{isTravel ? 'Alamat Penginapan / Tujuan' : 'Alamat Selama Cuti'}</h4>
-                                        <div className="flex gap-2 text-sm text-foreground/80">
-                                            <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                            {leave.lokasi}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {leave.replacement_pic && (
-                                    <div className="grid gap-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Pengganti PIC</h4>
-                                        <p className="text-sm font-medium">{leave.replacement_pic.name}</p>
-                                    </div>
-                                )}
-
-                                {leave.phone && (
-                                    <div className="grid gap-1">
-                                        <h4 className="text-sm font-medium text-muted-foreground">No. HP</h4>
-                                        <div className="flex items-center gap-2 text-sm font-medium">
-                                            <Phone className="h-4 w-4 text-muted-foreground" />
-                                            {leave.phone}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {leave.attachment_path && (
-                                    <div className="grid gap-2">
-                                        <h4 className="text-sm font-medium text-muted-foreground">Dokumen Pendukung</h4>
-                                        <a
-                                            href={`/storage/${leave.attachment_path}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline bg-primary/5 px-4 py-3 rounded-lg border border-primary/10 w-fit"
+                                    <div className="flex gap-3 pt-2">
+                                        <Button
+                                            onClick={handleEditSubmit}
+                                            disabled={editLoading}
+                                            className="bg-amber-600 hover:bg-amber-700 text-white gap-2"
                                         >
-                                            <Download className="h-4 w-4" />
-                                            Unduh Lampiran
-                                        </a>
+                                            {editLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                            Simpan & Resubmit
+                                        </Button>
+                                        <Button variant="outline" onClick={() => setEditMode(false)} disabled={editLoading} className="gap-2">
+                                            <X className="h-4 w-4" /> Batal
+                                        </Button>
                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">
+                                        {isTravel ? 'Detail Perjalanan Dinas' : 'Detail Pengajuan Cuti'}
+                                    </CardTitle>
+                                    {leave.type === 'annual' && (
+                                        <div className="mt-2 bg-emerald-50 border border-emerald-100 rounded-md py-1.5 px-3 flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-emerald-700">Sisa Cuti Pemohon</span>
+                                            <span className="text-sm font-bold text-emerald-800">{submitterRemainingLeaves} Hari</span>
+                                        </div>
+                                    )}
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    {leave.project && (
+                                        <div className="grid gap-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Nama Project</h4>
+                                            <div className="flex items-center gap-2 font-medium text-base">
+                                                <Briefcase className="h-4 w-4 text-primary" />
+                                                {leave.project.name}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {isTravel ? (
+                                        <div className="grid gap-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Kota / Negara Tujuan</h4>
+                                            <div className="flex items-center gap-2 font-medium text-base">
+                                                <Plane className="h-4 w-4 text-primary" />
+                                                {leave.destination}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="grid gap-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Jenis Cuti</h4>
+                                            <div className="flex items-center gap-2 font-medium text-base">
+                                                <Calendar className="h-4 w-4 text-primary" />
+                                                {LEAVE_TYPE_LABELS[leave.type] ?? leave.type}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid gap-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">{isTravel ? 'Tanggal Berangkat' : 'Tanggal Mulai'}</h4>
+                                            <p className="text-sm font-medium">{format(new Date(leave.start_date), 'dd MMMM yyyy', { locale: localeId })}</p>
+                                        </div>
+                                        <div className="grid gap-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">{isTravel ? 'Tanggal Kembali' : 'Tanggal Selesai'}</h4>
+                                            <p className="text-sm font-medium">{format(new Date(leave.end_date), 'dd MMMM yyyy', { locale: localeId })}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-1">
+                                        <h4 className="text-sm font-medium text-muted-foreground">{isTravel ? 'Total Hari' : 'Durasi'}</h4>
+                                        <p className="text-sm font-medium">{duration} Hari</p>
+                                    </div>
+
+                                    {leave.reason && (
+                                        <div className="grid gap-2">
+                                            <h4 className="text-sm font-medium text-muted-foreground">{isTravel ? 'Agenda / Keperluan' : 'Alasan Cuti'}</h4>
+                                            <p className="text-sm leading-relaxed bg-muted/30 p-4 rounded-lg border">{leave.reason}</p>
+                                        </div>
+                                    )}
+
+                                    {leave.lokasi && (
+                                        <div className="grid gap-2">
+                                            <h4 className="text-sm font-medium text-muted-foreground">{isTravel ? 'Alamat Penginapan / Tujuan' : 'Alamat Selama Cuti'}</h4>
+                                            <div className="flex gap-2 text-sm text-foreground/80">
+                                                <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                                {leave.lokasi}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {leave.replacement_pic && (
+                                        <div className="grid gap-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Pengganti PIC</h4>
+                                            <p className="text-sm font-medium">{leave.replacement_pic.name}</p>
+                                        </div>
+                                    )}
+
+                                    {leave.phone && (
+                                        <div className="grid gap-1">
+                                            <h4 className="text-sm font-medium text-muted-foreground">No. HP</h4>
+                                            <div className="flex items-center gap-2 text-sm font-medium">
+                                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                                {leave.phone}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {leave.attachment_path && (
+                                        <div className="grid gap-2">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Dokumen Pendukung</h4>
+                                            <a
+                                                href={`/storage/${leave.attachment_path}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline bg-primary/5 px-4 py-3 rounded-lg border border-primary/10 w-fit"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                                Unduh Lampiran
+                                            </a>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Approval History */}
                         {leave.approvals && leave.approvals.length > 0 && (
@@ -450,7 +625,7 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
                 </div>
             </div>
 
-            {/* Action Dialog */}
+            {/* Approval Action Dialog */}
             <Dialog open={actionDialog.open} onOpenChange={(open) => !open && setActionDialog(prev => ({ ...prev, open: false }))}>
                 <DialogContent>
                     <DialogHeader>
@@ -497,6 +672,29 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
                             ) : (
                                 <><FileText className="h-4 w-4" /> Revisi</>
                             )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-rose-700">
+                            <Trash2 className="h-5 w-5" /> Hapus Data Cuti
+                        </DialogTitle>
+                        <DialogDescription>
+                            Tindakan ini tidak dapat dibatalkan. Data cuti <b>{leave.code}</b> dari <b>{leave.user?.name}</b> akan dihapus permanen dan kuota cuti akan dikembalikan.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteDialog(false)} disabled={actionLoading}>
+                            Batal
+                        </Button>
+                        <Button variant="destructive" onClick={handleDelete} disabled={actionLoading} className="gap-2">
+                            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            Ya, Hapus
                         </Button>
                     </DialogFooter>
                 </DialogContent>
