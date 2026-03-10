@@ -36,6 +36,20 @@ final class ReimbursementResource extends JsonResource
                     ->where('type', 'atr')
                     ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
                     ->sum('amount') : null,
+                'used_eer_budget' => $this->project ? (float) $this->project->reimbursements()
+                    ->where('type', 'eer')
+                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->sum('amount') : null,
+                'used_eer_refund_budget' => $this->project ? (float) $this->project->reimbursements()
+                    ->where('type', 'eer')
+                    ->where('eer_type', 'refund')
+                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->sum('amount') : null,
+                'used_eer_reimbursement_budget' => $this->project ? (float) $this->project->reimbursements()
+                    ->where('type', 'eer')
+                    ->where('eer_type', 'reimbursement')
+                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->sum('amount') : null,
                 'used_allowance_budget' => $this->project ? (float) $this->project->reimbursements()
                     ->where('type', 'allowance')
                     ->whereNotIn('status', ['rejected', 'submitted', 'draft', 'revision'])

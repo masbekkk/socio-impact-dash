@@ -165,6 +165,9 @@ interface ReimbursementDetail {
     operational_budget: number | null;
     management_budget: number | null;
     used_operational_budget: number | null;
+    used_eer_budget: number | null;
+    used_eer_refund_budget: number | null;
+    used_eer_reimbursement_budget: number | null;
     allowance_budget: number | null;
     used_allowance_budget: number | null;
   } | null;
@@ -1055,34 +1058,123 @@ export default function Show() {
                   </div>
                 )}
 
-                {/* Finance/HR Budget Visibility */}
+                {/* Budget Usage Breakdown */}
                 {data.project && (userRole === 'finance' || userRole === 'hr' || userRole === 'superadmin') && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-muted/40 p-4 rounded-lg border border-muted/60">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">
-                        {data.type === 'allowance' ? 'Budget Allowance' : 'Budget Operasional'}
-                      </label>
-                      <div className="font-semibold text-base font-mono">
-                        {data.type === 'allowance'
-                          ? (data.project.allowance_budget ? `Rp ${data.project.allowance_budget.toLocaleString('id-ID')}` : '-')
-                          : (data.project.operational_budget ? `Rp ${data.project.operational_budget.toLocaleString('id-ID')}` : '-')}
+                  <div className="mt-4 space-y-4">
+                    {/* Operational Budget Section */}
+                    <div className="bg-muted/40 p-4 rounded-lg border border-muted/60">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs font-bold text-teal-700 uppercase tracking-wider">Budget Operasional</h4>
+                        <span className="text-sm font-bold font-mono text-slate-900">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(data.project.operational_budget || 0)}
+                        </span>
                       </div>
+
+                      {/* Usage progress bar */}
+                      {(() => {
+                        const totalOps = data.project.operational_budget || 0;
+                        const usedATR = data.project.used_operational_budget || 0;
+                        const usedEER = data.project.used_eer_budget || 0;
+                        const totalUsed = usedATR + usedEER;
+                        const remaining = totalOps - totalUsed;
+                        const pctATR = totalOps > 0 ? (usedATR / totalOps) * 100 : 0;
+                        const pctEER = totalOps > 0 ? (usedEER / totalOps) * 100 : 0;
+                        return (
+                          <>
+                            <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden mb-3">
+                              <div className="h-full flex">
+                                <div className="bg-teal-500 transition-all" style={{ width: `${Math.min(pctATR, 100)}%` }} />
+                                <div className="bg-blue-500 transition-all" style={{ width: `${Math.min(pctEER, 100 - pctATR)}%` }} />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="h-2 w-2 rounded-full bg-teal-500" />
+                                  <span className="text-[10px] font-medium text-muted-foreground uppercase">ATR (Advance)</span>
+                                </div>
+                                <p className="text-sm font-bold font-mono text-slate-900">
+                                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(usedATR)}
+                                </p>
+                              </div>
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="h-2 w-2 rounded-full bg-blue-500" />
+                                  <span className="text-[10px] font-medium text-muted-foreground uppercase">EER Total</span>
+                                </div>
+                                <p className="text-sm font-bold font-mono text-slate-900">
+                                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(usedEER)}
+                                </p>
+                                {(data.project.used_eer_refund_budget !== null || data.project.used_eer_reimbursement_budget !== null) && (
+                                  <div className="text-[10px] text-muted-foreground space-y-0.5 mt-0.5 pl-3.5">
+                                    <p>Refund: <span className="font-mono font-medium text-slate-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(data.project.used_eer_refund_budget || 0)}</span></p>
+                                    <p>Reimbursement: <span className="font-mono font-medium text-slate-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(data.project.used_eer_reimbursement_budget || 0)}</span></p>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] font-medium text-muted-foreground uppercase">Total Terpakai</span>
+                                <p className="text-sm font-bold font-mono text-orange-600">
+                                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalUsed)}
+                                </p>
+                              </div>
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] font-medium text-muted-foreground uppercase">Sisa Budget</span>
+                                <p className={`text-sm font-bold font-mono ${remaining < 0 ? 'text-red-600' : 'text-green-700'}`}>
+                                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(remaining)}
+                                </p>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Sisa Budget</label>
-                      <div className={`font-semibold text-base font-mono ${data.type === 'allowance'
-                        ? (data.project.allowance_budget && data.project.used_allowance_budget !== null && (data.project.allowance_budget - data.project.used_allowance_budget) < (data.amount || 0) ? 'text-red-600' : 'text-green-700')
-                        : (data.project.operational_budget && data.project.used_operational_budget !== null && (data.project.operational_budget - data.project.used_operational_budget) < (data.amount || 0) ? 'text-red-600' : 'text-green-700')
-                        }`}>
-                        {data.type === 'allowance'
-                          ? (data.project.allowance_budget && data.project.used_allowance_budget !== null
-                            ? `Rp ${(data.project.allowance_budget - data.project.used_allowance_budget).toLocaleString('id-ID')}`
-                            : '-')
-                          : (data.project.operational_budget && data.project.used_operational_budget !== null
-                            ? `Rp ${(data.project.operational_budget - data.project.used_operational_budget).toLocaleString('id-ID')}`
-                            : '-')}
+
+                    {/* Allowance Budget Section */}
+                    {data.project.allowance_budget != null && data.project.allowance_budget > 0 && (
+                      <div className="bg-amber-50/60 p-4 rounded-lg border border-amber-100/80">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider">Budget Allowance</h4>
+                          <span className="text-sm font-bold font-mono text-slate-900">
+                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(data.project.allowance_budget)}
+                          </span>
+                        </div>
+                        {(() => {
+                          const totalAllow = data.project.allowance_budget || 0;
+                          const usedAllow = data.project.used_allowance_budget || 0;
+                          const remainAllow = totalAllow - usedAllow;
+                          const pctAllow = totalAllow > 0 ? (usedAllow / totalAllow) * 100 : 0;
+                          return (
+                            <>
+                              <div className="w-full h-2.5 bg-amber-100 rounded-full overflow-hidden mb-3">
+                                <div className="h-full bg-amber-500 transition-all" style={{ width: `${Math.min(pctAllow, 100)}%` }} />
+                              </div>
+                              <div className="grid grid-cols-3 gap-3">
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="h-2 w-2 rounded-full bg-amber-500" />
+                                    <span className="text-[10px] font-medium text-muted-foreground uppercase">Terpakai</span>
+                                  </div>
+                                  <p className="text-sm font-bold font-mono text-slate-900">
+                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(usedAllow)}
+                                  </p>
+                                </div>
+                                <div className="space-y-0.5">
+                                  <span className="text-[10px] font-medium text-muted-foreground uppercase">Sisa Budget</span>
+                                  <p className={`text-sm font-bold font-mono ${remainAllow < 0 ? 'text-red-600' : 'text-green-700'}`}>
+                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(remainAllow)}
+                                  </p>
+                                </div>
+                                <div className="space-y-0.5">
+                                  <span className="text-[10px] font-medium text-muted-foreground uppercase">Persentase</span>
+                                  <p className="text-sm font-bold font-mono text-amber-700">{pctAllow.toFixed(1)}%</p>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
