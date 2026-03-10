@@ -212,13 +212,13 @@ const APPROVABLE_STATUSES = ['submitted', 'head_approved', 'hr_approved', 'finan
 
 export default function Show() {
   const {
-    code,
+    id,
     auth,
     expenseTypes = [],
     projects: propsProjects = [],
     users: propsUsers = []
   } = usePage().props as unknown as {
-    code: string;
+    id: number;
     auth: any;
     expenseTypes?: { value: string; label: string }[];
     projects?: { id: number; name: string; code: string; division_name: string; pic_name: string }[];
@@ -249,6 +249,11 @@ export default function Show() {
   const [budgetEdits, setBudgetEdits] = useState<Record<number, number>>({});
   const [pendingAllowanceAmount, setPendingAllowanceAmount] = useState<number>(0);
   const [savingBudget, setSavingBudget] = useState(false);
+
+  // Manual Code Editing State
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [newCode, setNewCode] = useState('');
+  const [savingCode, setSavingCode] = useState(false);
 
   const [revisionEditing, setRevisionEditing] = useState(false);
   const [revisionForm, setRevisionForm] = useState<{
@@ -303,7 +308,7 @@ export default function Show() {
   const fetchDetail = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/v1/reimbursements/${code}`);
+      const response = await axios.get(`/api/v1/reimbursements/${id}`);
       setData(response.data.data);
       if (response.data.projects) setProjects(response.data.projects);
       if (response.data.users) setUsers(response.data.users);
@@ -316,7 +321,7 @@ export default function Show() {
     } finally {
       setLoading(false);
     }
-  }, [code]);
+  }, [id]);
 
   useEffect(() => {
     fetchDetail();
@@ -361,7 +366,7 @@ export default function Show() {
       const payload: any = { action: 'request_fund' };
       if (role) payload.role = role;
 
-      await axios.post(`/api/v1/reimbursements/${data.code}/status`, payload);
+      await axios.post(`/api/v1/reimbursements/${data.id}/status`, payload);
 
       await fetchDetail();
     } catch {
@@ -382,7 +387,7 @@ export default function Show() {
         payload.amount = pendingAllowanceAmount;
       }
 
-      await axios.post(`/api/v1/reimbursements/${data.code}/status`, payload);
+      await axios.post(`/api/v1/reimbursements/${data.id}/status`, payload);
 
       resetApproveDialog();
       await fetchDetail();
@@ -405,7 +410,7 @@ export default function Show() {
       };
       if (role) payload.role = role;
 
-      await axios.post(`/api/v1/reimbursements/${data.code}/status`, payload);
+      await axios.post(`/api/v1/reimbursements/${data.id}/status`, payload);
 
       resetRejectDialog();
       await fetchDetail();
@@ -429,7 +434,7 @@ export default function Show() {
 
       if (role) payload.role = role;
 
-      await axios.post(`/api/v1/reimbursements/${data.code}/status`, payload);
+      await axios.post(`/api/v1/reimbursements/${data.id}/status`, payload);
 
       resetRevisiDialog();
       await fetchDetail();
@@ -452,7 +457,7 @@ export default function Show() {
 
       if (role) formData.append('role', role);
 
-      await axios.post(`/api/v1/reimbursements/${data.code}/status`, formData, {
+      await axios.post(`/api/v1/reimbursements/${data.id}/status`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -469,7 +474,7 @@ export default function Show() {
     if (!data || !newComment.trim()) return;
     setCommentLoading(true);
     try {
-      await axios.post(`/api/v1/reimbursements/${data.code}/comments`, {
+      await axios.post(`/api/v1/reimbursements/${data.id}/comments`, {
         comment: newComment,
       });
 
@@ -503,13 +508,30 @@ export default function Show() {
           amount,
         })),
       };
-      await axios.post(`/api/v1/reimbursements/${data.code}/budgets`, payload);
+      await axios.post(`/api/v1/reimbursements/${data.id}/budgets`, payload);
       setIsEditingBudget(false);
       await fetchDetail();
     } catch {
       alert('Gagal menyimpan perubahan budget.');
     } finally {
       setSavingBudget(false);
+    }
+  };
+
+  const handleUpdateCode = async () => {
+    if (!data || !newCode.trim()) return;
+    setSavingCode(true);
+    try {
+      await axios.patch(`/api/v1/reimbursements/${data.id}/code`, {
+        code: newCode.trim(),
+      });
+      setIsEditingCode(false);
+      // URL is ID-based, so no redirect needed — just refresh
+      await fetchDetail();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Gagal mengupdate kode reimbursement.');
+    } finally {
+      setSavingCode(false);
     }
   };
 
@@ -761,7 +783,7 @@ export default function Show() {
         Object.assign(resubmitData, { selected_budget_details, items });
       }
 
-      await resubmitReimbursement(data.code, resubmitData);
+      await resubmitReimbursement(data.id, resubmitData);
 
       setRevisionEditing(false);
       await fetchDetail();
@@ -912,7 +934,52 @@ export default function Show() {
               </div>
               <div className="flex items-center gap-2 text-muted-foreground mt-1 text-sm font-mono">
                 <FileText className="h-3.5 w-3.5" />
-                {data.code}
+                {isEditingCode ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={newCode}
+                      onChange={(e) => setNewCode(e.target.value)}
+                      className="h-7 w-48 text-xs font-mono"
+                      placeholder="Nomor baru..."
+                    />
+                    <Button
+                      size="sm"
+                      className="h-7 px-2"
+                      onClick={handleUpdateCode}
+                      disabled={savingCode}
+                    >
+                      {savingCode ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Simpan'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2"
+                      onClick={() => setIsEditingCode(false)}
+                      disabled={savingCode}
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    {data.code}
+                    {isFinanceOrAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 ml-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => {
+                          setNewCode(data.code);
+                          setIsEditingCode(true);
+                        }}
+                      >
+                        <Plus className="h-3 w-3 rotate-45" /> {/* Use a small edit-like icon or just text */}
+                        <span className="sr-only">Edit Code</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                      </Button>
+                    )}
+                  </>
+                )}
                 <span className="mx-1">•</span>
                 <Calendar className="h-3.5 w-3.5" />
                 {format(new Date(data.created_at), 'dd MMMM yyyy, HH:mm', { locale: localeId })}

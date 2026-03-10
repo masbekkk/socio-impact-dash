@@ -89,10 +89,10 @@ final class ReimbursementController extends Controller
         }
     }
 
-    public function show(string $code, Request $request): JsonResponse
+    public function show(int $id, Request $request): JsonResponse
     {
         try {
-            $data = $this->reimbursementService->getReimbursementDetail($code);
+            $data = $this->reimbursementService->getReimbursementDetail($id);
 
             if (! $data) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
@@ -132,15 +132,26 @@ final class ReimbursementController extends Controller
     }
 
     public function updateStatus(
-        string $code,
+        int $id,
         UpdateReimbursementStatusRequest $request,
         UpdateReimbursementStatus $action
     ): JsonResponse {
         try {
-            $reimbursement = Reimbursement::where('code', $code)->first();
+            $reimbursement = Reimbursement::find($id);
 
             if (! $reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
+            }
+
+            $user = $request->user();
+
+            // Authorization: owner, approver, or privileged role
+            if (
+                $reimbursement->user_id !== $user->id
+                && ! $user->hasAnyPermission(['approve_reimbursements', 'reject_reimbursements'])
+                && ! $user->hasAnyRole(['finance', 'head', 'hr', 'direktur', 'superadmin'])
+            ) {
+                return JsonResponseFormatter::error('Anda tidak memiliki akses untuk mengubah status', 403);
             }
 
             $result = $action->handle(
@@ -161,7 +172,7 @@ final class ReimbursementController extends Controller
         }
     }
 
-    public function updateBudgets(string $code, Request $request): JsonResponse
+    public function updateBudgets(int $id, Request $request): JsonResponse
     {
         try {
             $user = $request->user();
@@ -175,7 +186,7 @@ final class ReimbursementController extends Controller
                 'budgets.*.amount' => 'required|numeric|min:0',
             ]);
 
-            $reimbursement = Reimbursement::where('code', $code)->first();
+            $reimbursement = Reimbursement::find($id);
 
             if (! $reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
@@ -200,7 +211,7 @@ final class ReimbursementController extends Controller
             });
 
             // Reload data
-            $data = $this->reimbursementService->getReimbursementDetail($code);
+            $data = $this->reimbursementService->getReimbursementDetail($id);
 
             return JsonResponseFormatter::success(
                 new ReimbursementResource($data),
@@ -211,11 +222,11 @@ final class ReimbursementController extends Controller
         }
     }
 
-    public function resubmit(string $code, Request $request): JsonResponse
+    public function resubmit(int $id, Request $request): JsonResponse
     {
         try {
             $user = $request->user();
-            $reimbursement = Reimbursement::where('code', $code)->first();
+            $reimbursement = Reimbursement::find($id);
 
             if (! $reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
@@ -333,7 +344,7 @@ final class ReimbursementController extends Controller
                 ]);
             });
 
-            $data = $this->reimbursementService->getReimbursementDetail($code);
+            $data = $this->reimbursementService->getReimbursementDetail($id);
 
             return JsonResponseFormatter::success(
                 new ReimbursementResource($data),
@@ -352,7 +363,7 @@ final class ReimbursementController extends Controller
                 return JsonResponseFormatter::error('Unauthorized', 403);
             }
 
-            $reimbursement = Reimbursement::where('id', $id)->orWhere('code', $id)->first();
+            $reimbursement = Reimbursement::find($id);
             if (! $reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
             }
@@ -361,6 +372,35 @@ final class ReimbursementController extends Controller
             $reimbursement->delete();
 
             return JsonResponseFormatter::success(null, 'Reimbursement berhasil dihapus');
+        } catch (Throwable $e) {
+            return JsonResponseFormatter::error($e->getMessage(), 500);
+        }
+    }
+
+    public function updateCode(int $id, Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (! $user->hasRole('finance') && ! $user->hasRole('superadmin')) {
+                return JsonResponseFormatter::error('Unauthorized', 403);
+            }
+
+            $reimbursement = Reimbursement::find($id);
+
+            if (! $reimbursement) {
+                return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
+            }
+
+            $validated = $request->validate([
+                'code' => ['required', 'string', 'max:50', 'unique:reimbursements,code,' . $reimbursement->id],
+            ]);
+
+            $reimbursement->update(['code' => $validated['code']]);
+
+            return JsonResponseFormatter::success(
+                new ReimbursementResource($reimbursement),
+                'Kode reimbursement berhasil diupdate'
+            );
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }

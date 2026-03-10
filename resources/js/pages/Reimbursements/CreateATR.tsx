@@ -68,6 +68,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
   const [selectedActivities, setSelectedActivities] = useState<SelectedActivity[]>([]);
 
   const [formData, setFormData] = useState({
+    code: '',
     user_id: '',
     nama: authUser?.name ?? '',
     nip: authUser?.nip ?? '',
@@ -267,6 +268,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
     })).filter(a => a.amount > 0);
 
     await submitReimbursement({
+      code: formData.code,
       type: 'atr',
       project_id: formData.project_id,
       amount: totalAmount,
@@ -312,6 +314,18 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
               <p className="text-sm text-muted-foreground mb-6">Data diri pemohon dan informasi proyek terkait.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="code">Nomor ATR</Label>
+                  <Input
+                    id="code"
+                    name="code"
+                    placeholder="Masukkan Nomor ATR (opsional)"
+                    className={cn("h-10", errors.code ? "border-red-500" : "")}
+                    value={formData.code}
+                    onChange={handleChange}
+                  />
+                  {errors.code && <p className="text-xs text-red-500 font-medium">{errors.code[0]}</p>}
+                </div>
                 {hasRole(['finance', 'superadmin']) && (
                   <div className="md:col-span-2 space-y-2">
                     <Label htmlFor="user_id">Pilih Pegawai (Pemohon)</Label>

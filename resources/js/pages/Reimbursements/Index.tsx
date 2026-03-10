@@ -161,10 +161,10 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
     navigate({ sort_by: column, sort_dir: newDir, page: 1 });
   };
 
-  const handleDelete = async (code: string) => {
+  const handleDelete = async (id: number) => {
     if (!window.confirm('Apakah Anda yakin ingin menghapus reimbursement ini? Aksi ini tidak dapat dibatalkan.')) return;
     try {
-      await axios.delete(`/api/v1/reimbursements/${code}`);
+      await axios.delete(`/api/v1/reimbursements/${id}`);
       router.reload({ only: ['reimbursements'] });
     } catch {
       alert('Gagal menghapus Keuangan.');
@@ -494,7 +494,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
-                                  <Link href={`/reimbursements/${item.code}`} className="cursor-pointer">
+                                  <Link href={`/reimbursements/${item.id}`} className="cursor-pointer">
                                     <Eye className="mr-2 h-4 w-4" /> Lihat Detail
                                   </Link>
                                 </DropdownMenuItem>
@@ -508,7 +508,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                 {isSuperadmin && (
                                   <>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer" onClick={() => handleDelete(item.code)}>
+                                    <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer" onClick={() => handleDelete(item.id)}>
                                       <Trash2 className="mr-2 h-4 w-4" /> Hapus
                                     </DropdownMenuItem>
                                   </>
@@ -612,7 +612,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                 if (selectedItem) {
                   setActionLoading(true);
                   try {
-                    await axios.patch(`/api/v1/reimbursements/${selectedItem.code}/status`, { action: 'approved' });
+                    await axios.patch(`/api/v1/reimbursements/${selectedItem.id}/status`, { action: 'approved' });
                     setApproveDialogOpen(false);
                     setSelectedItem(null);
                     router.reload({ only: ['reimbursements'] });
@@ -667,7 +667,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                 if (selectedItem && rejectionReason.trim()) {
                   setActionLoading(true);
                   try {
-                    await axios.patch(`/api/v1/reimbursements/${selectedItem.code}/status`, {
+                    await axios.patch(`/api/v1/reimbursements/${selectedItem.id}/status`, {
                       action: 'rejected',
                       notes: rejectionReason,
                     });

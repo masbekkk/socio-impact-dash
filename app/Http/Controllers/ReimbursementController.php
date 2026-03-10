@@ -255,7 +255,7 @@ final class ReimbursementController
     /**
      * Display the specified resource.
      */
-    public function show(string $code): \Inertia\Response
+    public function show(int $id): \Inertia\Response
     {
         $projects = Project::select('id', 'name', 'code', 'operational_budget', 'allowance_budget', 'division_id', 'pic_id')
             ->with(['division:id,name', 'pic:id,name'])
@@ -273,7 +273,7 @@ final class ReimbursementController
         $users = \App\Models\User::select('id', 'name')->get();
 
         return Inertia::render('Reimbursements/Show', [
-            'code' => $code,
+            'id' => $id,
             'projects' => $projects,
             'users' => $users,
             'expenseTypes' => collect(\App\Enums\ExpenseType::cases())->map(fn ($type) => [

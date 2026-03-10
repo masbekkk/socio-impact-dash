@@ -84,10 +84,10 @@ final class ReimbursementService
         return $query->paginate($perPage);
     }
 
-    public function getReimbursementDetail(string $code): ?Reimbursement
+    public function getReimbursementDetail(int $id): ?Reimbursement
     {
         return Reimbursement::with(['user', 'project.division', 'project.pic', 'project.head', 'documents', 'approvals.approver', 'atrBudgetSelecteds.budgetDetail', 'items.budgetDetail', 'items.children.reimbursement', 'comments.user'])
-            ->where('code', $code)
+            ->where('id', $id)
             ->first();
     }
 }

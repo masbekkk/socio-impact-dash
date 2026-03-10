@@ -18,6 +18,7 @@ final class StoreReimbursementRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'code' => ['nullable', 'string', 'max:50', 'unique:reimbursements,code'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'atr_id' => ['nullable', 'integer', 'exists:reimbursements,id'],

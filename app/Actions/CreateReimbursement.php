@@ -41,7 +41,7 @@ final readonly class CreateReimbursement
     private function createReimbursementRecord(array $data, int $userId): Reimbursement
     {
         return Reimbursement::create([
-            'code' => $this->generateUniqueCode(),
+            'code' => $data['code'] ?? null,
             'user_id' => $data['user_id'] ?? $userId,
             'project_id' => $data['project_id'] ?? null,
             'atr_id' => $data['atr_id'] ?? null,
@@ -66,15 +66,6 @@ final readonly class CreateReimbursement
                 ? now()
                 : null,
         ]);
-    }
-
-    private function generateUniqueCode(): string
-    {
-        do {
-            $code = 'RMB-'.mb_strtoupper(Str::random(6));
-        } while (Reimbursement::where('code', $code)->exists());
-
-        return $code;
     }
 
     private function syncDocuments(Reimbursement $reimbursement, array $documents, int $userId): void

@@ -13,14 +13,14 @@ use Throwable;
 
 final class ReimbursementCommentController extends Controller
 {
-    public function store(Request $request, string $code): JsonResponse
+    public function store(Request $request, int $id): JsonResponse
     {
         try {
             $validated = $request->validate([
                 'comment' => ['required', 'string', 'min:3'],
             ]);
 
-            $reimbursement = Reimbursement::where('code', $code)->firstOrFail();
+            $reimbursement = Reimbursement::findOrFail($id);
 
             if ($reimbursement->user_id !== $request->user()->id && ! $request->user()->hasAnyRole(['head', 'finance', 'direktur', 'superadmin'])) {
                 return JsonResponseFormatter::error('Unauthorized', 403);

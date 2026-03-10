@@ -107,6 +107,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
   const [items, setItems] = useState<({ id: string } & ChildItem & { project_budget_detail_id: number | '' })[]>([]);
 
   const [formData, setFormData] = useState({
+    code: '',
     user_id: '',
     name: authUser?.name ?? '',
     nip: authUser?.nip ?? '',
@@ -281,6 +282,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
     }));
 
     await submitReimbursement({
+      code: formData.code,
       type: 'eer',
       eer_type: eerCalculation.type,
       refund_reimburse_amount: eerCalculation.amount,
@@ -324,6 +326,18 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
               <p className="text-sm text-muted-foreground mb-6">Pilih ATR yang akan diselesaikan menggunakan EER.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="md:col-span-3 space-y-2">
+                  <Label htmlFor="code">Nomor EER</Label>
+                  <Input
+                    id="code"
+                    name="code"
+                    placeholder="Masukkan Nomor EER (opsional)"
+                    className={cn("h-10", errors.code ? "border-red-500" : "")}
+                    value={formData.code}
+                    onChange={handleChange}
+                  />
+                  {errors.code && <p className="text-xs text-red-500 font-medium">{errors.code[0]}</p>}
+                </div>
                 {hasRole(['finance', 'superadmin']) && (
                   <div className="md:col-span-3 space-y-2">
                     <Label htmlFor="user_id">Pilih Pegawai (Pemohon)</Label>

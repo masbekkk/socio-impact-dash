@@ -19,6 +19,7 @@ import { SearchableSelect } from '@/components/SearchableSelect';
 import MoneyInput from '@/components/MoneyInput';
 import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import { usePermission } from '@/hooks/use-permission';
+import { cn } from '@/lib/utils';
 import type { Project } from '@/types/reimbursement';
 
 const URGENCY_MAP: Record<string, string> = {
@@ -62,6 +63,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
     const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
     const [formData, setFormData] = useState({
+        code: '',
         user_id: '',
         name: authUser?.name ?? '',
         nip: authUser?.nip ?? '',
@@ -178,6 +180,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
         if (attachmentFile) documents.push({ file: attachmentFile, type: 'other' });
 
         await submitReimbursement({
+            code: formData.code,
             type: 'allowance',
             project_id: formData.project_id,
             amount: formData.amount,
@@ -233,6 +236,18 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                             <p className="text-sm text-muted-foreground mb-6">Informasi data diri Anda saat ini.</p>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="md:col-span-3 space-y-2">
+                                    <Label htmlFor="code">Nomor Allowance</Label>
+                                    <Input
+                                        id="code"
+                                        name="code"
+                                        placeholder="Masukkan Nomor Allowance (opsional)"
+                                        className={cn("h-10", errors.code ? "border-red-500" : "")}
+                                        value={formData.code}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.code && <p className="text-xs text-red-500 font-medium">{errors.code[0]}</p>}
+                                </div>
                                 {hasRole(['hr', 'superadmin']) && (
                                     <div className="md:col-span-3 space-y-2">
                                         <Label htmlFor="user_id">Pilih Pegawai (Pemohon)</Label>
