@@ -35,6 +35,7 @@ final class ReimbursementController
             'end_date' => $request->get('end_date'),
             'sort_by' => $request->get('sort_by', 'created_at'),
             'sort_dir' => $request->get('sort_dir', 'desc'),
+            'division_id' => $request->get('division_id'),
         ];
 
         $perPage = $request->integer('per_page', 10);
@@ -50,8 +51,10 @@ final class ReimbursementController
                 'end_date' => $request->get('end_date', ''),
                 'sort_by' => $request->get('sort_by', 'created_at'),
                 'sort_dir' => $request->get('sort_dir', 'desc'),
+                'division_id' => $request->get('division_id', ''),
                 'per_page' => $perPage,
             ],
+            'divisions' => \App\Models\Division::with('divisionCode')->get(),
         ]);
     }
 

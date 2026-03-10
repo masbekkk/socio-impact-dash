@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
@@ -61,7 +62,7 @@ interface Reimbursement {
   urgency: string | null;
   created_at: string;
   user: { id: number; name: string } | null;
-  project: { id: number; name: string; code: string } | null;
+  project: { id: number; name: string; code: string; division_name?: string } | null;
   approvals: ReimbursementApproval[];
 }
 
@@ -81,6 +82,7 @@ interface Filters {
   search: string;
   start_date: string;
   end_date: string;
+  division_id: string;
   sort_by: string;
   sort_dir: string;
   per_page: number;
@@ -89,6 +91,7 @@ interface Filters {
 interface Props {
   reimbursements: PaginatedData;
   filters: Filters;
+  divisions: any[];
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -105,7 +108,7 @@ const TYPE_COLORS: Record<string, string> = {
   allowance: 'bg-teal-100 text-teal-700 border-teal-200',
 };
 
-export default function ReimbursementsIndex({ reimbursements, filters }: Props) {
+export default function ReimbursementsIndex({ reimbursements, filters, divisions }: Props) {
   const { auth } = usePage().props as unknown as { auth: any };
   const userRoles = auth?.user?.role_name || '';
   const isSuperadmin = userRoles.includes('superadmin');
@@ -139,6 +142,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
     if (merged.sort_by && merged.sort_by !== 'created_at') query.sort_by = String(merged.sort_by);
     if (merged.sort_dir && merged.sort_dir !== 'desc') query.sort_dir = String(merged.sort_dir);
     if (merged.per_page && merged.per_page !== 10) query.per_page = String(merged.per_page);
+    if (merged.division_id) query.division_id = String(merged.division_id);
     if (params.page && Number(params.page) > 1) query.page = String(params.page);
 
     router.get('/reimbursements', query, { preserveState: true, preserveScroll: true });
@@ -348,6 +352,20 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                       </DropdownMenuContent>
                     </DropdownMenu>
 
+                    <SearchableSelect
+                      options={[
+                        { label: 'Semua Divisi', value: 'all' },
+                        ...(divisions || []).map((div: any) => ({
+                          label: `${div.division_code?.code} - ${div.name}`,
+                          value: div.id.toString()
+                        }))
+                      ]}
+                      value={filters.division_id || 'all'}
+                      onValueChange={(val) => navigate({ division_id: val === 'all' ? '' : val, page: 1 })}
+                      placeholder="Filter Divisi"
+                      className="w-40"
+                    />
+
                     <Select value={filters.status || 'all'} onValueChange={(v) => navigate({ status: v === 'all' ? '' : v, page: 1 })}>
                       <SelectTrigger className="w-[160px]">
                         <div className="flex items-center gap-2">
@@ -385,6 +403,7 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                         </button>
                       </TableHead>
                       <TableHead>Pemohon</TableHead>
+                      <TableHead>Divisi</TableHead>
                       <TableHead>Proyek</TableHead>
                       <TableHead>
                         <button className="flex items-center font-medium" onClick={() => handleSort('amount')}>
@@ -419,6 +438,9 @@ export default function ReimbursementsIndex({ reimbursements, filters }: Props) 
                             {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}
                           </TableCell>
                           <TableCell>{item.user?.name ?? '-'}</TableCell>
+                          <TableCell className="max-w-[120px]">
+                            <span className="truncate block font-medium">{item.project?.division_name ?? '-'}</span>
+                          </TableCell>
                           <TableCell className="max-w-[150px]">
                             <span className="truncate block">{item.project?.name ?? '-'}</span>
                           </TableCell>

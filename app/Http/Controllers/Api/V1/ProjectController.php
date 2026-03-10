@@ -47,10 +47,7 @@ final class ProjectController extends Controller
         }
 
         if ($request->filled('division') && $request->division !== 'all') {
-            $query->whereHas('division.divisionCode', function (\Illuminate\Database\Eloquent\Builder $q) use ($request) {
-                /** @var \Illuminate\Database\Eloquent\Builder $q */
-                $q->where('code', $request->division);
-            });
+            $query->where('division_id', $request->division);
         }
 
         if ($request->filled('start_date')) {

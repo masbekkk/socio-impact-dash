@@ -256,10 +256,13 @@ export default function Edit({ projects, letterRequestId }: Props) {
                                     <div className="space-y-2 md:col-span-2">
                                         <Label htmlFor="division_id">Divisi Perusahaan <span className="text-red-500">*</span></Label>
                                         <SearchableSelect
-                                            options={divisions.map(divCode => ({
-                                                value: divCode.names && divCode.names.length > 0 ? divCode.names[0].id.toString() : '',
-                                                label: `${divCode.code} - ${divCode.name}`
-                                            }))}
+                                            options={Array.from(new Map(divisions.map((d: any) => [d.division_code?.id, d.division_code])).values())
+                                                .filter(dc => dc !== undefined && dc !== null)
+                                                .map((dc: any) => ({
+                                                    value: dc.id.toString(),
+                                                    label: `${dc.code} - ${dc.name}`
+                                                }))
+                                            }
                                             value={data.division_id}
                                             onValueChange={(val) => setData({ ...data, division_id: val })}
                                             placeholder="Pilih divisi perusahaan"

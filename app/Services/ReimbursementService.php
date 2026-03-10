@@ -49,6 +49,10 @@ final class ReimbursementService
         if (! empty($filters['project_id'])) {
             $query->where('project_id', $filters['project_id']);
         }
+        
+        if (! empty($filters['division_id'])) {
+            $query->whereHas('project', fn ($q) => $q->where('division_id', $filters['division_id']));
+        }
 
         if (! empty($filters['start_date'])) {
             $query->whereDate('created_at', '>=', $filters['start_date']);

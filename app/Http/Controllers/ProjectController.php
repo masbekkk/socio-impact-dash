@@ -18,14 +18,14 @@ final class ProjectController extends Controller
     {
         return Inertia::render('Projects/Index', [
             'filters' => $request->only(['search', 'status', 'division', 'start_date', 'end_date']),
-            'divisions' => DivisionCode::with('divisions')->get(),
+            'divisions' => \App\Models\Division::with('divisionCode')->get(),
         ]);
     }
 
     public function create(): Response
     {
         return Inertia::render('Projects/Create', [
-            'divisions' => DivisionCode::with('divisions')->get(),
+            'divisions' => \App\Models\Division::with('divisionCode')->get(),
             'employees' => User::with('roles')->get(),
         ]);
     }
@@ -42,7 +42,7 @@ final class ProjectController extends Controller
     {
         return Inertia::render('Projects/Edit', [
             'project_slug' => $project->uuid,
-            'divisions' => DivisionCode::with('divisions')->get(),
+            'divisions' => \App\Models\Division::with('divisionCode')->get(),
             'employees' => User::with('roles')->get(),
         ]);
     }

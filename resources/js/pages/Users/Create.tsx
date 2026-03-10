@@ -45,12 +45,10 @@ export default function Create() {
             setRoles(rolesRes.data.data);
 
             const divisionsData = divisionsRes.data?.data?.data ?? divisionsRes.data?.data ?? [];
-            const allDivisions = Array.isArray(divisionsData) ? divisionsData.flatMap((dc: any) =>
-                dc.names.map((d: any) => ({
-                    value: d.id.toString(),
-                    label: `${dc.code} - ${d.name}`
-                }))
-            ) : [];
+            const allDivisions = Array.isArray(divisionsData) ? divisionsData.map((d: any) => ({
+                value: d.id.toString(),
+                label: `${d.division_code?.code} - ${d.name}`
+            })) : [];
             setDivisions(allDivisions);
 
             const headUsers = headsRes.data?.data?.data ?? headsRes.data?.data ?? [];

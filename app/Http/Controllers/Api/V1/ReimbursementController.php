@@ -36,6 +36,7 @@ final class ReimbursementController extends Controller
                 'project_id' => $request->get('project_id'),
                 'start_date' => $request->get('start_date'),
                 'end_date' => $request->get('end_date'),
+                'division_id' => $request->get('division_id'),
             ];
 
             $perPage = $request->integer('per_page', 15);
@@ -59,6 +60,7 @@ final class ReimbursementController extends Controller
             'project_id' => $request->get('project_id'),
             'start_date' => $request->get('start_date'),
             'end_date' => $request->get('end_date'),
+            'division_id' => $request->get('division_id'),
         ];
 
         // Fetch without strict pagination limiting

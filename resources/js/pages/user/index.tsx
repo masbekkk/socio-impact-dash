@@ -315,7 +315,7 @@ export default function Index() {
                                                     </div>
                                                 ) : user.team_members_count && user.team_members_count > 0 ? (
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs text-muted-foreground">Team:</span>
+                                                        <span className="text-xs text-muted-foreground">Team: </span>
                                                         <span className="text-sm font-medium">{user.team_members_count} anggota</span>
                                                     </div>
                                                 ) : (

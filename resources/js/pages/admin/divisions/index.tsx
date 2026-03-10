@@ -22,17 +22,15 @@ import { MoreHorizontal, Plus, Search } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-interface DivisionName {
+interface Division {
     id: number;
     name: string;
     description: string | null;
-}
-
-interface Division {
-    id: number;
-    code: string;
-    name: string;
-    names: DivisionName[];
+    division_code: {
+        id: number;
+        code: string;
+        name: string;
+    };
     created_at: string;
 }
 
@@ -119,9 +117,10 @@ export default function Index() {
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                    <TableHead className="w-[120px]">Code</TableHead>
-                                    <TableHead className="w-[200px]">Name</TableHead>
-                                    <TableHead>Sub-Divisions</TableHead>
+                                    <TableHead className="w-[120px]">Parent Code</TableHead>
+                                    <TableHead className="w-[150px]">Parent Name</TableHead>
+                                    <TableHead className="w-[200px]">Division Name</TableHead>
+                                    <TableHead>Description</TableHead>
                                     <TableHead className="w-[150px]">Created At</TableHead>
                                     <TableHead className="text-right w-[100px]">Actions</TableHead>
                                 </TableRow>
@@ -143,24 +142,18 @@ export default function Index() {
                                     divisions.map((division) => (
                                         <TableRow key={division.id} className="hover:bg-muted/50">
                                             <TableCell className="font-medium uppercase align-top pt-4">
-                                                {division.code}
+                                                {division.division_code?.code}
+                                            </TableCell>
+                                            <TableCell className="font-medium align-top pt-4">
+                                                {division.division_code?.name}
                                             </TableCell>
                                             <TableCell className="font-medium align-top pt-4">
                                                 {division.name}
                                             </TableCell>
-                                            <TableCell className="py-4">
-                                                <ul className="list-disc list-inside space-y-1">
-                                                    {division.names && division.names.map((n) => (
-                                                        <li key={n.id}>
-                                                            <span className="font-medium">{n.name}</span>
-                                                            {n.description && (
-                                                                <span className="text-muted-foreground block pl-5 text-sm">
-                                                                    {n.description}
-                                                                </span>
-                                                            )}
-                                                        </li>
-                                                    ))}
-                                                </ul>
+                                            <TableCell className="py-4 align-top">
+                                                <span className="text-muted-foreground text-sm">
+                                                    {division.description || '-'}
+                                                </span>
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm align-top pt-4">
                                                 {new Date(division.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -175,11 +168,11 @@ export default function Index() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem asChild>
-                                                            <Link href={`/admin/divisions/${division.id}/edit`}>Edit</Link>
+                                                            <Link href={`/admin/divisions/${division.division_code?.id}/edit`}>Edit</Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             className="text-destructive focus:text-destructive cursor-pointer"
-                                                            onClick={() => handleDelete(division.id)}
+                                                            onClick={() => handleDelete(division.division_code?.id)}
                                                         >
                                                             Delete
                                                         </DropdownMenuItem>

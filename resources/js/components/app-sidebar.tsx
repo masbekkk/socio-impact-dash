@@ -96,11 +96,15 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export function AppSidebar() {
-    const { hasRole } = usePermission();
+    const { hasRole, hasPermission } = usePermission();
 
     const mainNavItems = NAV_ITEMS.filter((item) => {
-        if (!item.roles) return true;
-        return hasRole(item.roles);
+        if (!item.roles && !item.permissions) return true;
+
+        const roleAllowed = item.roles ? hasRole(item.roles) : false;
+        const permissionAllowed = item.permissions ? hasPermission(item.permissions) : false;
+
+        return roleAllowed || permissionAllowed;
     });
 
     return (

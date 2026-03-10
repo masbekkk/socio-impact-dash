@@ -487,12 +487,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                     <div className="space-y-2">
                                         <Label>Divisi & Anak Perusahaan <span className="text-red-500">*</span></Label>
                                         <SearchableSelect
-                                            options={divisions.flatMap(divCode =>
-                                                (divCode.divisions || []).map((n: any) => ({
-                                                    value: n.id.toString(),
-                                                    label: `${divCode.code} — ${n.name}`
-                                                }))
-                                            )}
+                                            options={divisions.map(div => ({
+                                                value: div.id.toString(),
+                                                label: `${div.division_code?.name} — ${div.name}`
+                                            }))}
                                             value={formData.division_id}
                                             onValueChange={(v) => handleInputChange('division_id', v)}
                                             placeholder="Pilih Divisi & Anak Perusahaan"

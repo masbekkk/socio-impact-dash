@@ -23,18 +23,20 @@ final class DivisionResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        /** @var \App\Models\DivisionCode $this */
-        $this->loadMissing('divisions');
+        /** @var \App\Models\Division $this */
+        $this->loadMissing('divisionCode');
 
         return [
             'id' => $this->id,
-            'code' => $this->code,
             'name' => $this->name,
-            'names' => $this->divisions->map(fn (\App\Models\Division $div) => [
-                'id' => $div->id,
-                'name' => $div->name,
-                'description' => $div->description,
-            ])->toArray(),
+            'description' => $this->description,
+            'division_code' => $this->whenLoaded('divisionCode', function () {
+                return [
+                    'id' => $this->divisionCode->id,
+                    'code' => $this->divisionCode->code,
+                    'name' => $this->divisionCode->name,
+                ];
+            }),
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];

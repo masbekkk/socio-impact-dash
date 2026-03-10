@@ -6,7 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\UserRole;
 use App\Formatters\JsonResponseFormatter;
-use App\Models\Division;
+use App\Models\DivisionCode;
 use App\Models\LetterCode;
 use App\Models\LetterDivision;
 use App\Models\LetterRequest;
@@ -69,7 +69,7 @@ final class LetterRequestController extends Controller
             'recipient' => 'required|string|max:255',
             'subject' => 'required|string|max:255',
             // 'pic_id' => 'required|exists:users,id',
-            'division_id' => 'required|exists:divisions,id',
+            'division_id' => 'required|exists:division_codes,id',
             'letter_code_id' => 'required|exists:letter_codes,id',
             'letter_division_id' => 'required|exists:letter_divisions,id',
             'keterangan' => 'nullable|string',
@@ -81,8 +81,8 @@ final class LetterRequestController extends Controller
 
         $kode = LetterCode::find($validated['letter_code_id'])->code;
         $divisi = LetterDivision::find($validated['letter_division_id'])->code;
-        $division = Division::where('id', $validated['division_id'])->with('divisionCode')->first();
-        $perusahaan = $division->divisionCode->code;
+        $divisionCode = DivisionCode::find($validated['division_id']);
+        $perusahaan = $divisionCode->code;
 
         $startNumbers = [
             'Socim.id' => 247,
@@ -94,10 +94,8 @@ final class LetterRequestController extends Controller
 
         $latestRequest = LetterRequest::whereYear('letter_date', $year)
             ->whereNotNull('letter_number')
-            ->whereHas('division', function ($query) use ($perusahaan) {
-                $query->whereHas('divisionCode', function ($q) use ($perusahaan) {
-                    $q->where('code', $perusahaan);
-                });
+            ->whereHas('division', function ($q) use ($perusahaan) {
+                $q->where('code', $perusahaan);
             })
             ->orderByRaw('CAST(SUBSTRING_INDEX(letter_number, "/", 1) AS UNSIGNED) DESC')
             ->first();
@@ -148,7 +146,7 @@ final class LetterRequestController extends Controller
             'recipient' => 'required|string|max:255',
             'subject' => 'required|string|max:255',
             // 'pic_id' => 'required|exists:users,id',
-            'division_id' => 'required|exists:divisions,id',
+            'division_id' => 'required|exists:division_codes,id',
             'letter_code_id' => 'required|exists:letter_codes,id',
             'letter_division_id' => 'required|exists:letter_divisions,id',
             'keterangan' => 'nullable|string',
@@ -175,8 +173,8 @@ final class LetterRequestController extends Controller
             $month = $newDate->month;
             $kode = LetterCode::find($validated['letter_code_id'])->code;
             $divisi = LetterDivision::find($validated['letter_division_id'])->code;
-            $division = Division::where('id', $validated['division_id'])->with('divisionCode')->first();
-            $perusahaan = $division->divisionCode->code;
+            $divisionCode = DivisionCode::find($validated['division_id']);
+            $perusahaan = $divisionCode->code;
 
             $startNumbers = [
                 'Socim.id' => 247,
@@ -189,8 +187,8 @@ final class LetterRequestController extends Controller
             // If company didn't change and year didn't change, we can potentially keep the sequence number.
             // But if it did, or if we want to be safe and always get the latest sequence for that company/year:
 
-            $oldDivision = Division::where('id', $letterRequest->division_id)->with('divisionCode')->first();
-            $oldPerusahaan = $oldDivision->divisionCode->code;
+            $oldDivisionCode = DivisionCode::find($letterRequest->division_id);
+            $oldPerusahaan = $oldDivisionCode->code;
 
             if ($oldPerusahaan === $perusahaan && $oldDate->year === $newDate->year) {
                 // Keep same sequence number if same company and year
@@ -201,10 +199,8 @@ final class LetterRequestController extends Controller
                 $latestRequest = LetterRequest::whereYear('letter_date', $year)
                     ->whereNotNull('letter_number')
                     ->where('id', '!=', $letterRequest->id) // Don't count itself
-                    ->whereHas('division', function ($query) use ($perusahaan) {
-                        $query->whereHas('divisionCode', function ($q) use ($perusahaan) {
-                            $q->where('code', $perusahaan);
-                        });
+                    ->whereHas('division', function ($q) use ($perusahaan) {
+                        $q->where('code', $perusahaan);
                     })
                     ->orderByRaw('CAST(SUBSTRING_INDEX(letter_number, "/", 1) AS UNSIGNED) DESC')
                     ->first();

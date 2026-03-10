@@ -17,23 +17,23 @@ final class DivisionController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = DivisionCode::query()->with('divisions');
+        $query = \App\Models\Division::query()->with('divisionCode');
 
         if ($request->filled('search')) {
             $search = $request->get('search');
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
-                $q->where('code', 'like', "%{$search}%")
-                    ->orWhere('name', 'like', "%{$search}%")
-                    ->orWhereHas('divisions', function (\Illuminate\Database\Eloquent\Builder $nq) use ($search) {
-                        $nq->where('name', 'like', "%{$search}%");
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('divisionCode', function (\Illuminate\Database\Eloquent\Builder $nq) use ($search) {
+                        $nq->where('code', 'like', "%{$search}%")
+                            ->orWhere('name', 'like', "%{$search}%");
                     });
             });
         }
 
-        $divisionCodes = $query->latest()->paginate($request->integer('per_page', 10));
+        $divisions = $query->latest()->paginate($request->integer('per_page', 10));
 
         return JsonResponseFormatter::success(
-            DivisionResource::collection($divisionCodes)->response()->getData(true),
+            DivisionResource::collection($divisions)->response()->getData(true),
             'Divisions retrieved successfully'
         );
     }
@@ -52,7 +52,16 @@ final class DivisionController extends Controller
         }
 
         return JsonResponseFormatter::success(
-            new DivisionResource($divisionCode->load('divisions')),
+            [
+                'id' => $divisionCode->id,
+                'code' => $divisionCode->code,
+                'name' => $divisionCode->name,
+                'names' => $divisionCode->divisions->map(fn($d) => [
+                    'id' => $d->id,
+                    'name' => $d->name,
+                    'description' => $d->description,
+                ])
+            ],
             'Division created successfully',
             201
         );
@@ -63,7 +72,16 @@ final class DivisionController extends Controller
         $divisionCode = DivisionCode::with('divisions')->findOrFail($id);
 
         return JsonResponseFormatter::success(
-            new DivisionResource($divisionCode),
+            [
+                'id' => $divisionCode->id,
+                'code' => $divisionCode->code,
+                'name' => $divisionCode->name,
+                'names' => $divisionCode->divisions->map(fn($d) => [
+                    'id' => $d->id,
+                    'name' => $d->name,
+                    'description' => $d->description,
+                ])
+            ],
             'Division retrieved successfully'
         );
     }
@@ -85,7 +103,16 @@ final class DivisionController extends Controller
         }
 
         return JsonResponseFormatter::success(
-            new DivisionResource($divisionCode->load('divisions')),
+            [
+                'id' => $divisionCode->id,
+                'code' => $divisionCode->code,
+                'name' => $divisionCode->name,
+                'names' => $divisionCode->divisions->map(fn($d) => [
+                    'id' => $d->id,
+                    'name' => $d->name,
+                    'description' => $d->description,
+                ])
+            ],
             'Division updated successfully'
         );
     }
@@ -100,6 +127,17 @@ final class DivisionController extends Controller
                 return JsonResponseFormatter::error(
                     null,
                     'Cannot delete division code because it has associated projects.',
+                    400
+                );
+            }
+        }
+
+        // Also check users
+        foreach ($divisionCode->divisions as $division) {
+            if ($division->users()->exists()) {
+                return JsonResponseFormatter::error(
+                    null,
+                    'Cannot delete division because it has associated users.',
                     400
                 );
             }

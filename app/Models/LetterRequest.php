@@ -59,6 +59,6 @@ final class LetterRequest extends Model
 
     public function division(): BelongsTo
     {
-        return $this->belongsTo(Division::class);
+        return $this->belongsTo(DivisionCode::class, 'division_id');
     }
 }
