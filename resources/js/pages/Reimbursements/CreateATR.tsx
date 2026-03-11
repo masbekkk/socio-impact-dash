@@ -442,12 +442,13 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
                         {activity.expanded && (
                           <div className="p-4 space-y-4 bg-white">
                             <div className="space-y-1.5 pb-2">
-                              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Detail Aktivitas (Opsional)</Label>
+                              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Detail Aktivitas <span className="text-red-500">*</span></Label>
                               <Input
                                 value={activity.detail_aktivitas}
                                 onChange={(e) => updateActivityDetail(activity.budget_detail_id, e.target.value)}
                                 placeholder="Masukkan detail aktivitas untuk kegiatan ini..."
                                 className="h-9 text-sm"
+                                required
                               />
                             </div>
 
@@ -473,7 +474,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
                                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                                   <div className="md:col-span-4 space-y-1">
                                     <Label className="text-xs">Nama Item <span className="text-red-500">*</span></Label>
-                                    <Input value={child.item_name} onChange={(e) => updateChildItem(activity.budget_detail_id, child.id, 'item_name', e.target.value)} placeholder="Nama item..." className="h-9 text-sm" />
+                                    <Input value={child.item_name} onChange={(e) => updateChildItem(activity.budget_detail_id, child.id, 'item_name', e.target.value)} placeholder="Nama item..." className="h-9 text-sm" required />
                                   </div>
                                   <div className="md:col-span-1 space-y-1">
                                     <Label className="text-xs">Qty</Label>

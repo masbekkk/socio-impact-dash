@@ -166,7 +166,7 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
         if (!authUser.can_approve && !authUser.can_reject) return false;
 
         const status = leave?.status ?? '';
-        if (['rejected', 'superadmin_approved'].includes(status)) return false;
+        if (['rejected'].includes(status)) return false;
 
         const hasCompletedAction = leave?.approvals?.some(a => a.approver?.id === authUser.id && ['approved', 'rejected'].includes(a.status));
         if (hasCompletedAction) return false;
@@ -175,7 +175,11 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
         if (['superadmin', 'direktur'].includes(role)) return true;
 
         if (role === 'hr') {
-            return status !== 'hr_approved';
+            if (status === 'hr_approved') return false;
+            const direkturApproval = leave?.approvals?.find(a => a.role === 'direktur');
+            if (direkturApproval && direkturApproval.status !== 'approved') return false;
+
+            return true;
         }
 
         return ['submitted', 'revision', 'revised'].includes(status);

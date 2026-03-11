@@ -82,6 +82,14 @@ final class LeaveController
                 return response()->json(['message' => 'Anda tidak dapat menyetujui pengajuan milik sendiri.'], 403);
             }
 
+            // Enforce sequential approval: Direktur must approve before HR for non-pegawai
+            if ($actor->hasRole('hr') && ! $leave->user->hasRole('pegawai')) {
+                $direkturApproval = $leave->approvals()->where('role', 'direktur')->first();
+                if ($direkturApproval && $direkturApproval->status !== ApprovalStatus::Approved) {
+                    return response()->json(['message' => 'Persetujuan Direktur diperlukan sebelum HR dapat memberikan persetujuan.'], 403);
+                }
+            }
+
             return DB::transaction(function () use ($leave, $actor, $validated, $isApprove): JsonResponse {
                 $role = $actor->getRoleNames()->first();
                 $submitterRole = $leave->user->getRoleNames()->first();

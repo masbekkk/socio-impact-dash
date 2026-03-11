@@ -101,6 +101,7 @@ final readonly class CreateLeave
 
         if ($user->hasRole('pegawai')) {
             $roles['head'] = $data['approver_head_id'] ?? null;
+            unset($roles['direktur']);
         }
 
         foreach ($roles as $role => $approverId) {
