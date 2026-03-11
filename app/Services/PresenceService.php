@@ -124,10 +124,16 @@ final class PresenceService
         $query = Presence::with(['user', 'project']);
 
         if ($user) {
-            if ($user->hasRole(\App\Enums\UserRole::Head->value) && ! $user->hasAnyPermission(['view_all_leaves'])) {
-                // If it's a head without "view all" permission, show their own + team members
-                $teamMemberIds = $user->teamMembers()->pluck('id')->push($user->id)->toArray();
-                $query->whereIn('user_id', $teamMemberIds);
+            if ($user->hasAnyRole([\App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::Superadmin->value]) || $user->hasAnyPermission(['view_all_leaves'])) {
+                // These roles can view all presence
+            } elseif ($user->hasRole(\App\Enums\UserRole::Head->value)) {
+                // Head can see:
+                // 1. Their own presence
+                // 2. Their team members' presence
+                $query->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                        ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $user->id));
+                });
             } else {
                 $query->where('user_id', $user->id);
             }

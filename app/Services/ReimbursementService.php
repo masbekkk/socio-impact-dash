@@ -19,7 +19,9 @@ final class ReimbursementService
             // Can view all, no extra where needed
         } elseif ($user->hasRole('hr')) {
             // HR can only see allowances
-            $query->where('type', \App\Enums\ReimbursementType::ALLOWANCE);
+            $query->where('type', \App\Enums\ReimbursementType::ALLOWANCE)->orWhere('user_id', $user->id)
+                ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $user->id))
+                ->orWhereHas('approvals', fn ($aq) => $aq->where('approver_id', $user->id));
         } elseif ($user->hasRole('head')) {
             // Head can see:
             // 1. Their own reimbursements
@@ -49,7 +51,7 @@ final class ReimbursementService
         if (! empty($filters['project_id'])) {
             $query->where('project_id', $filters['project_id']);
         }
-        
+
         if (! empty($filters['division_id']) && $filters['division_id'] !== 'all') {
             $divisionIds = is_array($filters['division_id']) ? $filters['division_id'] : explode(',', (string) $filters['division_id']);
             $query->whereHas('project', fn ($q) => $q->whereIn('division_id', $divisionIds));
