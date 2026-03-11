@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { ArrowLeft, ArrowRight, X, FileSpreadsheet, FileCheck, Building2, Plus, AlertCircle } from 'lucide-react'
 import { Head, Link, usePage, router } from '@inertiajs/react'
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout'
+import { usePermission } from '@/hooks/use-permission';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
@@ -23,10 +24,11 @@ import axios from 'axios';
 
 export default function ProjectsCreate({ divisions, employees }: { divisions: any[], employees: any[] }) {
   const { url, props } = usePage<any>();
+  const { hasRole, hasPermission } = usePermission();
   const userRole = props.auth?.user?.role_name ?? 'user';
-  const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
+  const isAdminOrFinance = hasRole(['superadmin', 'finance']);
   const permissions = props.auth?.permissions || [];
-  const canUpdateCode = permissions.includes('create_code_project');
+  const canUpdateCode = hasPermission('create_code_project');
 
   const queryParams = new URLSearchParams(url.split('?')[1]);
   const type = queryParams.get('type') || 'active'; // 'proposal' or 'active'

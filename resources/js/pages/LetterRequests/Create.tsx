@@ -19,6 +19,7 @@ import DatePicker from '@/components/DatePicker';
 import { format } from "date-fns";
 import axios, { all } from 'axios';
 import { SharedData } from '@/types';
+import { usePermission } from '@/hooks/use-permission';
 
 interface Project {
     id: number;
@@ -40,6 +41,7 @@ interface Props {
 
 export default function Create({ projects }: Props) {
     const { auth } = usePage<SharedData>().props;
+    const { hasRole } = usePermission();
     const userRole = auth.user.role_name;
 
     const [data, setData] = useState({
@@ -77,7 +79,9 @@ export default function Create({ projects }: Props) {
                 const allLetterDivs = divisionsRes.data.data;
                 let filteredLetterDivs = allLetterDivs;
 
-                if (userRole === 'direktur' || userRole === 'superadmin' || userRole === 'hr' || userRole === 'finance' || userRole === 'head') {
+                const isAuthorized = hasRole(['direktur', 'superadmin', 'hr', 'finance', 'head']);
+
+                if (isAuthorized) {
                     filteredLetterDivs = allLetterDivs;
                 } else {
                     // Default to PM or all roles if PM

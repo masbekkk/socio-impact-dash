@@ -32,7 +32,9 @@ final readonly class CreateReimbursement
                 $this->syncReimbursementItems($reimbursement, $data['items']);
             }
 
-            $this->assignApprovers($reimbursement, $data);
+            if ($reimbursement->status !== ReimbursementStatus::Draft) {
+                $this->assignApprovers($reimbursement, $data);
+            }
 
             return $reimbursement->load(['documents', 'atrBudgetSelecteds.budgetDetail', 'approvals.approver', 'items.budgetDetail']);
         });
@@ -47,7 +49,7 @@ final readonly class CreateReimbursement
             'atr_id' => $data['atr_id'] ?? null,
             'type' => $data['type'],
             'eer_type' => $data['eer_type'] ?? null,
-            'status' => ReimbursementStatus::Submitted,
+            'status' => $data['status'] ?? ReimbursementStatus::Submitted,
             'amount' => $data['amount'] ?? null,
             'bank_name' => $data['bank_name'] ?? null,
             'bank_account' => $data['bank_account'] ?? null,

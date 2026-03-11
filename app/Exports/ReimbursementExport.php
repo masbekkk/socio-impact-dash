@@ -37,41 +37,8 @@ final class ReimbursementExport implements WithMultipleSheets
         // Build the base query using the same role-based filtering as ReimbursementService
         $query = Reimbursement::with($eagerLoads);
 
-        // Apply Role-based filtering (same logic as ReimbursementService)
-        if ($this->user->hasRole('superadmin') || $this->user->hasRole('finance') || $this->user->hasRole('direktur')) {
-            // Can view all
-        } elseif ($this->user->hasRole('hr')) {
-            $query->where('type', \App\Enums\ReimbursementType::ALLOWANCE);
-        } elseif ($this->user->hasRole('head')) {
-            $query->where(function ($q) {
-                $q->where('user_id', $this->user->id)
-                    ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $this->user->id))
-                    ->orWhereHas('approvals', fn ($aq) => $aq->where('approver_id', $this->user->id));
-            });
-        } else {
-            $query->where('user_id', $this->user->id);
-        }
-
-        // Apply filters
-        if (! empty($this->filters['status'])) {
-            $query->where('status', $this->filters['status']);
-        }
-
-        if (! empty($this->filters['project_id'])) {
-            $query->where('project_id', $this->filters['project_id']);
-        }
-
-        if (! empty($this->filters['division_id'])) {
-            $query->whereHas('project', fn ($q) => $q->where('division_id', $this->filters['division_id']));
-        }
-
-        if (! empty($this->filters['start_date'])) {
-            $query->whereDate('created_at', '>=', $this->filters['start_date']);
-        }
-
-        if (! empty($this->filters['end_date'])) {
-            $query->whereDate('created_at', '<=', $this->filters['end_date']);
-        }
+        $service = new ReimbursementService();
+        $service->applyFilters($query, $this->user, $this->filters);
 
         $all = $query->orderBy('created_at', 'desc')->get();
 
