@@ -278,7 +278,7 @@ export default function CreateLeave({ authUser, projects, users, approvers }: Pr
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="replacement_pic_id">Pengganti PIC Cuti</Label>
+                    <Label htmlFor="replacement_pic_id">Pengganti PIC Cuti <span className="text-red-500">*</span></Label>
                     <SearchableSelect
                       options={users.map(u => ({ value: u.id.toString(), label: u.name }))}
                       value={formData.replacement_pic_id}
