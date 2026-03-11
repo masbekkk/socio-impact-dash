@@ -5,17 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { Card, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, Save, FileText, Loader2 } from 'lucide-react';
-import { differenceInDays } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
 import DatePicker from '@/components/DatePicker';
@@ -240,6 +232,7 @@ export default function CreateLeave({ authUser, projects, users, approvers }: Pr
                       onValueChange={(val) => handleSelectChange('project_id', val)}
                       placeholder="Pilih project"
                     />
+                    {errors.project_id && <p className="text-xs text-red-500">{errors.project_id[0]}</p>}
                   </div>
                 </div>
 
@@ -278,13 +271,14 @@ export default function CreateLeave({ authUser, projects, users, approvers }: Pr
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="replacement_pic_id">Pengganti PIC Cuti</Label>
+                    <Label htmlFor="replacement_pic_id">Pengganti PIC Cuti <span className="text-red-500">*</span></Label>
                     <SearchableSelect
                       options={users.map(u => ({ value: u.id.toString(), label: u.name }))}
                       value={formData.replacement_pic_id}
                       onValueChange={(val) => handleSelectChange('replacement_pic_id', val)}
                       placeholder="Pilih pengganti PIC"
                     />
+                    {errors.replacement_pic_id && <p className="text-xs text-red-500">{errors.replacement_pic_id[0]}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">No. HP (Dapat dihubungi) <span className="text-red-500">*</span></Label>
@@ -322,6 +316,7 @@ export default function CreateLeave({ authUser, projects, users, approvers }: Pr
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><FileText className="h-4 w-4" /> Dokumen Pendukung (Opsional)</Label>
                   <FileUploadDropzone className="w-full" onFilesChange={(files: File[]) => setAttachmentFile(files[0] ?? null)} />
+                  {errors.attachment && <p className="text-xs text-red-500">{errors.attachment[0]}</p>}
                   <p className="text-xs text-muted-foreground">Format: PDF, JPG, PNG (Max 5MB). Lampirkan surat dokter jika cuti sakit.</p>
                 </div>
 

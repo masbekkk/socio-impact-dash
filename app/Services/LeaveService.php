@@ -15,7 +15,7 @@ final class LeaveService
         $query = Leave::with(['user', 'project', 'replacementPic', 'approvals.approver']);
 
         if (! $user->hasAnyPermission(['view_all_leaves'])) {
-            if ($user->hasAnyRole([\App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::Superadmin->value])) {
+            if ($user->hasAnyRole([\App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::Superadmin->value, \App\Enums\UserRole::HR->value])) {
                 // These roles can view all leaves
             } elseif ($user->hasRole(\App\Enums\UserRole::Head->value)) {
                 // Head can see:
@@ -96,7 +96,7 @@ final class LeaveService
             if ($start->isWeekday()) {
                 $days++;
             }
-            $start->addDay();
+            $start = $start->addDay();
         }
 
         return $days;

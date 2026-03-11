@@ -112,7 +112,7 @@ final readonly class PresenceService
             ->first();
     }
 
-    public function getPresenceByDate(User $user, Carbon $date): ?Presence
+    public function getPresenceByDate(User $user, \Carbon\CarbonInterface $date): ?Presence
     {
         return Presence::query()->where('user_id', $user->id)
             ->whereDate('date', $date)
@@ -182,7 +182,7 @@ final readonly class PresenceService
         ];
     }
 
-    private function buildCheckInData(User $user, array $data, Carbon $today): array
+    private function buildCheckInData(User $user, array $data, \Carbon\CarbonInterface $today): array
     {
         $checkInTime = \Illuminate\Support\Facades\Date::now();
         $status = $this->determineCheckInStatus($checkInTime, $data['status'] ?? null);
@@ -210,7 +210,7 @@ final readonly class PresenceService
         ];
     }
 
-    private function determineCheckInStatus(Carbon $checkInTime, ?string $requestedStatus): PresenceStatus
+    private function determineCheckInStatus(\Carbon\CarbonInterface $checkInTime, ?string $requestedStatus): PresenceStatus
     {
         if ($requestedStatus) {
             return PresenceStatus::from($requestedStatus);
