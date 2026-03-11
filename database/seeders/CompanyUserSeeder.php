@@ -26,16 +26,13 @@ final class CompanyUserSeeder extends Seeder
         // ----------------------------------------------------
 
         // Create admin user
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@socio-impact.test'],
-            [
-                'name' => 'Admin User',
-                'nip' => '10000001',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
-            ]
-        );
+        $admin = User::query()->firstOrCreate(['email' => 'admin@socio-impact.test'], [
+            'name' => 'Admin User',
+            'nip' => '10000001',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+            'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
+        ]);
         $admin->assignRole(UserRole::Superadmin->value);
 
         // Create head user
@@ -52,28 +49,22 @@ final class CompanyUserSeeder extends Seeder
         // $head->assignRole(UserRole::Head->value);
 
         // Create finance user
-        $finance = User::firstOrCreate(
-            ['email' => 'finance@socio-impact.test'],
-            [
-                'name' => 'Finance Officer',
-                'nip' => '10000003',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
-            ]
-        );
+        $finance = User::query()->firstOrCreate(['email' => 'finance@socio-impact.test'], [
+            'name' => 'Finance Officer',
+            'nip' => '10000003',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+            'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
+        ]);
         $finance->assignRole(UserRole::Finance->value);
 
         // Create HR user
-        $hr = User::firstOrCreate(
-            ['email' => 'hr@socio-impact.test'],
-            [
-                'name' => 'HR Manager',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
-            ]
-        );
+        $hr = User::query()->firstOrCreate(['email' => 'hr@socio-impact.test'], [
+            'name' => 'HR Manager',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+            'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
+        ]);
         $hr->assignRole(UserRole::HR->value);
 
         // Create 10 regular employees
@@ -94,15 +85,12 @@ final class CompanyUserSeeder extends Seeder
         //     $user->assignRole(UserRole::Pegawai->value);
         // }
 
-        $direktur = User::firstOrCreate(
-            ['email' => 'direktur@socio-impact.test'],
-            [
-                'name' => 'Direktur User',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
-            ]
-        );
+        $direktur = User::query()->firstOrCreate(['email' => 'direktur@socio-impact.test'], [
+            'name' => 'Direktur User',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+            'employee_type' => \App\Enums\EmployeeType::PegawaiTetap->value,
+        ]);
         $direktur->assignRole(UserRole::Direktur->value);
 
         // ----------------------------------------------------
@@ -183,17 +171,14 @@ final class CompanyUserSeeder extends Seeder
                 $roleStr = UserRole::HR->value;
             }
 
-            $user = User::firstOrCreate(
-                ['nip' => $nip],
-                [
-                    'name' => $name,
-                    'email' => $email,
-                    'position' => $position,
-                    'password' => Hash::make('password'),
-                    'email_verified_at' => now(),
-                    'employee_type' => $empType,
-                ]
-            );
+            $user = User::query()->firstOrCreate(['nip' => $nip], [
+                'name' => $name,
+                'email' => $email,
+                'position' => $position,
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'employee_type' => $empType,
+            ]);
 
             if ($user->wasRecentlyCreated === false) {
                 // Update their position and role if they already exist

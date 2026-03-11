@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreLeaveRequest;
-use App\Http\Requests\UpdateLeaveRequest;
 use App\Models\Leave;
 use App\Models\Project;
 use App\Models\User;
@@ -21,7 +19,7 @@ final class LeaveController
     public function index(Request $request): \Inertia\Response
     {
         $user = $request->user();
-        $leaveService = app(\App\Services\LeaveService::class);
+        $leaveService = resolve(\App\Services\LeaveService::class);
         $usedDays = $leaveService->getAnnualLeaveDaysUsed($user->id, (int) date('Y'));
         $remainingAnnualLeaves = max(0, 12 - $usedDays);
 
@@ -54,7 +52,7 @@ final class LeaveController
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreLeaveRequest $request): void
+    public function store(): void
     {
         //
     }
@@ -65,10 +63,10 @@ final class LeaveController
     public function show(Request $request, string $code): \Inertia\Response
     {
         $user = Auth::user();
-        $leave = Leave::where('code', $code)->firstOrFail();
+        $leave = Leave::query()->where('code', $code)->firstOrFail();
 
-        $leaveService = app(\App\Services\LeaveService::class);
-        $submitterUsedDays = $leaveService->getAnnualLeaveDaysUsed($leave->user_id, (int) date('Y', strtotime($leave->start_date->toDateString())));
+        $leaveService = resolve(\App\Services\LeaveService::class);
+        $submitterUsedDays = $leaveService->getAnnualLeaveDaysUsed($leave->user_id, (int) date('Y', strtotime((string) $leave->start_date->toDateString())));
         $submitterRemainingLeaves = max(0, 12 - $submitterUsedDays);
 
         $formProps = $this->getFormProps($request);
@@ -92,7 +90,7 @@ final class LeaveController
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Leave $leave): void
+    public function edit(): void
     {
         //
     }
@@ -100,7 +98,7 @@ final class LeaveController
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateLeaveRequest $request, Leave $leave): void
+    public function update(): void
     {
         //
     }
@@ -108,7 +106,7 @@ final class LeaveController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Leave $leave): void
+    public function destroy(): void
     {
         //
     }
@@ -118,18 +116,18 @@ final class LeaveController
         $user = $request->user();
         $user->load('division');
 
-        $projects = Project::where('status', 'active')
+        $projects = Project::query()->where('status', 'active')
             ->get(['id', 'code', 'name']);
 
-        $users = User::where('id', '!=', $user->id)
+        $users = User::query()->where('id', '!=', $user->id)
             ->get(['id', 'name', 'email']);
 
-        $leaveService = app(\App\Services\LeaveService::class);
+        $leaveService = resolve(\App\Services\LeaveService::class);
         $usedDays = $leaveService->getAnnualLeaveDaysUsed($user->id, (int) date('Y'));
         $remainingAnnualLeaves = max(0, 12 - $usedDays);
 
         $approvers = [
-            'head' => User::role('head')->get(['id', 'name', 'email']),
+            'head' => User::query()->role('head')->get(['id', 'name', 'email']),
         ];
 
         return [

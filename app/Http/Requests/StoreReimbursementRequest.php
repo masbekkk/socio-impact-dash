@@ -38,14 +38,14 @@ final class StoreReimbursementRequest extends FormRequest
             'start_date' => [
                 'required_if:status,submitted,approved', // Simplified: required if not draft/revision? Actually, the logic was type-based before.
                 'nullable',
-                'date'
+                'date',
             ],
             'end_date' => [
                 'required_if:type,allowance',
                 'required_if:status,submitted,approved',
                 'nullable',
                 'date',
-                'after_or_equal:start_date'
+                'after_or_equal:start_date',
             ],
             'documents' => ['nullable', 'array'],
             'documents.*.file' => ['required_without:status,draft', 'file', 'max:10240'],

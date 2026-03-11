@@ -137,7 +137,8 @@ export default function ProjectTabs({
             await axios.put(`/api/v1/projects/${project.uuid}`, {
                 operational_budget: opsBudget,
                 management_budget: mgmtBudget,
-                allowance_budget: allowanceBudget
+                allowance_budget: allowanceBudget,
+                budget_partition_status: 'pending'
             });
             setEditPartitions(false);
             if (onShowToast) onShowToast('Pembagian anggaran berhasil disimpan', 'success');
@@ -702,10 +703,6 @@ export default function ProjectTabs({
                                             onValueChange={(values) => {
                                                 const val = values.floatValue || 0;
                                                 setOpsBudget(val);
-                                                if (hasRole(['finance', 'superadmin'])) {
-                                                    const allowance = project.budget_total - val - mgmtBudget;
-                                                    setAllowanceBudget(allowance > 0 ? allowance : 0);
-                                                }
                                             }}
                                             placeholder="Nilai Operasional"
                                             disabled={!isAdminOrFinance}
@@ -740,10 +737,6 @@ export default function ProjectTabs({
                                             onValueChange={(values) => {
                                                 const val = values.floatValue || 0;
                                                 setMgmtBudget(val);
-                                                if (hasRole(['finance', 'superadmin'])) {
-                                                    const allowance = project.budget_total - opsBudget - val;
-                                                    setAllowanceBudget(allowance > 0 ? allowance : 0);
-                                                }
                                             }}
                                             placeholder="Nilai Manajemen"
                                             disabled={!isAdminOrFinance}
@@ -763,10 +756,6 @@ export default function ProjectTabs({
                                             onValueChange={(values) => {
                                                 const val = values.floatValue || 0;
                                                 setAllowanceBudget(val);
-                                                if (hasRole(['finance', 'superadmin'])) {
-                                                    const ops = project.budget_total - val - mgmtBudget;
-                                                    setOpsBudget(ops > 0 ? ops : 0);
-                                                }
                                             }}
                                             placeholder="Nilai Allowance"
                                             disabled={!isAdminOrFinance}

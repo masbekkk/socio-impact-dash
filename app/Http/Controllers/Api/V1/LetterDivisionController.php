@@ -27,11 +27,11 @@ final class LetterDivisionController
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'code' => 'required|string|unique:letter_divisions,code',
-            'description' => 'nullable|string',
+            'code' => ['required', 'string', 'unique:letter_divisions,code'],
+            'description' => ['nullable', 'string'],
         ]);
 
-        $division = \App\Models\LetterDivision::create($validated);
+        $division = \App\Models\LetterDivision::query()->create($validated);
 
         return \App\Formatters\JsonResponseFormatter::created(
             new \App\Http\Resources\V1\LetterDivision\LetterDivisionResource($division),
@@ -44,7 +44,7 @@ final class LetterDivisionController
      */
     public function show(string $id): JsonResponse
     {
-        $division = \App\Models\LetterDivision::find($id);
+        $division = \App\Models\LetterDivision::query()->find($id);
 
         if (! $division) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Division tidak ditemukan.');
@@ -60,7 +60,7 @@ final class LetterDivisionController
      */
     public function update(Request $request, string $id): JsonResponse
     {
-        $division = \App\Models\LetterDivision::find($id);
+        $division = \App\Models\LetterDivision::query()->find($id);
 
         if (! $division) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Division tidak ditemukan.');
@@ -68,7 +68,7 @@ final class LetterDivisionController
 
         $validated = $request->validate([
             'code' => 'required|string|unique:letter_divisions,code,'.$division->id,
-            'description' => 'nullable|string',
+            'description' => ['nullable', 'string'],
         ]);
 
         $division->update($validated);
@@ -84,7 +84,7 @@ final class LetterDivisionController
      */
     public function destroy(string $id): JsonResponse
     {
-        $division = \App\Models\LetterDivision::find($id);
+        $division = \App\Models\LetterDivision::query()->find($id);
 
         if (! $division) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Division tidak ditemukan.');

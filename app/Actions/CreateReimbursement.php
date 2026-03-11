@@ -9,7 +9,6 @@ use App\Models\Reimbursement;
 use App\Services\FileUploadService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 final readonly class CreateReimbursement
 {
@@ -42,7 +41,7 @@ final readonly class CreateReimbursement
 
     private function createReimbursementRecord(array $data, int $userId): Reimbursement
     {
-        return Reimbursement::create([
+        return Reimbursement::query()->create([
             'code' => $data['code'] ?? null,
             'user_id' => $data['user_id'] ?? $userId,
             'project_id' => $data['project_id'] ?? null,
@@ -144,15 +143,15 @@ final readonly class CreateReimbursement
 
         // Default approvers if not provided
         if (empty($roles['finance']) && $reimbursement->type->value !== 'allowance') {
-            $roles['finance'] = \App\Models\User::where('email', 'finance@socio-impact.test')->first()?->id;
+            $roles['finance'] = \App\Models\User::query()->where('email', 'finance@socio-impact.test')->first()?->id;
         }
 
         if (empty($roles['hr']) && $reimbursement->type->value === 'allowance') {
-            $roles['hr'] = \App\Models\User::where('email', 'hr@socio-impact.test')->first()?->id;
+            $roles['hr'] = \App\Models\User::query()->where('email', 'hr@socio-impact.test')->first()?->id;
         }
 
         if (empty($roles['direktur'])) {
-            $roles['direktur'] = \App\Models\User::where('email', 'direktur@socio-impact.test')->first()?->id;
+            $roles['direktur'] = \App\Models\User::query()->where('email', 'direktur@socio-impact.test')->first()?->id;
         }
 
         foreach ($roles as $role => $approverId) {

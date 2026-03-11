@@ -9,7 +9,7 @@ use App\Services\FileUploadService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
-final class CloseProject
+final readonly class CloseProject
 {
     public function __construct(private FileUploadService $fileUploadService) {}
 

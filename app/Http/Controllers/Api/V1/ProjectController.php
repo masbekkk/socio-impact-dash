@@ -27,22 +27,19 @@ final class ProjectController extends Controller
 
         /** @var \App\Models\User $user */
         $user = $request->user();
-        $canViewAll = [UserRole::Superadmin, UserRole::Direktur, UserRole::Finance, UserRole::HR];
 
         if (! $user->hasAnyPermission(['view_all_projects'])) {
             $query->where('created_by', $user->id);
         }
 
         // Finance with division restriction
-        if ($user->hasRole(UserRole::Finance) && ! $user->hasAnyRole([UserRole::Superadmin, UserRole::Direktur])) {
-            if ($user->division_id) {
-                $query->where('division_id', $user->division_id);
-            }
+        if ($user->hasRole(UserRole::Finance) && ! $user->hasAnyRole([UserRole::Superadmin, UserRole::Direktur]) && $user->division_id) {
+            $query->where('division_id', $user->division_id);
         }
 
         if ($request->filled('search')) {
             $search = (string) $request->string('search');
-            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
                 /** @var \Illuminate\Database\Eloquent\Builder $q */
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%")

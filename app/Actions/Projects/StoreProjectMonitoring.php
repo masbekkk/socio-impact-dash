@@ -6,14 +6,11 @@ namespace App\Actions\Projects;
 
 use App\Models\Project;
 use App\Models\ProjectMonitoring;
-use App\Services\FileUploadService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 final class StoreProjectMonitoring
 {
-    public function __construct(private FileUploadService $fileUploadService) {}
-
     public function handle(Project $project, array $data, int $userId): ProjectMonitoring
     {
         return DB::transaction(function () use ($project, $data, $userId) {
@@ -26,7 +23,7 @@ final class StoreProjectMonitoring
             // Handle Attachments
             if (isset($data['documents']) && is_array($data['documents'])) {
                 foreach ($data['documents'] as $doc) {
-                    if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
+                    if (isset($doc['file']) && $doc['file'] instanceof UploadedFile) {
                         $file = $doc['file'];
 
                         // Save to temp local disk
@@ -44,10 +41,7 @@ final class StoreProjectMonitoring
                         ]);
 
                         // Dispatch background job
-                        \App\Jobs\ProcessProjectMonitoringDocumentUpload::dispatch(
-                            $document->id,
-                            "projects/{$project->id}/monitorings/{$monitoring->id}"
-                        );
+                        dispatch(new \App\Jobs\ProcessProjectMonitoringDocumentUpload($document->id, "projects/{$project->id}/monitorings/{$monitoring->id}"));
                     }
                 }
             }

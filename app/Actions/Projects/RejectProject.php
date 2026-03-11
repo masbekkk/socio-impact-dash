@@ -14,7 +14,7 @@ final class RejectProject
     {
         return DB::transaction(function () use ($project, $userId, $notes) {
             // Create rejection record
-            ProjectApproval::create([
+            ProjectApproval::query()->create([
                 'project_id' => $project->id,
                 'approved_by' => $userId,
                 'approval_type' => 'rejection', // or 'revision' as per frontend "Minta Revisi"

@@ -9,7 +9,7 @@ use App\Services\FileUploadService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
-final class UpdateTerminPayment
+final readonly class UpdateTerminPayment
 {
     public function __construct(private FileUploadService $fileUploadService) {}
 
@@ -38,7 +38,7 @@ final class UpdateTerminPayment
                 $updateData['proof_payment'] = $meta['path'];
             }
 
-            if (! empty($updateData)) {
+            if ($updateData !== []) {
                 $termin->update($updateData);
             }
 

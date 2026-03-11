@@ -28,7 +28,7 @@ final class PermissionController extends Controller
     {
         try {
             $request->validate([
-                'name' => 'required|string|unique:permissions,name',
+                'name' => ['required', 'string', 'unique:permissions,name'],
             ]);
 
             $permission = Permission::create(['name' => $request->name, 'guard_name' => 'web']);

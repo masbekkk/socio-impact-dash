@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('reimbursements', function (Blueprint $table) {
+        Schema::table('reimbursements', function (Blueprint $table): void {
             $table->time('start_time')->nullable()->after('start_date');
             $table->time('end_time')->nullable()->after('end_date');
         });
@@ -24,7 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('reimbursements', function (Blueprint $table) {
+        Schema::table('reimbursements', function (Blueprint $table): void {
             $table->dropColumn(['start_time', 'end_time']);
         });
     }

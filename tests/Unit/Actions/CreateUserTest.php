@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Event;
 it('may create a user', function (): void {
     Event::fake([Registered::class]);
 
-    $action = app(CreateUser::class);
+    $action = resolve(CreateUser::class);
 
-    $division = \App\Models\Division::factory()->create();
+    $division = App\Models\Division::factory()->create();
     $user = $action->handle([
         'name' => 'Test User',
         'email' => 'example@email.com',

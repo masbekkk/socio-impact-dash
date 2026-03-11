@@ -18,13 +18,13 @@ final class DashboardController extends Controller
 {
     public function __invoke(Request $request): Response
     {
-        $totalUsers = User::count();
-        $totalDivisions = Division::count();
-        $totalLetterRequests = LetterRequest::count();
-        $totalBudget = Project::sum('budget_total');
-        $totalManagementBudget = Project::sum('management_budget');
+        $totalUsers = User::query()->count();
+        $totalDivisions = Division::query()->count();
+        $totalLetterRequests = LetterRequest::query()->count();
+        $totalBudget = Project::query()->sum('budget_total');
+        $totalManagementBudget = Project::query()->sum('management_budget');
 
-        $leaderboard = Project::selectRaw('created_by, SUM(budget_total) as total_budget')
+        $leaderboard = Project::query()->selectRaw('created_by, SUM(budget_total) as total_budget')
             ->groupBy('created_by')
             ->orderByDesc('total_budget')
             ->with('creator:id,name')
@@ -33,7 +33,7 @@ final class DashboardController extends Controller
 
         $locations = ProjectLocation::with('project:id,name')->get();
 
-        $projectsByDivision = Division::withCount('projects')->get()->map(fn (Division $d): array => [
+        $projectsByDivision = Division::query()->withCount('projects')->get()->map(fn (Division $d): array => [
             'division' => $d->name,
             'count' => $d->projects_count,
         ]);

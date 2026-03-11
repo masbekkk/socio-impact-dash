@@ -60,12 +60,12 @@ final class HeadTeamSeeder extends Seeder
         ];
 
         foreach ($teamMappings as $headEmail => $memberEmails) {
-            $headUser = User::where('email', $headEmail)->first();
+            $headUser = User::query()->where('email', $headEmail)->first();
             if (! $headUser) {
                 continue;
             }
 
-            User::whereIn('email', $memberEmails)->update(['head_id' => $headUser->id]);
+            User::query()->whereIn('email', $memberEmails)->update(['head_id' => $headUser->id]);
         }
     }
 }

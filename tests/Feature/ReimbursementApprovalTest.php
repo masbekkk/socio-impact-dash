@@ -8,18 +8,18 @@ use App\Models\Reimbursement;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
 
-beforeEach(function () {
+beforeEach(function (): void {
     // Ensure roles exist
-    Role::firstOrCreate(['name' => 'head']);
-    Role::firstOrCreate(['name' => 'finance']);
-    Role::firstOrCreate(['name' => 'pegawai']);
+    Role::query()->firstOrCreate(['name' => 'head']);
+    Role::query()->firstOrCreate(['name' => 'finance']);
+    Role::query()->firstOrCreate(['name' => 'pegawai']);
 
-    if (App\Models\Division::count() === 0) {
+    if (App\Models\Division::query()->count() === 0) {
         App\Models\Division::factory()->create();
     }
 });
 
-test('requester cannot approve their own reimbursement', function () {
+test('requester cannot approve their own reimbursement', function (): void {
     $user = User::factory()->create();
     $user->assignRole('head');
 
@@ -42,7 +42,7 @@ test('requester cannot approve their own reimbursement', function () {
     $response->assertJsonPath('data.can_approve', false);
 });
 
-test('project head can approve submitted reimbursement', function () {
+test('project head can approve submitted reimbursement', function (): void {
     $head = User::factory()->create();
     $head->assignRole('head');
 
@@ -73,7 +73,7 @@ test('project head can approve submitted reimbursement', function () {
     $response->assertJsonPath('data.can_approve', true);
 });
 
-test('finance can approve head_approved reimbursement', function () {
+test('finance can approve head_approved reimbursement', function (): void {
     $finance = User::factory()->create();
     $finance->assignRole('finance');
 
@@ -112,7 +112,7 @@ test('finance can approve head_approved reimbursement', function () {
     $response->assertJsonPath('data.can_approve', true);
 });
 
-test('user cannot approve twice', function () {
+test('user cannot approve twice', function (): void {
     $head = User::factory()->create();
     $head->assignRole('head');
 

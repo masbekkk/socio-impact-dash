@@ -19,12 +19,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Throwable;
 
-final class LeaveController
+final readonly class LeaveController
 {
     public function __construct(
-        private readonly LeaveService $leaveService,
-        private readonly CreateLeave $createLeave,
-        private readonly \App\Actions\CreateNotification $createNotification,
+        private LeaveService $leaveService,
+        private CreateLeave $createLeave,
+        private \App\Actions\CreateNotification $createNotification,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -55,7 +55,7 @@ final class LeaveController
 
         $leave = $this->createLeave->handle($data, $request->user()->id);
 
-        return (new LeaveResource($leave))
+        return new LeaveResource($leave)
             ->response()
             ->setStatusCode(201);
     }
@@ -95,7 +95,7 @@ final class LeaveController
                 $submitterRole = $leave->user->getRoleNames()->first();
 
                 // Find existing pending approval for this role
-                $approval = LeaveApproval::where('leave_id', $leave->id)
+                $approval = LeaveApproval::query()->where('leave_id', $leave->id)
                     ->where('role', $role)
                     ->first();
 
@@ -113,7 +113,7 @@ final class LeaveController
                         'approved_at' => $isApprove ? now() : null,
                     ]);
                 } else {
-                    LeaveApproval::create([
+                    LeaveApproval::query()->create([
                         'leave_id' => $leave->id,
                         'approver_id' => $actor->id,
                         'role' => $role,
@@ -142,7 +142,7 @@ final class LeaveController
                 $leave->update(['status' => $newStatus]);
                 $leave->load(['user', 'project', 'replacementPic', 'approvals.approver']);
 
-                return (new LeaveResource($leave))->response()->setStatusCode(200);
+                return new LeaveResource($leave)->response()->setStatusCode(200);
             });
         } catch (Throwable $th) {
             return response()->json(['err' => $th->getMessage()], 500);
@@ -159,7 +159,7 @@ final class LeaveController
 
             return DB::transaction(function () use ($leave, $data, $request): JsonResponse {
                 if ($request->hasFile('attachment')) {
-                    $data['attachment_path'] = app(\App\Services\FileUploadService::class)->uploadFile(
+                    $data['attachment_path'] = resolve(\App\Services\FileUploadService::class)->uploadFile(
                         $request->file('attachment'),
                         "leaves/{$request->user()->id}/attachments"
                     )['path'];
@@ -188,7 +188,7 @@ final class LeaveController
 
                 // Notify HR roles
                 $hrUserIds = $this->createNotification->getUserIdsByRoles(['hr']);
-                if (! empty($hrUserIds)) {
+                if ($hrUserIds !== []) {
                     $this->createNotification->handle(
                         type: 'leave_revised',
                         title: 'Pengajuan Cuti Direvisi',
@@ -200,7 +200,7 @@ final class LeaveController
                     );
                 }
 
-                return (new LeaveResource($leave->load(['user', 'project', 'replacementPic', 'approvals.approver'])))
+                return new LeaveResource($leave->load(['user', 'project', 'replacementPic', 'approvals.approver']))
                     ->response()
                     ->setStatusCode(200);
             });

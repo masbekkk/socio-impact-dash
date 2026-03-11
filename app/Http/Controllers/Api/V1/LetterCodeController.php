@@ -27,11 +27,11 @@ final class LetterCodeController
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'code' => 'required|string|unique:letter_codes,code',
-            'description' => 'nullable|string',
+            'code' => ['required', 'string', 'unique:letter_codes,code'],
+            'description' => ['nullable', 'string'],
         ]);
 
-        $code = \App\Models\LetterCode::create($validated);
+        $code = \App\Models\LetterCode::query()->create($validated);
 
         return \App\Formatters\JsonResponseFormatter::created(
             new \App\Http\Resources\V1\LetterCode\LetterCodeResource($code),
@@ -44,7 +44,7 @@ final class LetterCodeController
      */
     public function show(string $id): JsonResponse
     {
-        $code = \App\Models\LetterCode::find($id);
+        $code = \App\Models\LetterCode::query()->find($id);
 
         if (! $code) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Code tidak ditemukan.');
@@ -60,7 +60,7 @@ final class LetterCodeController
      */
     public function update(Request $request, string $id): JsonResponse
     {
-        $code = \App\Models\LetterCode::find($id);
+        $code = \App\Models\LetterCode::query()->find($id);
 
         if (! $code) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Code tidak ditemukan.');
@@ -68,7 +68,7 @@ final class LetterCodeController
 
         $validated = $request->validate([
             'code' => 'required|string|unique:letter_codes,code,'.$code->id,
-            'description' => 'nullable|string',
+            'description' => ['nullable', 'string'],
         ]);
 
         $code->update($validated);
@@ -84,7 +84,7 @@ final class LetterCodeController
      */
     public function destroy(string $id): JsonResponse
     {
-        $code = \App\Models\LetterCode::find($id);
+        $code = \App\Models\LetterCode::query()->find($id);
 
         if (! $code) {
             return \App\Formatters\JsonResponseFormatter::notFound('Letter Code tidak ditemukan.');

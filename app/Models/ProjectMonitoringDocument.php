@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class ProjectMonitoringDocument extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'project_monitoring_id',
         'title',
@@ -27,7 +29,7 @@ final class ProjectMonitoringDocument extends Model
         return $this->belongsTo(ProjectMonitoring::class, 'project_monitoring_id');
     }
 
-    public function getUrlAttribute(): string
+    protected function getUrlAttribute(): string
     {
         return \Illuminate\Support\Facades\Storage::url($this->path);
     }

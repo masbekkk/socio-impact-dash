@@ -52,10 +52,10 @@ final class ProjectBudgetDetail extends Model
     /**
      * Get the total used amount from approved/in-progress ATR items.
      */
-    public function getUsedAmountAttribute(): float
+    protected function getUsedAmountAttribute(): float
     {
         return (float) $this->reimbursementItems()
-            ->whereHas('reimbursement', function ($q) {
+            ->whereHas('reimbursement', function ($q): void {
                 $q->where('type', 'atr')
                     ->whereNotIn('status', ['rejected', 'draft']);
             })
@@ -66,7 +66,7 @@ final class ProjectBudgetDetail extends Model
     /**
      * Get remaining available amount for new ATR claims.
      */
-    public function getRemainingAmountAttribute(): float
+    protected function getRemainingAmountAttribute(): float
     {
         $base = $this->amount_pelaksanaan > 0 ? $this->amount_pelaksanaan : $this->amount;
 

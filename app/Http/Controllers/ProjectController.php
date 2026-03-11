@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\DivisionCode;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;

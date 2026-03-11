@@ -16,13 +16,13 @@ final class ImpersonationController extends Controller
     {
         $action->handle($user);
 
-        return redirect()->route('dashboard');
+        return to_route('dashboard');
     }
 
     public function stop(StopImpersonating $action): RedirectResponse
     {
         $action->handle();
 
-        return redirect()->route('users.index');
+        return to_route('users.index');
     }
 }

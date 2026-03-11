@@ -15,7 +15,7 @@ final readonly class StopImpersonating
         $originalId = Session::pull('impersonated_by');
 
         if ($originalId) {
-            $user = User::find($originalId);
+            $user = User::query()->find($originalId);
             if ($user) {
                 Auth::guard('web')->loginUsingId($user->id);
                 Session::put('password_hash_web', $user->getAuthPassword());

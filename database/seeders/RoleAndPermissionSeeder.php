@@ -48,11 +48,11 @@ final class RoleAndPermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+            Permission::query()->firstOrCreate(['name' => $permission]);
         }
 
         // Create roles and assign permissions
-        $pegawaiRole = Role::firstOrCreate(['name' => UserRole::Pegawai->value]);
+        $pegawaiRole = Role::query()->firstOrCreate(['name' => UserRole::Pegawai->value]);
         $pegawaiRole->syncPermissions([
             'create_projects',
             'view_projects',
@@ -63,7 +63,7 @@ final class RoleAndPermissionSeeder extends Seeder
 
         ]);
 
-        $headRole = Role::firstOrCreate(['name' => UserRole::Head->value]);
+        $headRole = Role::query()->firstOrCreate(['name' => UserRole::Head->value]);
         $headRole->syncPermissions([
             'create_projects',
             'view_projects',
@@ -80,7 +80,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'add_event_calendar',
         ]);
 
-        $financeRole = Role::firstOrCreate(['name' => UserRole::Finance->value]);
+        $financeRole = Role::query()->firstOrCreate(['name' => UserRole::Finance->value]);
         $financeRole->syncPermissions([
             'view_reimbursements',
             'approve_reimbursements',
@@ -96,10 +96,10 @@ final class RoleAndPermissionSeeder extends Seeder
             'create_event',
         ]);
 
-        $superadminRole = Role::firstOrCreate(['name' => UserRole::Superadmin->value]);
+        $superadminRole = Role::query()->firstOrCreate(['name' => UserRole::Superadmin->value]);
         $superadminRole->syncPermissions($permissions);
 
-        $hrRole = Role::firstOrCreate(['name' => UserRole::HR->value]);
+        $hrRole = Role::query()->firstOrCreate(['name' => UserRole::HR->value]);
         $hrRole->syncPermissions([
             'view_leaves',
             'view_all_leaves',
@@ -111,7 +111,7 @@ final class RoleAndPermissionSeeder extends Seeder
             'create_event',
         ]);
 
-        $direkturRole = Role::firstOrCreate(['name' => UserRole::Direktur->value]);
+        $direkturRole = Role::query()->firstOrCreate(['name' => UserRole::Direktur->value]);
         $direkturRole->syncPermissions([
             'view_projects',
             'view_reimbursements',

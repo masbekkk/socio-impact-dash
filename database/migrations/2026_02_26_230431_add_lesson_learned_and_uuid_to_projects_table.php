@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('projects', function (Blueprint $table) {
+        Schema::table('projects', function (Blueprint $table): void {
             $table->uuid('uuid')->nullable()->after('id');
             $table->text('lesson_learned')->nullable()->after('end_date');
         });
@@ -27,7 +27,7 @@ return new class extends Migration
         }
 
         // Make it unique and not nullable
-        Schema::table('projects', function (Blueprint $table) {
+        Schema::table('projects', function (Blueprint $table): void {
             $table->uuid('uuid')->nullable(false)->unique()->change();
         });
     }
@@ -37,7 +37,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('projects', function (Blueprint $table) {
+        Schema::table('projects', function (Blueprint $table): void {
             $table->dropColumn(['uuid', 'lesson_learned']);
         });
     }

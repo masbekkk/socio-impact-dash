@@ -14,7 +14,7 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-final class AtrSheet implements FromCollection, ShouldAutoSize, WithHeadings, WithStyles, WithTitle
+final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHeadings, WithStyles, WithTitle
 {
     /**
      * @param  Collection<int, Reimbursement>  $reimbursements
@@ -68,12 +68,12 @@ final class AtrSheet implements FromCollection, ShouldAutoSize, WithHeadings, Wi
     public function collection(): Collection
     {
         return $this->reimbursements->map(function (Reimbursement $r): array {
-            $headApproval = $r->approvals->first(fn ($a) => $a->role === ApprovalRole::Head);
-            $financeApproval = $r->approvals->first(fn ($a) => $a->role === ApprovalRole::Finance);
-            $direkturApproval = $r->approvals->first(fn ($a) => $a->role === ApprovalRole::Direktur);
+            $headApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Head);
+            $financeApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Finance);
+            $direkturApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Direktur);
 
             // Budget items summary
-            $budgetItems = $r->atrBudgetSelecteds->map(fn ($b) => ($b->budgetDetail?->item_name ?? $b->budgetDetail?->notes ?? '-') . ' (Rp ' . number_format((float) $b->amount, 0, ',', '.') . ')')
+            $budgetItems = $r->atrBudgetSelecteds->map(fn ($b): string => ($b->budgetDetail?->item_name ?? $b->budgetDetail?->notes ?? '-').' (Rp '.number_format((float) $b->amount, 0, ',', '.').')')
                 ->implode('; ');
 
             // Linked EERs

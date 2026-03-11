@@ -23,7 +23,7 @@ final readonly class CreateNotification
         ?int $createdBy = null,
         array $options = [],
     ): Notification {
-        $notification = Notification::create([
+        $notification = Notification::query()->create([
             'type' => $type,
             'title' => $title,
             'message' => $message,
@@ -53,6 +53,6 @@ final readonly class CreateNotification
      */
     public function getUserIdsByRoles(array $roleNames): array
     {
-        return User::role($roleNames)->pluck('id')->all();
+        return User::query()->role($roleNames)->pluck('id')->all();
     }
 }

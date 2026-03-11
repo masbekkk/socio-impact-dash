@@ -4,17 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreReimbursementRequest;
-use App\Http\Requests\UpdateReimbursementRequest;
+use App\Http\Resources\V1\Reimbursement\ReimbursementResource;
 use App\Models\Project;
 use App\Models\Reimbursement;
 use App\Services\ReimbursementService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-use App\Http\Resources\V1\Reimbursement\ReimbursementResource;
-
-final class ReimbursementController
+final readonly class ReimbursementController
 {
     public function __construct(
         private ReimbursementService $reimbursementService
@@ -63,7 +60,7 @@ final class ReimbursementController
         $projects = Project::with(['division', 'pic', 'head', 'budgetDetails'])
             ->where('status', 'active')
             ->get()
-            ->map(fn (Project $project) => [
+            ->map(fn (Project $project): array => [
                 'id' => $project->id,
                 'name' => $project->name,
                 'code' => $project->code,
@@ -77,7 +74,7 @@ final class ReimbursementController
                 'head_name' => $project->head?->name ?? '-',
                 'head_email' => $project->head?->email ?? '-',
                 'head_role' => $project->head?->role?->value ?? '-',
-                'budget_details' => $project->budgetDetails->map(fn (\App\Models\ProjectBudgetDetail $detail) => [
+                'budget_details' => $project->budgetDetails->map(fn (\App\Models\ProjectBudgetDetail $detail): array => [
                     'id' => $detail->id,
                     'item_name' => $detail->item_name ?? $detail->notes ?? '-',
                     'notes' => $detail->notes,
@@ -88,10 +85,10 @@ final class ReimbursementController
                 ])->values()->all(),
             ]);
 
-        $approversGrouped = \App\Models\User::role(['head', 'hr', 'finance', 'direktur'])
+        $approversGrouped = \App\Models\User::query()->role(['head', 'hr', 'finance', 'direktur'])
             ->get()
             ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
-            ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u) => [
+            ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u): array => [
                 'id' => $u->id,
                 'name' => $u->name,
                 'email' => $u->email,
@@ -111,11 +108,11 @@ final class ReimbursementController
             ],
             'projects' => $projects,
             'approvers' => $approversGrouped,
-            'expenseTypes' => array_map(fn (\App\Enums\ExpenseType $e) => [
+            'expenseTypes' => array_map(fn (\App\Enums\ExpenseType $e): array => [
                 'value' => $e->value,
                 'label' => $e->value,
             ], \App\Enums\ExpenseType::cases()),
-            'users' => \App\Models\User::select('id', 'name', 'email', 'nip')->get(),
+            'users' => \App\Models\User::query()->select('id', 'name', 'email', 'nip')->get(),
         ]);
     }
 
@@ -126,7 +123,7 @@ final class ReimbursementController
             ->where('type', 'atr')
             ->where('status', 'transferred')
             ->get()
-            ->map(fn (Reimbursement $atr) => [
+            ->map(fn (Reimbursement $atr): array => [
                 'id' => $atr->id,
                 'code' => $atr->code,
                 'amount' => (float) $atr->amount,
@@ -142,7 +139,7 @@ final class ReimbursementController
                 'approver_head_id' => $atr->approvals->where('role', \App\Enums\ApprovalRole::Head)->first()?->approver_id,
                 'approver_finance_id' => $atr->approvals->where('role', \App\Enums\ApprovalRole::Finance)->first()?->approver_id,
                 'approver_direktur_id' => $atr->approvals->where('role', 'direktur')->first()?->approver_id,
-                'items' => $atr->items->where('parent_item_id', null)->map(fn (\App\Models\ReimbursementItem $item) => [
+                'items' => $atr->items->where('parent_item_id', null)->map(fn (\App\Models\ReimbursementItem $item): array => [
                     'id' => $item->id,
                     'item_name' => $item->item_name,
                     'quantity' => $item->quantity,
@@ -151,16 +148,16 @@ final class ReimbursementController
                     'expense_type' => $item->expense_type?->value,
                     'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
                     'activity_id' => $item->project_budget_detail_id,
-                    'used_eer_amount' => (float) $item->children()->whereHas('reimbursement', function ($q) {
+                    'used_eer_amount' => (float) $item->children()->whereHas('reimbursement', function ($q): void {
                         $q->where('type', 'eer')->whereNotIn('status', ['rejected', 'draft']);
                     })->sum('amount'),
                 ])->values()->all(),
             ]);
 
-        $approversGrouped = \App\Models\User::role(['head', 'hr', 'finance', 'direktur'])
+        $approversGrouped = \App\Models\User::query()->role(['head', 'hr', 'finance', 'direktur'])
             ->get()
             ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
-            ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u) => [
+            ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u): array => [
                 'id' => $u->id,
                 'name' => $u->name,
                 'email' => $u->email,
@@ -180,11 +177,11 @@ final class ReimbursementController
             ],
             'atrs' => $atrs,
             'approvers' => $approversGrouped,
-            'expenseTypes' => array_map(fn (\App\Enums\ExpenseType $e) => [
+            'expenseTypes' => array_map(fn (\App\Enums\ExpenseType $e): array => [
                 'value' => $e->value,
                 'label' => $e->value,
             ], \App\Enums\ExpenseType::cases()),
-            'users' => \App\Models\User::select('id', 'name', 'email', 'nip')->get(),
+            'users' => \App\Models\User::query()->select('id', 'name', 'email', 'nip')->get(),
         ]);
     }
 
@@ -193,7 +190,7 @@ final class ReimbursementController
         $projects = Project::with(['division', 'pic', 'head'])
             ->where('status', 'active')
             ->get()
-            ->map(fn (Project $project) => [
+            ->map(fn (Project $project): array => [
                 'id' => $project->id,
                 'name' => $project->name,
                 'code' => $project->code,
@@ -223,11 +220,11 @@ final class ReimbursementController
             ],
             'projects' => $projects,
             'approvers' => [
-                'head' => \App\Models\User::role('head')->get(['id', 'name', 'email']),
-                'hr' => \App\Models\User::role('hr')->get(['id', 'name', 'email']),
-                'direktur' => \App\Models\User::role('direktur')->get(['id', 'name', 'email']),
+                'head' => \App\Models\User::query()->role('head')->get(['id', 'name', 'email']),
+                'hr' => \App\Models\User::query()->role('hr')->get(['id', 'name', 'email']),
+                'direktur' => \App\Models\User::query()->role('direktur')->get(['id', 'name', 'email']),
             ],
-            'users' => \App\Models\User::select('id', 'name', 'email', 'nip')->get(),
+            'users' => \App\Models\User::query()->select('id', 'name', 'email', 'nip')->get(),
         ]);
     }
 
@@ -247,7 +244,7 @@ final class ReimbursementController
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreReimbursementRequest $request): void
+    public function store(): void
     {
         //
     }
@@ -257,10 +254,10 @@ final class ReimbursementController
      */
     public function show(int $id): \Inertia\Response
     {
-        $projects = Project::select('id', 'name', 'code', 'operational_budget', 'allowance_budget', 'division_id', 'pic_id')
+        $projects = Project::query()->select('id', 'name', 'code', 'operational_budget', 'allowance_budget', 'division_id', 'pic_id')
             ->with(['division:id,name', 'pic:id,name'])
             ->get()
-            ->map(fn ($project) => [
+            ->map(fn ($project): array => [
                 'id' => $project->id,
                 'name' => $project->name,
                 'code' => $project->code,
@@ -270,23 +267,23 @@ final class ReimbursementController
                 'pic_name' => $project->pic?->name ?? 'Belum ada PIC',
             ]);
 
-        $users = \App\Models\User::select('id', 'name')->get();
+        $users = \App\Models\User::query()->select('id', 'name')->get();
 
         return Inertia::render('Reimbursements/Show', [
             'id' => $id,
             'projects' => $projects,
             'users' => $users,
-            'expenseTypes' => collect(\App\Enums\ExpenseType::cases())->map(fn ($type) => [
+            'expenseTypes' => collect(\App\Enums\ExpenseType::cases())->map(fn ($type): array => [
                 'value' => $type->value,
                 'label' => $type->value,
-            ])->toArray(),
+            ])->all(),
         ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Reimbursement $reimbursement): void
+    public function edit(): void
     {
         //
     }
@@ -294,7 +291,7 @@ final class ReimbursementController
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateReimbursementRequest $request, Reimbursement $reimbursement): void
+    public function update(): void
     {
         //
     }
@@ -302,18 +299,18 @@ final class ReimbursementController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Reimbursement $reimbursement): void
+    public function destroy(): void
     {
         //
     }
 
-    public function approve(Reimbursement $reimbursement): \Illuminate\Http\RedirectResponse
+    public function approve(): \Illuminate\Http\RedirectResponse
     {
         // Logic to approve
         return back();
     }
 
-    public function reject(Reimbursement $reimbursement): \Illuminate\Http\RedirectResponse
+    public function reject(): \Illuminate\Http\RedirectResponse
     {
         // Logic to reject
         return back();

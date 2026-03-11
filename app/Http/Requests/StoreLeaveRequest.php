@@ -25,7 +25,7 @@ final class StoreLeaveRequest extends FormRequest
             'approver_head_id' => [
                 'nullable',
                 Rule::requiredIf(fn () => request()->user()?->hasRole('pegawai')),
-                'exists:users,id'
+                'exists:users,id',
             ],
             'attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ];

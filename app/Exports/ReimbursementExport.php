@@ -9,10 +9,9 @@ use App\Exports\Sheets\EerSheet;
 use App\Models\Reimbursement;
 use App\Models\User;
 use App\Services\ReimbursementService;
-use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-final class ReimbursementExport implements WithMultipleSheets
+final readonly class ReimbursementExport implements WithMultipleSheets
 {
     /**
      * @param  array<string, mixed>  $filters
@@ -40,7 +39,7 @@ final class ReimbursementExport implements WithMultipleSheets
         $service = new ReimbursementService();
         $service->applyFilters($query, $this->user, $this->filters);
 
-        $all = $query->orderBy('created_at', 'desc')->get();
+        $all = $query->latest()->get();
 
         $atrs = $all->where('type', \App\Enums\ReimbursementType::ATR)->values();
         $eers = $all->where('type', \App\Enums\ReimbursementType::EER)->values();

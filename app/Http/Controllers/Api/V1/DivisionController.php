@@ -21,9 +21,9 @@ final class DivisionController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->get('search');
-            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('divisionCode', function (\Illuminate\Database\Eloquent\Builder $nq) use ($search) {
+                    ->orWhereHas('divisionCode', function (\Illuminate\Database\Eloquent\Builder $nq) use ($search): void {
                         $nq->where('code', 'like', "%{$search}%")
                             ->orWhere('name', 'like', "%{$search}%");
                     });
@@ -42,7 +42,7 @@ final class DivisionController extends Controller
     {
         $validated = $request->validated();
 
-        $divisionCode = DivisionCode::create([
+        $divisionCode = DivisionCode::query()->create([
             'code' => $validated['code'],
             'name' => $validated['name'],
         ]);
@@ -56,11 +56,11 @@ final class DivisionController extends Controller
                 'id' => $divisionCode->id,
                 'code' => $divisionCode->code,
                 'name' => $divisionCode->name,
-                'names' => $divisionCode->divisions->map(fn($d) => [
+                'names' => $divisionCode->divisions->map(fn ($d): array => [
                     'id' => $d->id,
                     'name' => $d->name,
                     'description' => $d->description,
-                ])
+                ]),
             ],
             'Division created successfully',
             201
@@ -76,11 +76,11 @@ final class DivisionController extends Controller
                 'id' => $divisionCode->id,
                 'code' => $divisionCode->code,
                 'name' => $divisionCode->name,
-                'names' => $divisionCode->divisions->map(fn($d) => [
+                'names' => $divisionCode->divisions->map(fn ($d): array => [
                     'id' => $d->id,
                     'name' => $d->name,
                     'description' => $d->description,
-                ])
+                ]),
             ],
             'Division retrieved successfully'
         );
@@ -88,7 +88,7 @@ final class DivisionController extends Controller
 
     public function update(UpdateDivisionRequest $request, string $id): JsonResponse
     {
-        $divisionCode = DivisionCode::findOrFail($id);
+        $divisionCode = DivisionCode::query()->findOrFail($id);
         $validated = $request->validated();
 
         $divisionCode->update([
@@ -107,11 +107,11 @@ final class DivisionController extends Controller
                 'id' => $divisionCode->id,
                 'code' => $divisionCode->code,
                 'name' => $divisionCode->name,
-                'names' => $divisionCode->divisions->map(fn($d) => [
+                'names' => $divisionCode->divisions->map(fn ($d): array => [
                     'id' => $d->id,
                     'name' => $d->name,
                     'description' => $d->description,
-                ])
+                ]),
             ],
             'Division updated successfully'
         );

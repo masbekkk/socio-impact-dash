@@ -32,7 +32,7 @@ final class NotifyHrContractExpiring extends Command
     {
         $targetDate = now()->addMonth()->toDateString();
 
-        $expiringUsers = User::whereDate('contract_end', $targetDate)->get();
+        $expiringUsers = User::query()->whereDate('contract_end', $targetDate)->get();
 
         if ($expiringUsers->isEmpty()) {
             $this->info('No contracts expiring exactly 1 month from today.');
@@ -40,7 +40,7 @@ final class NotifyHrContractExpiring extends Command
             return;
         }
 
-        $hrUsers = User::role(UserRole::HR->value)->get();
+        $hrUsers = User::query()->role(UserRole::HR->value)->get();
 
         if ($hrUsers->isEmpty()) {
             $this->warn('Contracts are expiring, but no users with the HR role were found.');

@@ -12,7 +12,7 @@ final readonly class DeleteCalendarEvent
     public function handle(int $id): bool
     {
         /** @var ProjectEvent $event */
-        $event = ProjectEvent::findOrFail($id);
+        $event = ProjectEvent::query()->findOrFail($id);
 
         Gate::authorize('delete', $event);
 

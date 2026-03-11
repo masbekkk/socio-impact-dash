@@ -14,7 +14,7 @@ final class ApproveProject
     {
         return DB::transaction(function () use ($project, $userId, $notes) {
             // Create approval record
-            ProjectApproval::create([
+            ProjectApproval::query()->create([
                 'project_id' => $project->id,
                 'approved_by' => $userId,
                 'approval_type' => 'approval',

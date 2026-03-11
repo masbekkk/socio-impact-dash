@@ -17,9 +17,7 @@ final readonly class ApproveReimbursement
     {
         return DB::transaction(function () use ($reimbursement, $notes) {
             $user = Auth::user();
-            if (! $user) {
-                throw new Exception('User not authenticated');
-            }
+            throw_unless($user, Exception::class, 'User not authenticated');
             /** @var \App\Models\User $user */
             $role = $user->getRoleNames()->first();
 

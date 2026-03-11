@@ -10,7 +10,6 @@ use App\Models\DivisionCode;
 use App\Models\LetterCode;
 use App\Models\LetterDivision;
 use App\Models\LetterRequest;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -28,7 +27,7 @@ final class LetterRequestController extends Controller
                 // Head can see:
                 // 1. Their own letter requests
                 // 2. Their team members' letter requests
-                $query->where(function ($q) use ($user) {
+                $query->where(function ($q) use ($user): void {
                     $q->where('requester_id', $user->id)
                         ->orWhereHas('requester', fn ($uq) => $uq->where('head_id', $user->id));
                 });
@@ -39,10 +38,10 @@ final class LetterRequestController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
                 $q->where('subject', 'like', "%{$search}%")
                     ->orWhere('recipient', 'like', "%{$search}%")
-                    ->orWhereHas('project', function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
+                    ->orWhereHas('project', function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
                         $q->where('name', 'like', "%{$search}%")
                             ->orWhere('code', 'like', "%{$search}%");
                     });
@@ -74,24 +73,24 @@ final class LetterRequestController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'project_id' => 'required|exists:projects,id',
-            'letter_date' => 'required|date',
-            'recipient' => 'required|string|max:255',
-            'subject' => 'required|string|max:255',
+            'project_id' => ['required', 'exists:projects,id'],
+            'letter_date' => ['required', 'date'],
+            'recipient' => ['required', 'string', 'max:255'],
+            'subject' => ['required', 'string', 'max:255'],
             // 'pic_id' => 'required|exists:users,id',
-            'division_id' => 'required|exists:division_codes,id',
-            'letter_code_id' => 'required|exists:letter_codes,id',
-            'letter_division_id' => 'required|exists:letter_divisions,id',
-            'keterangan' => 'nullable|string',
+            'division_id' => ['required', 'exists:division_codes,id'],
+            'letter_code_id' => ['required', 'exists:letter_codes,id'],
+            'letter_division_id' => ['required', 'exists:letter_divisions,id'],
+            'keterangan' => ['nullable', 'string'],
         ]);
 
-        $letterDate = Carbon::parse($validated['letter_date']);
+        $letterDate = \Illuminate\Support\Facades\Date::parse($validated['letter_date']);
         $year = $letterDate->year;
         $month = $letterDate->month;
 
-        $kode = LetterCode::find($validated['letter_code_id'])->code;
-        $divisi = LetterDivision::find($validated['letter_division_id'])->code;
-        $divisionCode = DivisionCode::find($validated['division_id']);
+        $kode = LetterCode::query()->find($validated['letter_code_id'])->code;
+        $divisi = LetterDivision::query()->find($validated['letter_division_id'])->code;
+        $divisionCode = DivisionCode::query()->find($validated['division_id']);
         $perusahaan = $divisionCode->code;
 
         $startNumbers = [
@@ -102,9 +101,9 @@ final class LetterRequestController extends Controller
             'EBLI' => 8,
         ];
 
-        $latestRequest = LetterRequest::whereYear('letter_date', $year)
+        $latestRequest = LetterRequest::query()->whereYear('letter_date', $year)
             ->whereNotNull('letter_number')
-            ->whereHas('division', function ($q) use ($perusahaan) {
+            ->whereHas('division', function ($q) use ($perusahaan): void {
                 $q->where('code', $perusahaan);
             })
             ->orderByRaw('CAST(SUBSTRING_INDEX(letter_number, "/", 1) AS UNSIGNED) DESC')
@@ -112,8 +111,8 @@ final class LetterRequestController extends Controller
 
         $nextNo = $startNumbers[$perusahaan] ?? 1;
         if ($latestRequest) {
-            $parts = explode('/', $latestRequest->letter_number);
-            if (count($parts) > 0 && is_numeric($parts[0])) {
+            $parts = explode('/', (string) $latestRequest->letter_number);
+            if (is_numeric($parts[0])) {
                 $currentSeq = (int) $parts[0];
                 $nextNo = max($nextNo, $currentSeq + 1);
             }
@@ -122,7 +121,7 @@ final class LetterRequestController extends Controller
         $formattedNo = mb_str_pad((string) $nextNo, 3, '0', STR_PAD_LEFT);
         $letterNumber = "{$formattedNo}/{$kode}.{$divisi}/{$perusahaan}/{$month}-{$year}";
 
-        $letterRequest = LetterRequest::create([
+        $letterRequest = LetterRequest::query()->create([
             ...$validated,
             'requester_id' => $request->user()->id,
             'pic_id' => $request->user()->id,
@@ -138,7 +137,7 @@ final class LetterRequestController extends Controller
 
     public function update(Request $request, string $id): JsonResponse
     {
-        $letterRequest = LetterRequest::find($id);
+        $letterRequest = LetterRequest::query()->find($id);
 
         if (! $letterRequest) {
             return JsonResponseFormatter::notFound('Letter Request tidak ditemukan.');
@@ -151,15 +150,15 @@ final class LetterRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'project_id' => 'required|exists:projects,id',
-            'letter_date' => 'required|date',
-            'recipient' => 'required|string|max:255',
-            'subject' => 'required|string|max:255',
+            'project_id' => ['required', 'exists:projects,id'],
+            'letter_date' => ['required', 'date'],
+            'recipient' => ['required', 'string', 'max:255'],
+            'subject' => ['required', 'string', 'max:255'],
             // 'pic_id' => 'required|exists:users,id',
-            'division_id' => 'required|exists:division_codes,id',
-            'letter_code_id' => 'required|exists:letter_codes,id',
-            'letter_division_id' => 'required|exists:letter_divisions,id',
-            'keterangan' => 'nullable|string',
+            'division_id' => ['required', 'exists:division_codes,id'],
+            'letter_code_id' => ['required', 'exists:letter_codes,id'],
+            'letter_division_id' => ['required', 'exists:letter_divisions,id'],
+            'keterangan' => ['nullable', 'string'],
         ]);
 
         // If letter date, code, or division changed, technically the letter number should change too.
@@ -167,8 +166,8 @@ final class LetterRequestController extends Controller
         // For now, we will regenerate it if those key fields changed.
         $needsNewNumber = false;
 
-        $oldDate = Carbon::parse($letterRequest->letter_date);
-        $newDate = Carbon::parse($validated['letter_date']);
+        $oldDate = \Illuminate\Support\Facades\Date::parse($letterRequest->letter_date);
+        $newDate = \Illuminate\Support\Facades\Date::parse($validated['letter_date']);
 
         if ($oldDate->year !== $newDate->year ||
             $oldDate->month !== $newDate->month ||
@@ -181,9 +180,9 @@ final class LetterRequestController extends Controller
         if ($needsNewNumber) {
             $year = $newDate->year;
             $month = $newDate->month;
-            $kode = LetterCode::find($validated['letter_code_id'])->code;
-            $divisi = LetterDivision::find($validated['letter_division_id'])->code;
-            $divisionCode = DivisionCode::find($validated['division_id']);
+            $kode = LetterCode::query()->find($validated['letter_code_id'])->code;
+            $divisi = LetterDivision::query()->find($validated['letter_division_id'])->code;
+            $divisionCode = DivisionCode::query()->find($validated['division_id']);
             $perusahaan = $divisionCode->code;
 
             $startNumbers = [
@@ -197,19 +196,19 @@ final class LetterRequestController extends Controller
             // If company didn't change and year didn't change, we can potentially keep the sequence number.
             // But if it did, or if we want to be safe and always get the latest sequence for that company/year:
 
-            $oldDivisionCode = DivisionCode::find($letterRequest->division_id);
+            $oldDivisionCode = DivisionCode::query()->find($letterRequest->division_id);
             $oldPerusahaan = $oldDivisionCode->code;
 
             if ($oldPerusahaan === $perusahaan && $oldDate->year === $newDate->year) {
                 // Keep same sequence number if same company and year
-                $currentParts = explode('/', $letterRequest->letter_number);
+                $currentParts = explode('/', (string) $letterRequest->letter_number);
                 $seqNo = (count($currentParts) > 0 && is_numeric($currentParts[0])) ? $currentParts[0] : '001';
             } else {
                 // Get next number for the new company/year
-                $latestRequest = LetterRequest::whereYear('letter_date', $year)
+                $latestRequest = LetterRequest::query()->whereYear('letter_date', $year)
                     ->whereNotNull('letter_number')
                     ->where('id', '!=', $letterRequest->id) // Don't count itself
-                    ->whereHas('division', function ($q) use ($perusahaan) {
+                    ->whereHas('division', function ($q) use ($perusahaan): void {
                         $q->where('code', $perusahaan);
                     })
                     ->orderByRaw('CAST(SUBSTRING_INDEX(letter_number, "/", 1) AS UNSIGNED) DESC')
@@ -217,8 +216,8 @@ final class LetterRequestController extends Controller
 
                 $nextNo = $startNumbers[$perusahaan] ?? 1;
                 if ($latestRequest) {
-                    $parts = explode('/', $latestRequest->letter_number);
-                    if (count($parts) > 0 && is_numeric($parts[0])) {
+                    $parts = explode('/', (string) $latestRequest->letter_number);
+                    if (is_numeric($parts[0])) {
                         $currentSeq = (int) $parts[0];
                         $nextNo = max($nextNo, $currentSeq + 1);
                     }
@@ -240,7 +239,7 @@ final class LetterRequestController extends Controller
 
     public function destroy(Request $request, string $id): JsonResponse
     {
-        $letterRequest = LetterRequest::find($id);
+        $letterRequest = LetterRequest::query()->find($id);
 
         if (! $letterRequest) {
             return JsonResponseFormatter::notFound('Letter Request tidak ditemukan.');
@@ -264,7 +263,7 @@ final class LetterRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'letter_number' => 'required|string|max:255',
+            'letter_number' => ['required', 'string', 'max:255'],
         ]);
 
         $letterRequest->update([

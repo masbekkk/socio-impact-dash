@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('division_codes', function (Blueprint $table) {
+        Schema::table('division_codes', function (Blueprint $table): void {
             $table->string('name')->after('code');
         });
     }

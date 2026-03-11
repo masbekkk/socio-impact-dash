@@ -19,11 +19,11 @@ final class ProjectMonitoringResource extends JsonResource
             'id' => $this->id,
             'report_date' => $this->report_date,
             'notes' => $this->notes,
-            'creator' => $this->whenLoaded('creator', fn () => [
+            'creator' => $this->whenLoaded('creator', fn (): array => [
                 'id' => $this->creator->id,
                 'name' => $this->creator->name,
             ]),
-            'documents' => $this->whenLoaded('documents', fn () => $this->documents->map(fn ($doc) => [
+            'documents' => $this->whenLoaded('documents', fn () => $this->documents->map(fn ($doc): array => [
                 'id' => $doc->id,
                 'title' => $doc->title,
                 'original_name' => $doc->original_name,

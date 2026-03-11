@@ -18,8 +18,8 @@ final class CalendarController
         $user = auth()->user();
         $events = $getCalendarEvents->handle($user);
 
-        $isExecutive = $user->hasRole([\App\Enums\UserRole::Superadmin->value, \App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::HR->value]);
-        $isHead = $user->hasRole(\App\Enums\UserRole::Head->value);
+        $user->hasRole([\App\Enums\UserRole::Superadmin->value, \App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::HR->value]);
+        $user->hasRole(\App\Enums\UserRole::Head->value);
 
         return Inertia::render('Calendar/Index', [
             'events' => $events,

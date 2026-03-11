@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\V1\ReimbursementController;
 use App\Http\Controllers\CalendarController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum', 'can:view-admin'])->prefix('rbac')->group(function () {
+Route::middleware(['auth:sanctum', 'can:view-admin'])->prefix('rbac')->group(function (): void {
     // Roles
     Route::get('roles', [RoleController::class, 'index']);
     Route::post('roles', [RoleController::class, 'store']);
@@ -24,7 +24,7 @@ Route::middleware(['auth:sanctum', 'can:view-admin'])->prefix('rbac')->group(fun
     Route::delete('permissions/{permission}', [PermissionController::class, 'destroy']);
 });
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
+Route::middleware(['auth:sanctum'])->prefix('v1')->group(function (): void {
     Route::post('projects/{project}/deal', [App\Http\Controllers\Api\V1\ProjectController::class, 'deal']);
     Route::post('projects/{project}/approve', [App\Http\Controllers\Api\V1\ProjectApprovalController::class, 'approve']);
     Route::post('projects/{project}/reject', [App\Http\Controllers\Api\V1\ProjectApprovalController::class, 'reject']);
@@ -34,7 +34,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::post('projects/{project}/termins/{termin}', [App\Http\Controllers\Api\V1\ProjectTerminPaymentController::class, 'update']);
     Route::apiResource('projects', App\Http\Controllers\Api\V1\ProjectController::class)->names('api.projects');
     Route::apiResource('reimbursements', ReimbursementController::class)->only(['index', 'store', 'destroy'])->names('api.reimbursements');
-    Route::prefix('reimbursements')->group(function () {
+    Route::prefix('reimbursements')->group(function (): void {
         Route::get('/export-excel', [ReimbursementController::class, 'exportExcel'])->name('api.reimbursements.exportExcel');
         Route::get('/{reimbursement}', [ReimbursementController::class, 'show'])->name('api.reimbursements.show');
         Route::post('/{reimbursement}/status', [ReimbursementController::class, 'updateStatus'])->name('api.reimbursements.status');
@@ -67,7 +67,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::delete('calendar/{id}', [CalendarController::class, 'destroy'])->name('api.v1.calendar.destroy');
 
     // Notifications
-    Route::prefix('notifications')->group(function () {
+    Route::prefix('notifications')->group(function (): void {
         Route::get('/', [App\Http\Controllers\Api\V1\NotificationController::class, 'index'])->name('api.v1.notifications.index');
         Route::get('/unread-count', [App\Http\Controllers\Api\V1\NotificationController::class, 'unreadCount'])->name('api.v1.notifications.unread-count');
         Route::post('/{id}/read', [App\Http\Controllers\Api\V1\NotificationController::class, 'markAsRead'])->name('api.v1.notifications.read');

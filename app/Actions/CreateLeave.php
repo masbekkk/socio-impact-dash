@@ -25,7 +25,7 @@ final readonly class CreateLeave
         return DB::transaction(function () use ($data, $userId): Leave {
             if ($data['type'] === LeaveType::Annual->value || $data['type'] === LeaveType::Annual) {
                 $requestedDays = $this->leaveService->calculateTotalDays($data['start_date'], $data['end_date']);
-                $year = (int) date('Y', strtotime($data['start_date']));
+                $year = (int) date('Y', strtotime((string) $data['start_date']));
                 $usedDays = $this->leaveService->getAnnualLeaveDaysUsed($userId, $year);
 
                 if (($usedDays + $requestedDays) > 12) {
@@ -35,7 +35,7 @@ final readonly class CreateLeave
                 }
             }
 
-            $leave = Leave::create([
+            $leave = Leave::query()->create([
                 'code' => $this->generateUniqueCode(),
                 'user_id' => $userId,
                 'project_id' => $data['project_id'] ?? null,
@@ -62,7 +62,7 @@ final readonly class CreateLeave
         $year = date('Y');
         $prefix = "LV-{$year}-";
 
-        $lastLeave = Leave::where('code', 'like', "{$prefix}%")
+        $lastLeave = Leave::query()->where('code', 'like', "{$prefix}%")
             ->lockForUpdate()
             ->orderBy('id', 'desc')
             ->first();
@@ -79,7 +79,7 @@ final readonly class CreateLeave
 
     private function storeAttachment(?UploadedFile $file, int $userId): ?string
     {
-        if ($file === null) {
+        if (! $file instanceof UploadedFile) {
             return null;
         }
 
@@ -88,15 +88,15 @@ final readonly class CreateLeave
 
     private function assignApprovers(Leave $leave, array $data, int $userId): void
     {
-        $user = \App\Models\User::find($userId);
+        $user = \App\Models\User::query()->find($userId);
         if (! $user) {
             return;
         }
 
         $roles = [
             'head' => null,
-            'hr' => \App\Models\User::where('email', 'hr@socio-impact.test')->first()?->id,
-            'direktur' => \App\Models\User::where('email', 'direktur@socio-impact.test')->first()?->id,
+            'hr' => \App\Models\User::query()->where('email', 'hr@socio-impact.test')->first()?->id,
+            'direktur' => \App\Models\User::query()->where('email', 'direktur@socio-impact.test')->first()?->id,
         ];
 
         if ($user->hasRole('pegawai')) {
