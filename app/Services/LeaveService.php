@@ -15,9 +15,18 @@ final class LeaveService
         $query = Leave::with(['user', 'project', 'replacementPic', 'approvals.approver']);
 
         if (! $user->hasAnyPermission(['view_all_leaves'])) {
-            if ($user->hasRole(\App\Enums\UserRole::Head->value)) {
-                $teamMemberIds = $user->teamMembers()->pluck('id')->push($user->id)->toArray();
-                $query->whereIn('user_id', $teamMemberIds);
+            if ($user->hasAnyRole([\App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::Superadmin->value])) {
+                // These roles can view all leaves
+            } elseif ($user->hasRole(\App\Enums\UserRole::Head->value)) {
+                // Head can see:
+                // 1. Their own leaves
+                // 2. Their team members' leaves
+                // 3. Leaves where they are an approver
+                $query->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                        ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $user->id))
+                        ->orWhereHas('approvals', fn ($aq) => $aq->where('approver_id', $user->id));
+                });
             } else {
                 $query->where('user_id', $user->id);
             }

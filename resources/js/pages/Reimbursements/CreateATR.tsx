@@ -355,7 +355,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
                 <div className="space-y-2">
                   <Label htmlFor="project_id">Nama Project</Label>
                   <SearchableSelect
-                    options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.initial_project}` }))}
+                    options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.initial_project} - ${p.name}` }))}
                     value={formData.project_id}
                     onValueChange={handleProjectChange}
                     placeholder="Pilih proyek terkait"

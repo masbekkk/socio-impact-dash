@@ -14,32 +14,60 @@ final class ReimbursementService
     {
         $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver']);
 
+        $this->applyFilters($query, $user, $filters);
+
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_dir'] ?? 'desc';
+        $allowedSorts = ['created_at', 'amount', 'code', 'status'];
+
+        if (in_array($sortBy, $allowedSorts, true)) {
+            $query->orderBy($sortBy, $sortDir === 'asc' ? 'asc' : 'desc');
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    public function applyFilters(\Illuminate\Database\Eloquent\Builder $query, User $user, array $filters): void
+    {
         // Apply Role-based filtering
         if ($user->hasRole('superadmin') || $user->hasRole('finance') || $user->hasRole('direktur')) {
-            // Can view all, no extra where needed
+            // Can view all
         } elseif ($user->hasRole('hr')) {
-            // HR can only see allowances
-            $query->where('type', \App\Enums\ReimbursementType::ALLOWANCE);
+            // HR can see allowances OR their own/team/approvals
+            $query->where(function ($q) use ($user) {
+                $q->where('type', \App\Enums\ReimbursementType::ALLOWANCE)
+                    ->orWhere('user_id', $user->id)
+                    ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $user->id))
+                    ->orWhereHas('approvals', fn ($aq) => $aq->where('approver_id', $user->id));
+            });
         } elseif ($user->hasRole('head')) {
-            // Head can see:
-            // 1. Their own reimbursements
-            // 2. Their team members' reimbursements
-            // 3. Reimbursements where they are an approver
             $query->where(function ($q) use ($user) {
                 $q->where('user_id', $user->id)
                     ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $user->id))
                     ->orWhereHas('approvals', fn ($aq) => $aq->where('approver_id', $user->id));
             });
-        } elseif ($user->hasRole('pegawai')) {
-            // Pegawai can only see their own ATRs
-            $query->where('user_id', $user->id);
         } else {
-            // Default fallback for any other roles (only own data)
             $query->where('user_id', $user->id);
         }
 
         if (! empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+            $status = $filters['status'];
+            if (is_string($status) && str_contains($status, ',')) {
+                $status = explode(',', $status);
+            }
+
+            if (is_array($status)) {
+                $query->whereIn('status', $status);
+            } else {
+                // Special handling for 'revision' to include both 'revised' and 'revision'
+                if ($status === 'revision' || $status === 'revised') {
+                    $query->whereIn('status', ['revision', 'revised']);
+                } else {
+                    $query->where('status', $status);
+                }
+            }
         }
 
         if (! empty($filters['type'])) {
@@ -49,7 +77,7 @@ final class ReimbursementService
         if (! empty($filters['project_id'])) {
             $query->where('project_id', $filters['project_id']);
         }
-        
+
         if (! empty($filters['division_id']) && $filters['division_id'] !== 'all') {
             $divisionIds = is_array($filters['division_id']) ? $filters['division_id'] : explode(',', (string) $filters['division_id']);
             $query->whereHas('project', fn ($q) => $q->whereIn('division_id', $divisionIds));
@@ -71,18 +99,6 @@ final class ReimbursementService
                     ->orWhereHas('project', fn (\Illuminate\Database\Eloquent\Builder $p) => $p->where('name', 'like', "%{$search}%"));
             });
         }
-
-        $sortBy = $filters['sort_by'] ?? 'created_at';
-        $sortDir = $filters['sort_dir'] ?? 'desc';
-        $allowedSorts = ['created_at', 'amount', 'code', 'status'];
-
-        if (in_array($sortBy, $allowedSorts, true)) {
-            $query->orderBy($sortBy, $sortDir === 'asc' ? 'asc' : 'desc');
-        } else {
-            $query->orderBy('created_at', 'desc');
-        }
-
-        return $query->paginate($perPage);
     }
 
     public function getReimbursementDetail(int $id): ?Reimbursement

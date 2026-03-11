@@ -1007,7 +1007,7 @@ export default function Show() {
               >
                 <AlertCircle className="mr-2 h-4 w-4" /> Revisi
               </Button>
-              {userRole === 'finance' && data.type === 'atr' && data.status !== 'requested' ? (
+              {hasRole('finance') && data.type === 'atr' && data.status !== 'requested' ? (
                 <Button
                   className="bg-indigo-600 hover:bg-indigo-700 text-white"
                   onClick={handleRequestFund}
@@ -1059,7 +1059,7 @@ export default function Show() {
                 )}
 
                 {/* Budget Usage Breakdown */}
-                {data.project && (userRole === 'finance' || userRole === 'hr' || userRole === 'superadmin') && (
+                {data.project && hasRole(['finance', 'hr', 'superadmin']) && (
                   <div className="mt-4 space-y-4">
                     {/* Operational Budget Section */}
                     <div className="bg-muted/40 p-4 rounded-lg border border-muted/60">
@@ -2340,7 +2340,7 @@ export default function Show() {
               Apakah Anda yakin ingin menyetujui pengajuan <strong>{data.type.toUpperCase()}</strong> dengan kode <strong className="font-mono">{data.code}</strong>?
             </DialogDescription>
           </DialogHeader>
-          {userRole === 'hr' && data.type === 'allowance' && (
+          {hasRole('hr') && data.type === 'allowance' && (
             <div className="space-y-3 py-4 border-y my-2">
               <div className="space-y-1">
                 <Label className="text-xs font-bold text-slate-500 uppercase">Input Nominal Allowance <span className="text-red-500">*</span></Label>

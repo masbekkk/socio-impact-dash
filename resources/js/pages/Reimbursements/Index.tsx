@@ -209,27 +209,21 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Pilih Jenis Pengajuan</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {(isSuperadmin || isFinance || isDirektur || isHead || isPegawai) && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/reimbursements/create/atr" className="cursor-pointer">
-                      <FileText className="mr-2 h-4 w-4" /> Pengajuan ATR
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                {(isSuperadmin || isFinance || isDirektur || isHead) && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/reimbursements/create/eer" className="cursor-pointer">
-                      <Receipt className="mr-2 h-4 w-4" /> Pengajuan EER
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                {(isSuperadmin || isFinance || isDirektur || isHead || isHR) && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/reimbursements/create/allowance" className="cursor-pointer">
-                      <Wallet className="mr-2 h-4 w-4" /> Pengajuan Allowance
-                    </Link>
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem asChild>
+                  <Link href="/reimbursements/create/atr" className="cursor-pointer">
+                    <FileText className="mr-2 h-4 w-4" /> Pengajuan ATR
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/reimbursements/create/eer" className="cursor-pointer">
+                    <Receipt className="mr-2 h-4 w-4" /> Pengajuan EER
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/reimbursements/create/allowance" className="cursor-pointer">
+                    <Wallet className="mr-2 h-4 w-4" /> Pengajuan Allowance
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

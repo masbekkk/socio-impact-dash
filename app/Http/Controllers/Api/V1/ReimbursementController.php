@@ -236,8 +236,8 @@ final class ReimbursementController extends Controller
                 return JsonResponseFormatter::error('Hanya pembuat pengajuan yang dapat mengirim ulang revisi.', 403);
             }
 
-            if ($reimbursement->status->value !== 'revision') {
-                return JsonResponseFormatter::error('Pengajuan tidak dalam status revisi.', 422);
+            if ($reimbursement->status->value !== 'revision' && $reimbursement->status->value !== 'draft') {
+                return JsonResponseFormatter::error('Pengajuan tidak dalam status revisi atau draft.', 422);
             }
 
             $validated = $request->validate([
@@ -328,19 +328,26 @@ final class ReimbursementController extends Controller
                 $reimbursement->update($updateData);
 
                 $reimbursement->update([
-                    'status' => \App\Enums\ReimbursementStatus::Revised,
+                    'status' => \App\Enums\ReimbursementStatus::Submitted,
                 ]);
 
-                $reimbursement->approvals()->update([
-                    'status' => 'pending',
-                    'approved_at' => null,
-                ]);
+                // Clear any existing approvals (relevant if it was a revision)
+                $reimbursement->approvals()->delete();
+
+                // Call assignApprovers to handle the workflow
+                $action = new \App\Actions\CreateReimbursement(app(\App\Services\FileUploadService::class));
+                $reflector = new \ReflectionClass($action);
+                $method = $reflector->getMethod('assignApprovers');
+                $method->setAccessible(true);
+                $method->invoke($action, $reimbursement, $request->all());
 
                 // Add a system comment notifying approvers
-                $note = $validated['revision_note'] ?? 'Pengajuan telah direvisi dan diajukan kembali.';
+                $isDraft = $reimbursement->getOriginal('status') === \App\Enums\ReimbursementStatus::Draft;
+                $prefix = $isDraft ? '[Draft Diajukan]' : '[Revisi Diajukan Ulang]';
+                $note = $validated['revision_note'] ?? ($isDraft ? 'Draft pengajuan telah diajukan' : 'Pengajuan telah direvisi dan diajukan kembali.');
                 $reimbursement->comments()->create([
                     'user_id' => $user->id,
-                    'comment' => "[Revisi Diajukan Ulang] {$note}",
+                    'comment' => "{$prefix} {$note}",
                 ]);
             });
 

@@ -740,7 +740,7 @@ export default function ProjectTabs({
                                             onValueChange={(values) => {
                                                 const val = values.floatValue || 0;
                                                 setMgmtBudget(val);
-                                                if (userRole === 'finance' || userRole === 'superadmin') {
+                                                if (hasRole(['finance', 'superadmin'])) {
                                                     const allowance = project.budget_total - opsBudget - val;
                                                     setAllowanceBudget(allowance > 0 ? allowance : 0);
                                                 }
@@ -763,7 +763,7 @@ export default function ProjectTabs({
                                             onValueChange={(values) => {
                                                 const val = values.floatValue || 0;
                                                 setAllowanceBudget(val);
-                                                if (userRole === 'finance' || userRole === 'superadmin') {
+                                                if (hasRole(['finance', 'superadmin'])) {
                                                     const ops = project.budget_total - val - mgmtBudget;
                                                     setOpsBudget(ops > 0 ? ops : 0);
                                                 }

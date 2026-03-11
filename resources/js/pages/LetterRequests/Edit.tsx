@@ -19,6 +19,7 @@ import DatePicker from '@/components/DatePicker';
 import { format } from "date-fns";
 import axios from 'axios';
 import { SharedData } from '@/types';
+import { usePermission } from '@/hooks/use-permission';
 
 interface Project {
     id: number;
@@ -41,6 +42,7 @@ interface Props {
 
 export default function Edit({ projects, letterRequestId }: Props) {
     const { auth } = usePage<SharedData>().props;
+    const { hasRole } = usePermission();
     const userRole = auth.user.role_name;
 
     const [data, setData] = useState({
@@ -78,17 +80,30 @@ export default function Edit({ projects, letterRequestId }: Props) {
 
                 // Filter letter divisions based on role
                 const allLetterDivs = divisionsRes.data.data;
-                let filteredLetterDivs = allLetterDivs;
+                let filteredDivCodes: string[] = [];
 
-                if (userRole === 'direktur' || userRole === 'superadmin') {
-                    filteredLetterDivs = allLetterDivs.filter((d: any) => ['Direktur', 'Finance', 'HCM', 'BOD'].includes(d.code));
-                } else if (userRole === 'hr') {
-                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'HR' || d.code === 'HCM');
-                } else if (userRole === 'finance') {
-                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'Finance' || d.code === 'FA');
-                } else {
-                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'PM');;
+                if (hasRole(['direktur', 'superadmin'])) {
+                    filteredDivCodes.push('Direktur', 'Finance', 'HCM', 'BOD');
                 }
+                if (hasRole('hr')) {
+                    filteredDivCodes.push('HR', 'HCM');
+                }
+                if (hasRole('finance')) {
+                    filteredDivCodes.push('Finance', 'FA');
+                }
+
+                // If no special roles, or if head is one of the roles, ensure PM is included
+                // (or if they have none of the above, they get PM as default)
+                if (hasRole('head') || filteredDivCodes.length === 0) {
+                    filteredDivCodes.push('PM');
+                }
+
+                // Deduplicate codes
+                const uniqueCodes = [...new Set(filteredDivCodes)];
+
+                const filteredLetterDivs = allLetterDivs.filter((d: any) =>
+                    uniqueCodes.includes(d.code)
+                );
 
                 setLetterDivisions(filteredLetterDivs);
                 setUsers(usersRes.data.data.data);
