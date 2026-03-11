@@ -107,7 +107,18 @@ function runCommand(string $command, string $cwd, array &$outputArr): bool
         2 => ['pipe', 'w'],
     ];
 
-    $process = proc_open($command, $descriptors, $pipes, $cwd);
+    // Web server processes don't have HOME set, which Composer/git need
+    $homeDir = getenv('HOME') ?: (function_exists('posix_getpwuid')
+        ? (posix_getpwuid(posix_geteuid())['dir'] ?? '/tmp')
+        : '/tmp');
+
+    $env = [
+        'HOME' => $homeDir,
+        'COMPOSER_HOME' => $homeDir.'/.composer',
+        'PATH' => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin',
+    ];
+
+    $process = proc_open($command, $descriptors, $pipes, $cwd, $env);
 
     if (! is_resource($process)) {
         $outputArr[] = ['command' => $command, 'status' => 'error', 'message' => 'Failed to start process'];
@@ -144,9 +155,6 @@ $steps = [
     'git checkout build',
     'git reset --hard origin/build',
     'git clean -fd -e .htaccess -e .env',
-
-    // Step 3: Composer and Laravel
-    'composer install --no-interaction --no-dev --prefer-dist',
     'php artisan migrate --force --no-interaction',
     'php artisan optimize:clear',
 ];
