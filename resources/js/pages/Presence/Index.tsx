@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, router } from '@inertiajs/react';
 import PageHeader from '@/components/PageHeader';
@@ -39,14 +39,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, MapPin, Camera, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal, Eye, Building, Calendar, Download, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Filter, MapPin, Camera, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal, Eye, Building, Calendar, Download, FileText, CheckCircle, XCircle, RotateCcw, X as XIcon } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateFilterPresets } from '@/components/DateFilterPresets';
-import { X as XIcon } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 // --- Types ---
 interface PresenceData {
@@ -122,8 +122,88 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
   const [checkoutData, setCheckoutData] = useState({
     latitude: '',
     longitude: '',
-    notes: ''
+    notes: '',
+    image: null as File | null,
   });
+
+  // Camera State for Checkout
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Sync stream to video element when it opens
+  useEffect(() => {
+    if (isCameraOpen && stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [isCameraOpen, stream]);
+
+  // Camera Functions
+  const startCamera = async (facingMode: 'user' | 'environment' = 'user') => {
+    try {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facingMode }
+      });
+
+      setStream(newStream);
+      setIsCameraOpen(true);
+      setCameraFacingMode(facingMode);
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      alert("Gagal membuka kamera. Pastikan izin kamera diberikan.");
+      setIsCameraOpen(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setIsCameraOpen(false);
+  };
+
+  const switchCamera = () => {
+    const newMode = cameraFacingMode === 'user' ? 'environment' : 'user';
+    startCamera(newMode);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+
+      if (context) {
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        // Draw video frame to canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert to file
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], `checkout_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            setCheckoutData(prev => ({ ...prev, image: file }));
+            stopCamera();
+          }
+        }, 'image/jpeg', 0.8);
+      }
+    }
+  };
+
+  const retakePhoto = () => {
+    setCheckoutData(prev => ({ ...prev, image: null }));
+    startCamera(cameraFacingMode);
+  };
 
   // --- Handlers ---
   const handleFetchLocation = () => {
@@ -201,10 +281,19 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
       return;
     }
 
-    router.post(route('presences.checkout'), checkoutData, {
+    if (!checkoutData.image) {
+      alert('Harap ambil foto checkout terlebih dahulu.');
+      return;
+    }
+
+    router.post(route('presences.checkout'), {
+      ...checkoutData,
+      photo: checkoutData.image
+    }, {
       onSuccess: () => {
         setIsCheckoutDialogOpen(false);
-        setCheckoutData({ latitude: '', longitude: '', notes: '' });
+        setCheckoutData({ latitude: '', longitude: '', notes: '', image: null });
+        stopCamera();
       }
     });
   };
@@ -320,7 +409,7 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
                 <DateFilterPresets
                   startDate={startDate}
                   endDate={endDate}
-                  onSelect={(start, end) => { setStartDate(start); setEndDate(end); }}
+                  onSelect={(start: string, end: string) => { setStartDate(start); setEndDate(end); }}
                 />
               </DropdownMenuContent>
             </DropdownMenu>
@@ -336,7 +425,7 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
                 <DateFilterPresets
                   startDate={startDate}
                   endDate={endDate}
-                  onSelect={(start, end) => { setStartDate(start); setEndDate(end); }}
+                  onSelect={(start: string, end: string) => { setStartDate(start); setEndDate(end); }}
                 />
               </DropdownMenuContent>
             </DropdownMenu>
@@ -678,12 +767,90 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
                 onChange={(e) => setCheckoutData(prev => ({ ...prev, notes: e.target.value }))}
               />
             </div>
+
+            <div className="grid gap-2">
+              <Label>Foto Check-out <span className="text-destructive">*</span></Label>
+              <canvas ref={canvasRef} className="hidden" />
+
+              {!isCameraOpen && !checkoutData.image && (
+                <div className="border-2 border-dashed rounded-lg h-[200px] flex flex-col items-center justify-center p-4 bg-muted/30 gap-3">
+                  <div className="h-10 w-10 bg-muted rounded-full flex items-center justify-center">
+                    <Camera className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="font-medium text-xs">Ambil Foto Check-out</p>
+                    <p className="text-[10px] text-muted-foreground max-w-[150px] mx-auto">Wajib sebagai bukti penyelesaian kerja</p>
+                  </div>
+                  <Button type="button" onClick={() => startCamera('user')} variant="outline" size="sm" className="gap-2">
+                    <Camera className="h-4 w-4" />
+                    Buka Kamera
+                  </Button>
+                </div>
+              )}
+
+              {isCameraOpen && (
+                <div className="relative rounded-lg overflow-hidden bg-black aspect-video flex flex-col border">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    className="flex-1 object-cover w-full h-full"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex justify-center gap-4 items-center">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      onClick={stopCamera}
+                      className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 text-white border-0"
+                    >
+                      <XIcon className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      size="icon"
+                      className="h-12 w-12 rounded-full border-2 border-white bg-transparent hover:bg-white/20"
+                      onClick={capturePhoto}
+                    >
+                      <div className="h-9 w-9 rounded-full bg-white" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      onClick={switchCamera}
+                      className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 text-white border-0"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {checkoutData.image && !isCameraOpen && (
+                <div className="relative rounded-lg overflow-hidden border bg-muted aspect-video group">
+                  <img
+                    src={URL.createObjectURL(checkoutData.image)}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button type="button" onClick={retakePhoto} variant="secondary" size="sm">
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Foto Ulang
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCheckoutDialogOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => { setIsCheckoutDialogOpen(false); stopCamera(); }}>Batal</Button>
             <Button
               onClick={handleCheckoutSubmit}
-              disabled={!checkoutData.latitude || loadingLocation}
+              disabled={!checkoutData.latitude || loadingLocation || !checkoutData.image}
               className="bg-rose-600 hover:bg-rose-700"
             >
               Confirm Check-Out

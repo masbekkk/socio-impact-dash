@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { ArrowLeft, MapPin, Calendar, Clock, Briefcase, FileText, ChevronDown, CheckCircle, XCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
@@ -43,7 +44,9 @@ interface PresenceData {
     check_out_latitude: string | null;
     check_out_longitude: string | null;
     photo_path: string | null;
+    checkout_photo_path: string | null;
     image_url: string | null;
+    checkout_image_url: string | null;
     user: {
         name: string;
         email: string;
@@ -184,26 +187,54 @@ export default function PresenceShow({ presence }: Props) {
                         {/* 2. Documentation Photo */}
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg">Dokumentasi Lapangan</CardTitle>
+                                <CardTitle className="text-lg">Dokumentasi Foto</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="rounded-lg overflow-hidden border bg-muted relative group">
-                                    {presence.image_url ? (
-                                        <img
-                                            src={presence.image_url}
-                                            alt="Dokumentasi Presensi"
-                                            className="w-full h-auto object-cover max-h-[500px] transition-transform duration-300 group-hover:scale-105"
-                                        />
-                                    ) : (
-                                        <div className="h-64 flex flex-col items-center justify-center text-muted-foreground">
-                                            <CameraIcon className="h-10 w-10 mb-2 opacity-20" />
-                                            <p>Tidak ada foto dokumentasi</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Check-In Photo */}
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Foto Check-In</Label>
+                                        <div className="rounded-lg overflow-hidden border bg-muted relative group aspect-[4/3]">
+                                            {presence.image_url ? (
+                                                <img
+                                                    src={presence.image_url}
+                                                    alt="Foto Check-In"
+                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                />
+                                            ) : (
+                                                <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                                                    <CameraIcon className="h-8 w-8 mb-2 opacity-20" />
+                                                    <p className="text-xs">Tidak ada foto</p>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
+                                        <p className="text-[10px] text-muted-foreground italic flex items-center gap-1">
+                                            <Clock className="h-3 w-3" /> {presence.check_in_at ? format(new Date(presence.check_in_at), 'HH:mm') : '-'}
+                                        </p>
+                                    </div>
+
+                                    {/* Check-Out Photo */}
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold text-rose-600 uppercase tracking-wider">Foto Check-Out</Label>
+                                        <div className="rounded-lg overflow-hidden border bg-muted relative group aspect-[4/3]">
+                                            {presence.checkout_image_url ? (
+                                                <img
+                                                    src={presence.checkout_image_url}
+                                                    alt="Foto Check-Out"
+                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                />
+                                            ) : (
+                                                <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                                                    <CameraIcon className="h-8 w-8 mb-2 opacity-20" />
+                                                    <p className="text-xs">Belum check-out / Tidak ada foto</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground italic flex items-center gap-1">
+                                            <Clock className="h-3 w-3" /> {presence.check_out_at ? format(new Date(presence.check_out_at), 'HH:mm') : '-'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-2 italic flex items-center justify-end gap-1">
-                                    Diupload pada {presence.date} • {presence.check_in_at ? format(new Date(presence.check_in_at), 'HH:mm') : '-'}
-                                </p>
                             </CardContent>
                         </Card>
                     </div>
