@@ -32,8 +32,13 @@ final class ReimbursementService
     public function applyFilters(\Illuminate\Database\Eloquent\Builder $query, User $user, array $filters): void
     {
         // Apply Role-based filtering
-        if ($user->hasRole('superadmin') || $user->hasRole('finance') || $user->hasRole('direktur')) {
+        if ($user->hasAnyRole(['superadmin', 'direktur'])) {
             // Can view all
+        } elseif ($user->hasRole('finance')) {
+            // Finance with division restriction
+            if ($user->division_id) {
+                $query->whereHas('project', fn ($q) => $q->where('division_id', $user->division_id));
+            }
         } elseif ($user->hasRole('hr')) {
             // HR can see allowances OR their own/team/approvals
             $query->where(function ($q) use ($user) {

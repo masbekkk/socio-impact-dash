@@ -33,6 +33,13 @@ final class ProjectController extends Controller
             $query->where('created_by', $user->id);
         }
 
+        // Finance with division restriction
+        if ($user->hasRole(UserRole::Finance) && ! $user->hasAnyRole([UserRole::Superadmin, UserRole::Direktur])) {
+            if ($user->division_id) {
+                $query->where('division_id', $user->division_id);
+            }
+        }
+
         if ($request->filled('search')) {
             $search = (string) $request->string('search');
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
