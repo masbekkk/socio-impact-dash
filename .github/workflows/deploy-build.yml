@@ -17,6 +17,8 @@ jobs:
     # Only run on push, or if the PR was merged (not just closed)
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout Repository
@@ -25,7 +27,7 @@ jobs:
           fetch-depth: 0 # Fetch all history so we can checkout branches
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v3
+        uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
           extensions: mbstring, bcmath, pdo_mysql, zip
