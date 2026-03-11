@@ -16,8 +16,9 @@ final class CheckOutRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'photo' => ['required', 'image', 'mimes:jpeg,png,jpg', 'max:5120'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }

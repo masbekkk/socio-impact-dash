@@ -28,12 +28,14 @@ final class Presence extends Model
         'check_out_latitude',
         'check_out_longitude',
         'photo_path',
+        'checkout_photo_path',
         'attachment_path',
         'notes',
     ];
 
     protected $appends = [
         'image_url',
+        'checkout_image_url',
     ];
 
     public function casts(): array
@@ -67,6 +69,13 @@ final class Presence extends Model
     {
         return Attribute::get(
             fn () => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null
+        );
+    }
+
+    protected function checkoutImageUrl(): Attribute
+    {
+        return Attribute::get(
+            fn () => $this->checkout_photo_path ? Storage::disk('public')->url($this->checkout_photo_path) : null
         );
     }
 }

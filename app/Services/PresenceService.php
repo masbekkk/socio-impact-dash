@@ -70,7 +70,15 @@ final class PresenceService
             }
 
             $checkOutData = $this->buildCheckOutData($data);
-
+            
+            if (! empty($data['photo']) && $data['photo'] instanceof UploadedFile) {
+                $checkOutData['checkout_photo_path'] = $this->uploadPresencePhoto(
+                    $data['photo'],
+                    $user->id,
+                    'check_out'
+                );
+            }
+            
             $presence->update($checkOutData);
 
             return $presence->fresh();
