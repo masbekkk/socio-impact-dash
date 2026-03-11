@@ -146,33 +146,35 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
         setFormData(prev => ({ ...prev, amount: values.floatValue || 0 }));
     };
 
-    const handleSubmit = async () => {
-        if (!formData.project_id) {
-            setErrors({ project_id: ['Pilih project terlebih dahulu.'] });
-            return;
-        }
-
-        if (!formData.approver_head_id) {
-            setErrors({ _general: ['Persetujuan Head wajib dipilih.'] });
-            return;
-        }
-
-        if (!formData.start_date || !formData.end_date) {
-            setErrors({ _general: ['Tanggal berangkat dan kembali wajib diisi.'] });
-            return;
-        }
-
-        if (!attachmentFile) {
-            setErrors({ _general: ['Dokumen pendukung wajib diunggah.'] });
-            return;
-        }
-
-        const selected = projects.find(p => p.id === parseInt(formData.project_id));
-        if (selected) {
-            const remaining = (selected.allowance_budget ?? 0) - (selected.used_allowance_budget ?? 0);
-            if (formData.amount > remaining) {
-                setErrors({ amount: ['Nominal pengajuan melebihi sisa pagu allowance proyek.'] });
+    const handleSubmit = async (status: 'submitted' | 'draft' = 'submitted') => {
+        if (status === 'submitted') {
+            if (!formData.project_id) {
+                setErrors({ project_id: ['Pilih project terlebih dahulu.'] });
                 return;
+            }
+
+            if (!formData.approver_head_id) {
+                setErrors({ _general: ['Persetujuan Head wajib dipilih.'] });
+                return;
+            }
+
+            if (!formData.start_date || !formData.end_date) {
+                setErrors({ _general: ['Tanggal berangkat dan kembali wajib diisi.'] });
+                return;
+            }
+
+            if (!attachmentFile) {
+                setErrors({ _general: ['Dokumen pendukung wajib diunggah.'] });
+                return;
+            }
+
+            const selected = projects.find(p => p.id === parseInt(formData.project_id));
+            if (selected) {
+                const remaining = (selected.allowance_budget ?? 0) - (selected.used_allowance_budget ?? 0);
+                if (formData.amount > remaining) {
+                    setErrors({ amount: ['Nominal pengajuan melebihi sisa pagu allowance proyek.'] });
+                    return;
+                }
             }
         }
 
@@ -182,6 +184,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
         await submitReimbursement({
             code: formData.code,
             type: 'allowance',
+            status,
             project_id: formData.project_id,
             amount: formData.amount,
             usage_plan: formData.usage_plan,
@@ -427,10 +430,10 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                                 {loading && <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</span>}
                             </div>
                             <div className="flex gap-3">
-                                <Button variant="outline" asChild size="lg">
-                                    <Link href="/reimbursements">Batal</Link>
+                                <Button type="button" variant="outline" disabled={loading} onClick={() => handleSubmit('draft')}>
+                                    {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Simpan Draft</>}
                                 </Button>
-                                <Button type="submit" size="lg" disabled={loading} className="bg-sidebar hover:bg-sidebar/90 min-w-[180px]">
+                                <Button type="submit" disabled={loading} className="bg-sidebar hover:bg-sidebar/90 min-w-[180px]">
                                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Ajukan Allowance</>}
                                 </Button>
                             </div>

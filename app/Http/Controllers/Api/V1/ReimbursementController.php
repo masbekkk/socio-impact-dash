@@ -56,6 +56,7 @@ final class ReimbursementController extends Controller
         $user = $request->user();
         $filters = [
             'status' => $request->get('status'),
+            'type' => $request->get('type'),
             'project_id' => $request->get('project_id'),
             'start_date' => $request->get('start_date'),
             'end_date' => $request->get('end_date'),
