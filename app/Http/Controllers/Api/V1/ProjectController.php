@@ -38,7 +38,9 @@ final class ProjectController extends Controller
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
                 /** @var \Illuminate\Database\Eloquent\Builder $q */
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('initial_project', 'like', "%{$search}%")
+                    ->orWhere('client_name', 'like', "%{$search}%");
             });
         }
 
@@ -47,7 +49,8 @@ final class ProjectController extends Controller
         }
 
         if ($request->filled('division') && $request->division !== 'all') {
-            $query->where('division_id', $request->division);
+            $divisionIds = is_array($request->division) ? $request->division : explode(',', (string) $request->division);
+            $query->whereIn('division_id', $divisionIds);
         }
 
         if ($request->filled('start_date')) {

@@ -50,8 +50,9 @@ final class ReimbursementService
             $query->where('project_id', $filters['project_id']);
         }
         
-        if (! empty($filters['division_id'])) {
-            $query->whereHas('project', fn ($q) => $q->where('division_id', $filters['division_id']));
+        if (! empty($filters['division_id']) && $filters['division_id'] !== 'all') {
+            $divisionIds = is_array($filters['division_id']) ? $filters['division_id'] : explode(',', (string) $filters['division_id']);
+            $query->whereHas('project', fn ($q) => $q->whereIn('division_id', $divisionIds));
         }
 
         if (! empty($filters['start_date'])) {

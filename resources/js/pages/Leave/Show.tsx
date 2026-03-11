@@ -160,9 +160,26 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
 
     const isTravel = leave?.type === 'travel' || !!leave?.destination;
     const canRevisionEdit = authUser.is_owner && leave?.status === 'revision';
-    const canAction = ['submitted', 'head_approved', 'revision'].includes(leave?.status ?? '')
-        && !authUser.is_owner
-        && (authUser.can_approve || authUser.can_reject);
+
+    const canAction = (() => {
+        if (authUser.is_owner) return false;
+        if (!authUser.can_approve && !authUser.can_reject) return false;
+
+        const status = leave?.status ?? '';
+        if (['rejected', 'superadmin_approved'].includes(status)) return false;
+
+        const hasCompletedAction = leave?.approvals?.some(a => a.approver?.id === authUser.id && ['approved', 'rejected'].includes(a.status));
+        if (hasCompletedAction) return false;
+
+        const role = authUser.position?.toLowerCase() || '';
+        if (['superadmin', 'direktur'].includes(role)) return true;
+
+        if (role === 'hr') {
+            return status !== 'hr_approved';
+        }
+
+        return ['submitted', 'revision', 'revised'].includes(status);
+    })();
 
     const handleActionConfirm = async () => {
         if (!actionDialog.type || !leave) return;

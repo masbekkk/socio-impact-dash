@@ -33,10 +33,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  SelectValue,
-} from "@/components/ui/select"
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -278,18 +276,15 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
             </DropdownMenu>
 
             <div className="flex-none">
-              <SearchableSelect
-                options={[
-                  { label: 'Semua Divisi', value: 'all' },
-                  ...(divisions || []).map((div: any) => ({
-                    label: `${div.division_code?.code} - ${div.name}`,
-                    value: div.id.toString()
-                  }))
-                ]}
-                value={division}
-                onValueChange={(val) => handleFilterChange('division', val)}
-                placeholder="Filter Divisi"
-                className="w-40"
+              <SearchableMultiSelect
+                options={(divisions || []).map((div: any) => ({
+                  label: `${div.division_code?.code} - ${div.name}`,
+                  value: div.id.toString()
+                }))}
+                value={division && division !== 'all' ? division.split(',') : []}
+                onValueChange={(val: string[]) => handleFilterChange('division', val.length > 0 ? val.join(',') : 'all')}
+                placeholder="Semua Divisi"
+                className="w-40 sm:w-auto min-w-[160px]"
               />
             </div>
           </div>
@@ -349,9 +344,9 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Kode</TableHead>
+                  {canUpdateCode && <TableHead>Initial Project</TableHead>}
                   <TableHead>Nama Proyek</TableHead>
                   <TableHead>Client</TableHead>
-                  {canUpdateCode && <TableHead>Initial Project</TableHead>}
                   <TableHead>Divisi</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Status</TableHead>
@@ -371,12 +366,6 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   projects.map((p: any) => (
                     <TableRow key={p.id} className="group">
                       <TableCell className="font-medium">{p.code}</TableCell>
-                      <TableCell>
-                        <div className="font-medium">{p.name}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-xs text-muted-foreground italic">{p.client_name || '-'}</div>
-                      </TableCell>
                       {canUpdateCode && (
                         <TableCell>
                           <div className="text-xs font-mono bg-emerald-50 text-emerald-700 px-2 py-1 rounded inline-block">
@@ -384,6 +373,13 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                           </div>
                         </TableCell>
                       )}
+                      <TableCell>
+                        <div className="font-medium">{p.name}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs text-muted-foreground italic">{p.client_name || '-'}</div>
+                      </TableCell>
+
                       <TableCell>
                         {(() => {
                           const divName = (p.division_name || (p.division ? p.division.name : '')).toLowerCase();

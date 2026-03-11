@@ -2,6 +2,7 @@ export interface Project {
     id: number;
     name: string;
     code: string;
+    initial_project: string;
     operational_budget?: number;
     used_operational_budget?: number;
     allowance_budget?: number;

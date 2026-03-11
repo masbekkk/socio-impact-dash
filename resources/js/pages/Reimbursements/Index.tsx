@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
@@ -350,18 +351,15 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                       </DropdownMenuContent>
                     </DropdownMenu>
 
-                    <SearchableSelect
-                      options={[
-                        { label: 'Semua Divisi', value: 'all' },
-                        ...(divisions || []).map((div: any) => ({
-                          label: `${div.division_code?.code} - ${div.name}`,
-                          value: div.id.toString()
-                        }))
-                      ]}
-                      value={filters.division_id || 'all'}
-                      onValueChange={(val) => navigate({ division_id: val === 'all' ? '' : val, page: 1 })}
-                      placeholder="Filter Divisi"
-                      className="w-40"
+                    <SearchableMultiSelect
+                      options={(divisions || []).map((div: any) => ({
+                        label: `${div.division_code?.code} - ${div.name}`,
+                        value: div.id.toString()
+                      }))}
+                      value={filters.division_id ? filters.division_id.split(',') : []}
+                      onValueChange={(val: string[]) => navigate({ division_id: val.length > 0 ? val.join(',') : '', page: 1 })}
+                      placeholder="Semua Divisi"
+                      className="w-40 sm:w-auto min-w-[160px]"
                     />
 
                     <Select value={filters.status || 'all'} onValueChange={(v) => navigate({ status: v === 'all' ? '' : v, page: 1 })}>
