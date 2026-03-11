@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { DateFilterPresets } from '@/components/DateFilterPresets';
 import { X as XIcon } from 'lucide-react';
 import axios from 'axios';
+import { usePermission } from '@/hooks/use-permission';
 
 interface LeaveItem {
   id: number;
@@ -227,9 +228,9 @@ function LeaveTable({ title, description, hook }: LeaveTableProps) {
   const { data, meta, loading, search, setSearch, status, setStatus, startDate, endDate, setDateRange, clearDates, page, setPage, perPage, setPerPage, sortBy, toggleSort, refetch } = hook;
 
   const { auth } = usePage().props as any;
+  const { hasRole } = usePermission();
   const permissions = auth.permissions || [];
-  const roles = auth.user?.role_name?.split(', ') || [];
-  const canDelete = roles.some((r: string) => ['hr', 'superadmin'].includes(r.toLowerCase()));
+  const canDelete = hasRole(['hr', 'superadmin']);
 
   const [deleteTarget, setDeleteTarget] = useState<{ code: string; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);

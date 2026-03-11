@@ -230,6 +230,7 @@ export default function Show() {
 
   const [projects, setProjects] = useState(propsProjects);
   const [users, setUsers] = useState(propsUsers);
+  const { hasRole, hasPermission } = usePermission();
   const userRole = auth?.user?.role_name || 'pegawai';
   const userId = auth?.user?.id || 0;
 
@@ -290,13 +291,12 @@ export default function Show() {
   });
   const [resubmitLoading, setResubmitLoading] = useState(false);
 
-  const { hasRole, hasPermission } = usePermission();
   const isPegawai = hasRole('pegawai') && !hasRole('superadmin');
-  const canEditBudget = hasPermission('edit_atr_budget') || userRole === 'finance' || userRole === 'superadmin';
+  const canEditBudget = hasPermission('edit_atr_budget') || hasRole(['finance', 'superadmin']);
   const isCreator = data?.user?.id === userId;
   const isRevisionStatus = data?.status === 'revision';
-  const isFinanceOrAdmin = userRole === 'finance' || userRole === 'superadmin';
-  const isHrOrAdmin = userRole === 'hr' || userRole === 'superadmin';
+  const isFinanceOrAdmin = hasRole(['finance', 'superadmin']);
+  const isHrOrAdmin = hasRole(['hr', 'superadmin']);
 
   // Budget Partition Editing State
   const [editingPartitions, setEditingPartitions] = useState(false);

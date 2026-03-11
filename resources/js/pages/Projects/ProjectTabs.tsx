@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { usePage } from '@inertiajs/react'
 import axios from 'axios'
 import Editor from '@/components/Editor';
+import { usePermission } from '@/hooks/use-permission';
 
 interface ProjectTabsProps {
     project: any;
@@ -100,11 +101,12 @@ export default function ProjectTabs({
     const [savingBudget, setSavingBudget] = useState(false);
     const [localBudgetStatus, setLocalBudgetStatus] = useState(project.budget_partition_status || 'draft');
 
+    const { hasRole } = usePermission();
     const authUserRole = (usePage().props as any).auth?.user?.role_name || 'user';
     const userRole = initialUserRole || authUserRole;
 
     // Permissions
-    const isAdminOrFinance = userRole === 'superadmin' || userRole === 'finance';
+    const isAdminOrFinance = hasRole(['superadmin', 'finance']);
     const permissions = (usePage().props as any).auth?.permissions || [];
     const canInputBudget = isAdminOrFinance;
     const canApproveBudget = permissions.includes('approval_budget_partition');
@@ -647,10 +649,8 @@ export default function ProjectTabs({
                                     <p className="text-xs text-muted-foreground">Rincian alokasi anggaran operasional, manajemen, dan allowance.</p>
                                 </div>
                                 <div className="flex gap-2 items-center">
-                                    {localBudgetStatus === 'approved' && (
-                                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 uppercase text-[10px]">Telah Disetujui</Badge>
-                                    )}
-                                    {localBudgetStatus !== 'approved' && canInputBudget && !editPartitions && (
+
+                                    {canInputBudget && !editPartitions && (
                                         <Button variant="outline" size="sm" onClick={() => setEditPartitions(true)}>
                                             <Pencil className="w-4 h-4 mr-2" /> Atur Anggaran
                                         </Button>
@@ -702,7 +702,7 @@ export default function ProjectTabs({
                                             onValueChange={(values) => {
                                                 const val = values.floatValue || 0;
                                                 setOpsBudget(val);
-                                                if (userRole === 'finance' || userRole === 'superadmin') {
+                                                if (hasRole(['finance', 'superadmin'])) {
                                                     const allowance = project.budget_total - val - mgmtBudget;
                                                     setAllowanceBudget(allowance > 0 ? allowance : 0);
                                                 }

@@ -42,6 +42,7 @@ import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateFilterPresets } from '@/components/DateFilterPresets';
+import { usePermission } from '@/hooks/use-permission';
 
 interface ReimbursementApproval {
   id: number;
@@ -111,13 +112,13 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function ReimbursementsIndex({ reimbursements, filters, divisions }: Props) {
   const { auth } = usePage().props as unknown as { auth: any };
-  const userRoles = auth?.user?.role_name || '';
-  const isSuperadmin = userRoles.includes('superadmin');
-  const isFinance = userRoles.includes('finance');
-  const isDirektur = userRoles.includes('direktur');
-  const isHR = userRoles.includes('hr') && !isSuperadmin;
-  const isHead = userRoles.includes('head') && !isSuperadmin;
-  const isPegawai = userRoles.includes('pegawai') && !isSuperadmin && !isHead && !isFinance && !isDirektur && !isHR;
+  const { hasRole } = usePermission();
+  const isSuperadmin = hasRole('superadmin');
+  const isFinance = hasRole('finance');
+  const isDirektur = hasRole('direktur');
+  const isHR = hasRole('hr') && !isSuperadmin;
+  const isHead = hasRole('head') && !isSuperadmin;
+  const isPegawai = hasRole('pegawai') && !isSuperadmin && !isHead && !isFinance && !isDirektur && !isHR;
 
   const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);

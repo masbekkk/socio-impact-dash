@@ -26,16 +26,18 @@ import {
   DialogClose,
   DialogTrigger
 } from "@/components/ui/dialog"
+import { usePermission } from '@/hooks/use-permission';
 
 export default function ProjectsShow({ project_slug }: { project_slug: string | number }) {
   const { auth } = usePage().props as any;
+  const { hasRole, hasPermission } = usePermission();
   const permissions = auth.permissions || [];
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const currentUserRole = auth.user?.role_name;
   const currentUserId = auth.user?.id;
-  const canUpdateCode = permissions.includes('create_code_project');
+  const canUpdateCode = hasPermission('create_code_project');
 
   // Project Code State
   const [projectCode, setProjectCode] = useState('');

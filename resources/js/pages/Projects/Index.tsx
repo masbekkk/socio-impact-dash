@@ -40,11 +40,13 @@ import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateFilterPresets } from '@/components/DateFilterPresets';
 import axios from 'axios';
+import { usePermission } from '@/hooks/use-permission';
 
 export default function ProjectsIndex({ filters, divisions }: { filters?: any, divisions?: any[] }) {
   const { auth } = usePage().props as any;
+  const { hasRole, hasPermission } = usePermission();
   const permissions = auth.permissions || [];
-  const canUpdateCode = permissions.includes('create_code_project');
+  const canUpdateCode = hasPermission('create_code_project');
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
