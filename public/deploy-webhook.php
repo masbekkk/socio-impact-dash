@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 /**
  * Deploy Webhook Script (placed in /public/ for Hostinger .htaccess compatibility)
- * 
- * This is a standalone script. DO NOT use Laravel classes/Facades here as they 
+ *
+ * This is a standalone script. DO NOT use Laravel classes/Facades here as they
  * require booting the framework which is not done for this script.
  */
 
 // --- Global Error Handler ---
-register_shutdown_function(function() {
+register_shutdown_function(function () {
     $error = error_get_last();
     if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
         http_response_code(500);
@@ -18,7 +18,7 @@ register_shutdown_function(function() {
         echo json_encode([
             'status' => 'error',
             'message' => 'Fatal Error in webhook script',
-            'error' => $error
+            'error' => $error,
         ]);
         exit(1);
     }
@@ -34,20 +34,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
 
 // --- Configuration ---
 $projectPath = dirname(__DIR__);
-$envFile = $projectPath . '/.env';
+$envFile = $projectPath.'/.env';
 $secret = null;
 
 if (file_exists($envFile)) {
     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        $line = trim($line);
+        $line = mb_trim($line);
         if ($line === '' || str_starts_with($line, '#')) {
             continue;
         }
         if (str_starts_with($line, 'DEPLOY_SECRET=')) {
-            $secret = trim(substr($line, strlen('DEPLOY_SECRET=')));
+            $secret = mb_trim(mb_substr($line, mb_strlen('DEPLOY_SECRET=')));
             // Handle optional quotes
-            $secret = trim($secret, '"\'');
+            $secret = mb_trim($secret, '"\'');
             break;
         }
     }
@@ -63,7 +63,7 @@ if ($secret === null || $secret === '') {
 // --- Authorization Check ---
 $token = $_SERVER['HTTP_X_DEPLOY_TOKEN'] ?? '';
 
-if (!hash_equals($secret, $token)) {
+if (! hash_equals($secret, $token)) {
     http_response_code(403);
     header('Content-Type: application/json');
     echo json_encode(['error' => 'Unauthorized']);
@@ -71,23 +71,23 @@ if (!hash_equals($secret, $token)) {
 }
 
 // --- Requirements Check ---
-$requiredFunctions = ['proc_open', 'exec', 'shell_exec'];
+$requiredFunctions = ['proc_open'];
 $disabledFunctions = explode(',', ini_get('disable_functions') ?: '');
 $missing = [];
 
 foreach ($requiredFunctions as $func) {
-    if (!function_exists($func) || in_array($func, array_map('trim', $disabledFunctions))) {
+    if (! function_exists($func) || in_array($func, array_map('trim', $disabledFunctions))) {
         $missing[] = $func;
     }
 }
 
-if (!empty($missing)) {
+if (! empty($missing)) {
     http_response_code(500);
     header('Content-Type: application/json');
     echo json_encode([
-        'status' => 'error', 
-        'message' => 'Required PHP functions are disabled on this server', 
-        'missing' => $missing
+        'status' => 'error',
+        'message' => 'Required PHP functions are disabled on this server',
+        'missing' => $missing,
     ]);
     exit(1);
 }
@@ -109,8 +109,9 @@ function runCommand(string $command, string $cwd, array &$outputArr): bool
 
     $process = proc_open($command, $descriptors, $pipes, $cwd);
 
-    if (!is_resource($process)) {
+    if (! is_resource($process)) {
         $outputArr[] = ['command' => $command, 'status' => 'error', 'message' => 'Failed to start process'];
+
         return false;
     }
 
@@ -125,8 +126,8 @@ function runCommand(string $command, string $cwd, array &$outputArr): bool
     $outputArr[] = [
         'command' => $command,
         'status' => $returnCode === 0 ? 'success' : 'error',
-        'stdout' => trim($stdout),
-        'stderr' => trim($stderr),
+        'stdout' => mb_trim($stdout),
+        'stderr' => mb_trim($stderr),
         'exit_code' => $returnCode,
     ];
 
@@ -137,13 +138,13 @@ function runCommand(string $command, string $cwd, array &$outputArr): bool
 $steps = [
     // Step 1: Ensure known_hosts is set for GitHub
     'mkdir -p ~/.ssh && ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null',
-    
+
     // Step 2: Git updates
     'git fetch origin build --depth 1',
     'git checkout build',
     'git reset --hard origin/build',
     'git clean -fd -e .htaccess -e .env',
-    
+
     // Step 3: Composer and Laravel
     'composer install --no-interaction --no-dev --prefer-dist',
     'php artisan migrate --force --no-interaction',
@@ -151,9 +152,9 @@ $steps = [
 ];
 
 foreach ($steps as $step) {
-    if (!runCommand($step, $projectPath, $outputArr)) {
+    if (! runCommand($step, $projectPath, $outputArr)) {
         $hasError = true;
-        // If it's a critical git error, stop. 
+        // If it's a critical git error, stop.
         // Note: some git-clean or mkdir might fail but we might want to continue.
         // But generally, deployment steps are sequential.
         break;
