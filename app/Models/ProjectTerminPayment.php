@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class ProjectTerminPayment extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'project_id',
         'nominal',
@@ -35,7 +37,7 @@ final class ProjectTerminPayment extends Model
         return $this->belongsTo(User::class, 'verified_by');
     }
 
-    public function getProofPaymentUrlAttribute(): ?string
+    protected function getProofPaymentUrlAttribute(): ?string
     {
         return $this->proof_payment ? \Illuminate\Support\Facades\Storage::url($this->proof_payment) : null;
     }

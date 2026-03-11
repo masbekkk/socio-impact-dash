@@ -6,7 +6,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CheckOutRequest;
 use App\Http\Requests\StorePresenceRequest;
-use App\Http\Requests\UpdatePresenceRequest;
 use App\Models\Presence;
 use App\Models\Project;
 use App\Services\PresenceService;
@@ -48,7 +47,7 @@ final class PresenceController
      */
     public function create(): \Inertia\Response
     {
-        $projects = Project::select('id', 'name')->get();
+        $projects = Project::query()->select('id', 'name')->get();
 
         return Inertia::render('Presence/Create', [
             'projects' => $projects,
@@ -105,7 +104,7 @@ final class PresenceController
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Presence $presence): void
+    public function edit(): void
     {
         //
     }
@@ -113,7 +112,7 @@ final class PresenceController
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdatePresenceRequest $request, Presence $presence): void
+    public function update(): void
     {
         //
     }
@@ -121,7 +120,7 @@ final class PresenceController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Presence $presence): void
+    public function destroy(): void
     {
         //
     }

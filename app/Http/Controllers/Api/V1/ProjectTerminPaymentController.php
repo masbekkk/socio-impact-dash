@@ -16,9 +16,7 @@ final class ProjectTerminPaymentController extends Controller
     public function update(Request $request, Project $project, ProjectTerminPayment $termin, UpdateTerminPayment $updateTermin): \Illuminate\Http\JsonResponse
     {
         // Ensure termin belongs to project
-        if ($termin->project_id !== $project->id) {
-            abort(404);
-        }
+        abort_if($termin->project_id !== $project->id, 404);
 
         $validated = $request->validate([
             'is_verified' => ['nullable', 'boolean'],

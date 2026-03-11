@@ -23,7 +23,7 @@ final readonly class GetCalendarEvents
         } elseif ($user->hasRole(UserRole::Head->value)) {
             $divisionId = $user->division_id;
 
-            $projectsQuery->where(function ($q) use ($user, $divisionId) {
+            $projectsQuery->where(function ($q) use ($user, $divisionId): void {
                 $q->where('created_by', $user->id)
                     ->orWhere('pic_id', $user->id)
                     ->orWhere('account_manager_id', $user->id)
@@ -32,21 +32,21 @@ final readonly class GetCalendarEvents
             });
 
             $visibleProjectIds = $projectsQuery->pluck('id');
-            $eventsQuery->where(function ($q) use ($user, $visibleProjectIds) {
+            $eventsQuery->where(function ($q) use ($user, $visibleProjectIds): void {
                 $q->whereIn('project_id', $visibleProjectIds)
                     ->orWhere('created_by', $user->id);
             });
 
         } else {
             // PEGAWAI
-            $projectsQuery->where(function ($q) use ($user) {
+            $projectsQuery->where(function ($q) use ($user): void {
                 $q->where('created_by', $user->id)
                     ->orWhere('pic_id', $user->id)
                     ->orWhere('account_manager_id', $user->id);
             });
 
             $visibleProjectIds = $projectsQuery->pluck('id');
-            $eventsQuery->where(function ($q) use ($user, $visibleProjectIds) {
+            $eventsQuery->where(function ($q) use ($user, $visibleProjectIds): void {
                 $q->whereIn('project_id', $visibleProjectIds)
                     ->orWhere('created_by', $user->id);
             });

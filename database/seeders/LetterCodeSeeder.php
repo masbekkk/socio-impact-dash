@@ -39,10 +39,7 @@ final class LetterCodeSeeder extends Seeder
         ];
 
         foreach ($codes as $codeData) {
-            LetterCode::updateOrCreate(
-                ['code' => $codeData['code']],
-                ['description' => $codeData['description']]
-            );
+            LetterCode::query()->updateOrCreate(['code' => $codeData['code']], ['description' => $codeData['description']]);
         }
     }
 }

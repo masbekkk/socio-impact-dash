@@ -26,7 +26,7 @@ final class ProjectDocument extends Model
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
-    public function getUrlAttribute(): string
+    protected function getUrlAttribute(): string
     {
         return \Illuminate\Support\Facades\Storage::url($this->path);
     }

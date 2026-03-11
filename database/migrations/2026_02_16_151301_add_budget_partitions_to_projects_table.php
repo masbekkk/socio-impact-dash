@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('projects', function (Blueprint $table) {
+        Schema::table('projects', function (Blueprint $table): void {
             $table->decimal('operational_budget', 15, 2)->default(0)->after('budget_total');
             $table->decimal('management_budget', 15, 2)->default(0)->after('operational_budget');
             $table->decimal('allowance_budget', 15, 2)->default(0)->after('management_budget');
@@ -25,7 +25,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('projects', function (Blueprint $table) {
+        Schema::table('projects', function (Blueprint $table): void {
             $table->dropColumn(['operational_budget', 'management_budget', 'allowance_budget']);
         });
     }

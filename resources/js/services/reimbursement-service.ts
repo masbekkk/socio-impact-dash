@@ -38,6 +38,7 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     if (payload.end_date) fd.append('end_date', payload.end_date);
     if (payload.replacement_pic_id) fd.append('replacement_pic_id', payload.replacement_pic_id);
     if (payload.transfer_proof) fd.append('transfer_proof', payload.transfer_proof);
+    if (payload.status) fd.append('status', payload.status);
 
     payload.documents?.forEach((doc, index) => {
         fd.append(`documents[${index}][file]`, doc.file);

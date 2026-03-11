@@ -20,7 +20,7 @@ final class LetterDivisionSeeder extends Seeder
         $uniqueDivisions = array_unique($divisions);
 
         foreach ($uniqueDivisions as $division) {
-            LetterDivision::firstOrCreate(['code' => $division]);
+            LetterDivision::query()->firstOrCreate(['code' => $division]);
         }
     }
 }

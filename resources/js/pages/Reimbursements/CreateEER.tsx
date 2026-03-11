@@ -239,35 +239,37 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
 
   const hasOverBudgetItems = false;
 
-  const handleSubmit = async () => {
-    if (items.length === 0 || totalEerAmount <= 0) {
-      setErrors({ _general: ['Tambahkan minimal 1 item pengeluaran.'] });
-      return;
-    }
+  const handleSubmit = async (status: 'submitted' | 'draft' = 'submitted') => {
+    if (status === 'submitted') {
+      if (items.length === 0 || totalEerAmount <= 0) {
+        setErrors({ _general: ['Tambahkan minimal 1 item pengeluaran.'] });
+        return;
+      }
 
-    // Validation: Check if all mandatory fields are filled
-    const isInvalid = items.some(i =>
-      !i.project_budget_detail_id ||
-      !i.item_name.trim() ||
-      i.quantity <= 0 ||
-      i.unit_price <= 0 ||
-      !i.expense_type ||
-      !i.receipt
-    );
+      // Validation: Check if all mandatory fields are filled
+      const isInvalid = items.some(i =>
+        !i.project_budget_detail_id ||
+        !i.item_name.trim() ||
+        i.quantity <= 0 ||
+        i.unit_price <= 0 ||
+        !i.expense_type ||
+        !i.receipt
+      );
 
-    if (isInvalid) {
-      setErrors({ _general: ['Semua detail item (Kegiatan, Nama, Qty, Harga, Jenis, Kwitansi) wajib diisi.'] });
-      return;
-    }
+      if (isInvalid) {
+        setErrors({ _general: ['Semua detail item (Kegiatan, Nama, Qty, Harga, Jenis, Kwitansi) wajib diisi.'] });
+        return;
+      }
 
-    if (eerCalculation.type === 'refund' && !transferProof) {
-      setErrors({ _general: ['Bukti transfer refund wajib diunggah.'] });
-      return;
-    }
+      if (eerCalculation.type === 'refund' && !transferProof) {
+        setErrors({ _general: ['Bukti transfer refund wajib diunggah.'] });
+        return;
+      }
 
-    if (!formData.approver_head_id) {
-      setErrors({ _general: ['Head Approver wajib dipilih.'] });
-      return;
+      if (!formData.approver_head_id) {
+        setErrors({ _general: ['Head Approver wajib dipilih.'] });
+        return;
+      }
     }
 
     const payloadItems = items.map(i => ({
@@ -284,6 +286,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
     await submitReimbursement({
       code: formData.code,
       type: 'eer',
+      status,
       eer_type: eerCalculation.type,
       refund_reimburse_amount: eerCalculation.amount,
       atr_id: formData.atr_id,
@@ -712,6 +715,9 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                 {loading && <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</span>}
               </div>
               <div className="flex gap-3">
+                <Button type="button" variant="outline" disabled={loading} onClick={() => handleSubmit('draft')}>
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Simpan Draft</>}
+                </Button>
                 <Button type="submit" disabled={loading} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)]/90">
                   {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Ajukan EER</>}
                 </Button>

@@ -10,7 +10,7 @@ declare(strict_types=1);
  * 2. Add DEPLOY_SECRET=your_secret to your .env
  * 3. Add DEPLOY_WEBHOOK_SECRET and DEPLOY_WEBHOOK_URL to GitHub Secrets
  */
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (Illuminate\Support\Facades\Request::server('REQUEST_METHOD') !== 'POST') {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);
     exit(1);
@@ -40,7 +40,7 @@ if ($secret === null || $secret === '') {
     exit(1);
 }
 
-$token = $_SERVER['HTTP_X_DEPLOY_TOKEN'] ?? '';
+$token = Illuminate\Support\Facades\Request::server('HTTP_X_DEPLOY_TOKEN') ?? '';
 
 if (! hash_equals($secret, $token)) {
     http_response_code(403);
@@ -107,7 +107,7 @@ for ($i = 1; $i <= 3; $i++) {
         break;
     }
     if ($i < 3) {
-        sleep(5);
+        Illuminate\Support\Sleep::sleep(5);
     }
 }
 

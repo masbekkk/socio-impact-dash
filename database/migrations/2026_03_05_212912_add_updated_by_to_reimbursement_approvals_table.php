@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('reimbursement_approvals', function (Blueprint $table) {
+        Schema::table('reimbursement_approvals', function (Blueprint $table): void {
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
     }
@@ -23,7 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('reimbursement_approvals', function (Blueprint $table) {
+        Schema::table('reimbursement_approvals', function (Blueprint $table): void {
             $table->dropForeign(['updated_by']);
             $table->dropColumn('updated_by');
         });

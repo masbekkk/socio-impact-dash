@@ -39,32 +39,32 @@ final class ProjectResource extends JsonResource
             'created_by' => $this->created_by,
             'actual_budget' => $this->actual_budget,
             'lesson_learned' => $this->lesson_learned,
-            'creator' => $this->whenLoaded('creator', fn () => [
+            'creator' => $this->whenLoaded('creator', fn (): array => [
                 'id' => $this->creator->id,
                 'name' => $this->creator->name,
             ]),
-            'division' => $this->whenLoaded('division', fn () => [
+            'division' => $this->whenLoaded('division', fn (): array => [
                 'id' => $this->division->id,
                 'name' => $this->division->name,
                 'code' => $this->division->divisionCode?->code,
             ]),
-            'account_manager' => $this->whenLoaded('accountManager', fn () => [
+            'account_manager' => $this->whenLoaded('accountManager', fn (): array => [
                 'id' => $this->accountManager->id,
                 'name' => $this->accountManager->name,
                 'email' => $this->accountManager->email,
             ]),
-            'head' => $this->whenLoaded('head', fn () => [
+            'head' => $this->whenLoaded('head', fn (): array => [
                 'id' => $this->head->id,
                 'name' => $this->head->name,
                 'email' => $this->head->email,
             ]),
-            'pic' => $this->whenLoaded('pic', fn () => [
+            'pic' => $this->whenLoaded('pic', fn (): array => [
                 'id' => $this->pic->id,
                 'name' => $this->pic->name,
                 'email' => $this->pic->email,
             ]),
             'locations' => $this->whenLoaded('locations'),
-            'documents' => $this->whenLoaded('documents', fn () => $this->documents->map(fn ($doc) => [
+            'documents' => $this->whenLoaded('documents', fn () => $this->documents->map(fn ($doc): array => [
                 'id' => $doc->id,
                 'type' => $doc->type,
                 'original_name' => $doc->original_name,
@@ -74,7 +74,7 @@ final class ProjectResource extends JsonResource
                 'url' => $doc->url,
                 'upload_status' => $doc->upload_status ?? 'completed',
             ])),
-            'supporting_docs' => $this->whenLoaded('documents', fn () => $this->documents->map(fn ($doc) => [
+            'supporting_docs' => $this->whenLoaded('documents', fn () => $this->documents->map(fn ($doc): array => [
                 'id' => $doc->id,
                 'type' => $doc->type,
                 'original_name' => $doc->original_name,

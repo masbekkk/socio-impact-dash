@@ -31,8 +31,7 @@ final class LeaveLimitTest extends TestCase
         // Requested 13 days
         $response = $this->actingAs($user)->postJson('/api/v1/leaves', [
             'type' => LeaveType::Annual->value,
-            'start_date' => '2026-03-01',
-            'end_date' => '2026-03-17', // 13 working days (Mar 1-17, 2026 has 4 weekends: 1, 7, 8, 14, 15) -> 17-5 = 12? Wait.
+            'start_date' => '2026-03-01', // 13 working days (Mar 1-17, 2026 has 4 weekends: 1, 7, 8, 14, 15) -> 17-5 = 12? Wait.
             // Mar 1 (Sun), 2-6 (M-F), 7-8 (S-S), 9-13 (M-F), 14-15 (S-S), 16-17 (M-T)
             // Working days: 2,3,4,5,6 (5) + 9,10,11,12,13 (5) + 16,17 (2) = 12 days.
             // Let's use 2026-03-01 to 2026-03-18 for 13 working days.
@@ -101,7 +100,7 @@ final class LeaveLimitTest extends TestCase
         $user->assignRole(UserRole::Pegawai->value);
 
         // Create a rejected leave of 10 days
-        Leave::create([
+        Leave::query()->create([
             'code' => 'LV-REJECTED',
             'user_id' => $user->id,
             'type' => LeaveType::Annual,
@@ -128,7 +127,7 @@ final class LeaveLimitTest extends TestCase
         $user->assignRole(UserRole::Pegawai->value);
 
         // Leave in 2025: 12 days
-        Leave::create([
+        Leave::query()->create([
             'code' => 'LV-2025',
             'user_id' => $user->id,
             'type' => LeaveType::Annual,

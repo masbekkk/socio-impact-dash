@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('atr_budget_selecteds', function (Blueprint $table) {
+        Schema::create('atr_budget_selecteds', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('reimbursement_id')->constrained()->cascadeOnDelete();
             $table->foreignId('project_budget_detail_id')->constrained()->cascadeOnDelete();

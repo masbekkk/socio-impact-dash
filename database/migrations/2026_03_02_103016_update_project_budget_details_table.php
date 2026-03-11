@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('project_budget_details', function (Blueprint $table) {
+        Schema::table('project_budget_details', function (Blueprint $table): void {
             $table->string('item_name')->after('project_id');
             $table->integer('quantity')->nullable()->change();
         });
@@ -24,7 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('project_budget_details', function (Blueprint $table) {
+        Schema::table('project_budget_details', function (Blueprint $table): void {
             $table->dropColumn('item_name');
             $table->integer('quantity')->default(1)->nullable(false)->change();
         });

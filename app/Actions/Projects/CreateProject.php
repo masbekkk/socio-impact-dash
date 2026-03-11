@@ -78,7 +78,7 @@ final class CreateProject
         $budgetTotalRaw = $data['budget_total'] ?? 0;
         $budgetTotal = is_numeric($budgetTotalRaw) ? (float) $budgetTotalRaw : 0;
 
-        return Project::create([
+        return Project::query()->create([
             'code' => $code,
             'name' => $data['name'],
             'client_name' => $data['client_name'] ?? null,
@@ -153,10 +153,7 @@ final class CreateProject
                 ]);
 
                 // Dispatch background job to move file to final storage
-                \App\Jobs\ProcessProjectDocumentUpload::dispatch(
-                    (int) $document->id,
-                    "projects/{$project->id}/documents"
-                );
+                dispatch(new \App\Jobs\ProcessProjectDocumentUpload((int) $document->id, "projects/{$project->id}/documents"));
             }
         }
     }

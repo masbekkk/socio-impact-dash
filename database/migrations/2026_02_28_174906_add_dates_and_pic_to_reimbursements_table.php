@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('reimbursements', function (Blueprint $table) {
+        Schema::table('reimbursements', function (Blueprint $table): void {
             $table->date('start_date')->nullable()->after('usage_plan');
             $table->date('end_date')->nullable()->after('start_date');
             $table->foreignId('replacement_pic_id')->nullable()->after('end_date')->constrained('users')->onDelete('set null');
@@ -25,7 +25,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('reimbursements', function (Blueprint $table) {
+        Schema::table('reimbursements', function (Blueprint $table): void {
             $table->dropForeign(['replacement_pic_id']);
             $table->dropColumn(['start_date', 'end_date', 'replacement_pic_id']);
         });

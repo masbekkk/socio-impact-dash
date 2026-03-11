@@ -15,7 +15,7 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-final class EerSheet implements FromCollection, ShouldAutoSize, WithHeadings, WithStyles, WithTitle
+final readonly class EerSheet implements FromCollection, ShouldAutoSize, WithHeadings, WithStyles, WithTitle
 {
     /**
      * @param  Collection<int, Reimbursement>  $reimbursements
@@ -72,9 +72,9 @@ final class EerSheet implements FromCollection, ShouldAutoSize, WithHeadings, Wi
         $rows = collect();
 
         foreach ($this->reimbursements as $r) {
-            $headApproval = $r->approvals->first(fn ($a) => $a->role === ApprovalRole::Head);
-            $financeApproval = $r->approvals->first(fn ($a) => $a->role === ApprovalRole::Finance);
-            $direkturApproval = $r->approvals->first(fn ($a) => $a->role === ApprovalRole::Direktur);
+            $headApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Head);
+            $financeApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Finance);
+            $direkturApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Direktur);
 
             $items = $r->items->where('parent_item_id', null);
 
@@ -90,6 +90,13 @@ final class EerSheet implements FromCollection, ShouldAutoSize, WithHeadings, Wi
         }
 
         return $rows;
+    }
+
+    public function styles(Worksheet $sheet): array
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 
     /**
@@ -118,8 +125,8 @@ final class EerSheet implements FromCollection, ShouldAutoSize, WithHeadings, Wi
             // Item
             $item?->item_name ?? '-',
             $item?->quantity ?? '-',
-            $item ? (float) $item->unit_price : '-',
-            $item ? (float) $item->amount : '-',
+            $item instanceof ReimbursementItem ? (float) $item->unit_price : '-',
+            $item instanceof ReimbursementItem ? (float) $item->amount : '-',
             $item?->expense_type?->value ?? '-',
             $item?->notes ?? '-',
             // Bank
@@ -139,13 +146,6 @@ final class EerSheet implements FromCollection, ShouldAutoSize, WithHeadings, Wi
             $direkturApproval?->approver?->name ?? '-',
             $direkturApproval?->status?->value ?? '-',
             $direkturApproval?->notes ?? '-',
-        ];
-    }
-
-    public function styles(Worksheet $sheet): array
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
         ];
     }
 }

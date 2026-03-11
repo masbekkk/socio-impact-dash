@@ -10,14 +10,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('reimbursements', function (Blueprint $table) {
+        Schema::table('reimbursements', function (Blueprint $table): void {
             $table->string('code')->nullable()->change();
         });
     }
 
     public function down(): void
     {
-        Schema::table('reimbursements', function (Blueprint $table) {
+        Schema::table('reimbursements', function (Blueprint $table): void {
             $table->string('code')->nullable(false)->change();
         });
     }

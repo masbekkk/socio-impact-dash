@@ -11,12 +11,9 @@ final class UserService
 {
     public static function loggedUser(): ?User
     {
-        $cachedUser = null;
+        $cachedUser = User::with('roles')->find(Auth::id());
 
-        if ($cachedUser === null) {
-            $cachedUser = User::with('roles')->find(Auth::id());
-            $cachedUser->role_name = $cachedUser->getRoleNames()->implode(', ');
-        }
+        $cachedUser->role_name = $cachedUser->getRoleNames()->implode(', ');
 
         return $cachedUser;
     }

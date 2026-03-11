@@ -22,7 +22,7 @@ final class LeaveService
                 // 1. Their own leaves
                 // 2. Their team members' leaves
                 // 3. Leaves where they are an approver
-                $query->where(function ($q) use ($user) {
+                $query->where(function ($q) use ($user): void {
                     $q->where('user_id', $user->id)
                         ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $user->id))
                         ->orWhereHas('approvals', fn ($aq) => $aq->where('approver_id', $user->id));
@@ -69,7 +69,7 @@ final class LeaveService
         if (in_array($sortBy, $allowedSorts, true)) {
             $query->orderBy($sortBy, $sortDir === 'asc' ? 'asc' : 'desc');
         } else {
-            $query->orderBy('created_at', 'desc');
+            $query->latest();
         }
 
         return $query->paginate($perPage);
@@ -84,8 +84,8 @@ final class LeaveService
 
     public function calculateTotalDays(string $startDate, string $endDate): int
     {
-        $start = \Illuminate\Support\Carbon::parse($startDate)->startOfDay();
-        $end = \Illuminate\Support\Carbon::parse($endDate)->startOfDay();
+        $start = \Illuminate\Support\Facades\Date::parse($startDate)->startOfDay();
+        $end = \Illuminate\Support\Facades\Date::parse($endDate)->startOfDay();
 
         if ($start->gt($end)) {
             return 0;
@@ -104,7 +104,7 @@ final class LeaveService
 
     public function getAnnualLeaveDaysUsed(int $userId, int $year): int
     {
-        $leaves = Leave::where('user_id', $userId)
+        $leaves = Leave::query()->where('user_id', $userId)
             ->where('type', \App\Enums\LeaveType::Annual)
             ->where('status', '!=', \App\Enums\LeaveStatus::Rejected)
             ->whereYear('start_date', $year)

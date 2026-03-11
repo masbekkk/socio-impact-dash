@@ -20,7 +20,7 @@ final class ProjectApprovalResource extends JsonResource
             'approval_type' => $this->approval_type,
             'approval_status' => $this->approval_status,
             'notes' => $this->notes,
-            'approved_by' => $this->whenLoaded('approvedBy', fn () => [
+            'approved_by' => $this->whenLoaded('approvedBy', fn (): array => [
                 'id' => $this->approvedBy->id,
                 'name' => $this->approvedBy->name,
                 'role' => $this->approvedBy->getRoleNames()->first(),

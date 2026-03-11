@@ -80,7 +80,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
 
                 // Filter letter divisions based on role
                 const allLetterDivs = divisionsRes.data.data;
-                let filteredDivCodes: string[] = [];
+                const filteredDivCodes: string[] = [];
 
                 if (hasRole(['direktur', 'superadmin'])) {
                     filteredDivCodes.push('Direktur', 'Finance', 'HCM', 'BOD');

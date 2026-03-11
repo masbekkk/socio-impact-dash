@@ -30,7 +30,7 @@ final class ProcessProjectDocumentUpload implements ShouldQueue
 
     public function handle(): void
     {
-        $document = ProjectDocument::find($this->documentId);
+        $document = ProjectDocument::query()->find($this->documentId);
 
         if (! $document || ! $document->temp_path) {
             Log::warning("ProcessProjectDocumentUpload: Document #{$this->documentId} not found or no temp_path.");
@@ -51,7 +51,7 @@ final class ProcessProjectDocumentUpload implements ShouldQueue
                 return;
             }
 
-            $fileName = basename($document->temp_path);
+            $fileName = basename((string) $document->temp_path);
             $finalPath = $this->finalDirectory.'/'.$fileName;
 
             $stream = $tempDisk->readStream($document->temp_path);
@@ -82,7 +82,7 @@ final class ProcessProjectDocumentUpload implements ShouldQueue
 
     public function failed(Throwable $exception): void
     {
-        $document = ProjectDocument::find($this->documentId);
+        $document = ProjectDocument::query()->find($this->documentId);
         $document?->update(['upload_status' => 'failed']);
 
         Log::error("ProcessProjectDocumentUpload: Permanently failed for document #{$this->documentId}: {$exception->getMessage()}");

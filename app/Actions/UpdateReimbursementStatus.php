@@ -25,7 +25,7 @@ final readonly class UpdateReimbursementStatus
                     'status' => ReimbursementStatus::Transferred,
                     'transferred_at' => now(),
                 ];
-                if ($transferProof !== null) {
+                if ($transferProof instanceof UploadedFile) {
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
                     $updateData['transfer_proof_path'] = $path;
                 }
@@ -44,14 +44,14 @@ final readonly class UpdateReimbursementStatus
 
             if ($role === 'direktur') {
                 // Direktur override: update ALL approval records for this reimbursement
-                ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                ReimbursementApproval::query()->where('reimbursement_id', $reimbursement->id)
                     ->update([
                         'status' => $action === 'request_fund' ? ApprovalStatus::Approved->value : $action,
                         'approved_at' => in_array($action, [ApprovalStatus::Approved->value, 'request_fund']) ? now() : null,
                         'updated_by' => $approverId, // Track who actually took the action
                     ]);
             } else {
-                $approval = ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                $approval = ReimbursementApproval::query()->where('reimbursement_id', $reimbursement->id)
                     ->where('role', $role)
                     ->first();
 
@@ -64,7 +64,7 @@ final readonly class UpdateReimbursementStatus
                     ]);
                 } else {
                     // Fallback to create if it doesn't exist (e.g. legacy data or single-step update)
-                    ReimbursementApproval::create([
+                    ReimbursementApproval::query()->create([
                         'reimbursement_id' => $reimbursement->id,
                         'role' => $role,
                         'approver_id' => $approverId,
@@ -86,7 +86,7 @@ final readonly class UpdateReimbursementStatus
                     $updateData['status'] = ReimbursementStatus::Requested;
                 }
 
-                if ($transferProof !== null) {
+                if ($transferProof instanceof UploadedFile) {
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
                     $updateData['transfer_proof_path'] = $path;
                     $updateData['transferred_at'] = now();
@@ -121,7 +121,7 @@ final readonly class UpdateReimbursementStatus
 
             // Send notifications for status changes
             if (in_array($action, [ApprovalStatus::Approved->value, 'request_fund', 'revision', 'rejected'], true)) {
-                $notifier = new \App\Actions\CreateNotification();
+                $notifier = new CreateNotification();
 
                 $actionLabels = [
                     ApprovalStatus::Approved->value => 'disetujui',
@@ -140,7 +140,7 @@ final readonly class UpdateReimbursementStatus
                 }
 
                 // Add head approver if assigned
-                $headApproval = ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                $headApproval = ReimbursementApproval::query()->where('reimbursement_id', $reimbursement->id)
                     ->where('role', 'head')
                     ->first();
                 if ($headApproval?->approver_id) {
@@ -148,13 +148,13 @@ final readonly class UpdateReimbursementStatus
                 }
 
                 // Remove the person who took the action
-                $recipientIds = array_filter($recipientIds, fn (int $id) => $id !== $approverId);
+                $recipientIds = array_filter($recipientIds, fn (int $id): bool => $id !== $approverId);
 
                 if ($recipientIds !== []) {
                     $notifier->handle(
-                        type: 'reimbursement_' . $action,
+                        type: 'reimbursement_'.$action,
                         title: 'Update Pengajuan Keuangan',
-                        message: "Pengajuan {$reimbursement->code} telah {$label} oleh " . (\App\Models\User::find($approverId)?->name ?? 'System') . '.',
+                        message: "Pengajuan {$reimbursement->code} telah {$label} oleh ".(\App\Models\User::query()->find($approverId)?->name ?? 'System').'.',
                         recipientUserIds: array_values($recipientIds),
                         referenceType: 'reimbursement',
                         referenceId: $reimbursement->id,

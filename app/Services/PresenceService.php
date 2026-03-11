@@ -13,7 +13,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
-final class PresenceService
+final readonly class PresenceService
 {
     public function __construct(
         private FileUploadService $fileUploadService
@@ -22,12 +22,10 @@ final class PresenceService
     public function checkIn(User $user, array $data): Presence
     {
         return DB::transaction(function () use ($user, $data) {
-            $today = Carbon::today();
+            $today = \Illuminate\Support\Facades\Date::today();
 
             $existingPresence = $this->getTodayPresence($user);
-            if ($existingPresence && $existingPresence->check_in_at) {
-                throw new Exception('Anda sudah melakukan check-in hari ini.');
-            }
+            throw_if($existingPresence && $existingPresence->check_in_at, Exception::class, 'Anda sudah melakukan check-in hari ini.');
 
             $presenceData = $this->buildCheckInData($user, $data, $today);
 
@@ -46,13 +44,13 @@ final class PresenceService
                 );
             }
 
-            if ($existingPresence) {
+            if ($existingPresence instanceof Presence) {
                 $existingPresence->update($presenceData);
 
                 return $existingPresence->fresh();
             }
 
-            return Presence::create($presenceData);
+            return Presence::query()->create($presenceData);
         });
     }
 
@@ -61,16 +59,12 @@ final class PresenceService
         return DB::transaction(function () use ($user, $data) {
             $presence = $this->getTodayPresence($user);
 
-            if (! $presence) {
-                throw new Exception('Anda belum melakukan check-in hari ini.');
-            }
+            throw_unless($presence, Exception::class, 'Anda belum melakukan check-in hari ini.');
 
-            if ($presence->check_out_at) {
-                throw new Exception('Anda sudah melakukan check-out hari ini.');
-            }
+            throw_if($presence->check_out_at, Exception::class, 'Anda sudah melakukan check-out hari ini.');
 
             $checkOutData = $this->buildCheckOutData($data);
-            
+
             if (! empty($data['photo']) && $data['photo'] instanceof UploadedFile) {
                 $checkOutData['checkout_photo_path'] = $this->uploadPresencePhoto(
                     $data['photo'],
@@ -78,7 +72,7 @@ final class PresenceService
                     'check_out'
                 );
             }
-            
+
             $presence->update($checkOutData);
 
             return $presence->fresh();
@@ -88,12 +82,10 @@ final class PresenceService
     public function submitPermission(User $user, array $data): Presence
     {
         return DB::transaction(function () use ($user, $data) {
-            $date = Carbon::parse($data['date']);
+            $date = \Illuminate\Support\Facades\Date::parse($data['date']);
 
             $existingPresence = $this->getPresenceByDate($user, $date);
-            if ($existingPresence) {
-                throw new Exception('Sudah ada data absensi untuk tanggal tersebut.');
-            }
+            throw_if($existingPresence, Exception::class, 'Sudah ada data absensi untuk tanggal tersebut.');
 
             $presenceData = [
                 'user_id' => $user->id,
@@ -109,20 +101,20 @@ final class PresenceService
                 );
             }
 
-            return Presence::create($presenceData);
+            return Presence::query()->create($presenceData);
         });
     }
 
     public function getTodayPresence(User $user): ?Presence
     {
-        return Presence::where('user_id', $user->id)
-            ->whereDate('date', Carbon::today())
+        return Presence::query()->where('user_id', $user->id)
+            ->whereDate('date', \Illuminate\Support\Facades\Date::today())
             ->first();
     }
 
     public function getPresenceByDate(User $user, Carbon $date): ?Presence
     {
-        return Presence::where('user_id', $user->id)
+        return Presence::query()->where('user_id', $user->id)
             ->whereDate('date', $date)
             ->first();
     }
@@ -131,14 +123,14 @@ final class PresenceService
     {
         $query = Presence::with(['user', 'project']);
 
-        if ($user) {
+        if ($user instanceof User) {
             if ($user->hasAnyRole([\App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::Superadmin->value]) || $user->hasAnyPermission(['view_all_leaves'])) {
                 // These roles can view all presence
             } elseif ($user->hasRole(\App\Enums\UserRole::Head->value)) {
                 // Head can see:
                 // 1. Their own presence
                 // 2. Their team members' presence
-                $query->where(function ($q) use ($user) {
+                $query->where(function ($q) use ($user): void {
                     $q->where('user_id', $user->id)
                         ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $user->id));
                 });
@@ -172,7 +164,7 @@ final class PresenceService
 
     public function getMonthlySummary(User $user, int $month, int $year): array
     {
-        $presences = Presence::where('user_id', $user->id)
+        $presences = Presence::query()->where('user_id', $user->id)
             ->whereMonth('date', $month)
             ->whereYear('date', $year)
             ->get();
@@ -192,7 +184,7 @@ final class PresenceService
 
     private function buildCheckInData(User $user, array $data, Carbon $today): array
     {
-        $checkInTime = Carbon::now();
+        $checkInTime = \Illuminate\Support\Facades\Date::now();
         $status = $this->determineCheckInStatus($checkInTime, $data['status'] ?? null);
 
         return [
@@ -211,7 +203,7 @@ final class PresenceService
     private function buildCheckOutData(array $data): array
     {
         return [
-            'check_out_at' => Carbon::now(),
+            'check_out_at' => \Illuminate\Support\Facades\Date::now(),
             'check_out_latitude' => $data['latitude'] ?? null,
             'check_out_longitude' => $data['longitude'] ?? null,
             'notes' => $data['notes'] ?? null,
@@ -227,9 +219,9 @@ final class PresenceService
         $configTime = config('presence.check_in_time', '09:00');
         $tolerance = config('presence.tolerance_minutes', 15);
 
-        [$hour, $minute] = explode(':', $configTime);
+        [$hour, $minute] = explode(':', (string) $configTime);
 
-        $lateThreshold = Carbon::today()
+        $lateThreshold = \Illuminate\Support\Facades\Date::today()
             ->setTime((int) $hour, (int) $minute, 0)
             ->addMinutes($tolerance);
 

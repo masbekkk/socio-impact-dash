@@ -44,9 +44,9 @@ final class ProjectMonitoringController extends Controller
         // Optional: Check permissions (e.g., only creator or admin can delete)
         // For now, allow any authenticated user with project access
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($monitoring) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($monitoring): void {
             // Delete associated files
-            $fileUploadService = app(\App\Services\FileUploadService::class);
+            $fileUploadService = resolve(\App\Services\FileUploadService::class);
             foreach ($monitoring->documents as $document) {
                 $fileUploadService->deleteFile($document->path);
             }

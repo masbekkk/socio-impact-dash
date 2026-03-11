@@ -20,7 +20,7 @@ final class ReimbursementCommentController extends Controller
                 'comment' => ['required', 'string', 'min:3'],
             ]);
 
-            $reimbursement = Reimbursement::findOrFail($id);
+            $reimbursement = Reimbursement::query()->findOrFail($id);
 
             if ($reimbursement->user_id !== $request->user()->id && ! $request->user()->hasAnyRole(['head', 'finance', 'direktur', 'superadmin'])) {
                 return JsonResponseFormatter::error('Unauthorized', 403);

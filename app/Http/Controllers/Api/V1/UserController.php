@@ -82,7 +82,7 @@ final class UserController extends Controller
         unset($data['role'], $data['head_id']);
         $data['email_verified_at'] = now();
         $data['head_id'] = $headId;
-        $user = User::create($data);
+        $user = User::query()->create($data);
 
         $user->assignRole($role);
 

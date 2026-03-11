@@ -80,6 +80,14 @@ final class UpdateProject
             'lesson_learned',
         ])->toArray();
 
+        // Safeguard: if budget partitions are updated but status is not explicitly sent, set to pending
+        if (! isset($data['budget_partition_status'])) {
+            $hasBudgetChange = array_any(['operational_budget', 'management_budget', 'allowance_budget'], fn ($key): bool => isset($data[$key]) && (float) $data[$key] !== (float) $project->$key);
+            if ($hasBudgetChange) {
+                $updateData['budget_partition_status'] = 'pending';
+            }
+        }
+
         if (! empty($updateData)) {
             /** @var array<string, mixed> $updateArray */
             $updateArray = $updateData;
@@ -164,10 +172,7 @@ final class UpdateProject
                             'temp_path' => $tempPath,
                         ]);
 
-                        \App\Jobs\ProcessProjectDocumentUpload::dispatch(
-                            (int) $existingDoc->id,
-                            "projects/{$project->id}/documents"
-                        );
+                        dispatch(new \App\Jobs\ProcessProjectDocumentUpload((int) $existingDoc->id, "projects/{$project->id}/documents"));
 
                         continue;
                     }
@@ -186,10 +191,7 @@ final class UpdateProject
                     'temp_path' => $tempPath,
                 ]);
 
-                \App\Jobs\ProcessProjectDocumentUpload::dispatch(
-                    (int) $document->id,
-                    "projects/{$project->id}/documents"
-                );
+                dispatch(new \App\Jobs\ProcessProjectDocumentUpload((int) $document->id, "projects/{$project->id}/documents"));
             }
         }
     }

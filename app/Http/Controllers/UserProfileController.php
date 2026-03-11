@@ -51,7 +51,7 @@ final class UserProfileController
             'password.confirmed' => 'Konfirmasi password tidak cocok.',
         ]);
 
-        $user = User::create([
+        $user = User::query()->create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
@@ -84,7 +84,7 @@ final class UserProfileController
             'password.required' => 'Password wajib diisi.',
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        $user = User::query()->where('email', $validated['email'])->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             throw ValidationException::withMessages([

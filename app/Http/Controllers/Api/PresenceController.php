@@ -14,7 +14,7 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-final class PresenceController
+final readonly class PresenceController
 {
     public function __construct(
         private PresenceService $presenceService
@@ -76,7 +76,7 @@ final class PresenceController
         $presence = $this->presenceService->getTodayPresence($request->user());
 
         return JsonResponseFormatter::success(
-            $presence ? new PresenceResource($presence) : null
+            $presence instanceof \App\Models\Presence ? new PresenceResource($presence) : null
         );
     }
 

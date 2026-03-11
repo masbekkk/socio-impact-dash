@@ -23,7 +23,7 @@ final class FileUploadService
     {
         $metadata = $this->uploadFile($file, $storagePath, $disk);
 
-        if (empty($prefix)) {
+        if ($prefix === '' || $prefix === '0') {
             return $metadata;
         }
 
@@ -37,7 +37,7 @@ final class FileUploadService
 
     public function deleteFile(?string $filePath, string $disk = 'public'): bool
     {
-        if (empty($filePath)) {
+        if (in_array($filePath, [null, '', '0'], true)) {
             return false;
         }
 

@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('notification_recipients', function (Blueprint $table) {
+        Schema::create('notification_recipients', function (Blueprint $table): void {
             $table->id();
 
             $table->foreignId('notification_id')

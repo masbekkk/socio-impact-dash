@@ -10,8 +10,8 @@ final readonly class CreateCalendarEvent
 {
     public function handle(array $data): ProjectEvent
     {
-        return ProjectEvent::create([
-            'project_id' => ! empty($data['project_id']) ? $data['project_id'] : null,
+        return ProjectEvent::query()->create([
+            'project_id' => empty($data['project_id']) ? null : $data['project_id'],
             'created_by' => auth()->id(),
             'name' => $data['name'],
             'start_date' => $data['start_date'],

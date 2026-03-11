@@ -23,7 +23,7 @@ final class ReimbursementService
         if (in_array($sortBy, $allowedSorts, true)) {
             $query->orderBy($sortBy, $sortDir === 'asc' ? 'asc' : 'desc');
         } else {
-            $query->orderBy('created_at', 'desc');
+            $query->latest();
         }
 
         return $query->paginate($perPage);
@@ -32,18 +32,23 @@ final class ReimbursementService
     public function applyFilters(\Illuminate\Database\Eloquent\Builder $query, User $user, array $filters): void
     {
         // Apply Role-based filtering
-        if ($user->hasRole('superadmin') || $user->hasRole('finance') || $user->hasRole('direktur')) {
+        if ($user->hasAnyRole(['superadmin', 'direktur'])) {
             // Can view all
+        } elseif ($user->hasRole('finance')) {
+            // Finance with division restriction
+            if ($user->division_id) {
+                $query->whereHas('project', fn ($q) => $q->where('division_id', $user->division_id));
+            }
         } elseif ($user->hasRole('hr')) {
             // HR can see allowances OR their own/team/approvals
-            $query->where(function ($q) use ($user) {
+            $query->where(function ($q) use ($user): void {
                 $q->where('type', \App\Enums\ReimbursementType::ALLOWANCE)
                     ->orWhere('user_id', $user->id)
                     ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $user->id))
                     ->orWhereHas('approvals', fn ($aq) => $aq->where('approver_id', $user->id));
             });
         } elseif ($user->hasRole('head')) {
-            $query->where(function ($q) use ($user) {
+            $query->where(function ($q) use ($user): void {
                 $q->where('user_id', $user->id)
                     ->orWhereHas('user', fn ($uq) => $uq->where('head_id', $user->id))
                     ->orWhereHas('approvals', fn ($aq) => $aq->where('approver_id', $user->id));
@@ -60,13 +65,11 @@ final class ReimbursementService
 
             if (is_array($status)) {
                 $query->whereIn('status', $status);
-            } else {
+            } elseif ($status === 'revision' || $status === 'revised') {
                 // Special handling for 'revision' to include both 'revised' and 'revision'
-                if ($status === 'revision' || $status === 'revised') {
-                    $query->whereIn('status', ['revision', 'revised']);
-                } else {
-                    $query->where('status', $status);
-                }
+                $query->whereIn('status', ['revision', 'revised']);
+            } else {
+                $query->where('status', $status);
             }
         }
 
@@ -93,7 +96,7 @@ final class ReimbursementService
 
         if (! empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
                 $q->where('code', 'like', "%{$search}%")
                     ->orWhereHas('user', fn (\Illuminate\Database\Eloquent\Builder $u) => $u->where('name', 'like', "%{$search}%"))
                     ->orWhereHas('project', fn (\Illuminate\Database\Eloquent\Builder $p) => $p->where('name', 'like', "%{$search}%"));

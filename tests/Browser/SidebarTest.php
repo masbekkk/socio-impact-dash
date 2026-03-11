@@ -11,7 +11,7 @@ it('pegawai can access dashboard and get successful response', function (): void
     $response = $this->actingAs($user)->get('/dashboard');
 
     $response->assertSuccessful();
-    $response->assertInertia(fn () => true);
+    $response->assertInertia(fn (): true => true);
 });
 
 it('head can access dashboard and get successful response', function (): void {
@@ -20,7 +20,7 @@ it('head can access dashboard and get successful response', function (): void {
     $response = $this->actingAs($user)->get('/dashboard');
 
     $response->assertSuccessful();
-    $response->assertInertia(fn () => true);
+    $response->assertInertia(fn (): true => true);
 });
 
 it('finance can access dashboard and get successful response', function (): void {
@@ -29,7 +29,7 @@ it('finance can access dashboard and get successful response', function (): void
     $response = $this->actingAs($user)->get('/dashboard');
 
     $response->assertSuccessful();
-    $response->assertInertia(fn () => true);
+    $response->assertInertia(fn (): true => true);
 });
 
 it('superadmin can access dashboard and get successful response', function (): void {
@@ -38,7 +38,7 @@ it('superadmin can access dashboard and get successful response', function (): v
     $response = $this->actingAs($user)->get('/dashboard');
 
     $response->assertSuccessful();
-    $response->assertInertia(fn () => true);
+    $response->assertInertia(fn (): true => true);
 });
 
 it('sidebar renders for pegawai without errors', function (): void {

@@ -19,11 +19,10 @@ final class NotificationController extends Controller
         $user = $request->user();
 
         $notifications = NotificationRecipient::with('notification.creator')
-            ->where('user_id', $user->id)
-            ->orderByDesc('created_at')
+            ->where('user_id', $user->id)->latest()
             ->paginate($request->integer('per_page', 15));
 
-        $data = $notifications->through(function (NotificationRecipient $nr) {
+        $data = $notifications->through(function (NotificationRecipient $nr): array {
             $n = $nr->notification;
 
             return [
@@ -54,7 +53,7 @@ final class NotificationController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
 
-        $count = NotificationRecipient::where('user_id', $user->id)
+        $count = NotificationRecipient::query()->where('user_id', $user->id)
             ->whereNull('read_at')
             ->count();
 
@@ -66,7 +65,7 @@ final class NotificationController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
 
-        $recipient = NotificationRecipient::where('id', $id)
+        $recipient = NotificationRecipient::query()->where('id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();
 
@@ -83,7 +82,7 @@ final class NotificationController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
 
-        NotificationRecipient::where('user_id', $user->id)
+        NotificationRecipient::query()->where('user_id', $user->id)
             ->whereNull('read_at')
             ->update([
                 'read_at' => now(),
@@ -110,7 +109,7 @@ final class NotificationController extends Controller
 
     private function resolveProjectUrl(int $projectId): ?string
     {
-        $project = Project::select('uuid')->find($projectId);
+        $project = Project::query()->select('uuid')->find($projectId);
 
         return $project ? "/projects/{$project->uuid}" : null;
     }

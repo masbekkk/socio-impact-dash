@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('letter_requests', function (Blueprint $table) {
+        Schema::table('letter_requests', function (Blueprint $table): void {
             $table->foreignId('letter_code_id')->nullable()->constrained('letter_codes')->nullOnDelete();
             $table->foreignId('letter_division_id')->nullable()->constrained('letter_divisions')->nullOnDelete();
             $table->text('keterangan')->nullable();
@@ -27,7 +27,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('letter_requests', function (Blueprint $table) {
+        Schema::table('letter_requests', function (Blueprint $table): void {
             $table->dropForeign(['letter_code_id']);
             $table->dropForeign(['letter_division_id']);
             $table->dropForeign(['pic_id']);

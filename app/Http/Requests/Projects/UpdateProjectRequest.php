@@ -38,8 +38,8 @@ final class UpdateProjectRequest extends FormRequest
                 'sometimes',
                 'required',
                 'exists:users,id',
-                function ($attribute, $value, $fail) {
-                    $user = \App\Models\User::find($value);
+                function ($attribute, $value, $fail): void {
+                    $user = \App\Models\User::query()->find($value);
                     if ($user && $user->hasRole(\App\Enums\UserRole::Direktur->value)) {
                         $fail('The selected PIC cannot be a Direktur.');
                     }
@@ -156,7 +156,7 @@ final class UpdateProjectRequest extends FormRequest
                 // Check chronological order
                 $prevDate = null;
                 foreach ($terminPayments as $index => $payment) {
-                    $currentDate = \Carbon\Carbon::parse($payment['due_date']);
+                    $currentDate = \Illuminate\Support\Facades\Date::parse($payment['due_date']);
                     if ($prevDate && $currentDate->lessThan($prevDate)) {
                         $validator->errors()->add("termin_payments.{$index}.due_date", 'Tanggal jatuh tempo termin harus berurutan.');
                     }

@@ -221,30 +221,32 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
     );
   }, [selectedProject, selectedActivities]);
 
-  const handleSubmit = async () => {
-    if (selectedActivities.length === 0 || totalAmount <= 0) {
-      setErrors({ amount: ['Tambahkan minimal 1 item pada kegiatan yang dipilih.'] });
-      return;
-    }
+  const handleSubmit = async (status: 'submitted' | 'draft' = 'submitted') => {
+    if (status === 'submitted') {
+      if (selectedActivities.length === 0 || totalAmount <= 0) {
+        setErrors({ amount: ['Tambahkan minimal 1 item pada kegiatan yang dipilih.'] });
+        return;
+      }
 
-    if (!formData.start_date) {
-      setErrors({ start_date: ['Tanggal penggunaan wajib diisi.'] });
-      return;
-    }
+      if (!formData.start_date) {
+        setErrors({ start_date: ['Tanggal penggunaan wajib diisi.'] });
+        return;
+      }
 
-    if (!formData.approver_head_id) {
-      setErrors({ _general: ['Head Approver wajib dipilih.'] });
-      return;
-    }
+      if (!formData.approver_head_id) {
+        setErrors({ _general: ['Head Approver wajib dipilih.'] });
+        return;
+      }
 
-    // Validate per-activity budget
-    for (const activity of selectedActivities) {
-      const detail = selectedProject?.budget_details?.find(bd => bd.id === activity.budget_detail_id);
-      if (detail) {
-        const childTotal = activity.children.reduce((s, c) => s + (c.amount || 0), 0);
-        if (childTotal > detail.remaining_amount) {
-          setErrors({ amount: [`Total item pada kegiatan "${detail.item_name}" melebihi sisa anggaran (${fmt(detail.remaining_amount)}).`] });
-          return;
+      // Validate per-activity budget
+      for (const activity of selectedActivities) {
+        const detail = selectedProject?.budget_details?.find(bd => bd.id === activity.budget_detail_id);
+        if (detail) {
+          const childTotal = activity.children.reduce((s, c) => s + (c.amount || 0), 0);
+          if (childTotal > detail.remaining_amount) {
+            setErrors({ amount: [`Total item pada kegiatan "${detail.item_name}" melebihi sisa anggaran (${fmt(detail.remaining_amount)}).`] });
+            return;
+          }
         }
       }
     }
@@ -271,6 +273,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
       code: formData.code,
       type: 'atr',
       project_id: formData.project_id,
+      status,
       amount: totalAmount,
       bank_name: formData.bank_name,
       bank_account: formData.account_number,
@@ -661,6 +664,9 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
                 {loading && <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</span>}
               </div>
               <div className="flex gap-3">
+                <Button type="button" variant="outline" disabled={loading} onClick={() => handleSubmit('draft')}>
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Simpan Draft</>}
+                </Button>
                 <Button type="submit" disabled={loading} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)]/90">
                   {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Ajukan ATR</>}
                 </Button>

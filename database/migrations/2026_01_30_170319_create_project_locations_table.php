@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('project_locations', function (Blueprint $table) {
+        Schema::create('project_locations', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('project_id')->constrained('projects', 'id')->cascadeOnDelete()->cascadeOnUpdate();
             $table->string('latitude')->nullable();

@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('atr_budget_selecteds', function (Blueprint $table) {
+        Schema::table('atr_budget_selecteds', function (Blueprint $table): void {
             $table->text('notes')->nullable()->after('amount');
         });
     }
@@ -23,7 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('atr_budget_selecteds', function (Blueprint $table) {
+        Schema::table('atr_budget_selecteds', function (Blueprint $table): void {
             $table->dropColumn('notes');
         });
     }

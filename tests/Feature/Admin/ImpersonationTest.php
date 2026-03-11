@@ -1,18 +1,20 @@
 <?php
 
-use App\Models\User;
+declare(strict_types=1);
+
 use App\Enums\UserRole;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Session;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->seed(RoleAndPermissionSeeder::class);
 });
 
-test('superadmin can impersonate a user', function () {
+test('superadmin can impersonate a user', function (): void {
     $superadmin = User::factory()->create();
     $superadmin->assignRole(UserRole::Superadmin->value);
 
@@ -27,7 +29,7 @@ test('superadmin can impersonate a user', function () {
     $this->assertEquals($superadmin->id, Session::get('impersonated_by'));
 });
 
-test('non-superadmin cannot impersonate a user', function () {
+test('non-superadmin cannot impersonate a user', function (): void {
     $pegawai1 = User::factory()->create();
     $pegawai1->assignRole(UserRole::Pegawai->value);
 
@@ -41,7 +43,7 @@ test('non-superadmin cannot impersonate a user', function () {
     $this->assertEquals($pegawai1->id, auth()->id());
 });
 
-test('admin can stop impersonating', function () {
+test('admin can stop impersonating', function (): void {
     $superadmin = User::factory()->create();
     $superadmin->assignRole(UserRole::Superadmin->value);
 
@@ -62,7 +64,7 @@ test('admin can stop impersonating', function () {
     $this->assertFalse(Session::has('impersonated_by'));
 });
 
-test('session persists across requests after impersonating', function () {
+test('session persists across requests after impersonating', function (): void {
     $superadmin = User::factory()->create();
     $superadmin->assignRole(UserRole::Superadmin->value);
 

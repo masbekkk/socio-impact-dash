@@ -21,7 +21,7 @@ return new class extends Migration
 
         Schema::dropIfExists('project_events');
 
-        Schema::create('project_events', function (Blueprint $table) {
+        Schema::create('project_events', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('project_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
@@ -56,7 +56,7 @@ return new class extends Migration
         // We don't necessarily need to perfectly reverse it for dev, but
         // to be safe we'll recreate the old structure.
         Schema::dropIfExists('project_events');
-        Schema::create('project_events', function (Blueprint $table) {
+        Schema::create('project_events', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('project_id')->constrained()->onDelete('cascade');
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');

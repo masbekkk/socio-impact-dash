@@ -30,7 +30,7 @@ final class ProcessProjectMonitoringDocumentUpload implements ShouldQueue
 
     public function handle(): void
     {
-        $document = ProjectMonitoringDocument::find($this->documentId);
+        $document = ProjectMonitoringDocument::query()->find($this->documentId);
 
         if (! $document || ! $document->temp_path) {
             Log::warning("ProcessProjectMonitoringDocumentUpload: Document #{$this->documentId} not found or no temp_path.");
@@ -51,7 +51,7 @@ final class ProcessProjectMonitoringDocumentUpload implements ShouldQueue
                 return;
             }
 
-            $fileName = basename($document->temp_path);
+            $fileName = basename((string) $document->temp_path);
             $finalPath = $this->finalDirectory.'/'.$fileName;
 
             $stream = $tempDisk->readStream($document->temp_path);
@@ -80,7 +80,7 @@ final class ProcessProjectMonitoringDocumentUpload implements ShouldQueue
 
     public function failed(Throwable $exception): void
     {
-        $document = ProjectMonitoringDocument::find($this->documentId);
+        $document = ProjectMonitoringDocument::query()->find($this->documentId);
         $document?->update(['upload_status' => 'failed']);
         Log::error("ProcessProjectMonitoringDocumentUpload: Permanently failed for monitoring document #{$this->documentId}: {$exception->getMessage()}");
     }

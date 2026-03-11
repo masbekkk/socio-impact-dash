@@ -7,6 +7,7 @@ namespace App\Http\Resources\V1\Reimbursement;
 use App\Enums\ReimbursementType;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use UnitEnum;
 
 final class ReimbursementResource extends JsonResource
 {
@@ -70,22 +71,18 @@ final class ReimbursementResource extends JsonResource
             'rejection_reason' => $this->rejection_reason,
             'start_date' => $this->start_date?->toDateString(),
             'end_date' => $this->end_date?->toDateString(),
-            'start_time' => $this->start_time ? substr($this->start_time, 0, 5) : null,
-            'end_time' => $this->end_time ? substr($this->end_time, 0, 5) : null,
+            'start_time' => $this->start_time ? mb_substr($this->start_time, 0, 5) : null,
+            'end_time' => $this->end_time ? mb_substr($this->end_time, 0, 5) : null,
             'documents' => ReimbursementDocumentResource::collection(
                 $this->whenLoaded('documents')
             ),
-            'comments' => $this->whenLoaded('comments', function (): \Illuminate\Support\Collection {
-                return $this->comments->map(function (\App\Models\ReimbursementComment $item): array {
-                    return [
-                        'id' => $item->id,
-                        'user_id' => $item->user_id,
-                        'user_name' => $item->user?->name ?? 'Unknown',
-                        'comment' => $item->comment,
-                        'created_at' => $item->created_at?->toISOString(),
-                    ];
-                });
-            }),
+            'comments' => $this->whenLoaded('comments', fn (): \Illuminate\Support\Collection => $this->comments->map(fn (\App\Models\ReimbursementComment $item): array => [
+                'id' => $item->id,
+                'user_id' => $item->user_id,
+                'user_name' => $item->user?->name ?? 'Unknown',
+                'comment' => $item->comment,
+                'created_at' => $item->created_at?->toISOString(),
+            ])),
             'approvals' => $this->whenLoaded('approvals', function (): \Illuminate\Support\Collection {
                 $priority = [
                     'head' => 1,
@@ -94,55 +91,46 @@ final class ReimbursementResource extends JsonResource
                     'direktur' => 4,
                 ];
 
-                return $this->approvals->sortBy(function ($approval) use ($priority) {
-                    $roleValue = $approval->role instanceof \UnitEnum ? $approval->role->value : (string) $approval->role;
-                    return $priority[strtolower($roleValue)] ?? 99;
-                })->values()->map(function (\App\Models\ReimbursementApproval $item): array {
-                    return [
-                        'id' => $item->id,
-                        'approver_id' => $item->approver_id,
-                        'approver' => [
-                            'id' => $item->approver?->id,
-                            'name' => $item->approver?->name,
-                        ],
-                        'approver_name' => $item->approver?->name ?? 'Unknown',
-                        'role' => $item->role instanceof \UnitEnum ? $item->role->value : $item->role,
-                        'status' => $item->status instanceof \UnitEnum ? $item->status->value : $item->status,
-                        'notes' => $item->notes,
-                        'approved_at' => $item->approved_at?->toISOString(),
-                    ];
-                });
+                return $this->approvals->sortBy(function ($approval) use ($priority): int {
+                    $roleValue = $approval->role instanceof UnitEnum ? $approval->role->value : (string) $approval->role;
+
+                    return $priority[mb_strtolower($roleValue)] ?? 99;
+                })->values()->map(fn (\App\Models\ReimbursementApproval $item): array => [
+                    'id' => $item->id,
+                    'approver_id' => $item->approver_id,
+                    'approver' => [
+                        'id' => $item->approver?->id,
+                        'name' => $item->approver?->name,
+                    ],
+                    'approver_name' => $item->approver?->name ?? 'Unknown',
+                    'role' => $item->role instanceof UnitEnum ? $item->role->value : $item->role,
+                    'status' => $item->status instanceof UnitEnum ? $item->status->value : $item->status,
+                    'notes' => $item->notes,
+                    'approved_at' => $item->approved_at?->toISOString(),
+                ]);
             }),
             'can_approve' => $this->calculateCanApprove($request),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
-            'atr_budget_selecteds' => $this->whenLoaded('atrBudgetSelecteds', function (): \Illuminate\Support\Collection {
-                return $this->atrBudgetSelecteds->map(function (\App\Models\AtrBudgetSelected $item): array {
-                    return [
-                        'id' => $item->id,
-                        'project_budget_detail_id' => $item->project_budget_detail_id,
-                        'amount' => (float) $item->amount,
-                        'notes' => $item->notes, // Load the note text from pivot
-                    ];
-                });
-            }),
-            'items' => $this->whenLoaded('items', function (): \Illuminate\Support\Collection {
-                return $this->items->map(function (\App\Models\ReimbursementItem $item): array {
-                    return [
-                        'id' => $item->id,
-                        'parent_item_id' => $item->parent_item_id,
-                        'item_name' => $item->item_name,
-                        'quantity' => $item->quantity,
-                        'unit_price' => (float) $item->unit_price,
-                        'amount' => (float) $item->amount,
-                        'expense_type' => $item->expense_type?->value,
-                        'receipt_path' => $item->receipt_path,
-                        'notes' => $item->notes,
-                        'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
-                        'activity_id' => $item->project_budget_detail_id,
-                    ];
-                });
-            }),
+            'atr_budget_selecteds' => $this->whenLoaded('atrBudgetSelecteds', fn (): \Illuminate\Support\Collection => $this->atrBudgetSelecteds->map(fn (\App\Models\AtrBudgetSelected $item): array => [
+                'id' => $item->id,
+                'project_budget_detail_id' => $item->project_budget_detail_id,
+                'amount' => (float) $item->amount,
+                'notes' => $item->notes, // Load the note text from pivot
+            ])),
+            'items' => $this->whenLoaded('items', fn (): \Illuminate\Support\Collection => $this->items->map(fn (\App\Models\ReimbursementItem $item): array => [
+                'id' => $item->id,
+                'parent_item_id' => $item->parent_item_id,
+                'item_name' => $item->item_name,
+                'quantity' => $item->quantity,
+                'unit_price' => (float) $item->unit_price,
+                'amount' => (float) $item->amount,
+                'expense_type' => $item->expense_type?->value,
+                'receipt_path' => $item->receipt_path,
+                'notes' => $item->notes,
+                'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
+                'activity_id' => $item->project_budget_detail_id,
+            ])),
             'atr_items' => $this->when(
                 $this->type === ReimbursementType::EER && $this->atr_id !== null,
                 function () {
@@ -152,19 +140,17 @@ final class ReimbursementResource extends JsonResource
                     }
                     $atr->loadMissing('items');
 
-                    return $atr->items->where('parent_item_id', null)->map(function (\App\Models\ReimbursementItem $item): array {
-                        return [
-                            'id' => $item->id,
-                            'item_name' => $item->item_name,
-                            'quantity' => $item->quantity,
-                            'unit_price' => (float) $item->unit_price,
-                            'amount' => (float) $item->amount,
-                            'expense_type' => $item->expense_type?->value,
-                            'notes' => $item->notes,
-                            'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
-                            'activity_id' => $item->project_budget_detail_id,
-                        ];
-                    })->values();
+                    return $atr->items->where('parent_item_id', null)->map(fn (\App\Models\ReimbursementItem $item): array => [
+                        'id' => $item->id,
+                        'item_name' => $item->item_name,
+                        'quantity' => $item->quantity,
+                        'unit_price' => (float) $item->unit_price,
+                        'amount' => (float) $item->amount,
+                        'expense_type' => $item->expense_type?->value,
+                        'notes' => $item->notes,
+                        'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
+                        'activity_id' => $item->project_budget_detail_id,
+                    ])->values();
                 }
             ),
         ];
@@ -234,54 +220,45 @@ final class ReimbursementResource extends JsonResource
         // If user has the role and that role is PENDING, they can approve.
 
         // 1. Head Approval Phase
-        if ($effectiveStage === 'submitted' || $effectiveStage === 'revised') {
-            if ($user->hasRole('head') || $user->hasRole('direktur')) {
-                $pendingHead = $this->approvals->where('role', 'head')->where('status', 'pending')->isNotEmpty();
-                if ($pendingHead) {
-                    return true;
-                }
+        if (($effectiveStage === 'submitted' || $effectiveStage === 'revised') && ($user->hasRole('head') || $user->hasRole('direktur'))) {
+            $pendingHead = $this->approvals->where('role', 'head')->where('status', 'pending')->isNotEmpty();
+            if ($pendingHead) {
+                return true;
             }
         }
 
         // 2. HR Approval Phase (Allowance only)
-        if ($effectiveStage === 'head_approved' && $this->type->value === 'allowance') {
-            if ($user->hasRole('hr') || $user->hasRole('direktur')) {
-                $pendingHR = $this->approvals->where('role', 'hr')->where('status', 'pending')->isNotEmpty();
-                if ($pendingHR) {
-                    return true;
-                }
+        if ($effectiveStage === 'head_approved' && $this->type->value === 'allowance' && ($user->hasRole('hr') || $user->hasRole('direktur'))) {
+            $pendingHR = $this->approvals->where('role', 'hr')->where('status', 'pending')->isNotEmpty();
+            if ($pendingHR) {
+                return true;
             }
         }
 
         // 3. Finance Approval Phase
         // For ATR: after Head. For Allowance: after HR.
         $financeStage = (in_array($this->type->value, ['atr', 'eer'])) ? 'head_approved' : 'hr_approved';
-        if ($effectiveStage === $financeStage || (in_array($this->type->value, ['atr', 'eer']) && $effectiveStage === 'head_approved')) {
-            if ($user->hasRole('finance') || $user->hasRole('direktur')) {
-                $pendingFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
-                if ($pendingFinance) {
-                    return true;
-                }
+        if (($effectiveStage === $financeStage || in_array($this->type->value, ['atr', 'eer']) && $effectiveStage === 'head_approved') && ($user->hasRole('finance') || $user->hasRole('direktur'))) {
+            $pendingFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
+            if ($pendingFinance) {
+                return true;
             }
         }
 
         // 4. Direktur Final Phase (After Finance)
         // For Allowance, HR is the final phase before transfer.
-        if ($this->type->value === 'allowance') {
-            if ($hrApproval && $hrApproval->status->value === 'approved') {
-                // Once HR approved, it's ready for transfer. HR or Admin can take action.
-                return $user->hasRole('hr') || $user->hasRole('superadmin');
+        if ($this->type->value === 'allowance' && ($hrApproval && $hrApproval->status->value === 'approved')) {
+            // Once HR approved, it's ready for transfer. HR or Admin can take action.
+            if ($user->hasRole('hr')) {
+                return true;
             }
+
+            return (bool) $user->hasRole('superadmin');
         }
 
         $financeApproved = $financeApproval && $financeApproval->status->value === 'approved';
-        if ($financeApproved) {
-            if ($user->hasRole('direktur')) {
-                // Direktur can always approve if finance is done and it's not final yet
-                return true;
-            }
-        }
 
-        return false;
+        // Direktur can always approve if finance is done and it's not final yet
+        return $financeApproved && $user->hasRole('direktur');
     }
 }

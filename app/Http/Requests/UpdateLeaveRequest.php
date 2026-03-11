@@ -14,14 +14,14 @@ final class UpdateLeaveRequest extends FormRequest
     public function authorize(): bool
     {
         $leaveCode = $this->route('leaf') ?? $this->route('leave');
-        
-        $leave = \App\Models\Leave::where('code', $leaveCode)->first();
 
-        if (!$leave) {
+        $leave = \App\Models\Leave::query()->where('code', $leaveCode)->first();
+
+        if (! $leave) {
             return false;
         }
 
-        return $leave->user_id === $this->user()->id && 
+        return $leave->user_id === $this->user()->id &&
                in_array($leave->status, [\App\Enums\LeaveStatus::Revision, \App\Enums\LeaveStatus::Revised], true);
     }
 
@@ -45,7 +45,7 @@ final class UpdateLeaveRequest extends FormRequest
             'approver_head_id' => [
                 'nullable',
                 \Illuminate\Validation\Rule::requiredIf(fn () => $this->user()?->hasRole('pegawai')),
-                'exists:users,id'
+                'exists:users,id',
             ],
             'attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ];

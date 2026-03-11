@@ -11,17 +11,16 @@ use App\Enums\LeaveType;
 use App\Models\Leave;
 use App\Models\LeaveApproval;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 final class LeaveSeeder extends Seeder
 {
     public function run(): void
     {
-        $employees = User::role('pegawai')->get();
-        $head = User::role('head')->first();
-        $hr = User::role('hr')->first();
-        $admin = User::role('superadmin')->first();
+        $employees = User::query()->role('pegawai')->get();
+        $head = User::query()->role('head')->first();
+        $hr = User::query()->role('hr')->first();
+        $admin = User::query()->role('superadmin')->first();
 
         $leaveTypes = [
             LeaveType::Annual,
@@ -44,18 +43,18 @@ final class LeaveSeeder extends Seeder
         ];
 
         $year = now()->year;
-        $counter = Leave::whereYear('created_at', $year)->count() + 1;
+        $counter = Leave::query()->whereYear('created_at', $year)->count() + 1;
 
         for ($i = 1; $i <= 20; $i++) {
             $employee = $employees->random();
             $type = $leaveTypes[array_rand($leaveTypes)];
-            $startDate = Carbon::now()->subDays(rand(5, 90))->startOfDay();
-            $endDate = (clone $startDate)->addDays(rand(1, 7));
+            $startDate = \Illuminate\Support\Facades\Date::now()->subDays(random_int(5, 90))->startOfDay();
+            $endDate = (clone $startDate)->addDays(random_int(1, 7));
             $status = $statuses[array_rand($statuses)];
 
             $code = sprintf('LV-%d-%03d', $year, $counter++);
 
-            $leave = Leave::create([
+            $leave = Leave::query()->create([
                 'code' => $code,
                 'user_id' => $employee->id,
                 'type' => $type,
@@ -63,14 +62,14 @@ final class LeaveSeeder extends Seeder
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'reason' => $this->randomReason($type),
-                'phone' => '08'.rand(100000000, 999999999),
+                'phone' => '08'.random_int(100000000, 999999999),
             ]);
 
             // Only create approval if not in draft/submitted
             if (! in_array($status, [LeaveStatus::Submitted, LeaveStatus::Draft], true)) {
                 $map = $approverMap[array_rand($approverMap)];
 
-                LeaveApproval::create([
+                LeaveApproval::query()->create([
                     'leave_id' => $leave->id,
                     'approver_id' => $map['approver']->id,
                     'role' => $map['role'],
@@ -80,7 +79,7 @@ final class LeaveSeeder extends Seeder
                     'notes' => $status === LeaveStatus::Rejected
                         ? 'Pengajuan tidak memenuhi syarat.'
                         : null,
-                    'approved_at' => Carbon::now()->subDays(rand(1, 5)),
+                    'approved_at' => \Illuminate\Support\Facades\Date::now()->subDays(random_int(1, 5)),
                 ]);
             }
         }

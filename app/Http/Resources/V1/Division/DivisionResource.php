@@ -30,13 +30,11 @@ final class DivisionResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
-            'division_code' => $this->whenLoaded('divisionCode', function () {
-                return [
-                    'id' => $this->divisionCode->id,
-                    'code' => $this->divisionCode->code,
-                    'name' => $this->divisionCode->name,
-                ];
-            }),
+            'division_code' => $this->whenLoaded('divisionCode', fn (): array => [
+                'id' => $this->divisionCode->id,
+                'code' => $this->divisionCode->code,
+                'name' => $this->divisionCode->name,
+            ]),
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];

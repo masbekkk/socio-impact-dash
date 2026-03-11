@@ -10,7 +10,7 @@ final class ProjectSeeder extends Seeder
 {
     public function run(): void
     {
-        \App\Models\Project::factory()->count(25)->create()->each(function (\App\Models\Project $project) {
+        \App\Models\Project::factory()->count(25)->create()->each(function (\App\Models\Project $project): void {
             $project->locations()->createMany([
                 ['latitude' => '-6.200000', 'longitude' => '106.816666', 'detail_address' => 'Jakarta Office'],
                 ['latitude' => '-7.257472', 'longitude' => '112.752088', 'detail_address' => 'Surabaya Branch'],

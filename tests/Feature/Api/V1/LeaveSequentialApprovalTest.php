@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Api\V1;
 
 use App\Actions\CreateLeave;
-use App\Enums\ApprovalStatus;
 use App\Enums\LeaveStatus;
 use App\Enums\UserRole;
-use App\Models\Leave;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,7 +31,7 @@ final class LeaveSequentialApprovalTest extends TestCase
         User::factory()->create(['email' => 'hr@socio-impact.test'])->assignRole(UserRole::HR->value);
         User::factory()->create(['email' => 'direktur@socio-impact.test'])->assignRole(UserRole::Direktur->value);
 
-        $createLeave = app(CreateLeave::class);
+        $createLeave = resolve(CreateLeave::class);
         $leave = $createLeave->handle([
             'type' => 'annual',
             'start_date' => now()->addDay()->toDateString(),
@@ -55,7 +53,7 @@ final class LeaveSequentialApprovalTest extends TestCase
         User::factory()->create(['email' => 'hr@socio-impact.test'])->assignRole(UserRole::HR->value);
         User::factory()->create(['email' => 'direktur@socio-impact.test'])->assignRole(UserRole::Direktur->value);
 
-        $createLeave = app(CreateLeave::class);
+        $createLeave = resolve(CreateLeave::class);
         $leave = $createLeave->handle([
             'type' => 'annual',
             'start_date' => now()->addDay()->toDateString(),
@@ -78,7 +76,7 @@ final class LeaveSequentialApprovalTest extends TestCase
         $direktur->assignRole(UserRole::Direktur->value);
         $direktur->givePermissionTo('approve_leaves');
 
-        $createLeave = app(CreateLeave::class);
+        $createLeave = resolve(CreateLeave::class);
         $leave = $createLeave->handle([
             'type' => 'annual',
             'start_date' => now()->addDay()->toDateString(),
@@ -107,7 +105,7 @@ final class LeaveSequentialApprovalTest extends TestCase
         $direktur->assignRole(UserRole::Direktur->value);
         $direktur->givePermissionTo('approve_leaves');
 
-        $createLeave = app(CreateLeave::class);
+        $createLeave = resolve(CreateLeave::class);
         $leave = $createLeave->handle([
             'type' => 'annual',
             'start_date' => now()->addDay()->toDateString(),

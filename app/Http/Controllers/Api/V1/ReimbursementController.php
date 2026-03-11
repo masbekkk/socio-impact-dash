@@ -17,12 +17,13 @@ use App\Services\ReimbursementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use ReflectionClass;
 use Throwable;
 
 final class ReimbursementController extends Controller
 {
     public function __construct(
-        private ReimbursementService $reimbursementService
+        private readonly ReimbursementService $reimbursementService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -56,6 +57,7 @@ final class ReimbursementController extends Controller
         $user = $request->user();
         $filters = [
             'status' => $request->get('status'),
+            'type' => $request->get('type'),
             'project_id' => $request->get('project_id'),
             'start_date' => $request->get('start_date'),
             'end_date' => $request->get('end_date'),
@@ -94,7 +96,7 @@ final class ReimbursementController extends Controller
         try {
             $data = $this->reimbursementService->getReimbursementDetail($id);
 
-            if (! $data) {
+            if (! $data instanceof Reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
             }
 
@@ -105,10 +107,10 @@ final class ReimbursementController extends Controller
             }
 
             // Provide projects and users for the revision editor dropdowns
-            $projects = Project::select('id', 'name', 'code', 'operational_budget', 'allowance_budget', 'division_id', 'pic_id')
+            $projects = Project::query()->select('id', 'name', 'code', 'operational_budget', 'allowance_budget', 'division_id', 'pic_id')
                 ->with(['division:id,name', 'pic:id,name'])
                 ->get()
-                ->map(fn ($project) => [
+                ->map(fn ($project): array => [
                     'id' => $project->id,
                     'name' => $project->name,
                     'code' => $project->code,
@@ -118,7 +120,7 @@ final class ReimbursementController extends Controller
                     'pic_name' => $project->pic?->name ?? 'Belum ada PIC',
                 ]);
 
-            $users = User::select('id', 'name')->get();
+            $users = User::query()->select('id', 'name')->get();
 
             return response()->json([
                 'success' => true,
@@ -137,7 +139,7 @@ final class ReimbursementController extends Controller
         UpdateReimbursementStatus $action
     ): JsonResponse {
         try {
-            $reimbursement = Reimbursement::find($id);
+            $reimbursement = Reimbursement::query()->find($id);
 
             if (! $reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
@@ -181,21 +183,21 @@ final class ReimbursementController extends Controller
             }
 
             $validated = $request->validate([
-                'budgets' => 'required|array',
-                'budgets.*.id' => 'required|integer',
-                'budgets.*.amount' => 'required|numeric|min:0',
+                'budgets' => ['required', 'array'],
+                'budgets.*.id' => ['required', 'integer'],
+                'budgets.*.amount' => ['required', 'numeric', 'min:0'],
             ]);
 
-            $reimbursement = Reimbursement::find($id);
+            $reimbursement = Reimbursement::query()->find($id);
 
             if (! $reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
             }
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated): void {
                 $totalAmount = 0;
                 foreach ($validated['budgets'] as $budgetData) {
-                    $record = \App\Models\AtrBudgetSelected::where('reimbursement_id', $reimbursement->id)
+                    $record = \App\Models\AtrBudgetSelected::query()->where('reimbursement_id', $reimbursement->id)
                         ->where('id', $budgetData['id'])
                         ->first();
 
@@ -206,7 +208,7 @@ final class ReimbursementController extends Controller
                 }
 
                 // Also need to sum any unmodified ones just in case? Or actually just sum all belonging to this ATR.
-                $actualTotal = \App\Models\AtrBudgetSelected::where('reimbursement_id', $reimbursement->id)->sum('amount');
+                $actualTotal = \App\Models\AtrBudgetSelected::query()->where('reimbursement_id', $reimbursement->id)->sum('amount');
                 $reimbursement->update(['amount' => $actualTotal]);
             });
 
@@ -226,7 +228,7 @@ final class ReimbursementController extends Controller
     {
         try {
             $user = $request->user();
-            $reimbursement = Reimbursement::find($id);
+            $reimbursement = Reimbursement::query()->find($id);
 
             if (! $reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
@@ -255,7 +257,7 @@ final class ReimbursementController extends Controller
                 'urgency' => ['nullable', 'string', 'max:20'],
             ]);
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user): void {
                 // Update editable fields
                 $updateData = ['status' => \App\Enums\ReimbursementStatus::Submitted];
                 if (isset($validated['usage_plan'])) {
@@ -335,10 +337,9 @@ final class ReimbursementController extends Controller
                 $reimbursement->approvals()->delete();
 
                 // Call assignApprovers to handle the workflow
-                $action = new \App\Actions\CreateReimbursement(app(\App\Services\FileUploadService::class));
-                $reflector = new \ReflectionClass($action);
+                $action = new CreateReimbursement(resolve(\App\Services\FileUploadService::class));
+                $reflector = new ReflectionClass($action);
                 $method = $reflector->getMethod('assignApprovers');
-                $method->setAccessible(true);
                 $method->invoke($action, $reimbursement, $request->all());
 
                 // Add a system comment notifying approvers
@@ -370,7 +371,7 @@ final class ReimbursementController extends Controller
                 return JsonResponseFormatter::error('Unauthorized', 403);
             }
 
-            $reimbursement = Reimbursement::find($id);
+            $reimbursement = Reimbursement::query()->find($id);
             if (! $reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
             }
@@ -392,14 +393,14 @@ final class ReimbursementController extends Controller
                 return JsonResponseFormatter::error('Unauthorized', 403);
             }
 
-            $reimbursement = Reimbursement::find($id);
+            $reimbursement = Reimbursement::query()->find($id);
 
             if (! $reimbursement) {
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
             }
 
             $validated = $request->validate([
-                'code' => ['required', 'string', 'max:50', 'unique:reimbursements,code,' . $reimbursement->id],
+                'code' => ['required', 'string', 'max:50', 'unique:reimbursements,code,'.$reimbursement->id],
             ]);
 
             $reimbursement->update(['code' => $validated['code']]);

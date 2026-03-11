@@ -28,7 +28,7 @@ final class RoleController extends Controller
     {
         try {
             $request->validate([
-                'name' => 'required|string|unique:roles,name',
+                'name' => ['required', 'string', 'unique:roles,name'],
             ]);
 
             $role = Role::create([
@@ -81,11 +81,11 @@ final class RoleController extends Controller
     {
         try {
             $request->validate([
-                'permissions' => 'array',
-                'permissions.*' => 'string|exists:permissions,name',
+                'permissions' => ['array'],
+                'permissions.*' => ['string', 'exists:permissions,name'],
             ]);
 
-            $permissions = \Spatie\Permission\Models\Permission::whereIn('name', $request->permissions)
+            $permissions = \Spatie\Permission\Models\Permission::query()->whereIn('name', $request->permissions)
                 ->where('guard_name', 'web')
                 ->get();
 

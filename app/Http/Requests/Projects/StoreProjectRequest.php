@@ -36,8 +36,8 @@ final class StoreProjectRequest extends FormRequest
             'pic_id' => [
                 'required',
                 'exists:users,id',
-                function ($attribute, $value, $fail) {
-                    $user = \App\Models\User::find($value);
+                function ($attribute, $value, $fail): void {
+                    $user = \App\Models\User::query()->find($value);
                     if ($user && $user->hasRole(\App\Enums\UserRole::Direktur->value)) {
                         $fail('The selected PIC cannot be a Direktur.');
                     }
@@ -104,7 +104,7 @@ final class StoreProjectRequest extends FormRequest
                 // Check chronological order
                 $prevDate = null;
                 foreach ($terminPayments as $index => $termin) {
-                    $currentDate = \Carbon\Carbon::parse($termin['due_date']);
+                    $currentDate = \Illuminate\Support\Facades\Date::parse($termin['due_date']);
                     if ($prevDate && $currentDate->lessThan($prevDate)) {
                         $validator->errors()->add("termin_payments.{$index}.due_date", 'Tanggal jatuh tempo termin harus berurutan.');
                     }

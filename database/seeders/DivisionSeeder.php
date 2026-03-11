@@ -104,10 +104,7 @@ final class DivisionSeeder extends Seeder
         ];
 
         foreach ($divisions as $divisionData) {
-            $divisionCode = DivisionCode::firstOrCreate(
-                ['code' => $divisionData['code']],
-                ['name' => $companyNames[$divisionData['code']] ?? $divisionData['code']]
-            );
+            $divisionCode = DivisionCode::query()->firstOrCreate(['code' => $divisionData['code']], ['name' => $companyNames[$divisionData['code']] ?? $divisionData['code']]);
 
             $divisionCode->divisions()->firstOrCreate([
                 'name' => $divisionData['name'],

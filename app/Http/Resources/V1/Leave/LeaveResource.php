@@ -23,7 +23,7 @@ final class LeaveResource extends JsonResource
             'lokasi' => $this->lokasi,
             'reason' => $this->reason,
             'attachment_path' => $this->attachment_path,
-            'project' => $this->whenLoaded('project', fn () => [
+            'project' => $this->whenLoaded('project', fn (): array => [
                 'id' => $this->project->id,
                 'code' => $this->project->code,
                 'name' => $this->project->name,
