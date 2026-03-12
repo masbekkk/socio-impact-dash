@@ -172,7 +172,7 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
         if (hasCompletedAction) return false;
 
         const role = authUser.position?.toLowerCase() || '';
-        if (['superadmin', 'direktur'].includes(role)) return true;
+        if (['superadmin', 'direktur', 'hr'].includes(role)) return true;
 
         if (role === 'hr') {
             if (status === 'hr_approved') return false;
