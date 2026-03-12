@@ -95,11 +95,13 @@ interface SelectedActivity {
 
 const fmt = (v: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
 
-export default function CreateEER({ atrs = [], approvers = {}, users = [], expenseTypes = [] }: {
+export default function CreateEER({ atrs = [], approvers = {}, users = [], expenseTypes = [], reimbursement, isEdit = false }: {
   atrs?: Atr[],
   approvers?: Record<string, Approver[]>,
   users?: { id: number; name: string; email: string; nip: string }[],
   expenseTypes?: ExpenseTypeOption[],
+  reimbursement?: any,
+  isEdit?: boolean,
 }) {
   const { authUser, loading, errors, setErrors, clearFieldError, submitReimbursement } = useReimbursementForm([]);
   const { hasRole } = usePermission();
@@ -122,6 +124,42 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
     refund_reimburse_amount: 0,
   });
   const [transferProof, setTransferProof] = useState<File | null>(null);
+
+  // Populate data in edit mode
+  React.useEffect(() => {
+    if (isEdit && reimbursement) {
+      const data = reimbursement.data || reimbursement;
+      setFormData({
+        code: data.code || '',
+        user_id: data.user?.id?.toString() ?? '',
+        name: data.user?.name || '',
+        nip: data.nip || '',
+        atr_id: data.atr_id?.toString() ?? '',
+        project_id: data.project?.id?.toString() ?? '',
+        project_name: data.project?.name || '',
+        division: data.project?.division_name || '',
+        pic: data.project?.pic_name || '',
+        approver_head_id: data.approvals?.find((a: any) => a.role === 'head')?.approver_id?.toString() ?? '',
+        description: data.usage_plan || '',
+        eer_type: data.eer_type as any || 'refund',
+        refund_reimburse_amount: data.amount || 0,
+      });
+
+      if (data.items && data.items.length > 0) {
+        setItems(data.items.map((item: any) => ({
+          id: item.id?.toString() || crypto.randomUUID(),
+          project_budget_detail_id: item.activity_id,
+          item_name: item.item_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          amount: item.amount,
+          expense_type: item.expense_type || '',
+          receipt: null, // Keep receipt as null since we can't easily repopulate File object from URL
+          notes: item.notes || '',
+        })));
+      }
+    }
+  }, [isEdit, reimbursement]);
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -297,6 +335,8 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
       items: payloadItems,
       transfer_proof: transferProof,
       user_id: formData.user_id || undefined,
+      is_edit: isEdit,
+      reimbursement_id: isEdit ? (reimbursement.data?.id || reimbursement.id) : undefined,
     } as any);
   };
 
@@ -312,7 +352,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
             <Link href="/reimbursements"><ArrowLeft className="h-5 w-5" /></Link>
           </Button>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">Pengajuan EER (Baru)</h1>
+            <h1 className="text-xl font-bold tracking-tight">{isEdit ? 'Edit Draft EER' : 'Pengajuan EER (Baru)'}</h1>
             <p className="text-muted-foreground text-sm">Employee Expense Report — klaim biaya aktual berdasarkan limit ATR.</p>
           </div>
         </div>
@@ -716,10 +756,10 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
               </div>
               <div className="flex gap-3">
                 <Button type="button" variant="outline" disabled={loading} onClick={() => handleSubmit('draft')}>
-                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Simpan Draft</>}
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update Draft' : 'Simpan Draft'}</>}
                 </Button>
                 <Button type="submit" disabled={loading} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)]/90">
-                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Ajukan EER</>}
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update & Ajukan EER' : 'Ajukan EER'}</>}
                 </Button>
               </div>
             </CardFooter>

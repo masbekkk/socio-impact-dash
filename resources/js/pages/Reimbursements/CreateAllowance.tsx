@@ -51,11 +51,13 @@ interface AuthUser {
     join_date: string;
 }
 
-export default function CreateAllowance({ projects, approvers, authUser, users }: {
+export default function CreateAllowance({ projects, approvers, authUser, users, reimbursement, isEdit = false }: {
     projects: Project[],
     approvers: Record<string, Approver[]>,
     authUser: AuthUser,
-    users: SimpleUser[]
+    users: SimpleUser[],
+    reimbursement?: any,
+    isEdit?: boolean,
 }) {
     const { loading, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
     const { hasRole } = usePermission();
@@ -83,6 +85,37 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
         end_time: '17:00',
         replacement_pic_id: '',
     });
+
+    // Populate data in edit mode
+    useEffect(() => {
+        if (isEdit && reimbursement) {
+            const data = reimbursement.data || reimbursement;
+            const projectID = data.project?.id?.toString() ?? '';
+            const autoFill = projectID ? getAutoFill(projectID) : { division: '', pic: '' };
+
+            setFormData({
+                code: data.code || '',
+                user_id: data.user?.id?.toString() ?? '',
+                name: data.user?.name || '',
+                nip: data.nip || '',
+                division_name: data.project?.division_name || authUser?.division_name || '',
+                position: data.user?.position || authUser?.position || '', // Assuming role/position mapping
+                join_date: data.user?.join_date || authUser?.join_date || '',
+                project_id: projectID,
+                divisi: autoFill.division || data.project?.division_name || '',
+                pic_project: autoFill.pic || data.project?.pic_name || '',
+                approver_head_id: data.approvals?.find((a: any) => a.role === 'head')?.approver_id?.toString() ?? '',
+                usage_plan: data.usage_plan || '',
+                amount: data.amount || 0,
+                urgency: Object.keys(URGENCY_MAP).find(key => URGENCY_MAP[key] === data.urgency) || 'normal',
+                start_date: data.start_date || '',
+                end_date: data.end_date || '',
+                start_time: data.start_time || '08:00',
+                end_time: data.end_time || '17:00',
+                replacement_pic_id: data.replacement_pic_id?.toString() ?? '',
+            });
+        }
+    }, [isEdit, reimbursement]);
 
     const [totalDays, setTotalDays] = useState(0);
 
@@ -197,6 +230,8 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
             end_time: formData.end_time,
             replacement_pic_id: formData.replacement_pic_id,
             user_id: formData.user_id || undefined,
+            is_edit: isEdit,
+            reimbursement_id: isEdit ? (reimbursement.data?.id || reimbursement.id) : undefined,
         });
     };
 
@@ -222,8 +257,8 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                         <Link href="/reimbursements"><ArrowLeft className="h-5 w-5" /></Link>
                     </Button>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">Form Pengajuan Allowance</h1>
-                        <p className="text-muted-foreground text-sm">Lengkapi data untuk mengajukan uang saku atau tunjangan proyek.</p>
+                        <h1 className="text-xl font-bold tracking-tight">{isEdit ? 'Edit Draft Allowance' : 'Form Pengajuan Allowance'}</h1>
+                        <p className="text-muted-foreground text-sm">{isEdit ? 'Perbarui data draf tunjangan proyek Anda.' : 'Lengkapi data untuk mengajukan uang saku atau tunjangan proyek.'}</p>
                     </div>
                 </div>
 
@@ -431,10 +466,10 @@ export default function CreateAllowance({ projects, approvers, authUser, users }
                             </div>
                             <div className="flex gap-3">
                                 <Button type="button" variant="outline" disabled={loading} onClick={() => handleSubmit('draft')}>
-                                    {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Simpan Draft</>}
+                                    {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update Draft' : 'Simpan Draft'}</>}
                                 </Button>
                                 <Button type="submit" disabled={loading} className="bg-sidebar hover:bg-sidebar/90 min-w-[180px]">
-                                    {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Ajukan Allowance</>}
+                                    {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update & Ajukan Allowance' : 'Ajukan Allowance'}</>}
                                 </Button>
                             </div>
                         </CardFooter>

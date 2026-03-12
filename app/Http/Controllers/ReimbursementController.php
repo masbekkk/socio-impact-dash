@@ -283,9 +283,168 @@ final readonly class ReimbursementController
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(): void
+    public function edit(int $id, Request $request): \Inertia\Response
     {
-        //
+        $reimbursement = Reimbursement::with(['items.budgetDetail', 'project.division', 'project.pic', 'project.head', 'atrBudgetSelecteds.budgetDetail', 'approvals'])->findOrFail($id);
+        $user = $request->user();
+
+        // Security: only owner can edit draft
+        if ($reimbursement->user_id !== $user->id) {
+            abort(403, 'Unauthorized');
+        }
+
+        if ($reimbursement->status->value !== 'draft') {
+            return Inertia::render('Reimbursements/Show', [
+                'id' => $id,
+                // Add any other props needed by Show.tsx if it's rendered directly
+            ]);
+        }
+
+        $commonData = [
+            'isEdit' => true,
+            'reimbursement' => new ReimbursementResource($reimbursement),
+            'expenseTypes' => array_map(fn (\App\Enums\ExpenseType $e): array => [
+                'value' => $e->value,
+                'label' => $e->value,
+            ], \App\Enums\ExpenseType::cases()),
+            'users' => \App\Models\User::query()->select('id', 'name', 'email', 'nip')->get(),
+        ];
+
+        if ($reimbursement->type->value === 'atr') {
+            $projects = Project::with(['division', 'pic', 'head', 'budgetDetails'])
+                ->where('status', 'active')
+                ->get()
+                ->map(fn (Project $project): array => [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'code' => $project->code,
+                    'operational_budget' => (float) $project->operational_budget,
+                    'used_operational_budget' => (float) $project->reimbursements()
+                        ->where('type', 'atr')
+                        ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                        ->sum('amount'),
+                    'division_name' => $project->division?->name ?? '-',
+                    'pic_name' => $project->pic?->name ?? '-',
+                    'head_name' => $project->head?->name ?? '-',
+                    'head_email' => $project->head?->email ?? '-',
+                    'head_role' => $project->head?->role?->value ?? '-',
+                    'budget_details' => $project->budgetDetails->map(fn (\App\Models\ProjectBudgetDetail $detail): array => [
+                        'id' => $detail->id,
+                        'item_name' => $detail->item_name ?? $detail->notes ?? '-',
+                        'notes' => $detail->notes,
+                        'amount' => (float) $detail->amount,
+                        'amount_pelaksanaan' => (float) $detail->amount_pelaksanaan,
+                        'used_amount' => (float) $detail->used_amount,
+                        'remaining_amount' => (float) $detail->remaining_amount,
+                    ])->values()->all(),
+                ]);
+
+            $approversGrouped = \App\Models\User::query()->role(['head', 'hr', 'finance', 'direktur'])
+                ->get()
+                ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
+                ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u): array => [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                ])->values()->all());
+
+            return Inertia::render('Reimbursements/CreateATR', array_merge($commonData, [
+                'projects' => $projects,
+                'approvers' => $approversGrouped,
+            ]));
+        }
+
+        if ($reimbursement->type->value === 'eer') {
+            $atrs = Reimbursement::with(['project.division', 'project.pic', 'project.head', 'approvals', 'items.budgetDetail'])
+                ->where('user_id', $user->id)
+                ->where('type', 'atr')
+                ->where('status', 'transferred')
+                ->get()
+                ->map(fn (Reimbursement $atr): array => [
+                    'id' => $atr->id,
+                    'code' => $atr->code,
+                    'amount' => (float) $atr->amount,
+                    'usage_plan' => $atr->usage_plan,
+                    'project_id' => $atr->project_id,
+                    'project_name' => $atr->project?->name ?? '-',
+                    'project_code' => $atr->project?->code ?? '-',
+                    'division_name' => $atr->project?->division?->name ?? '-',
+                    'pic_name' => $atr->project?->pic?->name ?? '-',
+                    'head_name' => $atr->project?->head?->name ?? '-',
+                    'head_email' => $atr->project?->head?->email ?? '-',
+                    'head_role' => $atr->project?->head?->role?->value ?? '-',
+                    'approver_head_id' => $atr->approvals->where('role', \App\Enums\ApprovalRole::Head)->first()?->approver_id,
+                    'approver_finance_id' => $atr->approvals->where('role', \App\Enums\ApprovalRole::Finance)->first()?->approver_id,
+                    'approver_direktur_id' => $atr->approvals->where('role', 'direktur')->first()?->approver_id,
+                    'items' => $atr->items->where('parent_item_id', null)->map(fn (\App\Models\ReimbursementItem $item): array => [
+                        'id' => $item->id,
+                        'item_name' => $item->item_name,
+                        'quantity' => $item->quantity,
+                        'unit_price' => (float) $item->unit_price,
+                        'amount' => (float) $item->amount,
+                        'expense_type' => $item->expense_type?->value,
+                        'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
+                        'activity_id' => $item->project_budget_detail_id,
+                        'used_eer_amount' => (float) $item->children()->whereHas('reimbursement', function ($q): void {
+                            $q->where('type', 'eer')->whereNotIn('status', ['rejected', 'draft']);
+                        })->sum('amount'),
+                    ])->values()->all(),
+                ]);
+
+            $approversGrouped = \App\Models\User::query()->role(['head', 'hr', 'finance', 'direktur'])
+                ->get()
+                ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
+                ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u): array => [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                ])->values()->all());
+
+            return Inertia::render('Reimbursements/CreateEER', array_merge($commonData, [
+                'atrs' => $atrs,
+                'approvers' => $approversGrouped,
+            ]));
+        }
+
+        if ($reimbursement->type->value === 'allowance') {
+            $projects = Project::with(['division', 'pic', 'head'])
+                ->where('status', 'active')
+                ->get()
+                ->map(fn (Project $project): array => [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'code' => $project->code,
+                    'allowance_budget' => (float) $project->allowance_budget,
+                    'used_allowance_budget' => (float) $project->reimbursements()
+                        ->where('type', 'allowance')
+                        ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                        ->sum('amount'),
+                    'division_name' => $project->division?->name ?? '-',
+                    'pic_name' => $project->pic?->name ?? '-',
+                    'head_name' => $project->head?->name ?? '-',
+                    'head_email' => $project->head?->email ?? '-',
+                    'head_role' => $project->head?->role?->value ?? '-',
+                ]);
+
+            return Inertia::render('Reimbursements/CreateAllowance', array_merge($commonData, [
+                'projects' => $projects,
+                'approvers' => [
+                    'head' => \App\Models\User::query()->role('head')->get(['id', 'name', 'email']),
+                    'hr' => \App\Models\User::query()->role('hr')->get(['id', 'name', 'email']),
+                    'direktur' => \App\Models\User::query()->role('direktur')->get(['id', 'name', 'email']),
+                ],
+                'authUser' => [
+                    'name' => $user->name,
+                    'nip' => $user->nip ?? '-',
+                    'email' => $user->email,
+                    'division_name' => $user->division?->name ?? '-',
+                    'position' => $user->getRoleNames()->first() ?? '-',
+                    'join_date' => $user->created_at?->format('Y-m-d') ?? '-',
+                ],
+            ]));
+        }
+
+        abort(404);
     }
 
     /**

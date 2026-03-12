@@ -56,11 +56,13 @@ interface SelectedActivity {
 
 const fmt = (v: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
 
-export default function CreateATR({ projects, approvers, users = [], expenseTypes = [] }: {
+export default function CreateATR({ projects, approvers, users = [], expenseTypes = [], reimbursement, isEdit = false }: {
   projects: Project[],
   approvers: Record<string, Approver[]>,
   users?: { id: number; name: string; email: string; nip: string }[],
   expenseTypes?: ExpenseTypeOption[],
+  reimbursement?: any,
+  isEdit?: boolean,
 }) {
   const { authUser, loading, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
   const { hasRole } = usePermission();
@@ -86,6 +88,64 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
     start_date: '',
     end_date: '',
   });
+
+  // Populate data in edit mode
+  React.useEffect(() => {
+    if (isEdit && reimbursement) {
+      const data = reimbursement.data || reimbursement;
+      const projectID = data.project?.id?.toString() ?? '';
+      const autoFill = projectID ? getAutoFill(projectID) : { division: '', pic: '' };
+
+      setFormData({
+        code: data.code || '',
+        user_id: data.user?.id?.toString() ?? '',
+        nama: data.user?.name || '',
+        nip: data.nip || '',
+        project_id: projectID,
+        divisi: autoFill.division || data.project?.division_name || '',
+        pic_project: autoFill.pic || data.project?.pic_name || '',
+        approver_head_id: data.approvals?.find((a: any) => a.role === 'head')?.approver_id?.toString() ?? '',
+        approver_finance_id: data.approvals?.find((a: any) => a.role === 'finance')?.approver_id?.toString() ?? '',
+        approver_direktur_id: data.approvals?.find((a: any) => a.role === 'direktur')?.approver_id?.toString() ?? '',
+        bank_name: data.bank_name || '',
+        account_number: data.bank_account || '',
+        account_name: data.account_holder || '',
+        usage_plan: data.usage_plan || '',
+        urgency: Object.keys(URGENCY_MAP).find(key => URGENCY_MAP[key] === data.urgency) || 'normal',
+        start_date: data.start_date || '',
+        end_date: data.end_date || '',
+      });
+
+      // Populate activities and items
+      if (data.items && data.items.length > 0) {
+        const activitiesMap = new Map<number, SelectedActivity>();
+
+        data.items.forEach((item: any) => {
+          const budgetDetailId = item.activity_id;
+          if (!activitiesMap.has(budgetDetailId)) {
+            activitiesMap.set(budgetDetailId, {
+              budget_detail_id: budgetDetailId,
+              expanded: true,
+              detail_aktivitas: data.atr_budget_selecteds?.find((b: any) => b.project_budget_detail_id === budgetDetailId)?.notes || '',
+              children: [],
+            });
+          }
+
+          activitiesMap.get(budgetDetailId)?.children.push({
+            id: item.id?.toString() || crypto.randomUUID(),
+            item_name: item.item_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            amount: item.amount,
+            expense_type: item.expense_type || '',
+            notes: item.notes || '',
+          });
+        });
+
+        setSelectedActivities(Array.from(activitiesMap.values()));
+      }
+    }
+  }, [isEdit, reimbursement]);
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -285,6 +345,8 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
       selected_budget_details,
       approver_head_id: formData.approver_head_id,
       user_id: formData.user_id || undefined,
+      is_edit: isEdit,
+      reimbursement_id: isEdit ? (reimbursement.data?.id || reimbursement.id) : undefined,
     });
   };
 
@@ -300,8 +362,8 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
             <Link href="/reimbursements"><ArrowLeft className="h-5 w-5" /></Link>
           </Button>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">Pengajuan ATR</h1>
-            <p className="text-muted-foreground text-sm">Advance Travel Request untuk pengajuan dana di muka.</p>
+            <h1 className="text-xl font-bold tracking-tight">{isEdit ? 'Edit Draft ATR' : 'Pengajuan ATR'}</h1>
+            <p className="text-muted-foreground text-sm">{isEdit ? 'Perbarui data draf Advance Travel Request Anda.' : 'Advance Travel Request untuk pengajuan dana di muka.'}</p>
           </div>
         </div>
 
@@ -668,7 +730,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
                   {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Simpan Draft</>}
                 </Button>
                 <Button type="submit" disabled={loading} className="bg-[var(--sidebar)] hover:bg-[var(--sidebar)]/90">
-                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> Ajukan ATR</>}
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update & Ajukan ATR' : 'Ajukan ATR'}</>}
                 </Button>
               </div>
             </CardFooter>

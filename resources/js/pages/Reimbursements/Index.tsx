@@ -497,6 +497,13 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                     <Eye className="mr-2 h-4 w-4" /> Lihat Detail
                                   </Link>
                                 </DropdownMenuItem>
+                                {item.status === 'draft' && item.user?.id === auth.user.id && (
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/reimbursements/${item.id}/edit`} className="cursor-pointer">
+                                      <FileText className="mr-2 h-4 w-4" /> Edit Draft
+                                    </Link>
+                                  </DropdownMenuItem>
+                                )}
                                 {item.type === 'atr' && item.status === 'approved' && (
                                   <DropdownMenuItem asChild>
                                     <Link href={`/reimbursements/create/eer?atr_code=${item.code}`} className="cursor-pointer">

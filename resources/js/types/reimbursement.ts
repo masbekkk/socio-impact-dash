@@ -76,4 +76,6 @@ export interface ReimbursementPayload {
     revision_note?: string;
     transfer_proof?: File | null;
     status?: string;
+    is_edit?: boolean;
+    reimbursement_id?: number | string;
 }

@@ -42,7 +42,7 @@ final class StoreReimbursementRequest extends FormRequest
             ],
             'end_date' => [
                 'required_if:type,allowance',
-                'required_if:status,submitted,approved',
+                // 'required_if:status,submitted,approved',
                 'nullable',
                 'date',
                 'after_or_equal:start_date',

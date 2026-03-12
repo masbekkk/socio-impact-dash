@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
-import { storeReimbursement } from '@/services/reimbursement-service';
+import { storeReimbursement, resubmitReimbursement } from '@/services/reimbursement-service';
 import type { Project, ProjectAutoFill, ReimbursementPayload } from '@/types/reimbursement';
 import type { SharedData } from '@/types';
 
@@ -37,7 +37,11 @@ export function useReimbursementForm(projects: Project[]) {
         setErrors({});
 
         try {
-            await storeReimbursement(payload);
+            if (payload.is_edit && payload.reimbursement_id) {
+                await resubmitReimbursement(Number(payload.reimbursement_id), payload);
+            } else {
+                await storeReimbursement(payload);
+            }
             router.visit('/reimbursements');
             return true;
         } catch (error: any) {
