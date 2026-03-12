@@ -269,7 +269,7 @@ final class ReimbursementController extends Controller
                 'urgency' => ['nullable', 'string', 'max:20'],
             ]);
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user): void {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request): void {
                 // Update editable fields
                 $updateData = ['status' => \App\Enums\ReimbursementStatus::Submitted];
                 if (isset($validated['usage_plan'])) {
