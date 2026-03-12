@@ -70,12 +70,21 @@ interface Reimbursement {
 
 interface PaginatedData {
   data: Reimbursement[];
-  current_page: number;
-  last_page: number;
-  per_page: number;
-  total: number;
-  from: number | null;
-  to: number | null;
+  links: {
+    first: string;
+    last: string;
+    prev: string | null;
+    next: string | null;
+  };
+  meta: {
+    current_page: number;
+    from: number | null;
+    last_page: number;
+    path: string;
+    per_page: number;
+    to: number | null;
+    total: number;
+  };
 }
 
 interface Filters {
@@ -187,7 +196,8 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
   };
 
   const activeTab = filters.type || (isHR ? 'allowance' : isPegawai ? 'atr' : 'all');
-  const { data, current_page, last_page, total, from, to } = reimbursements;
+  const { data } = reimbursements;
+  const { current_page, last_page, total, from, to } = reimbursements.meta;
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>

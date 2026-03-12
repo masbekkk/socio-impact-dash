@@ -39,7 +39,7 @@ final readonly class ReimbursementController
         $reimbursements = $this->reimbursementService->listReimbursements($user, $filters, $perPage);
 
         return Inertia::render('Reimbursements/Index', [
-            'reimbursements' => ReimbursementResource::collection($reimbursements),
+            'reimbursements' => ReimbursementResource::collection($reimbursements)->response()->getData(true),
             'filters' => [
                 'type' => $request->get('type', ''),
                 'status' => $request->get('status', ''),
@@ -252,7 +252,7 @@ final readonly class ReimbursementController
     /**
      * Display the specified resource.
      */
-    public function show(int $id): \Inertia\Response
+    public function show(int|string $id): \Inertia\Response
     {
         $projects = Project::query()->select('id', 'name', 'code', 'operational_budget', 'allowance_budget', 'division_id', 'pic_id')
             ->with(['division:id,name', 'pic:id,name'])

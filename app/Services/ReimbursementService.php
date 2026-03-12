@@ -104,10 +104,15 @@ final class ReimbursementService
         }
     }
 
-    public function getReimbursementDetail(int $id): ?Reimbursement
+    public function getReimbursementDetail(int|string $identifier): ?Reimbursement
     {
-        return Reimbursement::with(['user', 'project.division', 'project.pic', 'project.head', 'documents', 'approvals.approver', 'atrBudgetSelecteds.budgetDetail', 'items.budgetDetail', 'items.children.reimbursement', 'comments.user'])
-            ->where('id', $id)
-            ->first();
+        $query = Reimbursement::with(['user', 'project.division', 'project.pic', 'project.head', 'documents', 'approvals.approver', 'atrBudgetSelecteds.budgetDetail', 'items.budgetDetail', 'items.children.reimbursement', 'comments.user']);
+
+        if (is_numeric($identifier)) {
+            $identifier = (int) $identifier;
+            return $query->where('id', $identifier)->first();
+        }
+
+        return $query->where('code', $identifier)->first();
     }
 }

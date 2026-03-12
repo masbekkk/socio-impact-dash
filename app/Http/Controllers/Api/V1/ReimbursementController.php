@@ -38,13 +38,21 @@ final class ReimbursementController extends Controller
                 'start_date' => $request->get('start_date'),
                 'end_date' => $request->get('end_date'),
                 'division_id' => $request->get('division_id'),
+                'search' => $request->get('search'),
+                'sort_by' => $request->get('sort_by', 'created_at'),
+                'sort_dir' => $request->get('sort_dir', 'desc'),
             ];
 
-            $perPage = $request->integer('per_page', 15);
+            $perPage = $request->integer('per_page', 10);
             $reimbursements = $this->reimbursementService->listReimbursements($user, $filters, $perPage);
 
+            $resource = ReimbursementResource::collection($reimbursements);
+            // $resource->response() would wrap everything in 'data' if we don't handle it
+            // getData(true) returns ['data' => ..., 'links' => ..., 'meta' => ...]
+            $paginatedData = $resource->response()->getData(true);
+
             return JsonResponseFormatter::success(
-                ReimbursementResource::collection($reimbursements),
+                $paginatedData,
                 'Daftar reimbursement berhasil diambil'
             );
         } catch (Throwable $e) {
@@ -91,7 +99,7 @@ final class ReimbursementController extends Controller
         }
     }
 
-    public function show(int $id, Request $request): JsonResponse
+    public function show(int|string $id, Request $request): JsonResponse
     {
         try {
             $data = $this->reimbursementService->getReimbursementDetail($id);
@@ -122,11 +130,15 @@ final class ReimbursementController extends Controller
 
             $users = User::query()->select('id', 'name')->get();
 
+            $resource = new ReimbursementResource($data);
+
             return response()->json([
-                'success' => true,
-                'data' => new ReimbursementResource($data),
-                'projects' => $projects,
-                'users' => $users,
+                'message' => 'Detail reimbursement berhasil diambil',
+                'data' => array_merge($resource->toArray($request), [
+                    'success' => true,
+                    'projects' => $projects,
+                    'users' => $users,
+                ]),
             ]);
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
