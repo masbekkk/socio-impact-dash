@@ -339,7 +339,18 @@ export default function Show() {
   // handleFileChange removed as it is no longer needed for approval
 
   const getCurrentUserRole = () => {
-    return userRole;
+    if (!auth?.user?.role_name) return 'pegawai';
+
+    const roles = auth.user.role_name.split(',').map((r: string) => r.trim());
+
+    // Priority order: superadmin > direktur > finance > hr > head > pegawai
+    if (roles.includes('superadmin')) return 'superadmin';
+    if (roles.includes('direktur')) return 'direktur';
+    if (roles.includes('finance')) return 'finance';
+    if (roles.includes('hr')) return 'hr';
+    if (roles.includes('head')) return 'head';
+
+    return roles[0] || 'pegawai';
   };
 
   const resetApproveDialog = () => {
