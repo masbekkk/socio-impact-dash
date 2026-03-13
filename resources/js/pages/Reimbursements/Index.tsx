@@ -521,7 +521,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                     </Link>
                                   </DropdownMenuItem>
                                 )}
-                                {isSuperadmin && (
+                                {(isSuperadmin || isFinance) && (
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer" onClick={() => handleDelete(item.id)}>

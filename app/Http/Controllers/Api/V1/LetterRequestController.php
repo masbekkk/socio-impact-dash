@@ -85,41 +85,12 @@ final class LetterRequestController extends Controller
         ]);
 
         $letterDate = \Illuminate\Support\Facades\Date::parse($validated['letter_date']);
-        $year = $letterDate->year;
-        $month = $letterDate->month;
-
         $kode = LetterCode::query()->find($validated['letter_code_id'])->code;
         $divisi = LetterDivision::query()->find($validated['letter_division_id'])->code;
         $divisionCode = DivisionCode::query()->find($validated['division_id']);
         $perusahaan = $divisionCode->code;
 
-        $startNumbers = [
-            'Socim.id' => 247,
-            'Lestari' => 63,
-            'Sustim.id' => 27,
-            'BKM' => 11,
-            'EBLI' => 8,
-        ];
-
-        $latestRequest = LetterRequest::query()->whereYear('letter_date', $year)
-            ->whereNotNull('letter_number')
-            ->whereHas('division', function ($q) use ($perusahaan): void {
-                $q->where('code', $perusahaan);
-            })
-            ->orderByRaw('CAST(SUBSTRING_INDEX(letter_number, "/", 1) AS UNSIGNED) DESC')
-            ->first();
-
-        $nextNo = $startNumbers[$perusahaan] ?? 1;
-        if ($latestRequest) {
-            $parts = explode('/', (string) $latestRequest->letter_number);
-            if (is_numeric($parts[0])) {
-                $currentSeq = (int) $parts[0];
-                $nextNo = max($nextNo, $currentSeq + 1);
-            }
-        }
-
-        $formattedNo = mb_str_pad((string) $nextNo, 3, '0', STR_PAD_LEFT);
-        $letterNumber = "{$formattedNo}/{$kode}.{$divisi}/{$perusahaan}/{$month}-{$year}";
+        $letterNumber = $this->generateLetterNumber($letterDate, $perusahaan, $kode, $divisi);
 
         $letterRequest = LetterRequest::query()->create([
             ...$validated,
@@ -178,55 +149,12 @@ final class LetterRequestController extends Controller
         }
 
         if ($needsNewNumber) {
-            $year = $newDate->year;
-            $month = $newDate->month;
             $kode = LetterCode::query()->find($validated['letter_code_id'])->code;
             $divisi = LetterDivision::query()->find($validated['letter_division_id'])->code;
             $divisionCode = DivisionCode::query()->find($validated['division_id']);
             $perusahaan = $divisionCode->code;
 
-            $startNumbers = [
-                'Socim.id' => 247,
-                'Lestari' => 63,
-                'Sustim.id' => 27,
-                'BKM' => 11,
-                'EBLI' => 8,
-            ];
-
-            // If company didn't change and year didn't change, we can potentially keep the sequence number.
-            // But if it did, or if we want to be safe and always get the latest sequence for that company/year:
-
-            $oldDivisionCode = DivisionCode::query()->find($letterRequest->division_id);
-            $oldPerusahaan = $oldDivisionCode->code;
-
-            if ($oldPerusahaan === $perusahaan && $oldDate->year === $newDate->year) {
-                // Keep same sequence number if same company and year
-                $currentParts = explode('/', (string) $letterRequest->letter_number);
-                $seqNo = (count($currentParts) > 0 && is_numeric($currentParts[0])) ? $currentParts[0] : '001';
-            } else {
-                // Get next number for the new company/year
-                $latestRequest = LetterRequest::query()->whereYear('letter_date', $year)
-                    ->whereNotNull('letter_number')
-                    ->where('id', '!=', $letterRequest->id) // Don't count itself
-                    ->whereHas('division', function ($q) use ($perusahaan): void {
-                        $q->where('code', $perusahaan);
-                    })
-                    ->orderByRaw('CAST(SUBSTRING_INDEX(letter_number, "/", 1) AS UNSIGNED) DESC')
-                    ->first();
-
-                $nextNo = $startNumbers[$perusahaan] ?? 1;
-                if ($latestRequest) {
-                    $parts = explode('/', (string) $latestRequest->letter_number);
-                    if (is_numeric($parts[0])) {
-                        $currentSeq = (int) $parts[0];
-                        $nextNo = max($nextNo, $currentSeq + 1);
-                    }
-                }
-                $seqNo = mb_str_pad((string) $nextNo, 3, '0', STR_PAD_LEFT);
-            }
-
-            $letterNumber = "{$seqNo}/{$kode}.{$divisi}/{$perusahaan}/{$month}-{$year}";
-            $validated['letter_number'] = $letterNumber;
+            $validated['letter_number'] = $this->generateLetterNumber($newDate, $perusahaan, $kode, $divisi, (int) $id);
         }
 
         $letterRequest->update($validated);
@@ -292,5 +220,87 @@ final class LetterRequestController extends Controller
             $letterRequest,
             'Letter request rejected successfully'
         );
+    }
+
+    private function generateLetterNumber(
+        \Carbon\CarbonInterface $letterDate,
+        string $perusahaan,
+        string $kode,
+        string $divisi,
+        ?int $ignoreId = null
+    ): string {
+        $year = $letterDate->year;
+        $month = $letterDate->month;
+
+        $startNumbers = [
+            'Socim.id' => 247,
+            'Lestari' => 63,
+            'Sustim.id' => 27,
+            'BKM' => 11,
+            'EBLI' => 8,
+        ];
+
+        // 1. Get the latest letter issued for this company and year (to find if it's a backdate)
+        $latestIssued = LetterRequest::query()
+            ->whereYear('letter_date', $year)
+            ->whereNotNull('letter_number')
+            ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+            ->whereHas('division', fn ($q) => $q->where('code', $perusahaan))
+            ->orderBy('letter_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        // 2. Get all requests for this year/company to find max sequence and existing suffixes
+        $allRequests = LetterRequest::query()
+            ->whereYear('letter_date', $year)
+            ->whereNotNull('letter_number')
+            ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+            ->whereHas('division', fn ($q) => $q->where('code', $perusahaan))
+            ->get();
+
+        $maxBaseSeq = $startNumbers[$perusahaan] ?? 1;
+        foreach ($allRequests as $req) {
+            $parts = explode('/', (string) $req->letter_number);
+            $basePart = explode('.', $parts[0])[0];
+            if (is_numeric($basePart)) {
+                $maxBaseSeq = max($maxBaseSeq, (int) $basePart);
+            }
+        }
+
+        $isBackdate = $latestIssued && $letterDate->lt($latestIssued->letter_date->startOfDay());
+
+        if (! $isBackdate) {
+            // Normal numbering: increment maxBaseSeq if we actually found existing letters,
+            // or if we are at the start number and it was already used.
+            $nextSeq = $maxBaseSeq;
+            if ($latestIssued) {
+                $nextSeq = $maxBaseSeq + 1;
+            }
+            $formattedSeq = mb_str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
+
+            return "{$formattedSeq}/{$kode}.{$divisi}/{$perusahaan}/{$month}-{$year}";
+        }
+
+        // Backdate logic: Use maxBaseSeq and add alphabet suffix
+        $baseStr = mb_str_pad((string) $maxBaseSeq, 3, '0', STR_PAD_LEFT);
+
+        // Find existing suffixes for this base
+        $existingSuffixes = [];
+        foreach ($allRequests as $req) {
+            $parts = explode('/', (string) $req->letter_number);
+            if (str_starts_with($parts[0], $baseStr . '.')) {
+                $suffix = mb_substr($parts[0], mb_strlen($baseStr) + 1);
+                $existingSuffixes[] = $suffix;
+            }
+        }
+
+        $nextSuffix = 'A';
+        if (! empty($existingSuffixes)) {
+            sort($existingSuffixes);
+            $lastSuffix = (string) end($existingSuffixes);
+            $nextSuffix = ++$lastSuffix; // PHP's string increment: 'A' -> 'B', 'Z' -> 'AA'
+        }
+
+        return "{$baseStr}.{$nextSuffix}/{$kode}.{$divisi}/{$perusahaan}/{$month}-{$year}";
     }
 }
