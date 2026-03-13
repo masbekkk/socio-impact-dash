@@ -347,9 +347,9 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Kode</TableHead>
                   {canUpdateCode && <TableHead>Initial Project</TableHead>}
-                  <TableHead>Nama Proyek</TableHead>
+                  <TableHead className="min-w-[250px]">Nama Proyek</TableHead>
                   <TableHead>Client</TableHead>
-                  <TableHead>Divisi</TableHead>
+                  <TableHead className="w-[180px]">Divisi</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Timeline</TableHead>

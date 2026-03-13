@@ -25,6 +25,7 @@ final class ReimbursementResource extends JsonResource
                 'uuid' => $this->project?->uuid,
                 'name' => $this->project?->name,
                 'code' => $this->project?->code,
+                'initial_project' => $this->project?->initial_project,
                 'division_name' => $this->project?->division?->name,
                 'pic_name' => $this->project?->pic?->name,
                 'head_name' => $this->project?->head?->name,

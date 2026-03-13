@@ -42,7 +42,7 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
             'Tanggal Mulai',
             'Tanggal Selesai',
             'Total Nominal',
-            'Kegiatan (Budget Items)',
+            'Detail Kegiatan',
             'Keterangan / Rencana Penggunaan',
             'Bank',
             'No. Rekening',
@@ -72,9 +72,8 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
             $financeApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Finance);
             $direkturApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Direktur);
 
-            // Budget items summary
-            $budgetItems = $r->atrBudgetSelecteds->map(fn ($b): string => ($b->budgetDetail?->item_name ?? $b->budgetDetail?->notes ?? '-').' (Rp '.number_format((float) $b->amount, 0, ',', '.').')')
-                ->implode('; ');
+            // Budget items summary (showing Detail Aktivitas from notes)
+            $budgetItems = $r->atrBudgetSelecteds->pluck('notes')->filter()->implode('; ');
 
             // Linked EERs
             $eers = $r->eers;
