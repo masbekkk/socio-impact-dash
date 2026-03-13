@@ -267,6 +267,9 @@ final class ReimbursementController extends Controller
                 'project_id' => ['nullable', 'integer', 'exists:projects,id'],
                 'replacement_pic_id' => ['nullable', 'integer', 'exists:users,id'],
                 'urgency' => ['nullable', 'string', 'max:20'],
+                'documents' => ['nullable', 'array'],
+                'documents.*.file' => ['required_with:documents', 'file', 'max:10240'],
+                'documents.*.type' => ['required_with:documents', 'string', 'max:50'],
             ]);
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request): void {
@@ -295,6 +298,28 @@ final class ReimbursementController extends Controller
                 }
                 if (array_key_exists('urgency', $validated)) {
                     $updateData['urgency'] = $validated['urgency'];
+                }
+
+                // Sync documents if provided
+                if (isset($validated['documents'])) {
+                    foreach ($validated['documents'] as $doc) {
+                        if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
+                            $fileUploadService = resolve(\App\Services\FileUploadService::class);
+                            $meta = $fileUploadService->uploadFile(
+                                $doc['file'],
+                                "reimbursements/{$reimbursement->id}/documents"
+                            );
+
+                            $reimbursement->documents()->create([
+                                'type' => $doc['type'] ?? 'other',
+                                'original_name' => $meta['original_name'],
+                                'path' => $meta['path'],
+                                'mime' => $meta['mime'],
+                                'size' => $meta['size'],
+                                'uploaded_by' => $user->id,
+                            ]);
+                        }
+                    }
                 }
 
                 // Sync items if provided
