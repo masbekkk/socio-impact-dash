@@ -24,7 +24,7 @@ final class StorePresenceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'project_id' => ['required', 'exists:projects,id'],
+            'project_id' => ['nullable', 'exists:projects,id'],
             'activity' => ['required', 'string', 'max:255'],
             'lat' => ['required', 'numeric'],
             'lng' => ['required', 'numeric'],

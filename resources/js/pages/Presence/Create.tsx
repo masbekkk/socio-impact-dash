@@ -169,8 +169,8 @@ export default function CreatePresence({ projects }: PageProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!data.project_id || !data.activity || !data.lat || !data.image) {
-            alert('Harap lengkapi semua data wajib (Project, Kegiatan, Lokasi, dan Foto).');
+        if (!data.activity || !data.lat || !data.image) {
+            alert('Harap lengkapi semua data wajib (Kegiatan, Lokasi, dan Foto).');
             return;
         }
 
@@ -210,7 +210,7 @@ export default function CreatePresence({ projects }: PageProps) {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="grid gap-2">
                                         <Label htmlFor="project">
-                                            Proyek <span className="text-destructive">*</span>
+                                            Proyek
                                         </Label>
                                         <SearchableSelect
                                             options={projects.map(p => ({ value: p.id.toString(), label: p.name }))}
