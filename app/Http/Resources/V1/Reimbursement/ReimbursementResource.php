@@ -56,6 +56,12 @@ final class ReimbursementResource extends JsonResource
                     ->where('type', 'allowance')
                     ->whereNotIn('status', ['rejected', 'submitted', 'draft', 'revision'])
                     ->sum('amount') : null,
+                'budget_details' => $this->project?->budgetDetails->map(fn ($bd): array => [
+                    'id' => $bd->id,
+                    'item_name' => $bd->item_name,
+                    'amount' => (float) ($bd->amount_pelaksanaan ?? $bd->amount),
+                    'remaining_amount' => (float) $bd->remaining_amount,
+                ]),
             ]),
             'type' => $this->type?->value,
             'eer_type' => $this->eer_type,

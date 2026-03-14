@@ -170,6 +170,12 @@ interface ReimbursementDetail {
     used_eer_reimbursement_budget: number | null;
     allowance_budget: number | null;
     used_allowance_budget: number | null;
+    budget_details?: {
+      id: number;
+      item_name: string;
+      amount: number;
+      remaining_amount: number;
+    }[];
   } | null;
   documents: ReimbursementDocument[];
   comments: ReimbursementComment[];
@@ -882,6 +888,42 @@ export default function Show() {
     }));
   };
 
+  const addActivityRevision = (budgetDetailId: number) => {
+    if (revisionForm.selected_activities.find(a => a.budget_detail_id === budgetDetailId)) return;
+    setRevisionForm(prev => ({
+      ...prev,
+      selected_activities: [...prev.selected_activities, {
+        budget_detail_id: budgetDetailId,
+        expanded: true,
+        detail_aktivitas: '',
+        children: [{
+          id: crypto.randomUUID(),
+          item_name: '',
+          quantity: 1,
+          unit_price: 0,
+          amount: 0,
+          expense_type: '',
+          receipt: null,
+          notes: ''
+        }]
+      }]
+    }));
+  };
+
+  const removeActivityRevision = (budgetDetailId: number) => {
+    setRevisionForm(prev => ({
+      ...prev,
+      selected_activities: prev.selected_activities.filter(a => a.budget_detail_id !== budgetDetailId)
+    }));
+  };
+
+  const availableActivitiesRevision = React.useMemo(() => {
+    if (!data?.project?.budget_details) return [];
+    return data.project.budget_details.filter(
+      bd => !revisionForm.selected_activities.find(a => a.budget_detail_id === bd.id) && bd.remaining_amount > 0
+    );
+  }, [data?.project?.budget_details, revisionForm.selected_activities]);
+
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Keuangan', href: '/reimbursements' },
@@ -1590,7 +1632,9 @@ export default function Show() {
                             ) : (
                               <div className="space-y-4">
                                 {revisionForm.selected_activities.map((activity) => {
-                                  const activityName = data.items?.find(i => i.activity_id === activity.budget_detail_id)?.activity_name || 'Kegiatan';
+                                  const activityName = data.items?.find(i => i.activity_id === activity.budget_detail_id)?.activity_name ||
+                                    data.project?.budget_details?.find(bd => bd.id === activity.budget_detail_id)?.item_name ||
+                                    'Kegiatan';
                                   const subtotal = activity.children.reduce((s, c) => s + (c.quantity * c.unit_price), 0);
 
                                   return (
@@ -1603,7 +1647,21 @@ export default function Show() {
                                           {activity.expanded ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
                                           <span className="font-semibold text-sm text-slate-800">{activityName}</span>
                                         </div>
-                                        <span className="text-sm font-bold text-emerald-700 font-mono">Rp {subtotal.toLocaleString('id-ID')}</span>
+                                        <div className="flex items-center gap-3">
+                                          <span className="text-sm font-bold text-emerald-700 font-mono text-right">Rp {subtotal.toLocaleString('id-ID')}</span>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              removeActivityRevision(activity.budget_detail_id);
+                                            }}
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </div>
                                       </div>
 
                                       {activity.expanded && (
@@ -1690,6 +1748,21 @@ export default function Show() {
                                     </div>
                                   );
                                 })}
+
+                                {availableActivitiesRevision.length > 0 && (
+                                  <div className="space-y-2 pt-2">
+                                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pilih & Tambah Kegiatan Baru</Label>
+                                    <SearchableSelect
+                                      options={availableActivitiesRevision.map(bd => ({
+                                        value: bd.id.toString(),
+                                        label: `${bd.item_name} — Sisa: Rp ${bd.remaining_amount.toLocaleString('id-ID')}`
+                                      }))}
+                                      onValueChange={(v) => addActivityRevision(parseInt(v))}
+                                      placeholder="Pilih kegiatan lain..."
+                                      className="h-9"
+                                    />
+                                  </div>
+                                )}
                               </div>
                             )}
 
