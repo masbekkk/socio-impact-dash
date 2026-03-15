@@ -260,7 +260,7 @@ final class ReimbursementResource extends JsonResource
                 return true;
             }
 
-            return (bool) $user->hasRole('superadmin');
+            return (bool) $user->hasRole('superadmin') || $user->hasRole('direktur');
         }
 
         $financeApproved = $financeApproval && $financeApproval->status->value === 'approved';
