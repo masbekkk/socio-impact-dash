@@ -194,14 +194,14 @@ interface ReimbursementDetail {
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700 border-gray-200', icon: FileText },
   submitted: { label: 'Diajukan', className: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock },
-  approved: { label: 'Disetujui', className: 'bg-blue-100 text-blue-700 border-blue-200', icon: CheckCircle },
-  head_approved: { label: 'Head Approved', className: 'bg-blue-100 text-blue-700 border-blue-200', icon: CheckCircle },
-  hr_approved: { label: 'HR Approved', className: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: CheckCircle },
-  finance_approved: { label: 'Finance Approved', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: DollarSign },
-  requested: { label: 'Diminta (Requested)', className: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: DollarSign },
-  transferred: { label: 'Transferred', className: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle },
-  rejected: { label: 'Rejected', className: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
+  approved: { label: 'Disetujui', className: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle },
+  head_approved: { label: 'Head Approved', className: 'bg-blue-50 text-blue-600 hover:bg-blue-50 border-blue-100', icon: CheckCircle },
+  hr_approved: { label: 'HR Approved', className: 'bg-blue-50 text-blue-600 hover:bg-blue-50 border-blue-100', icon: CheckCircle },
+  finance_approved: { label: 'Finance Approved', className: 'bg-blue-50 text-blue-600 hover:bg-blue-50 border-blue-100', icon: CheckCircle },
+  request_fund: { label: 'Request Fund', className: 'bg-orange-50 text-orange-600 hover:bg-orange-50 border-orange-100', icon: DollarSign },
+  transferred: { label: 'Sudah Ditransfer', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle },
   revision: { label: 'Revisi', className: 'bg-orange-100 text-orange-700 border-orange-200', icon: AlertCircle },
+  rejected: { label: 'Ditolak', className: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -1044,46 +1044,75 @@ export default function Show() {
           </div>
 
           {/* Action Buttons */}
-          {canApproveReject && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                onClick={() => setRejectDialogOpen(true)}
-              >
-                <XCircle className="mr-2 h-4 w-4" /> Tolak
-              </Button>
-              <Button
-                variant="outline"
-                className="border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-                onClick={() => setRevisiDialogOpen(true)}
-              >
-                <AlertCircle className="mr-2 h-4 w-4" /> Revisi
-              </Button>
-              {hasRole('finance') && data.type === 'atr' && data.status !== 'requested' ? (
+          <div className="flex items-center gap-2">
+            {canApproveReject && (
+              <>
                 <Button
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                  onClick={handleRequestFund}
-                  disabled={actionLoading}
+                  variant="outline"
+                  className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={() => setRejectDialogOpen(true)}
                 >
-                  {actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DollarSign className="mr-2 h-4 w-4" />}
-                  Submit to Request
+                  <XCircle className="mr-2 h-4 w-4" /> Tolak
                 </Button>
-              ) : (
                 <Button
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => {
-                    if (data.type === 'allowance') {
-                      setPendingAllowanceAmount(data.amount || 0);
-                    }
-                    setApproveDialogOpen(true);
-                  }}
+                  variant="outline"
+                  className="border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                  onClick={() => setRevisiDialogOpen(true)}
                 >
-                  <CheckCircle className="mr-2 h-4 w-4" /> Setujui
+                  <AlertCircle className="mr-2 h-4 w-4" /> Revisi
                 </Button>
-              )}
-            </div>
-          )}
+
+                {/* Role-Specific Approval Buttons */}
+                {hasRole('finance') && !hasRole('direktur') && (data.status === 'head_approved' || (data.type === 'allowance' && data.status === 'hr_approved')) ? (
+                  <Button
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    onClick={() => setApproveDialogOpen(true)}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                    Finance Approved
+                  </Button>
+                ) : (
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => {
+                      if (data.type === 'allowance') {
+                        setPendingAllowanceAmount(data.amount || 0);
+                      }
+                      setApproveDialogOpen(true);
+                    }}
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" /> Setujui
+                  </Button>
+                )}
+              </>
+            )}
+
+            {/* Post-Approval Finance Actions */}
+            {hasRole('finance') && (
+              <>
+                {data.status === 'approved' && (
+                  <Button
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    onClick={handleRequestFund}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DollarSign className="mr-2 h-4 w-4" />}
+                    Request Fund
+                  </Button>
+                )}
+                {data.status === 'request_fund' && (
+                  <Button
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => setTransferDialogOpen(true)}
+                    disabled={actionLoading}
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" /> Transferred
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

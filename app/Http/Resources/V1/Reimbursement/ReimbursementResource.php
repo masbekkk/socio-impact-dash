@@ -227,7 +227,7 @@ final class ReimbursementResource extends JsonResource
         // If user has the role and that role is PENDING, they can approve.
 
         // 1. Head Approval Phase
-        if (($effectiveStage === 'submitted' || $effectiveStage === 'revised') && ($user->hasRole('head') || $user->hasRole('direktur'))) {
+        if (in_array($effectiveStage, ['submitted', 'revised']) && ($user->hasRole('head') || $user->hasRole('direktur'))) {
             $pendingHead = $this->approvals->where('role', 'head')->where('status', 'pending')->isNotEmpty();
             if ($pendingHead) {
                 return true;
@@ -245,7 +245,7 @@ final class ReimbursementResource extends JsonResource
         // 3. Finance Approval Phase
         // For ATR: after Head. For Allowance: after HR.
         $financeStage = (in_array($this->type->value, ['atr', 'eer'])) ? 'head_approved' : 'hr_approved';
-        if (($effectiveStage === $financeStage || in_array($this->type->value, ['atr', 'eer']) && $effectiveStage === 'head_approved') && ($user->hasRole('finance') || $user->hasRole('direktur'))) {
+        if (in_array($effectiveStage, [$financeStage, 'finance_approved']) && ($user->hasRole('finance') || $user->hasRole('direktur'))) {
             $pendingFinance = $this->approvals->where('role', 'finance')->where('status', 'pending')->isNotEmpty();
             if ($pendingFinance) {
                 return true;

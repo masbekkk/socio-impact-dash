@@ -77,13 +77,23 @@ final readonly class UpdateReimbursementStatus
             }
 
             if ($action === ApprovalStatus::Approved->value || $action === 'request_fund') {
-                // Determine if all required approvals are met, but for now user requested status stays submitted
-                // until transferred.
-
                 $updateData = [];
 
                 if ($action === 'request_fund') {
                     $updateData['status'] = ReimbursementStatus::Requested;
+                } else {
+                    // Update main status based on role
+                    $roleStatusMap = [
+                        'head' => ReimbursementStatus::HeadApproved,
+                        'hr' => ReimbursementStatus::HRApproved,
+                        'finance' => ReimbursementStatus::FinanceApproved,
+                        'direktur' => ReimbursementStatus::Approved,
+                        'superadmin' => ReimbursementStatus::Approved,
+                    ];
+
+                    if (isset($roleStatusMap[$role])) {
+                        $updateData['status'] = $roleStatusMap[$role];
+                    }
                 }
 
                 if ($transferProof instanceof UploadedFile) {
