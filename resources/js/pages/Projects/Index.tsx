@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Search, Plus, Filter, MoreHorizontal, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, CheckCircle2, X, FileText, Cpu, BarChart3, Users, Globe, HeartHandshake, Layers, Building, Wallet } from 'lucide-react'
+import { Calendar, Search, Plus, Filter, MoreHorizontal, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, CheckCircle2, X, FileText, Cpu, BarChart3, Users, Globe, HeartHandshake, Layers, Building, Wallet, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,6 +71,8 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
   const [division, setDivision] = React.useState(filters?.division || 'all');
   const [perPage, setPerPage] = React.useState(10);
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [sortBy, setSortBy] = React.useState(filters?.sort_by || 'created_at');
+  const [sortDir, setSortDir] = React.useState(filters?.sort_dir || 'desc');
 
   // Delete Dialog & Toast State
   const [projectToDelete, setProjectToDelete] = React.useState<any>(null);
@@ -89,7 +91,9 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
           start_date: startDate,
           end_date: endDate,
           per_page: perPage,
-          page: currentPage
+          page: currentPage,
+          sort_by: sortBy,
+          sort_dir: sortDir
         },
       });
       setProjects(response.data.data.data);
@@ -147,7 +151,21 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, startDate, endDate, status, division, perPage, currentPage]);
+  }, [search, startDate, endDate, status, division, perPage, currentPage, sortBy, sortDir]);
+
+  const handleSort = (column: string) => {
+    const newDir = sortBy === column && sortDir === 'asc' ? 'desc' : 'asc';
+    setSortBy(column);
+    setSortDir(newDir);
+    setCurrentPage(1);
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortBy !== column) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-40" />;
+    return sortDir === 'asc'
+      ? <ArrowUp className="ml-1 h-3 w-3" />
+      : <ArrowDown className="ml-1 h-3 w-3" />;
+  };
 
   const handleFilterChange = (key: string, value: string) => {
     if (key === 'status') setStatus(value);
@@ -345,15 +363,49 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead>Kode</TableHead>
-                  {canUpdateCode && <TableHead>Initial Project</TableHead>}
-                  <TableHead className="min-w-[250px]">Nama Proyek</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead className="w-[180px]">Divisi</TableHead>
+                  <TableHead>
+                    <button className="flex items-center font-medium" onClick={() => handleSort('code')}>
+                      Kode <SortIcon column="code" />
+                    </button>
+                  </TableHead>
+                  {canUpdateCode && (
+                    <TableHead>
+                      <button className="flex items-center font-medium" onClick={() => handleSort('initial_project')}>
+                        Initial Project <SortIcon column="initial_project" />
+                      </button>
+                    </TableHead>
+                  )}
+                  <TableHead className="min-w-[250px]">
+                    <button className="flex items-center font-medium" onClick={() => handleSort('name')}>
+                      Nama Proyek <SortIcon column="name" />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button className="flex items-center font-medium" onClick={() => handleSort('client_name')}>
+                      Client <SortIcon column="client_name" />
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-[180px]">
+                    <button className="flex items-center font-medium" onClick={() => handleSort('division_id')}>
+                      Divisi <SortIcon column="division_id" />
+                    </button>
+                  </TableHead>
                   <TableHead>Created By</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Timeline</TableHead>
-                  <TableHead className="text-right">Nilai Kontrak</TableHead>
+                  <TableHead>
+                    <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
+                      Status <SortIcon column="status" />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button className="flex items-center font-medium" onClick={() => handleSort('start_date')}>
+                      Timeline <SortIcon column="start_date" />
+                    </button>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <button className="flex items-center font-medium justify-end w-full" onClick={() => handleSort('budget_total')}>
+                      Nilai Kontrak <SortIcon column="budget_total" />
+                    </button>
+                  </TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>

@@ -1419,7 +1419,7 @@ export default function Show() {
                 </div>
 
                 {/* Usage Date */}
-                {(data.start_date || data.end_date) && (
+                {(data.start_date || data.end_date) && data.type !== 'allowance' && (
                   <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 space-y-2">
                     <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
                       <Calendar className="h-4 w-4" /> {data.type === 'atr' ? 'Tanggal Penggunaan Dana' : 'Jadwal Penggunaan Dana'}
@@ -2160,6 +2160,61 @@ export default function Show() {
                           )}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Allowance Period info */}
+                {data.type === 'allowance' && (data.start_date || data.end_date) && (
+                  <div className="bg-amber-50/50 p-6 rounded-xl border border-amber-200/60 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-amber-800 font-bold text-sm uppercase tracking-tight">
+                        <Calendar className="h-5 w-5 text-amber-600" /> Periode Allowance
+                      </div>
+                      {data.start_date && data.end_date && (() => {
+                        const start = new Date(data.start_date);
+                        const end = new Date(data.end_date);
+                        const diffTime = Math.abs(end.getTime() - start.getTime());
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                        return (
+                          <Badge variant="outline" className="bg-white border-amber-200 text-amber-700 font-bold px-3 py-1">
+                            {diffDays} Hari
+                          </Badge>
+                        );
+                      })()}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+                      {/* Connector Line between dates */}
+                      <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-px bg-amber-200 z-0" />
+                      
+                      <div className="bg-white p-4 rounded-lg border border-amber-100 shadow-sm relative z-10 flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Mulai Perjalanan</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xl font-bold text-slate-800">
+                            {format(new Date(data.start_date!), 'dd MMMM yyyy', { locale: localeId })}
+                          </span>
+                          {data.start_time && (
+                            <span className="text-xs font-mono font-medium px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
+                              {data.start_time}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-lg border border-amber-100 shadow-sm relative z-10 flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Selesai Perjalanan</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xl font-bold text-slate-800">
+                            {format(new Date(data.end_date!), 'dd MMMM yyyy', { locale: localeId })}
+                          </span>
+                          {data.end_time && (
+                            <span className="text-xs font-mono font-medium px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
+                              {data.end_time}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

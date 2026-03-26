@@ -65,8 +65,29 @@ final class ProjectController extends Controller
             $query->whereDate('end_date', '<=', (string) $request->get('end_date'));
         }
 
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortDir = $request->get('sort_dir', 'desc');
+        $allowedSorts = [
+            'code',
+            'initial_project',
+            'name',
+            'client_name',
+            'division_id',
+            'status',
+            'start_date',
+            'end_date',
+            'budget_total',
+            'created_at',
+        ];
+
+        if (in_array($sortBy, $allowedSorts, true)) {
+            $query->orderBy($sortBy, $sortDir === 'asc' ? 'asc' : 'desc');
+        } else {
+            $query->latest();
+        }
+
         $perPage = $request->integer('per_page', 10);
-        $projects = $query->latest()->paginate($perPage);
+        $projects = $query->paginate($perPage);
 
         return JsonResponseFormatter::success(
             new ProjectCollection($projects),
