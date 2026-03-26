@@ -266,6 +266,7 @@ final class ReimbursementController extends Controller
                 'refund_reimburse_amount' => ['nullable', 'numeric', 'min:0'],
                 'project_id' => ['nullable', 'integer', 'exists:projects,id'],
                 'replacement_pic_id' => ['nullable', 'integer', 'exists:users,id'],
+                'approver_head_id' => ['nullable', 'integer', 'exists:users,id'],
                 'urgency' => ['nullable', 'string', 'max:20'],
                 'documents' => ['nullable', 'array'],
                 'documents.*.file' => ['required_with:documents', 'file', 'max:10240'],
@@ -274,7 +275,12 @@ final class ReimbursementController extends Controller
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request): void {
                 // Update editable fields
-                $updateData = ['status' => \App\Enums\ReimbursementStatus::Submitted];
+                $isRevision = $reimbursement->status === \App\Enums\ReimbursementStatus::Revision;
+                $newStatus = $isRevision
+                    ? \App\Enums\ReimbursementStatus::Revised
+                    : \App\Enums\ReimbursementStatus::Submitted;
+
+                $updateData = ['status' => $newStatus];
                 if (isset($validated['usage_plan'])) {
                     $updateData['usage_plan'] = $validated['usage_plan'];
                 }
@@ -366,9 +372,7 @@ final class ReimbursementController extends Controller
 
                 $reimbursement->update($updateData);
 
-                $reimbursement->update([
-                    'status' => \App\Enums\ReimbursementStatus::Submitted,
-                ]);
+                $reimbursement->update($updateData);
 
                 // Clear any existing approvals (relevant if it was a revision)
                 $reimbursement->approvals()->delete();
@@ -404,7 +408,8 @@ final class ReimbursementController extends Controller
     {
         try {
             $user = $request->user();
-            if (! $user->hasRole('superadmin')) {
+
+            if (! $user->hasRole('superadmin') && ! $user->hasRole('finance')) {
                 return JsonResponseFormatter::error('Unauthorized', 403);
             }
 

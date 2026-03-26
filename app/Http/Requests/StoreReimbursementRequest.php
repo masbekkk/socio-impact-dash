@@ -26,7 +26,7 @@ final class StoreReimbursementRequest extends FormRequest
             'status' => ['nullable', 'string', new Enum(\App\Enums\ReimbursementStatus::class)],
             'eer_type' => ['nullable', 'string', 'in:refund,reimbursement'],
             'amount' => ['nullable', 'numeric'],
-            'approver_head_id' => ['nullable', 'integer', 'exists:users,id'],
+            'approver_head_id' => ['required', 'integer', 'exists:users,id'],
             'approver_finance_id' => ['nullable', 'integer', 'exists:users,id'],
             'approver_direktur_id' => ['nullable', 'integer', 'exists:users,id'],
             'approver_hr_id' => ['nullable', 'integer', 'exists:users,id'],

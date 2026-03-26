@@ -136,6 +136,11 @@ final readonly class CreateReimbursement
             'direktur' => $data['approver_direktur_id'] ?? null,
         ];
 
+        // Fallback for Head: if not provided, try project PIC or then Project Head
+        if (empty($roles['head']) && $reimbursement->project) {
+            $roles['head'] = $reimbursement->project->pic_id ?? $reimbursement->project->head_id;
+        }
+
         // Ensure Allowance skips finance and direktur even if passed in data
         if ($reimbursement->type->value === 'allowance') {
             $roles['finance'] = null;

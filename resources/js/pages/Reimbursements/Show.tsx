@@ -37,6 +37,7 @@ interface SelectedActivityRevision {
   budget_detail_id: number;
   expanded: boolean;
   detail_aktivitas: string;
+  activity_name: string;
   children: {
     id: string | number;
     item_name: string;
@@ -225,17 +226,20 @@ export default function Show() {
     auth,
     expenseTypes = [],
     projects: propsProjects = [],
-    users: propsUsers = []
+    users: propsUsers = [],
+    approvers: propsApprovers = {}
   } = usePage().props as unknown as {
     id: number;
     auth: any;
     expenseTypes?: { value: string; label: string }[];
-    projects?: { id: number; name: string; code: string; division_name: string; pic_name: string }[];
+    projects?: any[];
     users?: { id: number; name: string }[];
+    approvers?: Record<string, { id: number; name: string; email: string }[]>;
   };
 
   const [projects, setProjects] = useState(propsProjects);
   const [users, setUsers] = useState(propsUsers);
+  const [approvers, setApprovers] = useState(propsApprovers);
   const { hasRole, hasPermission } = usePermission();
   const userRole = auth?.user?.role_name || 'pegawai';
   const userId = auth?.user?.id || 0;
@@ -276,6 +280,7 @@ export default function Show() {
     start_time: string;
     end_time: string;
     revision_note: string;
+    approver_head_id: string;
     eer_type: string;
     refund_reimburse_amount: number;
     selected_activities: SelectedActivityRevision[];
@@ -290,6 +295,7 @@ export default function Show() {
     start_time: '08:00',
     end_time: '17:00',
     revision_note: '',
+    approver_head_id: '',
     eer_type: 'refund',
     refund_reimburse_amount: 0,
     selected_activities: [],
@@ -321,6 +327,7 @@ export default function Show() {
       setData(response.data.data);
       if (response.data.projects) setProjects(response.data.projects);
       if (response.data.users) setUsers(response.data.users);
+      if (response.data.approvers) setApprovers(response.data.approvers);
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 404) {
         setError('Data pengajuan tidak ditemukan.');
@@ -613,6 +620,7 @@ export default function Show() {
           selected_activities.push({
             budget_detail_id: abs.project_budget_detail_id,
             expanded: true,
+            activity_name: abs.activity_name,
             detail_aktivitas: abs.notes ?? '',
             children: children.length > 0 ? children : [{
               id: crypto.randomUUID(),
@@ -639,6 +647,7 @@ export default function Show() {
       start_time: data.start_time ?? '08:00',
       end_time: data.end_time ?? '17:00',
       revision_note: '',
+      approver_head_id: data.approvals?.find((a: any) => a.role === 'head')?.approver_id?.toString() ?? '',
       eer_type: data.eer_type ?? 'refund',
       refund_reimburse_amount: data.refund_reimburse_amount ?? 0,
       selected_activities,
@@ -788,6 +797,7 @@ export default function Show() {
         type: data.type,
         ...(revisionForm.project_id && { project_id: revisionForm.project_id }),
         ...(revisionForm.replacement_pic_id && { replacement_pic_id: revisionForm.replacement_pic_id }),
+        ...(revisionForm.approver_head_id && { approver_head_id: revisionForm.approver_head_id }),
         ...(revisionForm.urgency && { urgency: revisionForm.urgency }),
         usage_plan: revisionForm.usage_plan,
         start_date: revisionForm.start_date || null,
@@ -1462,8 +1472,26 @@ export default function Show() {
                                   <SearchableSelect
                                     options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.name}` }))}
                                     value={revisionForm.project_id || 'none'}
-                                    onValueChange={(v) => setRevisionForm({ ...revisionForm, project_id: v === 'none' ? '' : v })}
+                                    onValueChange={(v) => {
+                                      const pId = v === 'none' ? '' : v;
+                                      const proj = projects.find(p => p.id.toString() === pId);
+                                      setRevisionForm({
+                                        ...revisionForm,
+                                        project_id: pId,
+                                        // Auto-update head if project has one
+                                        ...(proj?.head_id && { approver_head_id: proj.head_id.toString() })
+                                      });
+                                    }}
                                     placeholder="Pilih Project"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-semibold uppercase tracking-tight text-slate-500">Head Approver <span className="text-red-500">*</span></Label>
+                                  <SearchableSelect
+                                    options={(approvers.head || []).map(u => ({ value: u.id.toString(), label: u.name }))}
+                                    value={revisionForm.approver_head_id || 'none'}
+                                    onValueChange={(v) => setRevisionForm({ ...revisionForm, approver_head_id: v === 'none' ? '' : v })}
+                                    placeholder="Pilih Head Approver"
                                   />
                                 </div>
                                 <div className="space-y-2">
@@ -1868,9 +1896,16 @@ export default function Show() {
                 {/* ATR Items (New Flow) */}
                 {data.items && data.items.length > 0 && data.type === 'atr' && (() => {
                   const atrItems = data.items.filter(i => !i.parent_item_id);
-                  const grouped: Record<number, { name: string; items: ReimbursementItem[] }> = {};
+                  const grouped: Record<number, { name: string; notes: string; items: ReimbursementItem[] }> = {};
                   atrItems.forEach(item => {
-                    if (!grouped[item.activity_id]) grouped[item.activity_id] = { name: item.activity_name, items: [] };
+                    if (!grouped[item.activity_id]) {
+                      const budgetSelected = data.atr_budget_selecteds?.find(abs => abs.project_budget_detail_id === item.activity_id);
+                      grouped[item.activity_id] = { 
+                        name: item.activity_name, 
+                        notes: budgetSelected?.notes || '',
+                        items: [] 
+                      };
+                    }
                     grouped[item.activity_id].items.push(item);
                   });
                   return (
@@ -1878,8 +1913,13 @@ export default function Show() {
                       <label className="text-xs font-medium text-muted-foreground uppercase">Item Kegiatan ATR</label>
                       {Object.entries(grouped).map(([actId, group]) => (
                         <div key={actId} className="border rounded-xl overflow-hidden">
-                          <div className="bg-slate-50 p-3 border-b">
-                            <h4 className="font-semibold text-sm text-slate-800">{group.name}</h4>
+                          <div className="bg-slate-50 p-4 border-b space-y-1">
+                            <h4 className="font-bold text-sm text-slate-900">{group.name}</h4>
+                            {group.notes && (
+                              <p className="text-xs text-muted-foreground italic leading-relaxed">
+                                {group.notes}
+                              </p>
+                            )}
                           </div>
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm">
@@ -1938,10 +1978,16 @@ export default function Show() {
                   });
 
                   // Group ATR items by activity for reference
-                  const groupedAtr: Record<number, { name: string; items: typeof atrItems; plannedAmount: number }> = {};
+                  const groupedAtr: Record<number, { name: string; notes: string; items: typeof atrItems; plannedAmount: number }> = {};
                   atrItems.forEach(item => {
                     if (!groupedAtr[item.activity_id]) {
-                      groupedAtr[item.activity_id] = { name: item.activity_name, items: [], plannedAmount: 0 };
+                      const budgetSelected = data.atr_budget_selecteds?.find(abs => abs.project_budget_detail_id === item.activity_id);
+                      groupedAtr[item.activity_id] = { 
+                        name: item.activity_name, 
+                        notes: budgetSelected?.notes || '',
+                        items: [], 
+                        plannedAmount: 0 
+                      };
                     }
                     groupedAtr[item.activity_id].items.push(item);
                     groupedAtr[item.activity_id].plannedAmount += item.amount;
@@ -2033,9 +2079,16 @@ export default function Show() {
                                       ) : (
                                         <div className="h-4 w-4 rounded-full border-2 border-slate-300" />
                                       )}
-                                      <h4 className={cn("font-bold text-sm", isClaimed ? "text-emerald-900" : "text-slate-600")}>
-                                        {group.name}
-                                      </h4>
+                                      <div className="space-y-0.5">
+                                        <h4 className={cn("font-bold text-sm", isClaimed ? "text-emerald-900" : "text-slate-600")}>
+                                          {group.name}
+                                        </h4>
+                                        {group.notes && (
+                                          <p className="text-[10px] text-muted-foreground italic leading-relaxed">
+                                            {group.notes}
+                                          </p>
+                                        )}
+                                      </div>
                                     </div>
                                     <div className="text-right">
                                       <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Budget ATR</p>

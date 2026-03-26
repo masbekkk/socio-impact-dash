@@ -123,7 +123,8 @@ final class ReimbursementResource extends JsonResource
                 'id' => $item->id,
                 'project_budget_detail_id' => $item->project_budget_detail_id,
                 'amount' => (float) $item->amount,
-                'notes' => $item->notes, // Load the note text from pivot
+                'notes' => $item->notes,
+                'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
             ])),
             'items' => $this->whenLoaded('items', fn (): \Illuminate\Support\Collection => $this->items->map(fn (\App\Models\ReimbursementItem $item): array => [
                 'id' => $item->id,

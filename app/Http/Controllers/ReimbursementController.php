@@ -269,10 +269,20 @@ final readonly class ReimbursementController
 
         $users = \App\Models\User::query()->select('id', 'name')->get();
 
+        $approversGrouped = \App\Models\User::query()->role(['head', 'hr', 'finance', 'direktur'])
+            ->get()
+            ->groupBy(fn (\App\Models\User $user) => $user->roles->first()->name)
+            ->map(fn (\Illuminate\Database\Eloquent\Collection $users) => $users->map(fn (\App\Models\User $u): array => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+            ])->values()->all());
+
         return Inertia::render('Reimbursements/Show', [
             'id' => $id,
             'projects' => $projects,
             'users' => $users,
+            'approvers' => $approversGrouped,
             'expenseTypes' => collect(\App\Enums\ExpenseType::cases())->map(fn ($type): array => [
                 'value' => $type->value,
                 'label' => $type->value,

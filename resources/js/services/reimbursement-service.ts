@@ -48,6 +48,7 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     payload.selected_budget_details?.forEach((budget, index) => {
         fd.append(`selected_budget_details[${index}][project_budget_detail_id]`, budget.project_budget_detail_id.toString());
         fd.append(`selected_budget_details[${index}][amount]`, budget.amount.toString());
+        if (budget.notes) fd.append(`selected_budget_details[${index}][notes]`, budget.notes);
     });
 
     payload.items?.forEach((item, index) => {

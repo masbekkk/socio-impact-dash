@@ -748,7 +748,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="approver_head_id">Head Approver</Label>
+                  <Label htmlFor="approver_head_id">Head Approver <span className="text-red-500">*</span></Label>
                   <SearchableSelect
                     options={(approvers['head'] || []).map(u => ({ value: u.id.toString(), label: u.name }))}
                     value={formData.approver_head_id}

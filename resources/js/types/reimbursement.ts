@@ -71,6 +71,7 @@ export interface ReimbursementPayload {
     selected_budget_details?: {
         project_budget_detail_id: number;
         amount: number;
+        notes?: string;
     }[];
     items?: ReimbursementItemPayload[];
     revision_note?: string;
