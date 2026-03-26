@@ -82,22 +82,26 @@ final readonly class LeaveController
                 return response()->json(['message' => 'Anda tidak dapat menyetujui pengajuan milik sendiri.'], 403);
             }
 
-            // Enforce sequential approval: Direktur must approve before HR for non-pegawai
-            if ($actor->hasRole('hr') && ! $leave->user->hasRole('pegawai')) {
-                $direkturApproval = $leave->approvals()->where('role', 'direktur')->first();
-                if ($direkturApproval && $direkturApproval->status !== ApprovalStatus::Approved) {
-                    return response()->json(['message' => 'Persetujuan Direktur diperlukan sebelum HR dapat memberikan persetujuan.'], 403);
-                }
-            }
 
             return DB::transaction(function () use ($leave, $actor, $validated, $isApprove): JsonResponse {
-                $role = $actor->getRoleNames()->first();
+                $userRoles = $actor->getRoleNames()->toArray();
                 $submitterRole = $leave->user->getRoleNames()->first();
 
-                // Find existing pending approval for this role
+                // Find existing pending approval for any of the actor's roles
                 $approval = LeaveApproval::query()->where('leave_id', $leave->id)
-                    ->where('role', $role)
+                    ->whereIn('role', $userRoles)
+                    ->where('status', ApprovalStatus::Pending)
                     ->first();
+
+                $role = $approval?->role?->value ?? $actor->getRoleNames()->first();
+
+                // Enforce sequential approval: Direktur must approve before HR for non-pegawai
+                if ($role === 'hr' && ! $leave->user->hasRole('pegawai')) {
+                    $direkturApproval = $leave->approvals()->where('role', 'direktur')->first();
+                    if ($direkturApproval && $direkturApproval->status !== ApprovalStatus::Approved) {
+                        return response()->json(['message' => 'Persetujuan Direktur diperlukan sebelum HR dapat memberikan persetujuan.'], 403);
+                    }
+                }
 
                 $actionStatus = match ($validated['action']) {
                     'approve' => ApprovalStatus::Approved,

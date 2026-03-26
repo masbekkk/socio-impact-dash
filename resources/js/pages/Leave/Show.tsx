@@ -26,6 +26,7 @@ import { id as localeId } from 'date-fns/locale';
 import DatePicker from '@/components/DatePicker';
 import axios from 'axios';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { usePermission } from '@/hooks/use-permission';
 
 interface LeaveData {
     id: number;
@@ -158,12 +159,14 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
 
     useEffect(() => { fetchLeave(); }, [fetchLeave]);
 
+    const { hasRole, hasPermission } = usePermission();
+
     const isTravel = leave?.type === 'travel' || !!leave?.destination;
     const canRevisionEdit = authUser.is_owner && leave?.status === 'revision';
 
     const canAction = (() => {
         if (authUser.is_owner) return false;
-        if (!authUser.can_approve && !authUser.can_reject) return false;
+        if (!hasPermission(['approve_leaves', 'reject_leaves'])) return false;
 
         const status = leave?.status ?? '';
         if (['rejected'].includes(status)) return false;
@@ -171,18 +174,28 @@ export default function LeaveShow({ leaveCode, authUser, submitterRemainingLeave
         const hasCompletedAction = leave?.approvals?.some(a => a.approver?.id === authUser.id && ['approved', 'rejected'].includes(a.status));
         if (hasCompletedAction) return false;
 
-        const role = authUser.position?.toLowerCase() || '';
-        if (['superadmin', 'direktur', 'hr'].includes(role)) return true;
+        // Superadmin and Direktur can always take action if not rejected and not yet acted
+        if (hasRole(['superadmin', 'direktur'])) return true;
 
-        if (role === 'hr') {
+        // Check for HR role sequential logic
+        if (hasRole('hr')) {
             if (status === 'hr_approved') return false;
-            const direkturApproval = leave?.approvals?.find(a => a.role === 'direktur');
-            if (direkturApproval && direkturApproval.status !== 'approved') return false;
 
-            return true;
+            const direkturApproval = leave?.approvals?.find(a => a.role === 'direktur');
+            // If there's a Direktur approval and it's not yet approved, HR can't act yet (for non-pegawai)
+            if (direkturApproval && direkturApproval.status !== 'approved') {
+                // However, they might still be able to act if they HAVE other roles (like Head)
+            } else {
+                return true;
+            }
         }
 
-        return ['submitted', 'revision', 'revised'].includes(status);
+        // Head role can act in initial stages
+        if (hasRole('head')) {
+            if (['submitted', 'revision', 'revised'].includes(status)) return true;
+        }
+
+        return false;
     })();
 
     const handleActionConfirm = async () => {

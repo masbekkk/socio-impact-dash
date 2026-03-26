@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Api\V1;
 
 use App\Actions\CreateLeave;
+use App\Enums\ApprovalStatus;
 use App\Enums\LeaveStatus;
 use App\Enums\UserRole;
 use App\Models\User;
@@ -123,5 +124,44 @@ final class LeaveSequentialApprovalTest extends TestCase
         ])->assertStatus(200);
 
         $this->assertEquals(LeaveStatus::HRApproved, $leave->fresh()->status);
+    }
+
+    public function test_user_with_head_and_hr_roles_can_approve_both_sequentially(): void
+    {
+        // This user is the HR of the company AND the Head of the submitter
+        $multiRoleUser = User::factory()->create(['email' => 'hr@socio-impact.test']);
+        $multiRoleUser->assignRole(UserRole::Head->value, UserRole::HR->value);
+        $multiRoleUser->givePermissionTo(['approve_leaves', 'reject_leaves']);
+
+        // Since it's a pegawai submission, we don't need a direktur approval
+        User::factory()->create(['email' => 'direktur@socio-impact.test'])->assignRole(UserRole::Direktur->value);
+
+        $pegawai = User::factory()->create();
+        $pegawai->assignRole(UserRole::Pegawai->value);
+
+        $createLeave = app(CreateLeave::class);
+        $leave = $createLeave->handle([
+            'type' => 'annual',
+            'start_date' => now()->addDay()->toDateString(),
+            'end_date' => now()->addDays(2)->toDateString(),
+            'approver_head_id' => $multiRoleUser->id,
+        ], $pegawai->id);
+
+        // 1. Approve as Head
+        $this->actingAs($multiRoleUser)->postJson("/api/v1/leaves/{$leave->code}/status", [
+            'action' => 'approve',
+        ])->assertStatus(200);
+
+        $this->assertEquals(LeaveStatus::HeadApproved, $leave->fresh()->status);
+        $this->assertEquals(ApprovalStatus::Approved, $leave->approvals()->where('role', 'head')->first()->status);
+        $this->assertEquals(ApprovalStatus::Pending, $leave->approvals()->where('role', 'hr')->first()->status);
+
+        // 2. Approve as HR (same user)
+        $this->actingAs($multiRoleUser)->postJson("/api/v1/leaves/{$leave->code}/status", [
+            'action' => 'approve',
+        ])->assertStatus(200);
+
+        $this->assertEquals(LeaveStatus::HRApproved, $leave->fresh()->status);
+        $this->assertEquals(ApprovalStatus::Approved, $leave->approvals()->where('role', 'hr')->first()->status);
     }
 }
