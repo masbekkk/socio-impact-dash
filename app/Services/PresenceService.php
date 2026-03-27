@@ -147,16 +147,11 @@ final readonly class PresenceService
             $query->whereDate('date', '<=', $filters['end_date']);
         }
 
-        if (! empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (! empty($filters['month'])) {
-            $query->whereMonth('date', $filters['month']);
-        }
-
-        if (! empty($filters['year'])) {
-            $query->whereYear('date', $filters['year']);
+        if (! empty($filters['search'])) {
+            $query->where(function ($q) use ($filters): void {
+                $q->whereHas('user', fn ($uq) => $uq->where('name', 'like', "%{$filters['search']}%"))
+                    ->orWhere('activity', 'like', "%{$filters['search']}%");
+            });
         }
 
         return $query->orderBy('date', 'desc')->paginate($perPage);

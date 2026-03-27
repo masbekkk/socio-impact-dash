@@ -34,6 +34,7 @@ final class PresenceController
         return Inertia::render('Presence/Index', [
             'presences' => $presences,
             'todayPresence' => $presenceService->getTodayPresence($user),
+            'filters' => request()->only(['search', 'start_date', 'end_date']),
         ]);
     }
 

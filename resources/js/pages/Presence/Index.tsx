@@ -83,18 +83,50 @@ interface PaginatedPresences {
 interface PageProps {
   presences: PaginatedPresences;
   todayPresence: PresenceData | null;
+  filters: {
+    search?: string;
+    start_date?: string;
+    end_date?: string;
+  };
 }
 
-export default function PresenceIndex({ presences, todayPresence }: PageProps) {
+export default function PresenceIndex({ presences, todayPresence, filters }: PageProps) {
   // --- State ---
   const [breadcrumbs] = useState([
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Presensi', href: '/presences' },
   ]);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(filters.search || '');
+  const [startDate, setStartDate] = useState(filters.start_date || '');
+  const [endDate, setEndDate] = useState(filters.end_date || '');
 
-  // Form State
+  // Persistent filtering
+  const [isFirstRender, setIsFirstRender] = useState(true);
+
+  useEffect(() => {
+    if (isFirstRender) {
+      setIsFirstRender(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      router.get(
+        route('presences.index'),
+        {
+          search: searchQuery,
+          start_date: startDate,
+          end_date: endDate,
+        },
+        {
+          preserveState: true,
+          replace: true,
+        }
+      );
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, startDate, endDate]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [formData, setFormData] = useState({
@@ -112,10 +144,6 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
     type: null,
     log: null
   });
-
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
 
   // Checkout State
   const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
@@ -442,28 +470,36 @@ export default function PresenceIndex({ presences, todayPresence }: PageProps) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-9 gap-2">
                     <Filter className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Filter</span>
+                    <span className="hidden sm:inline">Quick Filter</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Filter Harian</DropdownMenuLabel>
+                  <DropdownMenuLabel>Rentang Waktu</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Hari Ini</DropdownMenuItem>
-                  <DropdownMenuItem>Minggu Ini</DropdownMenuItem>
-                  <DropdownMenuItem>Bulan Ini</DropdownMenuItem>
-                  <DropdownMenuLabel>Filter Status</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setFilterStatus('all')} className={filterStatus === 'all' ? 'bg-accent' : ''}>
-                    Semua Status
+                  <DropdownMenuItem onClick={() => {
+                    const today = format(new Date(), 'yyyy-MM-dd');
+                    setStartDate(today);
+                    setEndDate(today);
+                  }}>
+                    Hari Ini
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setFilterStatus('pending')} className={filterStatus === 'pending' ? 'bg-accent' : ''}>
-                    Menunggu
+                  <DropdownMenuItem onClick={() => {
+                    const now = new Date();
+                    const start = new Date(now.setDate(now.getDate() - now.getDay()));
+                    const end = new Date(now.setDate(start.getDate() + 6));
+                    setStartDate(format(start, 'yyyy-MM-dd'));
+                    setEndDate(format(end, 'yyyy-MM-dd'));
+                  }}>
+                    Minggu Ini
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setFilterStatus('approved')} className={filterStatus === 'approved' ? 'bg-accent' : ''}>
-                    Disetujui
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setFilterStatus('rejected')} className={filterStatus === 'rejected' ? 'bg-accent' : ''}>
-                    Ditolak
+                  <DropdownMenuItem onClick={() => {
+                    const now = new Date();
+                    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    setStartDate(format(start, 'yyyy-MM-dd'));
+                    setEndDate(format(end, 'yyyy-MM-dd'));
+                  }}>
+                    Bulan Ini
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

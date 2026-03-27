@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { router } from '@inertiajs/react';
+import { router, Link } from '@inertiajs/react';
 
-import { CheckCircle, XCircle, Clock, AlertCircle, FileText } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, FileText, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -146,6 +146,7 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
                                             <TableHead className="font-bold">Nominal</TableHead>
                                             <TableHead className="font-bold">Status Approval</TableHead>
                                             <TableHead className="font-bold">Status</TableHead>
+                                            <TableHead className="font-bold text-right">Aksi</TableHead>
                                         </>
                                     ) : (
                                         <>
@@ -157,6 +158,7 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
                                             <TableHead className="font-bold text-right">Total Biaya</TableHead>
                                             <TableHead className="font-bold">Status Approval</TableHead>
                                             <TableHead className="font-bold">Status</TableHead>
+                                            <TableHead className="font-bold text-right">Aksi</TableHead>
                                         </>
                                     )
                                 ) : (
@@ -167,6 +169,7 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
                                         <TableHead className="font-bold">Durasi</TableHead>
                                         <TableHead className="font-bold">Status Approval</TableHead>
                                         <TableHead className="font-bold">Status</TableHead>
+                                        <TableHead className="font-bold text-right">Aksi</TableHead>
                                     </>
                                 )}
                             </TableRow>
@@ -225,6 +228,11 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
                                                             {statusCfg.label}
                                                         </Badge>
                                                     </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Link href={`/reimbursements/${item.id}`} className="text-emerald-700 hover:text-emerald-800" target="_blank">
+                                                            <Eye className="h-4 w-4" />
+                                                        </Link>
+                                                    </TableCell>
                                                 </>
                                             ) : (
                                                 <>
@@ -267,6 +275,11 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
                                                             <StatusIcon className="h-3 w-3" />
                                                             {statusCfg.label}
                                                         </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Link href={`/reimbursements/${item.id}`} className="text-emerald-700 hover:text-emerald-800" target="_blank">
+                                                            <Eye className="h-4 w-4" />
+                                                        </Link>
                                                     </TableCell>
                                                 </>
                                             )
@@ -328,6 +341,11 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
                                                         <StatusIcon className="h-3 w-3" />
                                                         {statusCfg.label}
                                                     </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Link href={`/leaves/${item.code}`} className="text-emerald-700 hover:text-emerald-800" target="_blank">
+                                                        <Eye className="h-4 w-4" />
+                                                    </Link>
                                                 </TableCell>
                                             </>
                                         )}
