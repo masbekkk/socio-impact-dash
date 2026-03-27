@@ -144,21 +144,27 @@ final class ReimbursementResource extends JsonResource
                 function () {
                     $atr = $this->atr;
                     if (! $atr) {
-                        return [];
+                        return [
+                            'items' => [],
+                            'total_amount' => 0,
+                        ];
                     }
                     $atr->loadMissing('items');
 
-                    return $atr->items->where('parent_item_id', null)->map(fn (\App\Models\ReimbursementItem $item): array => [
-                        'id' => $item->id,
-                        'item_name' => $item->item_name,
-                        'quantity' => $item->quantity,
-                        'unit_price' => (float) $item->unit_price,
-                        'amount' => (float) $item->amount,
-                        'expense_type' => $item->expense_type?->value,
-                        'notes' => $item->notes,
-                        'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
-                        'activity_id' => $item->project_budget_detail_id,
-                    ])->values();
+                    return [
+                        'items' => $atr->items->where('parent_item_id', null)->map(fn (\App\Models\ReimbursementItem $item): array => [
+                            'id' => $item->id,
+                            'item_name' => $item->item_name,
+                            'quantity' => $item->quantity,
+                            'unit_price' => (float) $item->unit_price,
+                            'amount' => (float) $item->amount,
+                            'expense_type' => $item->expense_type?->value,
+                            'notes' => $item->notes,
+                            'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
+                            'activity_id' => $item->project_budget_detail_id,
+                        ])->values(),
+                        'total_amount' => (float) $atr->amount,
+                    ];
                 }
             ),
         ];

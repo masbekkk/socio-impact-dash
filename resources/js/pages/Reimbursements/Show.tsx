@@ -184,7 +184,10 @@ interface ReimbursementDetail {
   can_approve: boolean;
   atr_budget_selecteds?: AtrBudgetSelected[];
   items?: ReimbursementItem[];
-  atr_items?: { id: number; item_name: string; quantity: number; unit_price: number; amount: number; expense_type: string | null; notes: string | null; activity_name: string; activity_id: number }[];
+  atr_items?: {
+    items: { id: number; item_name: string; quantity: number; unit_price: number; amount: number; expense_type: string | null; notes: string | null; activity_name: string; activity_id: number }[];
+    total_amount: number;
+  };
   start_date: string | null;
   end_date: string | null;
   start_time: string | null;
@@ -348,6 +351,26 @@ export default function Show() {
       commentsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [data?.comments]);
+
+  // Automatic EER Type Detection for Revision Form
+  useEffect(() => {
+    if (data?.type === 'eer' && data?.atr_items?.total_amount !== undefined) {
+      const totalClaim = revisionForm.eer_items.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const atrTotal = data.atr_items.total_amount;
+      const diff = totalClaim - atrTotal;
+      
+      const newType = diff > 0 ? 'reimbursement' : 'refund';
+      const newAmount = Math.abs(diff);
+
+      if (revisionForm.eer_type !== newType || revisionForm.refund_reimburse_amount !== newAmount) {
+        setRevisionForm(prev => ({
+          ...prev,
+          eer_type: newType,
+          refund_reimburse_amount: newAmount
+        }));
+      }
+    }
+  }, [revisionForm.eer_items, data?.atr_items?.total_amount, data?.type]);
 
   // handleFileChange removed as it is no longer needed for approval
 
@@ -1099,7 +1122,7 @@ export default function Show() {
             )}
 
             {/* Post-Approval Finance Actions */}
-            {hasRole('finance') && (
+            {isFinanceOrAdmin && (
               <>
                 {data.status === 'approved' && (
                   <Button
@@ -1837,36 +1860,31 @@ export default function Show() {
                               <div className="mt-4 p-4 border rounded-xl bg-slate-50/50 space-y-4">
                                 <div className="space-y-3">
                                   <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tipe Hasil EER</Label>
-                                  <RadioGroup
-                                    value={revisionForm.eer_type}
-                                    onValueChange={(v: string) => setRevisionForm(p => ({ ...p, eer_type: v }))}
-                                    className="grid grid-cols-2 gap-2"
-                                  >
                                     <div className={cn(
-                                      "flex items-center space-x-2 p-2 rounded-lg border bg-white cursor-pointer",
-                                      revisionForm.eer_type === 'refund' && "border-blue-500 bg-blue-50/30"
+                                      "flex items-center space-x-2 p-3 rounded-lg border bg-blue-50/30 border-blue-200"
                                     )}>
-                                      <RadioGroupItem value="refund" id="rev-refund" />
-                                      <Label htmlFor="rev-refund" className="text-xs cursor-pointer font-medium">Refund</Label>
+                                      <div className="flex-1">
+                                        <div className="font-semibold text-xs">
+                                          {revisionForm.eer_type === 'refund' ? 'Refund (Pengembalian Kelebihan)' : 'Reimbursement (Kekurangan Dana)'}
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground">
+                                          {revisionForm.eer_type === 'refund'
+                                            ? 'Total EER lebih kecil dari ATR. Selisih dana dikembalikan ke kantor.'
+                                            : 'Total EER lebih besar dari ATR. Kantor akan membayarkan selisihnya.'}
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div className={cn(
-                                      "flex items-center space-x-2 p-2 rounded-lg border bg-white cursor-pointer",
-                                      revisionForm.eer_type === 'reimbursement' && "border-blue-500 bg-blue-50/30"
-                                    )}>
-                                      <RadioGroupItem value="reimbursement" id="rev-reimbursement" />
-                                      <Label htmlFor="rev-reimbursement" className="text-xs cursor-pointer font-medium">Reimbursement</Label>
-                                    </div>
-                                  </RadioGroup>
                                 </div>
 
-                                <div className="space-y-1">
-                                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nominal {revisionForm.eer_type === 'refund' ? 'Refund' : 'Reimburse'}</Label>
-                                  <Textarea
-                                    value={revisionForm.usage_plan}
-                                    onChange={(e) => setRevisionForm(p => ({ ...p, usage_plan: e.target.value }))}
-                                    placeholder="Update rencana penggunaan..."
-                                  />
-                                </div>
+                                 <div className="space-y-2">
+                                   <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nominal {revisionForm.eer_type === 'refund' ? 'Refund' : 'Reimburse'}</Label>
+                                   <div className="h-9 text-sm font-bold flex items-center px-3 rounded-md bg-blue-50 border border-blue-100 text-blue-800">
+                                     Rp {revisionForm.refund_reimburse_amount.toLocaleString('id-ID')}
+                                   </div>
+                                   <p className="text-[10px] text-muted-foreground italic">
+                                     *Nominal dikalkulasi otomatis dari selisih limit ATR dan total rincian item di atas.
+                                   </p>
+                                 </div>
                               </div>
                             )}
                           </div>
@@ -1967,7 +1985,7 @@ export default function Show() {
                 {/* EER Claimed Items + All ATR Items */}
                 {data.type === 'eer' && (() => {
                   const eerItems = data.items || [];
-                  const atrItems = data.atr_items || [];
+                  const atrItems = data.atr_items?.items || [];
 
                   // Calculate totals per activity for EER claims
                   const activityClaimTotals: Record<number, number> = {};
@@ -2258,7 +2276,7 @@ export default function Show() {
                   </div>
                 )}
 
-                {((data.status === 'submitted' || data.status === 'request_fund') && (isFinanceOrAdmin || (data.type === 'allowance' && isHrOrAdmin))) && (
+                {((data.status === 'submitted' || data.status === 'request_fund') && isFinanceOrAdmin) && (
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <Button
                       onClick={() => setTransferDialogOpen(true)}
