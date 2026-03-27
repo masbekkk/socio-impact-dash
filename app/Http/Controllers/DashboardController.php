@@ -52,60 +52,74 @@ final class DashboardController extends Controller
 
         // Head Logic
         if (in_array('head', $roles)) {
-            $approvalItems['head_reimbursements'] = \App\Models\Reimbursement::query()
-                ->whereHas('approvals', function ($q) use ($user): void {
-                    $q->where('approver_id', $user->id)
-                        ->where('status', \App\Enums\ApprovalStatus::Pending)
-                        ->where('role', 'head');
-                })
-                ->where('status', \App\Enums\ReimbursementStatus::Submitted)
-                ->with(['user', 'project'])
-                ->get();
+            $approvalItems['head_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
+                \App\Models\Reimbursement::query()
+                    ->whereHas('approvals', function ($q) use ($user): void {
+                        $q->where('approver_id', $user->id)
+                            ->where('status', \App\Enums\ApprovalStatus::Pending)
+                            ->where('role', 'head');
+                    })
+                    ->where('status', \App\Enums\ReimbursementStatus::Submitted)
+                    ->with(['user', 'project.division', 'approvals.approver'])
+                    ->get()
+            )->resolve();
 
-            $approvalItems['head_leaves'] = \App\Models\Leave::query()
-                ->whereHas('approvals', function ($q) use ($user): void {
-                    $q->where('approver_id', $user->id)
-                        ->where('status', \App\Enums\ApprovalStatus::Pending)
-                        ->where('role', 'head');
-                })
-                ->where('status', \App\Enums\LeaveStatus::Submitted)
-                ->with(['user', 'project'])
-                ->get();
+            $approvalItems['head_leaves'] = \App\Http\Resources\V1\Leave\LeaveResource::collection(
+                \App\Models\Leave::query()
+                    ->whereHas('approvals', function ($q) use ($user): void {
+                        $q->where('approver_id', $user->id)
+                            ->where('status', \App\Enums\ApprovalStatus::Pending)
+                            ->where('role', 'head');
+                    })
+                    ->where('status', \App\Enums\LeaveStatus::Submitted)
+                    ->with(['user', 'project', 'approvals.approver'])
+                    ->get()
+            )->resolve();
         }
 
         // Finance Logic
         if (in_array('finance', $roles)) {
-            $approvalItems['finance_reimbursements'] = \App\Models\Reimbursement::query()
-                ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
-                ->with(['user', 'project'])
-                ->get();
+            $approvalItems['finance_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
+                \App\Models\Reimbursement::query()
+                    ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
+                    ->with(['user', 'project.division', 'approvals.approver'])
+                    ->get()
+            )->resolve();
         }
 
         // Direktur Logic
         if (in_array('direktur', $roles)) {
-            $approvalItems['direktur_reimbursements'] = \App\Models\Reimbursement::query()
-                ->where('status', \App\Enums\ReimbursementStatus::FinanceApproved)
-                ->with(['user', 'project'])
-                ->get();
+            $approvalItems['direktur_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
+                \App\Models\Reimbursement::query()
+                    ->where('status', \App\Enums\ReimbursementStatus::FinanceApproved)
+                    ->with(['user', 'project.division', 'approvals.approver'])
+                    ->get()
+            )->resolve();
 
-            $approvalItems['direktur_leaves'] = \App\Models\Leave::query()
-                ->where('status', \App\Enums\LeaveStatus::HeadApproved)
-                ->with(['user', 'project'])
-                ->get();
+            $approvalItems['direktur_leaves'] = \App\Http\Resources\V1\Leave\LeaveResource::collection(
+                \App\Models\Leave::query()
+                    ->where('status', \App\Enums\LeaveStatus::HeadApproved)
+                    ->with(['user', 'project', 'approvals.approver'])
+                    ->get()
+            )->resolve();
         }
 
         // HR Logic
         if (in_array('hr', $roles)) {
-            $approvalItems['hr_leaves'] = \App\Models\Leave::query()
-                ->where('status', \App\Enums\LeaveStatus::DirekturApproved)
-                ->with(['user', 'project'])
-                ->get();
+            $approvalItems['hr_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
+                \App\Models\Reimbursement::query()
+                    ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
+                    ->where('type', \App\Enums\ReimbursementType::Allowance)
+                    ->with(['user', 'project.division', 'approvals.approver'])
+                    ->get()
+            )->resolve();
 
-            $approvalItems['hr_allowances'] = \App\Models\Reimbursement::query()
-                ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
-                ->where('type', \App\Enums\ReimbursementType::ALLOWANCE)
-                ->with(['user', 'project'])
-                ->get();
+            $approvalItems['hr_leaves'] = \App\Http\Resources\V1\Leave\LeaveResource::collection(
+                \App\Models\Leave::query()
+                    ->where('status', \App\Enums\LeaveStatus::DirekturApproved)
+                    ->with(['user', 'project', 'approvals.approver'])
+                    ->get()
+            )->resolve();
         }
 
         return Inertia::render('Dashboard/Index', [
