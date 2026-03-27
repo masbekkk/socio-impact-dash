@@ -111,6 +111,32 @@ final class LeaveController
         //
     }
 
+    public function bulkApprove(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        if (! empty($ids)) {
+            $bulkAction = new \App\Actions\BulkApproveLeaves(new \App\Actions\ApproveLeaveAction());
+            $bulkAction->handle($ids);
+        }
+
+        return back()->with('success', 'Berhasil menyetujui pengajuan cuti terpilih.');
+    }
+
+    public function approve(string $code): \Illuminate\Http\RedirectResponse
+    {
+        $leave = Leave::query()->where('code', $code)->firstOrFail();
+        $action = new \App\Actions\ApproveLeaveAction();
+        $action->handle($leave);
+
+        return back()->with('success', 'Berhasil menyetujui pengajuan cuti.');
+    }
+
+    public function reject(string $code): \Illuminate\Http\RedirectResponse
+    {
+        // Implement reject logic if needed or just redirect back
+        return back();
+    }
+
     private function getFormProps(Request $request): array
     {
         $user = $request->user();

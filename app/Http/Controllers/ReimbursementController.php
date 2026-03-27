@@ -473,6 +473,18 @@ final readonly class ReimbursementController
         //
     }
 
+    public function bulkApprove(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $user = $request->user();
+        if ($user && ! empty($ids)) {
+            $bulkAction = new \App\Actions\BulkApproveReimbursements(new \App\Actions\UpdateReimbursementStatus());
+            $bulkAction->handle($ids, $user->id, $user->getRoleNames()->first());
+        }
+
+        return back()->with('success', 'Berhasil menyetujui pengajuan terpilih.');
+    }
+
     public function approve(): \Illuminate\Http\RedirectResponse
     {
         // Logic to approve

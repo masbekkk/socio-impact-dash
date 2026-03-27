@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::resource('reimbursements', ReimbursementController::class);
     Route::post('reimbursements/{reimbursement}/approve', [ReimbursementController::class, 'approve'])->name('reimbursements.approve');
     Route::post('reimbursements/{reimbursement}/reject', [ReimbursementController::class, 'reject'])->name('reimbursements.reject');
+    Route::post('reimbursements/bulk-approve', [ReimbursementController::class, 'bulkApprove'])->name('reimbursements.bulk-approve');
 
     // Letter Requests
     Route::resource('letter-requests', LetterRequestController::class)->only(['index', 'create', 'store', 'edit']);
@@ -61,6 +62,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::resource('leaves', LeaveController::class);
     Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
     Route::post('leaves/{leave}/reject', [LeaveController::class, 'reject'])->name('leaves.reject');
+    Route::post('leaves/bulk-approve', [LeaveController::class, 'bulkApprove'])->name('leaves.bulk-approve');
 
     // Admin
     Route::prefix('admin')->middleware('can:adminAccess')->group(function (): void {

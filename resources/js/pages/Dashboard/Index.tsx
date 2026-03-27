@@ -8,7 +8,7 @@ import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { MapPin, TrendingUp, Clock, Users, Building2, FileText, Banknote } from 'lucide-react';
+import { MapPin, TrendingUp, Clock, Users, Building2, FileText, Banknote, CheckCircle2 } from 'lucide-react';
 import { type SharedData } from '@/types';
 import { usePermission } from '@/hooks/use-permission';
 
@@ -68,6 +68,9 @@ const DASHBOARD_DATA = {
   }
 };
 
+import { ApprovalStatisticCard } from '@/components/dashboard/ApprovalStatisticCard';
+import { BulkApprovalModal } from '@/components/dashboard/BulkApprovalModal';
+
 interface LeaderboardEntry {
   created_by: number;
   total_budget: string;
@@ -94,6 +97,17 @@ interface DivisionEntry {
   count: number;
 }
 
+interface ApprovalItem {
+  id: number;
+  code: string;
+  type: string;
+  amount: string;
+  user: { name: string };
+  project: { name: string };
+  start_date?: string;
+  end_date?: string;
+}
+
 interface DashboardProps extends SharedData {
   totalUsers: number;
   totalDivisions: number;
@@ -103,6 +117,15 @@ interface DashboardProps extends SharedData {
   leaderboard: LeaderboardEntry[];
   locations: ProjectLocation[];
   projectsByDivision: DivisionEntry[];
+  approvalItems: {
+    head_reimbursements: ApprovalItem[];
+    head_leaves: ApprovalItem[];
+    finance_reimbursements: ApprovalItem[];
+    direktur_reimbursements: ApprovalItem[];
+    direktur_leaves: ApprovalItem[];
+    hr_leaves: ApprovalItem[];
+    hr_allowances: ApprovalItem[];
+  };
 }
 
 export default function Dashboard({
@@ -114,9 +137,23 @@ export default function Dashboard({
   leaderboard,
   locations,
   projectsByDivision,
+  approvalItems,
 }: DashboardProps) {
   const { hasRole } = usePermission();
   const isPegawai = hasRole('pegawai') && !hasRole('superadmin');
+
+  // Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState<{ title: string; items: any[]; type: 'reimbursement' | 'leave' }>({
+    title: '',
+    items: [],
+    type: 'reimbursement'
+  });
+
+  const openApprovalModal = (title: string, items: any[], type: 'reimbursement' | 'leave') => {
+    setModalData({ title, items, type });
+    setModalOpen(true);
+  };
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -221,6 +258,132 @@ export default function Dashboard({
             </>
           )}
         </div>
+
+        {/* Approval Statistics Section */}
+        {(!isPegawai || hasRole(['head', 'finance', 'direktur', 'hr'])) && (
+          <div className="space-y-4 pt-4 border-t border-gray-100">
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-[#1a5f4a]" />
+              Persetujuan Terpending
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Role: Head */}
+              {hasRole('head') && (
+                <>
+                  <ApprovalStatisticCard 
+                    title="ATR Need Approval (Head)" 
+                    count={approvalItems.head_reimbursements.filter(i => i.type === 'atr').length} 
+                    color="emerald"
+                    onClick={() => openApprovalModal("ATR Need Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'atr'), 'reimbursement')}
+                    icon={<Banknote className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard 
+                    title="EER Need Approval (Head)" 
+                    count={approvalItems.head_reimbursements.filter(i => i.type === 'eer').length} 
+                    color="emerald"
+                    onClick={() => openApprovalModal("EER Need Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'eer'), 'reimbursement')}
+                    icon={<FileText className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard 
+                    title="Allowance Need Approval (Head)" 
+                    count={approvalItems.head_reimbursements.filter(i => i.type === 'allowance').length} 
+                    color="emerald"
+                    onClick={() => openApprovalModal("Allowance Need Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'allowance'), 'reimbursement')}
+                    icon={<Users className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard 
+                    title="Leaves Need Approval (Head)" 
+                    count={approvalItems.head_leaves.length} 
+                    color="emerald"
+                    onClick={() => openApprovalModal("Leaves Need Approval (Head)", approvalItems.head_leaves, 'leave')}
+                    icon={<Clock className="h-4 w-4" />}
+                  />
+                </>
+              )}
+
+              {/* Role: Finance */}
+              {hasRole('finance') && (
+                <>
+                  <ApprovalStatisticCard 
+                    title="ATR Need Approval (Finance)" 
+                    count={approvalItems.finance_reimbursements.filter(i => i.type === 'atr').length} 
+                    color="blue"
+                    onClick={() => openApprovalModal("ATR Need Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'atr'), 'reimbursement')}
+                    icon={<Banknote className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard 
+                    title="EER Need Approval (Finance)" 
+                    count={approvalItems.finance_reimbursements.filter(i => i.type === 'eer').length} 
+                    color="blue"
+                    onClick={() => openApprovalModal("EER Need Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'eer'), 'reimbursement')}
+                    icon={<FileText className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard 
+                    title="Allowance Need Approval (Finance)" 
+                    count={approvalItems.finance_reimbursements.filter(i => i.type === 'allowance').length} 
+                    color="blue"
+                    onClick={() => openApprovalModal("Allowance Need Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'allowance'), 'reimbursement')}
+                    icon={<Users className="h-4 w-4" />}
+                  />
+                </>
+              )}
+
+              {/* Role: Direktur */}
+              {hasRole('direktur') && (
+                <>
+                  <ApprovalStatisticCard 
+                    title="ATR Need Approval (Direktur)" 
+                    count={approvalItems.direktur_reimbursements.filter(i => i.type === 'atr').length} 
+                    color="amber"
+                    onClick={() => openApprovalModal("ATR Need Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'atr'), 'reimbursement')}
+                    icon={<Banknote className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard 
+                    title="EER Need Approval (Direktur)" 
+                    count={approvalItems.direktur_reimbursements.filter(i => i.type === 'eer').length} 
+                    color="amber"
+                    onClick={() => openApprovalModal("EER Need Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'eer'), 'reimbursement')}
+                    icon={<FileText className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard 
+                    title="Allowance Need Approval (Direktur)" 
+                    count={approvalItems.direktur_reimbursements.filter(i => i.type === 'allowance').length} 
+                    color="amber"
+                    onClick={() => openApprovalModal("Allowance Need Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'allowance'), 'reimbursement')}
+                    icon={<Users className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard 
+                    title="Leaves Need Approval (Direktur)" 
+                    count={approvalItems.direktur_leaves.length} 
+                    color="amber"
+                    onClick={() => openApprovalModal("Leaves Need Approval (Direktur)", approvalItems.direktur_leaves, 'leave')}
+                    icon={<Clock className="h-4 w-4" />}
+                  />
+                </>
+              )}
+
+              {/* Role: HR */}
+              {hasRole('hr') && (
+                <>
+                  <ApprovalStatisticCard 
+                    title="Leaves Need Approval (HR)" 
+                    count={approvalItems.hr_leaves.length} 
+                    color="rose"
+                    onClick={() => openApprovalModal("Leaves Need Approval (HR)", approvalItems.hr_leaves, 'leave')}
+                    icon={<Clock className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard 
+                    title="Allowance Need Approval (HR)" 
+                    count={approvalItems.hr_allowances.length} 
+                    color="rose"
+                    onClick={() => openApprovalModal("Allowance Need Approval (HR)", approvalItems.hr_allowances, 'reimbursement')}
+                    icon={<Users className="h-4 w-4" />}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {!isPegawai && (
           <>
@@ -331,6 +494,14 @@ export default function Dashboard({
         )}
 
       </div>
+
+      <BulkApprovalModal 
+        isOpen={modalOpen} 
+        onOpenChange={setModalOpen} 
+        title={modalData.title} 
+        items={modalData.items} 
+        type={modalData.type} 
+      />
     </AppSidebarLayout>
   );
 }

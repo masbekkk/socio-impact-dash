@@ -38,6 +38,76 @@ final class DashboardController extends Controller
             'count' => $d->projects_count,
         ]);
 
+        $user = $request->user();
+        $roles = $user?->getRoleNames()->toArray() ?? [];
+        $approvalItems = [
+            'head_reimbursements' => [],
+            'head_leaves' => [],
+            'finance_reimbursements' => [],
+            'direktur_reimbursements' => [],
+            'direktur_leaves' => [],
+            'hr_leaves' => [],
+            'hr_allowances' => [],
+        ];
+
+        // Head Logic
+        if (in_array('head', $roles)) {
+            $approvalItems['head_reimbursements'] = \App\Models\Reimbursement::query()
+                ->whereHas('approvals', function ($q) use ($user): void {
+                    $q->where('approver_id', $user->id)
+                        ->where('status', \App\Enums\ApprovalStatus::Pending)
+                        ->where('role', 'head');
+                })
+                ->where('status', \App\Enums\ReimbursementStatus::Submitted)
+                ->with(['user', 'project'])
+                ->get();
+
+            $approvalItems['head_leaves'] = \App\Models\Leave::query()
+                ->whereHas('approvals', function ($q) use ($user): void {
+                    $q->where('approver_id', $user->id)
+                        ->where('status', \App\Enums\ApprovalStatus::Pending)
+                        ->where('role', 'head');
+                })
+                ->where('status', \App\Enums\LeaveStatus::Submitted)
+                ->with(['user', 'project'])
+                ->get();
+        }
+
+        // Finance Logic
+        if (in_array('finance', $roles)) {
+            $approvalItems['finance_reimbursements'] = \App\Models\Reimbursement::query()
+                ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
+                ->with(['user', 'project'])
+                ->get();
+        }
+
+        // Direktur Logic
+        if (in_array('direktur', $roles)) {
+            $approvalItems['direktur_reimbursements'] = \App\Models\Reimbursement::query()
+                ->where('status', \App\Enums\ReimbursementStatus::FinanceApproved)
+                ->with(['user', 'project'])
+                ->get();
+
+            $approvalItems['direktur_leaves'] = \App\Models\Leave::query()
+                ->where('status', \App\Enums\LeaveStatus::HeadApproved)
+                ->with(['user', 'project'])
+                ->get();
+        }
+
+        // HR Logic
+        if (in_array('hr', $roles)) {
+            $approvalItems['hr_leaves'] = \App\Models\Leave::query()
+                ->where('status', \App\Enums\LeaveStatus::DirekturApproved)
+                ->with(['user', 'project'])
+                ->get();
+
+            $approvalItems['hr_allowances'] = \App\Models\Reimbursement::query()
+                ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
+                ->where('type', \App\Enums\ReimbursementType::ALLOWANCE)
+                ->with(['user', 'project'])
+                ->get();
+        }
+
         return Inertia::render('Dashboard/Index', [
             'totalUsers' => $totalUsers,
             'totalDivisions' => $totalDivisions,
@@ -47,6 +117,7 @@ final class DashboardController extends Controller
             'leaderboard' => $leaderboard,
             'locations' => $locations,
             'projectsByDivision' => $projectsByDivision,
+            'approvalItems' => $approvalItems,
         ]);
     }
 }
