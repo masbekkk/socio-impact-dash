@@ -1672,20 +1672,26 @@ export default function Show() {
                                       </div>
 
                                       {/* Row 3: Receipt & Notes */}
-                                      <div className="md:col-span-12 lg:col-span-6 space-y-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                                          KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500">*</span>
-                                        </Label>
-                                        <FileUploadDropzone
-                                          className="bg-white h-[80px] overflow-hidden rounded-lg"
-                                          onFilesChange={(files: File[]) => updateItemEerRevision(item.id, 'receipt', files[0] ?? null)}
-                                        />
-                                        {(item.receipt || item.receipt_path) && (
-                                          <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100 italic">
-                                            <CheckCircle className="h-3 w-3" /> {item.receipt ? `Baru: ${item.receipt.name}` : 'Sudah terlampir'}
-                                          </div>
-                                        )}
-                                      </div>
+                                        <div className="md:col-span-12 lg:col-span-6 space-y-1">
+                                          <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                            KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500">*</span>
+                                          </Label>
+                                          {isFinanceOrAdmin ? (
+                                            <FileUploadDropzone
+                                              className="bg-white h-[80px] overflow-hidden rounded-lg"
+                                              onFilesChange={(files: File[]) => updateItemEerRevision(item.id, 'receipt', files[0] ?? null)}
+                                            />
+                                          ) : (
+                                            <div className="bg-slate-50 border border-dashed p-3 rounded-lg text-[10px] text-muted-foreground flex items-center justify-center italic h-[80px]">
+                                              Hanya Finance yang dapat mengupload bukti pembayaran/kwitansi saat revisi.
+                                            </div>
+                                          )}
+                                          {(item.receipt || item.receipt_path) && (
+                                            <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100 italic">
+                                              <CheckCircle className="h-3 w-3" /> {item.receipt ? `Baru: ${item.receipt.name}` : 'Sudah terlampir'}
+                                            </div>
+                                          )}
+                                        </div>
 
                                       <div className="md:col-span-12 lg:col-span-6 space-y-1">
                                         <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">CATATAN TAMBAHAN</Label>
@@ -1858,33 +1864,35 @@ export default function Show() {
 
                             {data.type === 'eer' && (
                               <div className="mt-4 p-4 border rounded-xl bg-slate-50/50 space-y-4">
-                                <div className="space-y-3">
-                                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tipe Hasil EER</Label>
+                                <div className="space-y-4">
+                                  <div className="space-y-3">
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Hasil Kalkulasi EER (Otomatis)</Label>
                                     <div className={cn(
-                                      "flex items-center space-x-2 p-3 rounded-lg border bg-blue-50/30 border-blue-200"
+                                      "flex items-center space-x-2 p-3 rounded-lg border bg-blue-50/30 border-blue-200 shadow-sm"
                                     )}>
                                       <div className="flex-1">
-                                        <div className="font-semibold text-xs">
-                                          {revisionForm.eer_type === 'refund' ? 'Refund (Pengembalian Kelebihan)' : 'Reimbursement (Kekurangan Dana)'}
+                                        <div className="font-bold text-[11px] text-blue-900">
+                                          {revisionForm.eer_type === 'refund' ? '💰 REFUND (Pengembalian Kelebihan)' : '💳 REIMBURSEMENT (Kekurangan Dana)'}
                                         </div>
-                                        <div className="text-[10px] text-muted-foreground">
+                                        <div className="text-[10px] text-blue-700 mt-0.5 leading-relaxed">
                                           {revisionForm.eer_type === 'refund'
-                                            ? 'Total EER lebih kecil dari ATR. Selisih dana dikembalikan ke kantor.'
-                                            : 'Total EER lebih besar dari ATR. Kantor akan membayarkan selisihnya.'}
+                                            ? 'Total klaim lebih kecil dari limit ATR. Selisih dana wajib dikembalikan ke kantor.'
+                                            : 'Total klaim melampaui limit ATR. Kantor akan membayarkan selisihnya.'}
                                         </div>
                                       </div>
                                     </div>
-                                </div>
+                                  </div>
 
-                                 <div className="space-y-2">
-                                   <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nominal {revisionForm.eer_type === 'refund' ? 'Refund' : 'Reimburse'}</Label>
-                                   <div className="h-9 text-sm font-bold flex items-center px-3 rounded-md bg-blue-50 border border-blue-100 text-blue-800">
-                                     Rp {revisionForm.refund_reimburse_amount.toLocaleString('id-ID')}
-                                   </div>
-                                   <p className="text-[10px] text-muted-foreground italic">
-                                     *Nominal dikalkulasi otomatis dari selisih limit ATR dan total rincian item di atas.
-                                   </p>
-                                 </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nominal {revisionForm.eer_type === 'refund' ? 'Refund' : 'Reimburse'}</Label>
+                                    <div className="h-10 text-sm font-black flex items-center px-4 rounded-xl bg-blue-600 text-white shadow-inner">
+                                      Rp {revisionForm.refund_reimburse_amount.toLocaleString('id-ID')}
+                                    </div>
+                                    <p className="text-[9px] text-muted-foreground italic leading-tight">
+                                      * Dikalkulasi otomatis dari selisih limit ATR dan total rincian klaim di atas.
+                                    </p>
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>
