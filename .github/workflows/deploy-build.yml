@@ -57,7 +57,7 @@ jobs:
       - name: Build Assets
         run: npm run build:ssr
 
-      - name: Commit and Push to 'build' branch
+      - name: Commit and Push to 'buildv2.3.27' branch
         run: |
           # Configure Git user for GitHub Actions Bot
           git config --global user.name "github-actions[bot]"
@@ -78,7 +78,7 @@ jobs:
           
           # Force push the 'build' branch back to GitHub
           # The secrets.GITHUB_TOKEN is automatically provided by GitHub Actions
-          git push origin build --force
+          git push origin buildv2.3.27 --force
 
       - name: Deploy to Hostinger via Webhook
         run: |
