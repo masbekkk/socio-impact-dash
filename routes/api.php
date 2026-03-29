@@ -41,6 +41,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function (): void {
         Route::patch('/{reimbursement}/budgets', [ReimbursementController::class, 'updateBudgets'])->name('api.reimbursements.budgets.update');
         Route::patch('/{reimbursement}/code', [ReimbursementController::class, 'updateCode'])->name('api.reimbursements.code.update');
         Route::post('/{reimbursement}/resubmit', [ReimbursementController::class, 'resubmit'])->name('api.reimbursements.resubmit');
+        Route::post('/{reimbursement}/items/{item}/receipt', [ReimbursementController::class, 'updateItemReceipt'])->name('api.reimbursements.items.receipt.update');
         Route::post('/{reimbursement}/comments', [App\Http\Controllers\Api\V1\ReimbursementCommentController::class, 'store'])->name('api.reimbursements.comments.store');
     });
 

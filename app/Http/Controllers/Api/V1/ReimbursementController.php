@@ -262,7 +262,7 @@ final class ReimbursementController extends Controller
                 'revision_note' => ['nullable', 'string'],
                 'items' => ['nullable', 'array'],
                 'selected_budget_details' => ['nullable', 'array'],
-                'eer_type' => ['nullable', 'string', 'in:refund,reimbursement'],
+                'eer_type' => ['nullable', 'string', 'in:refund,reimbursement,balance'],
                 'refund_reimburse_amount' => ['nullable', 'numeric', 'min:0'],
                 'project_id' => ['nullable', 'integer', 'exists:projects,id'],
                 'replacement_pic_id' => ['nullable', 'integer', 'exists:users,id'],
@@ -450,6 +450,51 @@ final class ReimbursementController extends Controller
             return JsonResponseFormatter::success(
                 new ReimbursementResource($reimbursement),
                 'Kode reimbursement berhasil diupdate'
+            );
+        } catch (Throwable $e) {
+            return JsonResponseFormatter::error($e->getMessage(), 500);
+        }
+    }
+
+    public function updateItemReceipt(int $id, int $itemId, Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (! $user->hasRole('finance') && ! $user->hasRole('superadmin')) {
+                return JsonResponseFormatter::error('Unauthorized', 403);
+            }
+
+            $reimbursement = Reimbursement::query()->find($id);
+            if (! $reimbursement) {
+                return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
+            }
+
+            $item = \App\Models\ReimbursementItem::query()
+                ->where('reimbursement_id', $id)
+                ->where('id', $itemId)
+                ->first();
+
+            if (! $item) {
+                return JsonResponseFormatter::notFound('Item reimbursement tidak ditemukan');
+            }
+
+            $request->validate([
+                'receipt' => ['required', 'file', 'max:10240'], // 10MB
+            ]);
+
+            $fileUploadService = resolve(\App\Services\FileUploadService::class);
+            $meta = $fileUploadService->uploadFile(
+                $request->file('receipt'),
+                "reimbursements/{$id}/items"
+            );
+
+            $item->update([
+                'receipt_path' => $meta['path'],
+            ]);
+
+            return JsonResponseFormatter::success(
+                new ReimbursementResource($reimbursement->fresh()),
+                'Kwitansi item berhasil diupload'
             );
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);

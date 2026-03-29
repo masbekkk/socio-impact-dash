@@ -76,3 +76,14 @@ export async function resubmitReimbursement(id: number, payload: any): Promise<a
 
     return response.data;
 }
+
+export async function updateItemReceipt(reimbursementId: number, itemId: number, file: File): Promise<any> {
+    const fd = new FormData();
+    fd.append('receipt', file);
+
+    const response = await axios.post(`${API_URL}/${reimbursementId}/items/${itemId}/receipt`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data;
+}

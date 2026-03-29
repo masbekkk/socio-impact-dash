@@ -102,7 +102,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
-import { resubmitReimbursement } from '@/services/reimbursement-service';
+import { resubmitReimbursement, updateItemReceipt } from '@/services/reimbursement-service';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -255,6 +255,24 @@ export default function Show() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [revisiDialogOpen, setRevisiDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingItemId, setUploadingItemId] = useState<number | null>(null);
+
+  const handleItemReceiptUpload = async (itemId: number, file: File) => {
+    if (!data) return;
+    try {
+      setActionLoading(true);
+      await updateItemReceipt(data.id, itemId, file);
+      // Refresh the page to show the new receipt
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to upload receipt:', error);
+      alert('Gagal mengupload kwitansi. Silakan coba lagi.');
+    } finally {
+      setActionLoading(false);
+      setUploadingItemId(null);
+    }
+  };
   const [rejectionReason, setRejectionReason] = useState('');
   const [revisiReason, setRevisiReason] = useState('');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -299,7 +317,7 @@ export default function Show() {
     end_time: '17:00',
     revision_note: '',
     approver_head_id: '',
-    eer_type: 'refund',
+    eer_type: 'refund' as 'refund' | 'reimbursement' | 'balance',
     refund_reimburse_amount: 0,
     selected_activities: [],
     eer_items: [],
@@ -359,7 +377,10 @@ export default function Show() {
       const atrTotal = data.atr_items.total_amount;
       const diff = totalClaim - atrTotal;
       
-      const newType = diff > 0 ? 'reimbursement' : 'refund';
+      let newType: 'reimbursement' | 'refund' | 'balance' = 'balance';
+      if (diff > 0) newType = 'reimbursement';
+      else if (diff < 0) newType = 'refund';
+      
       const newAmount = Math.abs(diff);
 
       if (revisionForm.eer_type !== newType || revisionForm.refund_reimburse_amount !== newAmount) {
@@ -1415,8 +1436,16 @@ export default function Show() {
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Tipe EER</label>
                       <div>
-                        <Badge variant="outline" className="capitalize px-3 border-blue-200 bg-blue-50 text-blue-700">
-                          {data.eer_type}
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "capitalize px-3 border",
+                            data.eer_type === 'refund' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                            data.eer_type === 'balance' ? "bg-slate-50 text-slate-700 border-slate-200" :
+                            "bg-blue-50 text-blue-700 border-blue-200"
+                          )}
+                        >
+                          {data.eer_type === 'balance' ? 'balance (sesuai budget)' : data.eer_type}
                         </Badge>
                       </div>
                     </div>
@@ -1868,24 +1897,48 @@ export default function Show() {
                                   <div className="space-y-3">
                                     <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Hasil Kalkulasi EER (Otomatis)</Label>
                                     <div className={cn(
-                                      "flex items-center space-x-2 p-3 rounded-lg border bg-blue-50/30 border-blue-200 shadow-sm"
+                                      "flex items-center space-x-2 p-3 rounded-lg border shadow-sm",
+                                      revisionForm.eer_type === 'refund' ? "bg-emerald-50/30 border-emerald-200" :
+                                      revisionForm.eer_type === 'balance' ? "bg-slate-50/30 border-slate-200" :
+                                      "bg-blue-50/30 border-blue-200"
                                     )}>
                                       <div className="flex-1">
-                                        <div className="font-bold text-[11px] text-blue-900">
-                                          {revisionForm.eer_type === 'refund' ? '💰 REFUND (Pengembalian Kelebihan)' : '💳 REIMBURSEMENT (Kekurangan Dana)'}
+                                        <div className={cn(
+                                          "font-bold text-[11px]",
+                                          revisionForm.eer_type === 'refund' ? "text-emerald-900" :
+                                          revisionForm.eer_type === 'balance' ? "text-slate-900" :
+                                          "text-blue-900"
+                                        )}>
+                                          {revisionForm.eer_type === 'balance' ? '⚖️ BALANCE (Sesuai Budget)' : (
+                                            revisionForm.eer_type === 'refund' ? '💰 REFUND (Pengembalian Kelebihan)' : '💳 REIMBURSEMENT (Kekurangan Dana)'
+                                          )}
                                         </div>
-                                        <div className="text-[10px] text-blue-700 mt-0.5 leading-relaxed">
+                                        <div className={cn(
+                                          "text-[10px] mt-0.5 leading-relaxed",
+                                          revisionForm.eer_type === 'refund' ? "text-emerald-700" :
+                                          revisionForm.eer_type === 'balance' ? "text-slate-600" :
+                                          "text-blue-700"
+                                        )}>
                                           {revisionForm.eer_type === 'refund'
                                             ? 'Total klaim lebih kecil dari limit ATR. Selisih dana wajib dikembalikan ke kantor.'
-                                            : 'Total klaim melampaui limit ATR. Kantor akan membayarkan selisihnya.'}
+                                            : revisionForm.eer_type === 'balance'
+                                              ? 'Total klaim sesuai dengan budget ATR. Tidak ada pengembalian atau penambahan dana.'
+                                              : 'Total klaim melampaui limit ATR. Kantor akan membayarkan selisihnya.'}
                                         </div>
                                       </div>
                                     </div>
                                   </div>
 
                                   <div className="space-y-2">
-                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nominal {revisionForm.eer_type === 'refund' ? 'Refund' : 'Reimburse'}</Label>
-                                    <div className="h-10 text-sm font-black flex items-center px-4 rounded-xl bg-blue-600 text-white shadow-inner">
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                      {revisionForm.eer_type === 'balance' ? 'Selisih Nominal' : `Nominal ${revisionForm.eer_type === 'refund' ? 'Refund' : 'Reimburse'}`}
+                                    </Label>
+                                    <div className={cn(
+                                      "h-10 text-sm font-black flex items-center px-4 rounded-xl text-white shadow-inner",
+                                      revisionForm.eer_type === 'refund' ? "bg-emerald-600" :
+                                      revisionForm.eer_type === 'balance' ? "bg-slate-600" :
+                                      "bg-blue-600"
+                                    )}>
                                       Rp {revisionForm.refund_reimburse_amount.toLocaleString('id-ID')}
                                     </div>
                                     <p className="text-[9px] text-muted-foreground italic leading-tight">
@@ -2051,15 +2104,36 @@ export default function Show() {
                                         )}
                                       </td>
                                       <td className="p-4 text-center">
-                                        {item.receipt_path ? (
-                                          <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
-                                            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] gap-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200">
-                                              <Download className="h-3 w-3" /> Lihat
+                                        <div className="flex items-center justify-center gap-2">
+                                          {item.receipt_path ? (
+                                            <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
+                                              <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] gap-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200">
+                                                <Download className="h-3 w-3" /> Lihat
+                                              </Button>
+                                            </a>
+                                          ) : (
+                                            <span className="text-[10px] text-muted-foreground italic">—</span>
+                                          )}
+
+                                          {isFinanceOrAdmin && (
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                              disabled={actionLoading && uploadingItemId === item.id}
+                                              onClick={() => {
+                                                setUploadingItemId(item.id);
+                                                fileInputRef.current?.click();
+                                              }}
+                                            >
+                                              {actionLoading && uploadingItemId === item.id ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                              ) : (
+                                                <Upload className="h-3 w-3" />
+                                              )}
                                             </Button>
-                                          </a>
-                                        ) : (
-                                          <span className="text-[10px] text-muted-foreground italic">—</span>
-                                        )}
+                                          )}
+                                        </div>
                                       </td>
                                     </tr>
                                   ))}
@@ -2770,6 +2844,20 @@ export default function Show() {
           </DialogFooter>
         </DialogContent>
       </Dialog >
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*,application/pdf"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file && uploadingItemId) {
+            handleItemReceiptUpload(uploadingItemId, file);
+          }
+          // Reset value to allow uploading same file again
+          e.target.value = '';
+        }}
+      />
     </AppSidebarLayout >
   );
 }

@@ -120,7 +120,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
     pic: '',
     approver_head_id: '',
     description: '',
-    eer_type: 'refund' as 'refund' | 'reimbursement',
+    eer_type: 'refund' as 'refund' | 'reimbursement' | 'balance',
     refund_reimburse_amount: 0,
   });
   const [transferProof, setTransferProof] = useState<File | null>(null);
@@ -269,8 +269,12 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
   const eerCalculation = useMemo(() => {
     if (!selectedAtr) return { type: 'refund' as const, amount: 0 };
     const diff = totalEerAmount - selectedAtr.amount;
+    let type: 'reimbursement' | 'refund' | 'balance' = 'balance';
+    if (diff > 0) type = 'reimbursement';
+    else if (diff < 0) type = 'refund';
+
     return {
-      type: diff > 0 ? ('reimbursement' as const) : ('refund' as const),
+      type,
       amount: Math.abs(diff),
     };
   }, [totalEerAmount, selectedAtr]);
@@ -603,16 +607,23 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                           </Label>
                           <div className="space-y-2">
                             <div className={cn(
-                              "flex items-center space-x-2 p-3 rounded-lg border bg-blue-50/30 border-blue-200"
+                              "flex items-center space-x-2 p-3 rounded-lg border",
+                              eerCalculation.type === 'refund' ? "bg-emerald-50/30 border-emerald-200" :
+                              eerCalculation.type === 'balance' ? "bg-slate-50/30 border-slate-200" :
+                              "bg-blue-50/30 border-blue-200"
                             )}>
                               <div className="flex-1">
                                 <div className="font-semibold text-sm">
-                                  {eerCalculation.type === 'refund' ? 'Refund (Pengembalian Kelebihan)' : 'Reimbursement (Kekurangan Dana)'}
+                                  {eerCalculation.type === 'balance' ? 'Balance (Sesuai Budget)' : (
+                                    eerCalculation.type === 'refund' ? 'Refund (Pengembalian Kelebihan)' : 'Reimbursement (Kekurangan Dana)'
+                                  )}
                                 </div>
                                 <div className="text-[10px] text-muted-foreground">
                                   {eerCalculation.type === 'refund'
                                     ? 'Total EER lebih kecil dari ATR. Selisih dana dikembalikan ke kantor.'
-                                    : 'Total EER lebih besar dari ATR. Kantor akan membayarkan selisihnya.'}
+                                    : eerCalculation.type === 'balance'
+                                      ? 'Total EER sesuai dengan budget ATR. Tidak ada pengembalian atau penambahan dana.'
+                                      : 'Total EER lebih besar dari ATR. Kantor akan membayarkan selisihnya.'}
                                 </div>
                               </div>
                             </div>
@@ -633,7 +644,9 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
 
                             <div className="space-y-2 text-blue-800">
                               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                Nominal Otomatis ({eerCalculation.type === 'refund' ? 'Refund' : 'Reimburse'})
+                                Nominal Otomatis ({eerCalculation.type === 'refund' ? 'Refund' : (
+                                  eerCalculation.type === 'balance' ? 'Balance' : 'Reimburse'
+                                )})
                               </p>
                               <div className="h-10 text-lg font-bold flex items-center px-3 rounded-md bg-blue-50 border border-blue-100">
                                 {fmt(eerCalculation.amount)}

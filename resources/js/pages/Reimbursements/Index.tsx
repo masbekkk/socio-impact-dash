@@ -522,7 +522,21 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                             <>
                               <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
                               <TableCell>
-                                <Badge variant="outline" className={cn("uppercase", TYPE_COLORS[item.type] || '')}>{item.type}</Badge>
+                                <div className="flex flex-col gap-1">
+                                  <Badge variant="outline" className={cn("uppercase w-fit", TYPE_COLORS[item.type] || '')}>{item.type}</Badge>
+                                  {item.type === 'eer' && item.eer_type && (
+                                    <span className={cn(
+                                      "text-[10px] font-medium px-1.5 py-0.5 rounded-full border w-fit",
+                                      item.eer_type === 'refund' ? "bg-orange-50 text-orange-600 border-orange-200" :
+                                      item.eer_type === 'reimbursement' ? "bg-blue-50 text-blue-600 border-blue-200" :
+                                      "bg-purple-50 text-purple-600 border-purple-200"
+                                    )}>
+                                      {item.eer_type === 'refund' ? 'Refund' :
+                                       item.eer_type === 'reimbursement' ? 'Reimbursement' :
+                                       'Balance (Sesuai Budget)'}
+                                    </span>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="text-sm">
                                 {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}
