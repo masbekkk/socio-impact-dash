@@ -122,6 +122,30 @@ final class LeaveController
         return back()->with('success', 'Berhasil menyetujui pengajuan cuti terpilih.');
     }
 
+    public function bulkReject(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $notes = $request->input('notes', []);
+        if (! empty($ids)) {
+            $bulkAction = new \App\Actions\BulkRejectLeaves(new \App\Actions\RejectLeaveAction());
+            $bulkAction->handle($ids, $notes);
+        }
+
+        return back()->with('success', 'Berhasil menolak pengajuan cuti terpilih.');
+    }
+
+    public function bulkRevision(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $notes = $request->input('notes', []);
+        if (! empty($ids)) {
+            $bulkAction = new \App\Actions\BulkRevisionLeaves(new \App\Actions\RevisionLeaveAction());
+            $bulkAction->handle($ids, $notes);
+        }
+
+        return back()->with('success', 'Berhasil meminta revisi pengajuan cuti terpilih.');
+    }
+
     public function approve(string $code): \Illuminate\Http\RedirectResponse
     {
         $leave = Leave::query()->where('code', $code)->firstOrFail();

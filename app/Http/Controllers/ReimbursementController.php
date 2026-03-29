@@ -485,6 +485,32 @@ final readonly class ReimbursementController
         return back()->with('success', 'Berhasil menyetujui pengajuan terpilih.');
     }
 
+    public function bulkReject(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $notes = $request->input('notes', []);
+        $user = $request->user();
+        if ($user && ! empty($ids)) {
+            $bulkAction = new \App\Actions\BulkRejectReimbursements(new \App\Actions\UpdateReimbursementStatus());
+            $bulkAction->handle($ids, $notes, $user->id, $user->getRoleNames()->first());
+        }
+
+        return back()->with('success', 'Berhasil menolak pengajuan terpilih.');
+    }
+
+    public function bulkRevision(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $notes = $request->input('notes', []);
+        $user = $request->user();
+        if ($user && ! empty($ids)) {
+            $bulkAction = new \App\Actions\BulkRevisionReimbursements(new \App\Actions\UpdateReimbursementStatus());
+            $bulkAction->handle($ids, $notes, $user->id, $user->getRoleNames()->first());
+        }
+
+        return back()->with('success', 'Berhasil meminta revisi pengajuan terpilih.');
+    }
+
     public function approve(): \Illuminate\Http\RedirectResponse
     {
         // Logic to approve

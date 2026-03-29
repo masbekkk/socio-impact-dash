@@ -44,6 +44,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('reimbursements/{reimbursement}/approve', [ReimbursementController::class, 'approve'])->name('reimbursements.approve');
     Route::post('reimbursements/{reimbursement}/reject', [ReimbursementController::class, 'reject'])->name('reimbursements.reject');
     Route::post('reimbursements/bulk-approve', [ReimbursementController::class, 'bulkApprove'])->name('reimbursements.bulk-approve');
+    Route::post('reimbursements/bulk-reject', [ReimbursementController::class, 'bulkReject'])->name('reimbursements.bulk-reject');
+    Route::post('reimbursements/bulk-revision', [ReimbursementController::class, 'bulkRevision'])->name('reimbursements.bulk-revision');
 
     // Letter Requests
     Route::resource('letter-requests', LetterRequestController::class)->only(['index', 'create', 'store', 'edit']);
@@ -63,6 +65,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
     Route::post('leaves/{leave}/reject', [LeaveController::class, 'reject'])->name('leaves.reject');
     Route::post('leaves/bulk-approve', [LeaveController::class, 'bulkApprove'])->name('leaves.bulk-approve');
+    Route::post('leaves/bulk-reject', [LeaveController::class, 'bulkReject'])->name('leaves.bulk-reject');
+    Route::post('leaves/bulk-revision', [LeaveController::class, 'bulkRevision'])->name('leaves.bulk-revision');
 
     // Admin
     Route::prefix('admin')->middleware('can:adminAccess')->group(function (): void {

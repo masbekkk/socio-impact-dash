@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Models\Leave;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-final readonly class RejectLeaveAction
+final readonly class RevisionLeaveAction
 {
     /**
      * Execute the action.
      */
-    public function handle(\App\Models\Leave $leave, ?string $notes = null): \App\Models\Leave
+    public function handle(Leave $leave, ?string $notes = null): Leave
     {
-        return DB::transaction(function () use ($leave, $notes): \App\Models\Leave {
-            $user = \Illuminate\Support\Facades\Auth::user();
+        return DB::transaction(function () use ($leave, $notes): Leave {
+            $user = Auth::user();
             throw_unless($user, \Exception::class, 'User not authenticated');
             /** @var \App\Models\User $user */
             $role = $user->getRoleNames()->first();
@@ -26,9 +28,9 @@ final readonly class RejectLeaveAction
 
             if ($approval) {
                 $approval->update([
-                    'status' => \App\Enums\ApprovalStatus::Rejected,
+                    'status' => \App\Enums\ApprovalStatus::Rejected, // Approval status for 'needs revision' is often mapped to 'Rejected' record-wise but 'Revision' status-wise
                     'notes' => $notes,
-                    'approved_at' => now(), // Still use approved_at as a timestamp for action
+                    'approved_at' => now(),
                 ]);
             } else {
                 $leave->approvals()->create([
@@ -40,7 +42,7 @@ final readonly class RejectLeaveAction
                 ]);
             }
 
-            $leave->update(['status' => \App\Enums\LeaveStatus::Rejected]);
+            $leave->update(['status' => \App\Enums\LeaveStatus::Revision]);
 
             return $leave->fresh(['user', 'project', 'replacementPic', 'approvals.approver']);
         });
