@@ -71,6 +71,7 @@ final class ReimbursementResource extends JsonResource
             'bank_name' => $this->bank_name,
             'bank_account' => $this->bank_account,
             'account_holder' => $this->account_holder,
+            'bank_branch' => $this->bank_branch,
             'usage_plan' => match ($this->type) {
                 ReimbursementType::ALLOWANCE => $this->usage_plan,
                 ReimbursementType::ATR, ReimbursementType::EER => $this->atrBudgetSelecteds->count() > 0 

@@ -55,6 +55,7 @@ final readonly class EerSheet implements FromCollection, ShouldAutoSize, WithHea
             'Bank',
             'No. Rekening',
             'Atas Nama',
+            'Cabang Bank',
             'Tanggal Pengajuan',
             // Approval columns
             'Head Approver',
@@ -137,6 +138,7 @@ final readonly class EerSheet implements FromCollection, ShouldAutoSize, WithHea
             $r->bank_name ?? '-',
             $r->bank_account ?? '-',
             $r->account_holder ?? '-',
+            $r->bank_branch ?? '-',
             $r->created_at?->format('Y-m-d H:i') ?? '-',
             // Head
             $headApproval?->approver?->name ?? '-',

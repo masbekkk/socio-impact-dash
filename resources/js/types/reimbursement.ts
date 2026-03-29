@@ -54,6 +54,7 @@ export interface ReimbursementPayload {
     bank_name?: string;
     bank_account?: string;
     account_holder?: string;
+    bank_branch?: string;
     usage_plan?: string;
     urgency?: string;
     eer_type?: string;

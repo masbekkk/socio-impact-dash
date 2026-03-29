@@ -49,6 +49,7 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
             'Bank',
             'No. Rekening',
             'Atas Nama',
+            'Cabang Bank',
             // Approval columns
             'Head Approver',
             'Head Status',
@@ -103,6 +104,7 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
                 $r->bank_name ?? '-',
                 $r->bank_account ?? '-',
                 $r->account_holder ?? '-',
+                $r->bank_branch ?? '-',
                 // Head
                 $headApproval?->approver?->name ?? '-',
                 $headApproval?->status?->value ?? '-',

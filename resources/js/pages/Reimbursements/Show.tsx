@@ -145,6 +145,7 @@ interface ReimbursementDetail {
   bank_name: string | null;
   bank_account: string | null;
   account_holder: string | null;
+  bank_branch: string | null;
   usage_plan: string | null;
   urgency: string | null;
   transferred_at: string | null;
@@ -376,11 +377,11 @@ export default function Show() {
       const totalClaim = revisionForm.eer_items.reduce((sum, item) => sum + (item.amount || 0), 0);
       const atrTotal = data.atr_items.total_amount;
       const diff = totalClaim - atrTotal;
-      
+
       let newType: 'reimbursement' | 'refund' | 'balance' = 'balance';
       if (diff > 0) newType = 'reimbursement';
       else if (diff < 0) newType = 'refund';
-      
+
       const newAmount = Math.abs(diff);
 
       if (revisionForm.eer_type !== newType || revisionForm.refund_reimburse_amount !== newAmount) {
@@ -1436,13 +1437,13 @@ export default function Show() {
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Tipe EER</label>
                       <div>
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={cn(
                             "capitalize px-3 border",
                             data.eer_type === 'refund' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                            data.eer_type === 'balance' ? "bg-slate-50 text-slate-700 border-slate-200" :
-                            "bg-blue-50 text-blue-700 border-blue-200"
+                              data.eer_type === 'balance' ? "bg-slate-50 text-slate-700 border-slate-200" :
+                                "bg-blue-50 text-blue-700 border-blue-200"
                           )}
                         >
                           {data.eer_type === 'balance' ? 'balance (sesuai budget)' : data.eer_type}
@@ -1701,26 +1702,26 @@ export default function Show() {
                                       </div>
 
                                       {/* Row 3: Receipt & Notes */}
-                                        <div className="md:col-span-12 lg:col-span-6 space-y-1">
-                                          <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                                            KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500">*</span>
-                                          </Label>
-                                          {isFinanceOrAdmin ? (
-                                            <FileUploadDropzone
-                                              className="bg-white h-[80px] overflow-hidden rounded-lg"
-                                              onFilesChange={(files: File[]) => updateItemEerRevision(item.id, 'receipt', files[0] ?? null)}
-                                            />
-                                          ) : (
-                                            <div className="bg-slate-50 border border-dashed p-3 rounded-lg text-[10px] text-muted-foreground flex items-center justify-center italic h-[80px]">
-                                              Hanya Finance yang dapat mengupload bukti pembayaran/kwitansi saat revisi.
-                                            </div>
-                                          )}
-                                          {(item.receipt || item.receipt_path) && (
-                                            <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100 italic">
-                                              <CheckCircle className="h-3 w-3" /> {item.receipt ? `Baru: ${item.receipt.name}` : 'Sudah terlampir'}
-                                            </div>
-                                          )}
-                                        </div>
+                                      <div className="md:col-span-12 lg:col-span-6 space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                          KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500">*</span>
+                                        </Label>
+                                        {isFinanceOrAdmin ? (
+                                          <FileUploadDropzone
+                                            className="bg-white h-[80px] overflow-hidden rounded-lg"
+                                            onFilesChange={(files: File[]) => updateItemEerRevision(item.id, 'receipt', files[0] ?? null)}
+                                          />
+                                        ) : (
+                                          <div className="bg-slate-50 border border-dashed p-3 rounded-lg text-[10px] text-muted-foreground flex items-center justify-center italic h-[80px]">
+                                            Hanya Finance yang dapat mengupload bukti pembayaran/kwitansi saat revisi.
+                                          </div>
+                                        )}
+                                        {(item.receipt || item.receipt_path) && (
+                                          <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100 italic">
+                                            <CheckCircle className="h-3 w-3" /> {item.receipt ? `Baru: ${item.receipt.name}` : 'Sudah terlampir'}
+                                          </div>
+                                        )}
+                                      </div>
 
                                       <div className="md:col-span-12 lg:col-span-6 space-y-1">
                                         <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">CATATAN TAMBAHAN</Label>
@@ -1899,15 +1900,15 @@ export default function Show() {
                                     <div className={cn(
                                       "flex items-center space-x-2 p-3 rounded-lg border shadow-sm",
                                       revisionForm.eer_type === 'refund' ? "bg-emerald-50/30 border-emerald-200" :
-                                      revisionForm.eer_type === 'balance' ? "bg-slate-50/30 border-slate-200" :
-                                      "bg-blue-50/30 border-blue-200"
+                                        revisionForm.eer_type === 'balance' ? "bg-slate-50/30 border-slate-200" :
+                                          "bg-blue-50/30 border-blue-200"
                                     )}>
                                       <div className="flex-1">
                                         <div className={cn(
                                           "font-bold text-[11px]",
                                           revisionForm.eer_type === 'refund' ? "text-emerald-900" :
-                                          revisionForm.eer_type === 'balance' ? "text-slate-900" :
-                                          "text-blue-900"
+                                            revisionForm.eer_type === 'balance' ? "text-slate-900" :
+                                              "text-blue-900"
                                         )}>
                                           {revisionForm.eer_type === 'balance' ? '⚖️ BALANCE (Sesuai Budget)' : (
                                             revisionForm.eer_type === 'refund' ? '💰 REFUND (Pengembalian Kelebihan)' : '💳 REIMBURSEMENT (Kekurangan Dana)'
@@ -1916,8 +1917,8 @@ export default function Show() {
                                         <div className={cn(
                                           "text-[10px] mt-0.5 leading-relaxed",
                                           revisionForm.eer_type === 'refund' ? "text-emerald-700" :
-                                          revisionForm.eer_type === 'balance' ? "text-slate-600" :
-                                          "text-blue-700"
+                                            revisionForm.eer_type === 'balance' ? "text-slate-600" :
+                                              "text-blue-700"
                                         )}>
                                           {revisionForm.eer_type === 'refund'
                                             ? 'Total klaim lebih kecil dari limit ATR. Selisih dana wajib dikembalikan ke kantor.'
@@ -1936,8 +1937,8 @@ export default function Show() {
                                     <div className={cn(
                                       "h-10 text-sm font-black flex items-center px-4 rounded-xl text-white shadow-inner",
                                       revisionForm.eer_type === 'refund' ? "bg-emerald-600" :
-                                      revisionForm.eer_type === 'balance' ? "bg-slate-600" :
-                                      "bg-blue-600"
+                                        revisionForm.eer_type === 'balance' ? "bg-slate-600" :
+                                          "bg-blue-600"
                                     )}>
                                       Rp {revisionForm.refund_reimburse_amount.toLocaleString('id-ID')}
                                     </div>
@@ -1979,10 +1980,10 @@ export default function Show() {
                   atrItems.forEach(item => {
                     if (!grouped[item.activity_id]) {
                       const budgetSelected = data.atr_budget_selecteds?.find(abs => abs.project_budget_detail_id === item.activity_id);
-                      grouped[item.activity_id] = { 
-                        name: item.activity_name, 
+                      grouped[item.activity_id] = {
+                        name: item.activity_name,
                         notes: budgetSelected?.notes || '',
-                        items: [] 
+                        items: []
                       };
                     }
                     grouped[item.activity_id].items.push(item);
@@ -2061,11 +2062,11 @@ export default function Show() {
                   atrItems.forEach(item => {
                     if (!groupedAtr[item.activity_id]) {
                       const budgetSelected = data.atr_budget_selecteds?.find(abs => abs.project_budget_detail_id === item.activity_id);
-                      groupedAtr[item.activity_id] = { 
-                        name: item.activity_name, 
+                      groupedAtr[item.activity_id] = {
+                        name: item.activity_name,
                         notes: budgetSelected?.notes || '',
-                        items: [], 
-                        plannedAmount: 0 
+                        items: [],
+                        plannedAmount: 0
                       };
                     }
                     groupedAtr[item.activity_id].items.push(item);
@@ -2283,11 +2284,11 @@ export default function Show() {
                         );
                       })()}
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
                       {/* Connector Line between dates */}
                       <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-px bg-amber-200 z-0" />
-                      
+
                       <div className="bg-white p-4 rounded-lg border border-amber-100 shadow-sm relative z-10 flex flex-col gap-1">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Mulai Perjalanan</span>
                         <div className="flex items-baseline gap-2">
@@ -2354,11 +2355,17 @@ export default function Show() {
                           <span className="font-medium">{data.account_holder}</span>
                         </div>
                       )}
+                      {data.bank_branch && (
+                        <div>
+                          <span className="text-muted-foreground text-xs block">Cabang Pembuka</span>
+                          <span className="font-medium">{data.bank_branch}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {((data.status === 'submitted' || data.status === 'request_fund') && isFinanceOrAdmin) && (
+                {((data.status === 'submitted' || data.status === 'request_fund' || (data.type === 'eer' && data.eer_type === 'refund' && !data.transfer_proof_path && !['draft', 'rejected', 'transferred'].includes(data.status))) && isFinanceOrAdmin) && (
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <Button
                       onClick={() => setTransferDialogOpen(true)}
@@ -2438,7 +2445,7 @@ export default function Show() {
                 )}
 
                 {/* Refund Bank Info Reminder (if manual check needed) */}
-                {data.type === 'eer' && data.eer_type === 'refund' && data.status !== 'transferred' && (
+                {data.type === 'eer' && data.eer_type === 'refund' && data.status !== 'transferred' && isFinanceOrAdmin && (
                   <div className="bg-rose-50/50 p-4 rounded-lg border border-rose-100 space-y-3">
                     <div className="flex items-center gap-2 text-rose-800 font-medium text-sm">
                       <Info className="h-4 w-4" /> Rekening Refund (Reminder)

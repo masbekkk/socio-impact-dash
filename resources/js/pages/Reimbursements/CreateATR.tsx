@@ -85,6 +85,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
     bank_name: '',
     account_number: '',
     account_name: '',
+    bank_branch: '',
     usage_plan: '',
     urgency: 'normal',
     start_date: '',
@@ -112,6 +113,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
         bank_name: data.bank_name || '',
         account_number: data.bank_account || '',
         account_name: data.account_holder || '',
+        bank_branch: data.bank_branch || '',
         usage_plan: data.usage_plan || '',
         urgency: Object.keys(URGENCY_MAP).find(key => URGENCY_MAP[key] === data.urgency) || 'normal',
         start_date: data.start_date || '',
@@ -340,6 +342,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
       bank_name: formData.bank_name,
       bank_account: formData.account_number,
       account_holder: formData.account_name,
+      bank_branch: formData.bank_branch,
       usage_plan: formData.usage_plan,
       urgency: URGENCY_MAP[formData.urgency] ?? 'normal',
       start_date: formData.start_date || undefined,
@@ -673,8 +676,8 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
 
             {/* Rencana Penggunaan */}
             <div className="p-6 md:p-8 bg-white">
-              <h3 className="text-lg font-semibold mb-1">Rencana Penggunaan</h3>
-              <p className="text-sm text-muted-foreground mb-6">Jelaskan rencana penggunaan dana, jadwal pemakaian, dan tingkat urgensi.</p>
+              <h3 className="text-lg font-semibold mb-1">Catatan Tambahan</h3>
+              <p className="text-sm text-muted-foreground mb-6">Tambahkan catatan tambahan, seperti jadwal pemakaian, dan tingkat urgensi.</p>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -786,6 +789,13 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input id="account_name" name="account_name" placeholder="Nama pemilik rekening" className="pl-9 h-10" value={formData.account_name} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bank_branch">Cabang Pembuka Rekening</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input id="bank_branch" name="bank_branch" placeholder="Contoh: KCP Sudirman" className="pl-9 h-10" value={formData.bank_branch} onChange={handleChange} />
                   </div>
                 </div>
               </div>

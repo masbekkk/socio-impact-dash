@@ -33,13 +33,14 @@ final class StoreReimbursementRequest extends FormRequest
             'bank_name' => ['nullable', 'string', 'max:100'],
             'bank_account' => ['nullable', 'string', 'max:50'],
             'account_holder' => ['nullable', 'string', 'max:100'],
+            'bank_branch' => ['nullable', 'string', 'max:100'],
             'usage_plan' => ['nullable', 'string'],
             'urgency' => ['nullable', 'string', 'max:20'],
-            'start_date' => [
-                'required_if:status,submitted,approved', // Simplified: required if not draft/revision? Actually, the logic was type-based before.
-                'nullable',
-                'date',
-            ],
+            // 'start_date' => [
+            //     'required_if:status,submitted,approved', // Simplified: required if not draft/revision? Actually, the logic was type-based before.
+            //     'nullable',
+            //     'date',
+            // ],
             'end_date' => [
                 'required_if:type,allowance',
                 // 'required_if:status,submitted,approved',

@@ -295,7 +295,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
         i.quantity <= 0 ||
         i.unit_price <= 0 ||
         !i.expense_type ||
-        !i.receipt
+        (hasRole(['finance', 'superadmin']) && !i.receipt)
       );
 
       if (isInvalid) {
@@ -303,7 +303,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
         return;
       }
 
-      if (eerCalculation.type === 'refund' && !transferProof) {
+      if (eerCalculation.type === 'refund' && hasRole(['finance', 'superadmin']) && !transferProof) {
         setErrors({ _general: ['Bukti transfer refund wajib diunggah.'] });
         return;
       }
@@ -554,20 +554,22 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                         </div>
 
                         {/* Row 3: Receipt & Notes */}
-                        <div className="md:col-span-12 lg:col-span-6 space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                            KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500 ml-1">*</span>
-                          </Label>
-                          <FileUploadDropzone
-                            className="bg-white h-[120px] overflow-hidden rounded-lg"
-                            onFilesChange={(files: File[]) => updateItem(item.id, 'receipt', files[0] ?? null)}
-                          />
-                          {item.receipt && (
-                            <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100">
-                              <CheckCircle className="h-3 w-3" /> Terlampir: {item.receipt.name}
-                            </div>
-                          )}
-                        </div>
+                        {hasRole(['finance', 'superadmin']) && (
+                          <div className="md:col-span-12 lg:col-span-6 space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                              KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500 ml-1">*</span>
+                            </Label>
+                            <FileUploadDropzone
+                              className="bg-white h-[120px] overflow-hidden rounded-lg"
+                              onFilesChange={(files: File[]) => updateItem(item.id, 'receipt', files[0] ?? null)}
+                            />
+                            {item.receipt && (
+                              <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100">
+                                <CheckCircle className="h-3 w-3" /> Terlampir: {item.receipt.name}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         <div className="md:col-span-12 lg:col-span-6 space-y-2">
                           <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">CATATAN TAMBAHAN</Label>
@@ -609,8 +611,8 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                             <div className={cn(
                               "flex items-center space-x-2 p-3 rounded-lg border",
                               eerCalculation.type === 'refund' ? "bg-emerald-50/30 border-emerald-200" :
-                              eerCalculation.type === 'balance' ? "bg-slate-50/30 border-slate-200" :
-                              "bg-blue-50/30 border-blue-200"
+                                eerCalculation.type === 'balance' ? "bg-slate-50/30 border-slate-200" :
+                                  "bg-blue-50/30 border-blue-200"
                             )}>
                               <div className="flex-1">
                                 <div className="font-semibold text-sm">
@@ -659,7 +661,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                         </div>
                       </div>
 
-                      {eerCalculation.type === 'refund' && eerCalculation.amount > 0 && (
+                      {eerCalculation.type === 'refund' && eerCalculation.amount > 0 && hasRole(['finance', 'superadmin']) && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t">
                           <div className="space-y-4">
                             <Label className="text-sm font-bold flex items-center gap-2 text-rose-600">
@@ -731,6 +733,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                 <div className="space-y-2">
                   <Label className="text-sm font-medium flex items-center gap-2">
                     <User className="h-4 w-4 text-blue-600" /> Head Approver
+                    <span className="text-rose-500">*</span>
                   </Label>
                   <SearchableSelect
                     options={(approvers['head'] || []).map(u => ({ value: u.id.toString(), label: u.name }))}
