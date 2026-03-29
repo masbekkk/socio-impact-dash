@@ -12,7 +12,7 @@ final class ReimbursementService
 {
     public function listReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver']);
+        $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver', 'atrBudgetSelecteds']);
 
         $this->applyFilters($query, $user, $filters);
 

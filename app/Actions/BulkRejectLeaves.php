@@ -15,15 +15,16 @@ final readonly class BulkRejectLeaves
 
     /**
      * @param int[] $ids
-     * @param array<int, string> $notesMap
+     * @param array<int, string> $notes
      */
-    public function handle(array $ids, array $notesMap): void
+    public function handle(array $ids, array $notes, string $role): void
     {
-        DB::transaction(function () use ($ids, $notesMap): void {
+        DB::transaction(function () use ($ids, $notes, $role): void {
             $leaves = Leave::query()->whereIn('id', $ids)->get();
 
             foreach ($leaves as $leave) {
-                $this->rejectLeaveAction->handle($leave, $notesMap[$leave->id] ?? 'Bulk rejected via Dashboard');
+                $note = $notes[$leave->id] ?? 'Bulk rejected via Dashboard';
+                $this->rejectLeaveAction->handle($leave, $note, $role);
             }
         });
     }

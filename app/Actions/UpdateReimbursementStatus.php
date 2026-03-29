@@ -20,6 +20,18 @@ final readonly class UpdateReimbursementStatus
             $notes = $data['notes'] ?? null;
             $role = $data['role'] ?? null;
 
+            if ($role === null) {
+                $user = \App\Models\User::find($approverId);
+                if ($user) {
+                    $roles = $user->getRoleNames();
+                    if ($roles->contains('head') && $roles->contains('finance')) {
+                        $role = ($user->id === $reimbursement->project?->head_id) ? 'head' : 'finance';
+                    } else {
+                        $role = $roles->first();
+                    }
+                }
+            }
+
             if ($action === 'transferred') {
                 $updateData = [
                     'status' => ReimbursementStatus::Transferred,

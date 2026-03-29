@@ -11,13 +11,21 @@ final readonly class RejectLeaveAction
     /**
      * Execute the action.
      */
-    public function handle(\App\Models\Leave $leave, ?string $notes = null): \App\Models\Leave
+    public function handle(Leave $leave, string $notes, ?string $role = null): Leave
     {
-        return DB::transaction(function () use ($leave, $notes): \App\Models\Leave {
-            $user = \Illuminate\Support\Facades\Auth::user();
+        return DB::transaction(function () use ($leave, $notes, $role): Leave {
+            $user = Auth::user();
             throw_unless($user, \Exception::class, 'User not authenticated');
             /** @var \App\Models\User $user */
-            $role = $user->getRoleNames()->first();
+
+            if ($role === null) {
+                $roles = $user->getRoleNames();
+                if ($roles->contains('head') && $roles->contains('finance')) {
+                    $role = ($user->id === $leave->project?->head_id) ? 'head' : 'finance';
+                } else {
+                    $role = $roles->first();
+                }
+            }
 
             $approval = $leave->approvals()
                 ->where('role', $role)

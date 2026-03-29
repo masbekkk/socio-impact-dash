@@ -114,9 +114,13 @@ final class LeaveController
     public function bulkApprove(Request $request): \Illuminate\Http\RedirectResponse
     {
         $ids = $request->input('ids', []);
-        if (! empty($ids)) {
+        $role = $request->input('role');
+        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkApproveLeaves(new \App\Actions\ApproveLeaveAction());
-            $bulkAction->handle($ids);
+            $bulkAction->handle($ids, $role);
         }
 
         return back()->with('success', 'Berhasil menyetujui pengajuan cuti terpilih.');
@@ -126,9 +130,13 @@ final class LeaveController
     {
         $ids = $request->input('ids', []);
         $notes = $request->input('notes', []);
-        if (! empty($ids)) {
+        $role = $request->input('role');
+        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkRejectLeaves(new \App\Actions\RejectLeaveAction());
-            $bulkAction->handle($ids, $notes);
+            $bulkAction->handle($ids, $notes, $role);
         }
 
         return back()->with('success', 'Berhasil menolak pengajuan cuti terpilih.');
@@ -138,9 +146,13 @@ final class LeaveController
     {
         $ids = $request->input('ids', []);
         $notes = $request->input('notes', []);
-        if (! empty($ids)) {
+        $role = $request->input('role');
+        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkRevisionLeaves(new \App\Actions\RevisionLeaveAction());
-            $bulkAction->handle($ids, $notes);
+            $bulkAction->handle($ids, $notes, $role);
         }
 
         return back()->with('success', 'Berhasil meminta revisi pengajuan cuti terpilih.');

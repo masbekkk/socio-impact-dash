@@ -14,13 +14,22 @@ final readonly class ApproveLeaveAction
     /**
      * Execute the action.
      */
-    public function handle(Leave $leave, ?string $notes = null): Leave
+    public function handle(Leave $leave, ?string $notes = null, ?string $role = null): Leave
     {
-        return DB::transaction(function () use ($leave, $notes): Leave {
+        return DB::transaction(function () use ($leave, $notes, $role): Leave {
             $user = Auth::user();
             throw_unless($user, \Exception::class, 'User not authenticated');
             /** @var \App\Models\User $user */
-            $role = $user->getRoleNames()->first();
+            
+            if ($role === null) {
+                $roles = $user->getRoleNames();
+                if ($roles->contains('head') && $roles->contains('finance')) {
+                    // Smart detection: if user is assigned as project head, act as head.
+                    $role = ($user->id === $leave->project?->head_id) ? 'head' : 'finance';
+                } else {
+                    $role = $roles->first();
+                }
+            }
 
             $approval = $leave->approvals()
                 ->where('role', $role)

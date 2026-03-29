@@ -476,10 +476,12 @@ final readonly class ReimbursementController
     public function bulkApprove(Request $request): \Illuminate\Http\RedirectResponse
     {
         $ids = $request->input('ids', []);
+        $role = $request->input('role');
         $user = $request->user();
         if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkApproveReimbursements(new \App\Actions\UpdateReimbursementStatus());
-            $bulkAction->handle($ids, $user->id, $user->getRoleNames()->first());
+            $bulkAction->handle($ids, $user->id, $role);
         }
 
         return back()->with('success', 'Berhasil menyetujui pengajuan terpilih.');
@@ -489,10 +491,12 @@ final readonly class ReimbursementController
     {
         $ids = $request->input('ids', []);
         $notes = $request->input('notes', []);
+        $role = $request->input('role');
         $user = $request->user();
         if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkRejectReimbursements(new \App\Actions\UpdateReimbursementStatus());
-            $bulkAction->handle($ids, $notes, $user->id, $user->getRoleNames()->first());
+            $bulkAction->handle($ids, $notes, $user->id, $role);
         }
 
         return back()->with('success', 'Berhasil menolak pengajuan terpilih.');
@@ -502,10 +506,12 @@ final readonly class ReimbursementController
     {
         $ids = $request->input('ids', []);
         $notes = $request->input('notes', []);
+        $role = $request->input('role');
         $user = $request->user();
         if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkRevisionReimbursements(new \App\Actions\UpdateReimbursementStatus());
-            $bulkAction->handle($ids, $notes, $user->id, $user->getRoleNames()->first());
+            $bulkAction->handle($ids, $notes, $user->id, $role);
         }
 
         return back()->with('success', 'Berhasil meminta revisi pengajuan terpilih.');

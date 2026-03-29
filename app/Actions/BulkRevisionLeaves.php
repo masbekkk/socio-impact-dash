@@ -15,15 +15,16 @@ final readonly class BulkRevisionLeaves
 
     /**
      * @param int[] $ids
-     * @param array<int, string> $notesMap
+     * @param array<int, string> $notes
      */
-    public function handle(array $ids, array $notesMap): void
+    public function handle(array $ids, array $notes, string $role): void
     {
-        DB::transaction(function () use ($ids, $notesMap): void {
+        DB::transaction(function () use ($ids, $notes, $role): void {
             $leaves = Leave::query()->whereIn('id', $ids)->get();
 
             foreach ($leaves as $leave) {
-                $this->revisionLeaveAction->handle($leave, $notesMap[$leave->id] ?? 'Bulk revision via Dashboard');
+                $note = $notes[$leave->id] ?? 'Bulk revision via Dashboard';
+                $this->revisionLeaveAction->handle($leave, $note, $role);
             }
         });
     }

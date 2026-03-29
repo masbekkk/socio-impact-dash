@@ -60,7 +60,7 @@ final class DashboardController extends Controller
                             ->where('role', 'head');
                     })
                     ->where('status', \App\Enums\ReimbursementStatus::Submitted)
-                    ->with(['user', 'project.division', 'approvals.approver'])
+                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
                     ->get()
             )->resolve();
 
@@ -82,7 +82,7 @@ final class DashboardController extends Controller
             $approvalItems['finance_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
                 \App\Models\Reimbursement::query()
                     ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
-                    ->with(['user', 'project.division', 'approvals.approver'])
+                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
                     ->get()
             )->resolve();
         }
@@ -92,7 +92,7 @@ final class DashboardController extends Controller
             $approvalItems['direktur_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
                 \App\Models\Reimbursement::query()
                     ->where('status', \App\Enums\ReimbursementStatus::FinanceApproved)
-                    ->with(['user', 'project.division', 'approvals.approver'])
+                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
                     ->get()
             )->resolve();
 
@@ -110,7 +110,7 @@ final class DashboardController extends Controller
                 \App\Models\Reimbursement::query()
                     ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
                     ->where('type', \App\Enums\ReimbursementType::Allowance)
-                    ->with(['user', 'project.division', 'approvals.approver'])
+                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
                     ->get()
             )->resolve();
 

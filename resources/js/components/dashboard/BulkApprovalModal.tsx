@@ -58,15 +58,16 @@ const LEAVE_TYPE_LABELS: Record<string, string> = {
     important: 'Cuti Alasan Penting',
 };
 
-interface BulkApprovalModalProps {
+export interface BulkApprovalModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     title: string;
     items: Item[];
     type: 'reimbursement' | 'leave';
+    role: string;
 }
 
-export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: BulkApprovalModalProps) {
+export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, role }: BulkApprovalModalProps) {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [actionMode, setActionMode] = useState<'approve' | 'reject' | 'revision' | null>(null);
     const [notes, setNotes] = useState<Record<number, string>>({});
@@ -93,7 +94,7 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
         
         const routeName = type === 'reimbursement' ? 'reimbursements.bulk-approve' : 'leaves.bulk-approve';
         
-        router.post(route(routeName), { ids: selectedIds }, {
+        router.post(route(routeName), { ids: selectedIds, role }, {
             onSuccess: () => {
                 onOpenChange(false);
                 setSelectedIds([]);
@@ -116,7 +117,8 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
         
         router.post(route(routeName), { 
             ids: selectedIds,
-            notes: notes 
+            notes: notes,
+            role: role
         }, {
             onSuccess: () => {
                 onOpenChange(false);
@@ -165,7 +167,7 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
         const allIds = items.map(item => item.id);
         const routeName = type === 'reimbursement' ? 'reimbursements.bulk-approve' : 'leaves.bulk-approve';
 
-        router.post(route(routeName), { ids: allIds }, {
+        router.post(route(routeName), { ids: allIds, role }, {
             onSuccess: () => {
                 onOpenChange(false);
                 setSelectedIds([]);

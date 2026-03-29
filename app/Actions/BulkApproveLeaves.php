@@ -16,13 +16,13 @@ final readonly class BulkApproveLeaves
     /**
      * @param int[] $ids
      */
-    public function handle(array $ids): void
+    public function handle(array $ids, string $role): void
     {
-        DB::transaction(function () use ($ids): void {
+        DB::transaction(function () use ($ids, $role): void {
             $leaves = Leave::query()->whereIn('id', $ids)->get();
 
             foreach ($leaves as $leave) {
-                $this->approveLeaveAction->handle($leave, 'Bulk approved via Dashboard');
+                $this->approveLeaveAction->handle($leave, 'Bulk approved via Dashboard', $role);
             }
         });
     }
