@@ -398,65 +398,36 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {activeTab === 'atr' ? (
-                        <>
-                          <TableHead>
-                            <button className="flex items-center font-medium" onClick={() => handleSort('code')}>
-                              Kode ATR <SortIcon column="code" />
-                            </button>
-                          </TableHead>
-                          <TableHead>Kode Project</TableHead>
-                          <TableHead>Inisial Project</TableHead>
-                          <TableHead>Detail Kegiatan</TableHead>
-                          <TableHead>
-                            <button className="flex items-center font-medium" onClick={() => handleSort('amount')}>
-                              Nominal <SortIcon column="amount" />
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
-                              Status Approval <SortIcon column="status" />
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
-                              Status <SortIcon column="status" />
-                            </button>
-                          </TableHead>
-                        </>
-                      ) : (
-                        <>
-                          <TableHead>
-                            <button className="flex items-center font-medium" onClick={() => handleSort('code')}>
-                              Kode <SortIcon column="code" />
-                            </button>
-                          </TableHead>
-                          <TableHead>Tipe</TableHead>
-                          <TableHead>
-                            <button className="flex items-center font-medium" onClick={() => handleSort('created_at')}>
-                              Tanggal <SortIcon column="created_at" />
-                            </button>
-                          </TableHead>
-                          <TableHead>Pemohon</TableHead>
-                          <TableHead>Divisi</TableHead>
-                          <TableHead>Proyek</TableHead>
-                          <TableHead>
-                            <button className="flex items-center font-medium" onClick={() => handleSort('amount')}>
-                              Total Biaya <SortIcon column="amount" />
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
-                              Status Approval <SortIcon column="status" />
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
-                              Status <SortIcon column="status" />
-                            </button>
-                          </TableHead>
-                        </>
-                      )}
+                      <TableHead>Tipe</TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium" onClick={() => handleSort('code')}>
+                          Kode <SortIcon column="code" />
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium" onClick={() => handleSort('created_at')}>
+                          Tgl <SortIcon column="created_at" />
+                        </button>
+                      </TableHead>
+                      <TableHead>Pemohon</TableHead>
+                      <TableHead>Kode Project</TableHead>
+                      <TableHead>Initial Project</TableHead>
+                      <TableHead>Detail Kegiatan</TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium" onClick={() => handleSort('amount')}>
+                          Nominal <SortIcon column="amount" />
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
+                          Status Approval <SortIcon column="status" />
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
+                          Status <SortIcon column="status" />
+                        </button>
+                      </TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -467,131 +438,75 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
 
                       return (
                         <TableRow key={item.id}>
-                          {activeTab === 'atr' ? (
-                            <>
-                              <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
-                              <TableCell className="text-sm font-mono">{item.project?.code ?? '-'}</TableCell>
-                              <TableCell className="text-sm">{item.project?.initial_project ?? '-'}</TableCell>
-                              <TableCell className="max-w-[200px]">
-                                <span className="truncate block text-sm">{item.usage_plan ?? '-'}</span>
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                Rp {parseFloat(item.amount).toLocaleString('id-ID')}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-col gap-1.5">
-                                  {item.approvals && item.approvals.length > 0 && (
-                                    <div className="mt-1 flex flex-col gap-1 inline-flex">
-                                      {[...item.approvals].sort((a, b) => {
-                                        const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
-                                        return (p[a.role] || 99) - (p[b.role] || 99);
-                                      }).map((approval) => (
-                                        <div key={approval.id} className="text-xs flex items-center gap-1.5">
-                                          {approval.status === 'approved' ? (
-                                            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                                          ) : approval.status === 'revised' ? (
-                                            <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
-                                          ) : (
-                                            <XCircle className="h-3.5 w-3.5 text-red-500" />
-                                          )}
-                                          <span className={cn(
-                                            "whitespace-nowrap",
-                                            approval.status === 'approved' ? "text-green-700 font-medium" :
-                                              approval.status === 'revised' ? "text-blue-700 font-medium" :
-                                                "text-red-700 font-medium"
-                                          )}>
-                                            {approval.status === 'approved' ? 'Disetujui' :
-                                              approval.status === 'revised' ? 'Sudah Direvisi' :
-                                                'Menunggu'}{' '}
-                                            <span className="font-normal text-muted-foreground">{approval.approver?.name}</span>
-                                          </span>
-                                        </div>
-                                      ))}
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="outline" className={cn("uppercase w-fit", TYPE_COLORS[item.type] || '')}>{item.type}</Badge>
+                              {item.type === 'eer' && item.eer_type && (
+                                <span className={cn(
+                                  "text-[10px] font-medium px-1.5 py-0.5 rounded-full border w-fit text-center",
+                                  item.eer_type === 'refund' ? "bg-orange-50 text-orange-600 border-orange-200" :
+                                  item.eer_type === 'reimbursement' ? "bg-blue-50 text-blue-600 border-blue-200" :
+                                  "bg-purple-50 text-purple-600 border-purple-200"
+                                )}>
+                                  {item.eer_type === 'refund' ? 'Refund' :
+                                   item.eer_type === 'reimbursement' ? 'Reimbursement' :
+                                   'Balance'}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
+                          <TableCell className="text-sm">
+                            {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}
+                          </TableCell>
+                          <TableCell className="text-sm">{item.user?.name ?? '-'}</TableCell>
+                          <TableCell className="text-sm font-mono">{item.project?.code ?? '-'}</TableCell>
+                          <TableCell className="text-sm">{item.project?.initial_project ?? '-'}</TableCell>
+                          <TableCell className="max-w-[200px]">
+                            <span className="truncate block text-sm">{item.usage_plan ?? '-'}</span>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            Rp {parseFloat(item.amount).toLocaleString('id-ID')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1.5">
+                              {item.approvals && item.approvals.length > 0 && (
+                                <div className="mt-1 flex flex-col gap-1 inline-flex">
+                                  {[...item.approvals].sort((a, b) => {
+                                    const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
+                                    return (p[a.role] || 99) - (p[b.role] || 99);
+                                  }).map((approval) => (
+                                    <div key={approval.id} className="text-xs flex items-center gap-1.5">
+                                      {approval.status === 'approved' ? (
+                                        <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                      ) : approval.status === 'revised' ? (
+                                        <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
+                                      ) : (
+                                        <XCircle className="h-3.5 w-3.5 text-red-500" />
+                                      )}
+                                      <span className={cn(
+                                        "whitespace-nowrap",
+                                        approval.status === 'approved' ? "text-green-700 font-medium" :
+                                          approval.status === 'revised' ? "text-blue-700 font-medium" :
+                                            "text-red-700 font-medium"
+                                      )}>
+                                        {approval.status === 'approved' ? 'Disetujui' :
+                                          approval.status === 'revised' ? 'Sudah Direvisi' :
+                                            'Menunggu'}{' '}
+                                        <span className="font-normal text-muted-foreground">{approval.approver?.name}</span>
+                                      </span>
                                     </div>
-                                  )}
+                                  ))}
                                 </div>
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
-                                  <StatusIcon className="h-3 w-3" />
-                                  {statusCfg.label}
-                                </Badge>
-                              </TableCell>
-                            </>
-                          ) : (
-                            <>
-                              <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
-                              <TableCell>
-                                <div className="flex flex-col gap-1">
-                                  <Badge variant="outline" className={cn("uppercase w-fit", TYPE_COLORS[item.type] || '')}>{item.type}</Badge>
-                                  {item.type === 'eer' && item.eer_type && (
-                                    <span className={cn(
-                                      "text-[10px] font-medium px-1.5 py-0.5 rounded-full border w-fit",
-                                      item.eer_type === 'refund' ? "bg-orange-50 text-orange-600 border-orange-200" :
-                                      item.eer_type === 'reimbursement' ? "bg-blue-50 text-blue-600 border-blue-200" :
-                                      "bg-purple-50 text-purple-600 border-purple-200"
-                                    )}>
-                                      {item.eer_type === 'refund' ? 'Refund' :
-                                       item.eer_type === 'reimbursement' ? 'Reimbursement' :
-                                       'Balance (Sesuai Budget)'}
-                                    </span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}
-                              </TableCell>
-                              <TableCell>{item.user?.name ?? '-'}</TableCell>
-                              <TableCell className="max-w-[120px]">
-                                <span className="truncate block font-medium">{item.project?.division_name ?? '-'}</span>
-                              </TableCell>
-                              <TableCell className="max-w-[150px]">
-                                <span className="truncate block">{item.project?.name ?? '-'}</span>
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                Rp {parseFloat(item.amount).toLocaleString('id-ID')}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-col gap-1.5">
-                                  {item.approvals && item.approvals.length > 0 && (
-                                    <div className="mt-1 flex flex-col gap-1 inline-flex">
-                                      {[...item.approvals].sort((a, b) => {
-                                        const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
-                                        return (p[a.role] || 99) - (p[b.role] || 99);
-                                      }).map((approval) => (
-                                        <div key={approval.id} className="text-xs flex items-center gap-1.5">
-                                          {approval.status === 'approved' ? (
-                                            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                                          ) : approval.status === 'revised' ? (
-                                            <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
-                                          ) : (
-                                            <XCircle className="h-3.5 w-3.5 text-red-500" />
-                                          )}
-                                          <span className={cn(
-                                            "whitespace-nowrap",
-                                            approval.status === 'approved' ? "text-green-700 font-medium" :
-                                              approval.status === 'revised' ? "text-blue-700 font-medium" :
-                                                "text-red-700 font-medium"
-                                          )}>
-                                            {approval.status === 'approved' ? 'Disetujui' :
-                                              approval.status === 'revised' ? 'Sudah Direvisi' :
-                                                'Menunggu'}{' '}
-                                            <span className="font-normal text-muted-foreground">{approval.approver?.name}</span>
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
-                                  <StatusIcon className="h-3 w-3" />
-                                  {statusCfg.label}
-                                </Badge>
-                              </TableCell>
-                            </>
-                          )}
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
+                              <StatusIcon className="h-3 w-3" />
+                              {statusCfg.label}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
