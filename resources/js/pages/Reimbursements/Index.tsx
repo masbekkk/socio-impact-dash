@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
@@ -140,6 +140,40 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  const STORAGE_KEY = 'reimbursement_filters';
+  const [isInitialMount, setIsInitialMount] = useState(true);
+
+  // Restore filters from localStorage on mount if URL is clean
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasFilters = params.has('type') || params.has('status') || params.has('search') || 
+                      params.has('start_date') || params.has('end_date') || 
+                      params.has('division_id') || params.has('page') || 
+                      params.has('sort_by') || params.has('sort_dir');
+
+    if (!hasFilters) {
+      const savedFilters = localStorage.getItem(STORAGE_KEY);
+      if (savedFilters) {
+        try {
+          const parsed = JSON.parse(savedFilters);
+          if (Object.values(parsed).some(v => v !== '' && v !== null && v !== undefined)) {
+            router.get('/reimbursements', parsed, { replace: true });
+          }
+        } catch (e) {
+          console.error('Failed to parse saved filters', e);
+        }
+      }
+    }
+    setIsInitialMount(false);
+  }, []);
+
+  // Save current filters to localStorage whenever they change
+  useEffect(() => {
+    if (!isInitialMount) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
+    }
+  }, [filters, isInitialMount]);
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -412,7 +446,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                       <TableHead>Pemohon</TableHead>
                       <TableHead>Kode Project</TableHead>
                       <TableHead>Initial Project</TableHead>
-                      <TableHead>Detail Kegiatan</TableHead>
+                      <TableHead className="min-w-[150px]">Detail Kegiatan</TableHead>
                       <TableHead>
                         <button className="flex items-center font-medium" onClick={() => handleSort('amount')}>
                           Nominal <SortIcon column="amount" />
@@ -462,8 +496,8 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                           <TableCell className="text-sm">{item.user?.name ?? '-'}</TableCell>
                           <TableCell className="text-sm font-mono">{item.project?.code ?? '-'}</TableCell>
                           <TableCell className="text-sm">{item.project?.initial_project ?? '-'}</TableCell>
-                          <TableCell className="max-w-[200px]">
-                            <span className="truncate block text-sm">{item.usage_plan ?? '-'}</span>
+                          <TableCell className="min-w-[150px] max-w-[250px] leading-relaxed">
+                            <span className="whitespace-normal break-words text-sm">{item.usage_plan ?? '-'}</span>
                           </TableCell>
                           <TableCell className="font-medium">
                             Rp {parseFloat(item.amount).toLocaleString('id-ID')}

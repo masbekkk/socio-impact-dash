@@ -145,7 +145,7 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
                                         <TableHead className="font-bold">Pemohon</TableHead>
                                         <TableHead className="font-bold">Kode Project</TableHead>
                                         <TableHead className="font-bold">Initial Project</TableHead>
-                                        <TableHead className="font-bold">Detail Kegiatan</TableHead>
+                                        <TableHead className="font-bold min-w-[150px]">Detail Kegiatan</TableHead>
                                         <TableHead className="font-bold">Nominal</TableHead>
                                         <TableHead className="font-bold">Status Approval</TableHead>
                                         <TableHead className="font-bold">Status</TableHead>
@@ -201,8 +201,8 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type }: 
                                                 <TableCell className="text-[10px]">{item.user?.name ?? '-'}</TableCell>
                                                 <TableCell className="text-[10px] font-mono">{item.project?.code ?? '-'}</TableCell>
                                                 <TableCell className="text-[10px]">{item.project?.initial_project ?? '-'}</TableCell>
-                                                <TableCell className="text-[10px] max-w-[150px]">
-                                                    <span className="truncate block">{item.usage_plan ?? '-'}</span>
+                                                <TableCell className="text-[10px] min-w-[150px] max-w-[250px] leading-relaxed">
+                                                    <span className="whitespace-normal break-words">{item.usage_plan ?? '-'}</span>
                                                 </TableCell>
                                                 <TableCell className="text-[10px] font-semibold whitespace-nowrap">
                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(item.amount || 0))}
