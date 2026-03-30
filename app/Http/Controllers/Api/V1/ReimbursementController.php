@@ -255,6 +255,7 @@ final class ReimbursementController extends Controller
             }
 
             $validated = $request->validate([
+                'status' => ['nullable', 'string', 'in:draft,submitted'],
                 'usage_plan' => ['nullable', 'string'],
                 'amount' => ['nullable', 'numeric', 'min:0'],
                 'start_date' => ['nullable', 'date'],
@@ -274,13 +275,23 @@ final class ReimbursementController extends Controller
             ]);
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request): void {
-                // Update editable fields
                 $isRevision = $reimbursement->status === \App\Enums\ReimbursementStatus::Revision;
-                $newStatus = $isRevision
-                    ? \App\Enums\ReimbursementStatus::Revised
-                    : \App\Enums\ReimbursementStatus::Submitted;
+                
+                // New Status logic: if explicitly draft, stay draft. 
+                // Else if it was a revision, it becomes revised. 
+                // Otherwise it becomes submitted.
+                $requestedStatus = $validated['status'] ?? 'submitted';
+                
+                if ($requestedStatus === 'draft') {
+                    $newStatus = \App\Enums\ReimbursementStatus::Draft;
+                } else {
+                    $newStatus = $isRevision
+                        ? \App\Enums\ReimbursementStatus::Revised
+                        : \App\Enums\ReimbursementStatus::Submitted;
+                }
 
                 $updateData = ['status' => $newStatus];
+                
                 if (isset($validated['usage_plan'])) {
                     $updateData['usage_plan'] = $validated['usage_plan'];
                 }
@@ -306,11 +317,12 @@ final class ReimbursementController extends Controller
                     $updateData['urgency'] = $validated['urgency'];
                 }
 
+                $fileUploadService = resolve(\App\Services\FileUploadService::class);
+
                 // Sync documents if provided
                 if (isset($validated['documents'])) {
                     foreach ($validated['documents'] as $doc) {
                         if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
-                            $fileUploadService = resolve(\App\Services\FileUploadService::class);
                             $meta = $fileUploadService->uploadFile(
                                 $doc['file'],
                                 "reimbursements/{$reimbursement->id}/documents"
@@ -331,7 +343,19 @@ final class ReimbursementController extends Controller
                 // Sync items if provided
                 if (isset($validated['items'])) {
                     $reimbursement->items()->delete();
-                    foreach ($validated['items'] as $item) {
+                    foreach ($validated['items'] as $index => $item) {
+                        $receiptPath = null;
+                        
+                        // Handle receipt file if provided in the items nested structure
+                        $itemFiles = $request->file('items');
+                        if ($itemFiles && isset($itemFiles[$index]['receipt']) && $itemFiles[$index]['receipt'] instanceof \Illuminate\Http\UploadedFile) {
+                            $meta = $fileUploadService->uploadFile(
+                                $itemFiles[$index]['receipt'],
+                                "reimbursements/{$reimbursement->id}/receipts"
+                            );
+                            $receiptPath = $meta['path'];
+                        }
+
                         $reimbursement->items()->create([
                             'project_budget_detail_id' => $item['project_budget_detail_id'],
                             'parent_item_id' => $item['parent_item_id'] ?? null,
@@ -340,6 +364,7 @@ final class ReimbursementController extends Controller
                             'unit_price' => $item['unit_price'] ?? 0,
                             'amount' => $item['amount'] ?? 0,
                             'expense_type' => $item['expense_type'] ?? null,
+                            'receipt_path' => $receiptPath,
                             'notes' => $item['notes'] ?? null,
                         ]);
                     }
@@ -372,32 +397,30 @@ final class ReimbursementController extends Controller
 
                 $reimbursement->update($updateData);
 
-                $reimbursement->update($updateData);
+                // Clear any existing approvals if it's NO LONGER a draft/revision
+                if ($newStatus !== \App\Enums\ReimbursementStatus::Draft) {
+                    $reimbursement->approvals()->delete();
+                    
+                    // Call assignApprovers to handle the workflow
+                    $action = new CreateReimbursement($fileUploadService);
+                    $action->assignApprovers($reimbursement, $request->all());
 
-                // Clear any existing approvals (relevant if it was a revision)
-                $reimbursement->approvals()->delete();
-
-                // Call assignApprovers to handle the workflow
-                $action = new CreateReimbursement(resolve(\App\Services\FileUploadService::class));
-                $reflector = new ReflectionClass($action);
-                $method = $reflector->getMethod('assignApprovers');
-                $method->invoke($action, $reimbursement, $request->all());
-
-                // Add a system comment notifying approvers
-                $isDraft = $reimbursement->getOriginal('status') === \App\Enums\ReimbursementStatus::Draft;
-                $prefix = $isDraft ? '[Draft Diajukan]' : '[Revisi Diajukan Ulang]';
-                $note = $validated['revision_note'] ?? ($isDraft ? 'Draft pengajuan telah diajukan' : 'Pengajuan telah direvisi dan diajukan kembali.');
-                $reimbursement->comments()->create([
-                    'user_id' => $user->id,
-                    'comment' => "{$prefix} {$note}",
-                ]);
+                    // Add a system comment notifying approvers
+                    $isDraftOriginal = $reimbursement->getOriginal('status') === \App\Enums\ReimbursementStatus::Draft;
+                    $prefix = $isDraftOriginal ? '[Draft Diajukan]' : '[Revisi Diajukan Ulang]';
+                    $note = $validated['revision_note'] ?? ($isDraftOriginal ? 'Draft pengajuan telah diajukan' : 'Pengajuan telah direvisi dan diajukan kembali.');
+                    $reimbursement->comments()->create([
+                        'user_id' => $user->id,
+                        'comment' => "{$prefix} {$note}",
+                    ]);
+                }
             });
 
             $data = $this->reimbursementService->getReimbursementDetail($id);
 
             return JsonResponseFormatter::success(
                 new ReimbursementResource($data),
-                'Revisi berhasil diajukan kembali'
+                'Pengajuan berhasil diperbarui'
             );
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);

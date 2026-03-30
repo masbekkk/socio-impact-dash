@@ -85,6 +85,7 @@ interface ChildItem {
   amount: number;
   expense_type: string;
   receipt: File | null;
+  receipt_path?: string | null;
   notes: string;
 }
 
@@ -156,7 +157,8 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
           unit_price: item.unit_price,
           amount: item.amount,
           expense_type: item.expense_type || '',
-          receipt: null, // Keep receipt as null since we can't easily repopulate File object from URL
+          receipt: null,
+          receipt_path: item.receipt_path,
           notes: item.notes || '',
         })));
       }
@@ -575,6 +577,11 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                           {item.receipt && (
                             <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100">
                               <CheckCircle className="h-3 w-3" /> Terlampir: {item.receipt.name}
+                            </div>
+                          )}
+                          {!item.receipt && item.receipt_path && (
+                            <div className="flex items-center gap-2 text-[10px] text-blue-600 bg-blue-50 p-1.5 rounded mt-1 border border-blue-100">
+                              <CheckCircle className="h-3 w-3" /> Kwitansi Tersimpan: <a href={item.receipt_path} target="_blank" rel="noopener noreferrer" className="underline font-bold">Lihat File</a>
                             </div>
                           )}
                         </div>

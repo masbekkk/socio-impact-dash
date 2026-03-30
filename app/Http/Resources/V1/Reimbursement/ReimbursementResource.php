@@ -16,6 +16,8 @@ final class ReimbursementResource extends JsonResource
         return [
             'id' => $this->id,
             'code' => $this->code,
+            'atr_id' => $this->atr_id,
+            'replacement_pic_id' => $this->replacement_pic_id,
             'user' => [
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,

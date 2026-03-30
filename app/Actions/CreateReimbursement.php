@@ -127,7 +127,7 @@ final readonly class CreateReimbursement
         }
     }
 
-    private function assignApprovers(Reimbursement $reimbursement, array $data): void
+    public function assignApprovers(Reimbursement $reimbursement, array $data): void
     {
         $roles = [
             'head' => $data['approver_head_id'] ?? null,
