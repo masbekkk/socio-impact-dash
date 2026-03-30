@@ -109,7 +109,7 @@ final class DashboardController extends Controller
             $approvalItems['hr_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
                 \App\Models\Reimbursement::query()
                     ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
-                    ->where('type', \App\Enums\ReimbursementType::Allowance)
+                    ->where('type', \App\Enums\ReimbursementType::ALLOWANCE)
                     ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
                     ->get()
             )->resolve();
