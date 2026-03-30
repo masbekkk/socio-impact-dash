@@ -142,6 +142,7 @@ interface ReimbursementDetail {
   eer_type: string | null;
   status: string;
   amount: number | null;
+  transferred_amount: number | null;
   bank_name: string | null;
   bank_account: string | null;
   account_holder: string | null;
@@ -278,6 +279,7 @@ export default function Show() {
   const [revisiReason, setRevisiReason] = useState('');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [transferProof, setTransferProof] = useState<File | null>(null);
+  const [transferredAmount, setTransferredAmount] = useState<number>(0);
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
 
@@ -428,6 +430,7 @@ export default function Show() {
   const resetTransferDialog = () => {
     setTransferDialogOpen(false);
     setTransferProof(null);
+    setTransferredAmount(0);
   };
 
   const handleRequestFund = async () => {
@@ -523,7 +526,8 @@ export default function Show() {
     try {
       const formData = new FormData();
       formData.append('action', 'transferred');
-      formData.append('transfer_proof', transferProof);
+      if (transferProof) formData.append('transfer_proof', transferProof);
+      if (transferredAmount > 0) formData.append('transferred_amount', transferredAmount.toString());
 
       const role = getCurrentUserRole();
 
@@ -1464,8 +1468,16 @@ export default function Show() {
                   {data.amount != null && data.amount > 0 && (
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Total Biaya</label>
-                      <div className="font-bold text-xl text-green-700 font-mono">
-                        Rp {data.amount.toLocaleString('id-ID')}
+                      <div className="flex items-baseline gap-3">
+                        <div className="font-bold text-xl text-green-700 font-mono">
+                          Rp {data.amount.toLocaleString('id-ID')}
+                        </div>
+                        {data.transferred_amount != null && data.transferred_amount > 0 && (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded text-blue-700">
+                            <span className="text-[10px] font-bold uppercase tracking-tighter opacity-70">Ditransfer:</span>
+                            <span className="text-xs font-mono font-bold">Rp {data.transferred_amount.toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -2828,6 +2840,20 @@ export default function Show() {
                 </a>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-500 uppercase">
+                Nominal Ditransfer <span className="text-red-500">*</span>
+              </Label>
+              <MoneyInput
+                value={transferredAmount || (data?.amount ?? 0)}
+                onValueChange={(v) => setTransferredAmount(v.floatValue || 0)}
+                className="text-lg font-bold text-blue-700 h-12"
+              />
+              <p className="text-[10px] text-muted-foreground italic">
+                * Masukkan nominal aktual yang ditransfer ke penerima.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={resetTransferDialog} disabled={actionLoading}>Batal</Button>
@@ -2837,7 +2863,7 @@ export default function Show() {
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-blue-600 hover:bg-blue-700"
               )}
-              disabled={(!(data?.eer_type === 'refund' && data?.transfer_proof_path) && !transferProof) || actionLoading}
+              disabled={(!(data?.eer_type === 'refund' && data?.transfer_proof_path) && !transferProof) || actionLoading || (transferredAmount <= 0 && !(data?.amount ?? 0))}
               onClick={handleTransfer}
             >
               {actionLoading ? (

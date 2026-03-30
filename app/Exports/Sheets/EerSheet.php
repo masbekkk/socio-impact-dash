@@ -44,6 +44,7 @@ final readonly class EerSheet implements FromCollection, ShouldAutoSize, WithHea
             'Tipe EER',
             'Nominal Refund/Reimbursement',
             'Total Nominal EER',
+            'Nominal Ditransfer',
             // Item columns
             'Nama Item',
             'Qty',
@@ -127,6 +128,7 @@ final readonly class EerSheet implements FromCollection, ShouldAutoSize, WithHea
             $r->eer_type ?? '-',
             $r->refund_reimburse_amount !== null ? (float) $r->refund_reimburse_amount : '-',
             (float) $r->amount,
+            (float) ($r->transferred_amount ?? 0),
             // Item
             $item?->item_name ?? '-',
             $item?->quantity ?? '-',

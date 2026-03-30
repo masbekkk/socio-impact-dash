@@ -17,7 +17,7 @@ final class Reimbursement extends Model
 
     protected $fillable = [
         'code', 'user_id', 'project_id', 'atr_id', 'type', 'eer_type', 'status',
-        'amount', 'bank_name', 'bank_account', 'account_holder', 'bank_branch',
+        'amount', 'transferred_amount', 'bank_name', 'bank_account', 'account_holder', 'bank_branch',
         'transferred_at', 'transfer_proof_path', 'rejection_reason',
         'usage_plan', 'urgency', 'start_date', 'end_date', 'start_time', 'end_time', 'replacement_pic_id',
     ];
@@ -29,6 +29,7 @@ final class Reimbursement extends Model
             'user_id' => 'integer',
             'project_id' => 'integer',
             'amount' => 'decimal:2',
+            'transferred_amount' => 'decimal:2',
             'type' => ReimbursementType::class,
             'status' => ReimbursementStatus::class,
             'transferred_at' => 'datetime',

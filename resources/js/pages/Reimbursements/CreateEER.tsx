@@ -35,6 +35,7 @@ import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { usePermission } from '@/hooks/use-permission';
+import { Badge } from '@/components/ui/badge';
 
 interface Approver {
   id: number;
@@ -63,6 +64,7 @@ interface Atr {
   id: number;
   code: string;
   amount: number;
+  transferred_amount: number | null;
   usage_plan: string;
   project_id: number;
   project_name: string;
@@ -458,9 +460,16 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                   <p className="text-sm text-muted-foreground">Input pengeluaran aktual secara manual. Semua detail item (Kegiatan, Nama, Qty, Harga, Jenis, Kwitansi) wajib diisi sesuai bukti pembayaran.</p>
                 </div>
                 {selectedAtr && (
-                  <div className="bg-slate-50 border p-3 rounded-lg text-right">
+                  <div className="bg-slate-50 border p-3 rounded-lg text-right flex flex-col gap-1">
                     <p className="text-xs text-slate-500 font-medium">Limit ATR Tersedia</p>
-                    <p className="text-lg font-bold text-slate-800">{fmt(selectedAtr.amount)}</p>
+                    <div className="flex items-center justify-end gap-2">
+                       <p className="text-lg font-bold text-slate-800">{fmt(selectedAtr.amount)}</p>
+                       {selectedAtr.transferred_amount != null && selectedAtr.transferred_amount > 0 && (
+                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-bold">
+                           Transferred: {fmt(selectedAtr.transferred_amount)}
+                         </Badge>
+                       )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -68,6 +68,7 @@ final class ReimbursementResource extends JsonResource
             'refund_reimburse_amount' => $this->amount,
             'status' => $this->status?->value,
             'amount' => (float) $this->amount,
+            'transferred_amount' => (float) $this->transferred_amount,
             'bank_name' => $this->bank_name,
             'bank_account' => $this->bank_account,
             'account_holder' => $this->account_holder,

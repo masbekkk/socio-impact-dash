@@ -37,6 +37,9 @@ final readonly class UpdateReimbursementStatus
                     'status' => ReimbursementStatus::Transferred,
                     'transferred_at' => now(),
                 ];
+                if (isset($data['transferred_amount'])) {
+                    $updateData['transferred_amount'] = (float) $data['transferred_amount'];
+                }
                 if ($transferProof instanceof UploadedFile) {
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
                     $updateData['transfer_proof_path'] = $path;

@@ -51,6 +51,7 @@ export interface ReimbursementPayload {
     user_id?: string;
     project_id?: string;
     amount?: number;
+    transferred_amount?: number;
     bank_name?: string;
     bank_account?: string;
     account_holder?: string;
