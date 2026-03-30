@@ -463,12 +463,12 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                   <div className="bg-slate-50 border p-3 rounded-lg text-right flex flex-col gap-1">
                     <p className="text-xs text-slate-500 font-medium">Limit ATR Tersedia</p>
                     <div className="flex items-center justify-end gap-2">
-                       <p className="text-lg font-bold text-slate-800">{fmt(selectedAtr.amount)}</p>
-                       {selectedAtr.transferred_amount != null && selectedAtr.transferred_amount > 0 && (
-                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-bold">
-                           Transferred: {fmt(selectedAtr.transferred_amount)}
-                         </Badge>
-                       )}
+                      <p className="text-lg font-bold text-slate-800">{fmt(selectedAtr.amount)}</p>
+                      {selectedAtr.transferred_amount != null && selectedAtr.transferred_amount > 0 && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-bold">
+                          Transferred: {fmt(selectedAtr.transferred_amount)}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 )}
@@ -563,22 +563,22 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                         </div>
 
                         {/* Row 3: Receipt & Notes */}
-                        {hasRole(['finance', 'superadmin']) && (
-                          <div className="md:col-span-12 lg:col-span-6 space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                              KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500 ml-1">*</span>
-                            </Label>
-                            <FileUploadDropzone
-                              className="bg-white h-[120px] overflow-hidden rounded-lg"
-                              onFilesChange={(files: File[]) => updateItem(item.id, 'receipt', files[0] ?? null)}
-                            />
-                            {item.receipt && (
-                              <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100">
-                                <CheckCircle className="h-3 w-3" /> Terlampir: {item.receipt.name}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        {/* {hasRole(['finance', 'superadmin']) && ( */}
+                        <div className="md:col-span-12 lg:col-span-6 space-y-2">
+                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                            KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500 ml-1">*</span>
+                          </Label>
+                          <FileUploadDropzone
+                            className="bg-white h-[120px] overflow-hidden rounded-lg"
+                            onFilesChange={(files: File[]) => updateItem(item.id, 'receipt', files[0] ?? null)}
+                          />
+                          {item.receipt && (
+                            <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100">
+                              <CheckCircle className="h-3 w-3" /> Terlampir: {item.receipt.name}
+                            </div>
+                          )}
+                        </div>
+                        {/* )} */}
 
                         <div className="md:col-span-12 lg:col-span-6 space-y-2">
                           <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">CATATAN TAMBAHAN</Label>
