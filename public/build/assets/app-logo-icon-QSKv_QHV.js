@@ -1,0 +1,1 @@
+import{j as s}from"./app-B1BOWxf_.js";function r(e){return s.jsx("div",{className:"flex aspect-square size-8 items-center justify-center rounded-md bg-white text-sidebar-primary-foreground",children:s.jsx("img",{src:"/assets/logo_socio.png",alt:"Logo",className:"size-5"})})}export{r as A};
