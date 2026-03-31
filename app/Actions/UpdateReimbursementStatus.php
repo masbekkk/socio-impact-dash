@@ -24,8 +24,19 @@ final readonly class UpdateReimbursementStatus
                 $user = \App\Models\User::find($approverId);
                 if ($user) {
                     $roles = $user->getRoleNames();
-                    if ($roles->contains('head') && $roles->contains('finance')) {
-                        $role = ($user->id === $reimbursement->project?->head_id) ? 'head' : 'finance';
+                    if ($roles->contains('head')) {
+                        // Prioritize Head over Finance/HR if this user was assigned as Head
+                        $isHead = ($user->id === $reimbursement->project?->head_id) || 
+                                 ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                                    ->where('approver_id', $user->id)
+                                    ->where('role', 'head')
+                                    ->exists();
+                        
+                        if ($isHead) {
+                            $role = 'head';
+                        } else {
+                            $role = $roles->first();
+                        }
                     } else {
                         $role = $roles->first();
                     }

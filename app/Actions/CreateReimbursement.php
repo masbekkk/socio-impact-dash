@@ -159,6 +159,11 @@ final readonly class CreateReimbursement
             $roles['direktur'] = \App\Models\User::query()->where('email', 'direktur@socio-impact.test')->first()?->id;
         }
 
+        // If Head and HR are the same person, skip the HR step (prioritize Head)
+        if ($roles['head'] && $roles['hr'] && (int) $roles['head'] === (int) $roles['hr']) {
+            $roles['hr'] = null;
+        }
+
         foreach ($roles as $role => $approverId) {
             if ($approverId) {
                 $reimbursement->approvals()->create([
