@@ -354,6 +354,8 @@ final class ReimbursementController extends Controller
                                 "reimbursements/{$reimbursement->id}/receipts"
                             );
                             $receiptPath = $meta['path'];
+                        } else {
+                            $receiptPath = $item['receipt_path'] ?? null;
                         }
 
                         $reimbursement->items()->create([

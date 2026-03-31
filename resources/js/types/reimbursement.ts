@@ -42,6 +42,7 @@ export interface ReimbursementItemPayload {
     amount: number;
     expense_type?: string;
     receipt?: File | null;
+    receipt_path?: string | null;
     notes?: string;
 }
 

@@ -60,6 +60,7 @@ function buildFormData(payload: ReimbursementPayload): FormData {
         if (item.parent_item_id) fd.append(`items[${index}][parent_item_id]`, item.parent_item_id.toString());
         if (item.expense_type) fd.append(`items[${index}][expense_type]`, item.expense_type);
         if (item.receipt) fd.append(`items[${index}][receipt]`, item.receipt);
+        if (item.receipt_path) fd.append(`items[${index}][receipt_path]`, item.receipt_path);
         if (item.notes) fd.append(`items[${index}][notes]`, item.notes);
     });
 

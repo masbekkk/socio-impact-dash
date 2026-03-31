@@ -326,6 +326,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
       amount: i.amount,
       expense_type: i.expense_type,
       receipt: i.receipt ?? undefined,
+      receipt_path: i.receipt_path ?? undefined,
       notes: i.notes || undefined,
     }));
 

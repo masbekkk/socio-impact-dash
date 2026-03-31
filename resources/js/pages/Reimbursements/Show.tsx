@@ -802,6 +802,7 @@ export default function Show() {
             amount: item.amount,
             expense_type: item.expense_type,
             receipt: item.receipt ?? undefined,
+            receipt_path: item.receipt_path ?? undefined,
             notes: item.notes,
           });
           const actId = Number(item.project_budget_detail_id);
@@ -828,6 +829,7 @@ export default function Show() {
               amount: child.quantity * child.unit_price,
               expense_type: child.expense_type,
               receipt: child.receipt ?? undefined,
+              receipt_path: child.receipt_path ?? undefined,
               notes: child.notes,
             });
             actTotal += child.quantity * child.unit_price;
@@ -1718,16 +1720,12 @@ export default function Show() {
                                         <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                                           KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500">*</span>
                                         </Label>
-                                        {isFinanceOrAdmin ? (
-                                          <FileUploadDropzone
-                                            className="bg-white h-[80px] overflow-hidden rounded-lg"
-                                            onFilesChange={(files: File[]) => updateItemEerRevision(item.id, 'receipt', files[0] ?? null)}
-                                          />
-                                        ) : (
-                                          <div className="bg-slate-50 border border-dashed p-3 rounded-lg text-[10px] text-muted-foreground flex items-center justify-center italic h-[80px]">
-                                            Hanya Finance yang dapat mengupload bukti pembayaran/kwitansi saat revisi.
-                                          </div>
-                                        )}
+
+                                        <FileUploadDropzone
+                                          className="bg-white h-[80px] overflow-hidden rounded-lg"
+                                          onFilesChange={(files: File[]) => updateItemEerRevision(item.id, 'receipt', files[0] ?? null)}
+                                        />
+
                                         {(item.receipt || item.receipt_path) && (
                                           <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100 italic">
                                             <CheckCircle className="h-3 w-3" /> {item.receipt ? `Baru: ${item.receipt.name}` : 'Sudah terlampir'}
