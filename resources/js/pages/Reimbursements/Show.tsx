@@ -100,6 +100,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Receipt,
 } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
 import { resubmitReimbursement, updateItemReceipt } from '@/services/reimbursement-service';
@@ -1467,9 +1468,13 @@ export default function Show() {
                       {format(new Date(data.created_at), 'dd MMMM yyyy', { locale: localeId })}
                     </div>
                   </div>
-                  {data.amount != null && data.amount > 0 && (
+                  {(data.amount != null && (data.amount > 0 || (data.type === 'eer' && data.eer_type === 'balance'))) && (
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Total Biaya</label>
+                      <label className="text-xs font-medium text-muted-foreground uppercase">
+                        {data.type === 'eer'
+                          ? (data.eer_type === 'refund' ? 'Nominal Refund' : (data.eer_type === 'balance' ? 'Penyelesaian' : 'Nominal Reimburse'))
+                          : 'Total Biaya'}
+                      </label>
                       <div className="flex items-baseline gap-3">
                         <div className="font-bold text-xl text-green-700 font-mono">
                           Rp {data.amount.toLocaleString('id-ID')}
@@ -2155,6 +2160,64 @@ export default function Show() {
                                   </tr>
                                 </tfoot>
                               </table>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* EER Summary (Refund/Reimburse Calculation) */}
+                      {data.type === 'eer' && data.atr_items && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="h-8 w-8 rounded-lg bg-slate-900 flex items-center justify-center">
+                              <Receipt className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-bold text-slate-900">Ringkasan Biaya EER</h3>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Kalkulasi Penggunaan Dana</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="space-y-1.5">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Total Pengeluaran (EER)</span>
+                              <div className="flex items-baseline gap-1 text-slate-900 font-mono">
+                                <span className="text-xs font-semibold">Rp</span>
+                                <span className="text-lg font-black">{eerItems.reduce((s: number, i: any) => s + i.amount, 0).toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5 pb-2 border-b md:border-b-0 md:pb-0">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Total Dana ATR</span>
+                              <div className="flex items-baseline gap-1 text-slate-600 font-mono">
+                                <span className="text-xs font-semibold">Rp</span>
+                                <span className="text-lg font-bold">{data.atr_items.total_amount.toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+
+                            <div className={cn(
+                              "space-y-1.5 p-3 rounded-lg border",
+                              data.eer_type === 'refund' ? "bg-emerald-50 border-emerald-100" : (data.eer_type === 'balance' ? "bg-slate-100 border-slate-200" : "bg-blue-50 border-blue-100")
+                            )}>
+                              <span className={cn(
+                                "text-[10px] font-bold uppercase tracking-tight",
+                                data.eer_type === 'refund' ? "text-emerald-700" : (data.eer_type === 'balance' ? "text-slate-600" : "text-blue-700")
+                              )}>
+                                {data.eer_type === 'refund' ? 'Sisa Dana (Refund)' : (data.eer_type === 'balance' ? 'Penyelesaian' : 'Kekurangan Dana (Reimburse)')}
+                              </span>
+                              <div className={cn(
+                                "flex items-baseline gap-1 font-mono",
+                                data.eer_type === 'refund' ? "text-emerald-900" : (data.eer_type === 'balance' ? "text-slate-900" : "text-blue-900")
+                              )}>
+                                <span className="text-xs font-semibold">Rp</span>
+                                <span className={cn(
+                                  "text-xl font-black",
+                                  data.eer_type === 'balance' && "text-slate-500"
+                                )}>{Math.abs(data.amount || 0).toLocaleString('id-ID')}</span>
+                              </div>
+                              {data.eer_type === 'balance' && (
+                                <p className="text-[9px] text-slate-500 font-medium">EER Balance</p>
+                              )}
                             </div>
                           </div>
                         </div>
