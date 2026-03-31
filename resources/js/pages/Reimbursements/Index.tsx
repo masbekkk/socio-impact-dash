@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
@@ -23,18 +23,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ListFilter, Calendar as CalendarIcon, X, MoreHorizontal, Wallet, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, AlertCircle, Trash2, Download } from 'lucide-react';
+import {
+  FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ListFilter,
+  Calendar as CalendarIcon, X, MoreHorizontal, Wallet, ArrowUpDown,
+  ArrowUp, ArrowDown, DollarSign, AlertCircle, Trash2, Download,
+} from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -43,6 +43,10 @@ import { id as localeId } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateFilterPresets } from '@/components/DateFilterPresets';
 import { usePermission } from '@/hooks/use-permission';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface ReimbursementApproval {
   id: number;
@@ -70,12 +74,7 @@ interface Reimbursement {
 
 interface PaginatedData {
   data: Reimbursement[];
-  links: {
-    first: string;
-    last: string;
-    prev: string | null;
-    next: string | null;
-  };
+  links: { first: string; last: string; prev: string | null; next: string | null };
   meta: {
     current_page: number;
     from: number | null;
@@ -105,6 +104,22 @@ interface Props {
   divisions: any[];
 }
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const DEFAULT_FILTERS: Filters = {
+  type: '',
+  status: '',
+  search: '',
+  start_date: '',
+  end_date: '',
+  division_id: '',
+  sort_by: 'created_at',
+  sort_dir: 'desc',
+  per_page: 10,
+};
+
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200', icon: FileText },
   submitted: { label: 'Diajukan', className: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-yellow-200', icon: Clock },
@@ -125,9 +140,75 @@ const TYPE_COLORS: Record<string, string> = {
   allowance: 'bg-teal-100 text-teal-700 border-teal-200',
 };
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when a Filters object has at least one non-default value,
+ * meaning it's worth persisting / restoring.
+ */
+function hasActiveFilters(f: Partial<Filters>): boolean {
+  return (
+    !!f.type ||
+    !!f.status ||
+    !!f.search ||
+    !!f.start_date ||
+    !!f.end_date ||
+    !!f.division_id ||
+    (!!f.sort_by && f.sort_by !== DEFAULT_FILTERS.sort_by) ||
+    (!!f.sort_dir && f.sort_dir !== DEFAULT_FILTERS.sort_dir) ||
+    (!!f.per_page && f.per_page !== DEFAULT_FILTERS.per_page)
+  );
+}
+
+/**
+ * Detects whether the current URL already carries any filter params so we
+ * know whether to honour the stored state or the explicit URL.
+ */
+function urlHasFilters(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  return (
+    params.has('type') ||
+    params.has('status') ||
+    params.has('search') ||
+    params.has('start_date') ||
+    params.has('end_date') ||
+    params.has('division_id') ||
+    params.has('page') ||
+    params.has('sort_by') ||
+    params.has('sort_dir') ||
+    params.has('per_page')
+  );
+}
+
+/**
+ * Converts a Filters object into a lean query object (omitting defaults so
+ * URLs stay clean).
+ */
+function filtersToQuery(f: Filters, page?: number): Record<string, string> {
+  const q: Record<string, string> = {};
+  if (f.type) q.type = f.type;
+  if (f.status) q.status = f.status;
+  if (f.search) q.search = f.search;
+  if (f.start_date) q.start_date = f.start_date;
+  if (f.end_date) q.end_date = f.end_date;
+  if (f.division_id) q.division_id = f.division_id;
+  if (f.sort_by && f.sort_by !== DEFAULT_FILTERS.sort_by) q.sort_by = f.sort_by;
+  if (f.sort_dir && f.sort_dir !== DEFAULT_FILTERS.sort_dir) q.sort_dir = f.sort_dir;
+  if (f.per_page && f.per_page !== DEFAULT_FILTERS.per_page) q.per_page = String(f.per_page);
+  if (page && page > 1) q.page = String(page);
+  return q;
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function ReimbursementsIndex({ reimbursements, filters, divisions }: Props) {
   const { auth } = usePage().props as unknown as { auth: any };
   const { hasRole } = usePermission();
+
   const isSuperadmin = hasRole('superadmin');
   const isFinance = hasRole('finance');
   const isDirektur = hasRole('direktur');
@@ -135,73 +216,125 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
   const isHead = hasRole('head') && !isSuperadmin;
   const isPegawai = hasRole('pegawai') && !isSuperadmin && !isHead && !isFinance && !isDirektur && !isHR;
 
+  // Storage key is per-user so filters don't bleed across accounts on shared
+  // machines.
+  const STORAGE_KEY = `reimbursement_filters_${auth?.user?.id ?? 'guest'}`;
+
+  // -------------------------------------------------------------------------
+  // Local state
+  // -------------------------------------------------------------------------
+
   const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  const STORAGE_KEY = 'reimbursement_filters';
-  const [isInitialMount, setIsInitialMount] = useState(true);
+  // Use a ref (not state) so toggling it never triggers a re-render and can
+  // never cause the save-effect to fire prematurely.
+  const isRestoringRef = useRef(false);
 
-  // Restore filters from localStorage on mount if URL is clean
+  // -------------------------------------------------------------------------
+  // Restore saved filters on first load (only when the URL is clean)
+  // -------------------------------------------------------------------------
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const hasFilters = params.has('type') || params.has('status') || params.has('search') || 
-                      params.has('start_date') || params.has('end_date') || 
-                      params.has('division_id') || params.has('page') || 
-                      params.has('sort_by') || params.has('sort_dir');
-
-    if (!hasFilters) {
-      const savedFilters = localStorage.getItem(STORAGE_KEY);
-      if (savedFilters) {
-        try {
-          const parsed = JSON.parse(savedFilters);
-          if (Object.values(parsed).some(v => v !== '' && v !== null && v !== undefined)) {
-            router.get('/reimbursements', parsed, { replace: true });
-          }
-        } catch (e) {
-          console.error('Failed to parse saved filters', e);
-        }
+    // If the URL already has explicit filter params the user (or a bookmark /
+    // back-navigation) supplied them — respect that and update storage to
+    // match the URL instead of overwriting it.
+    if (urlHasFilters()) {
+      // Keep storage in sync with whatever the URL says.
+      if (hasActiveFilters(filters)) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
       }
+      return;
     }
-    setIsInitialMount(false);
-  }, []);
 
-  // Save current filters to localStorage whenever they change
+    // Clean URL: try to restore from storage.
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+
+    let saved: Partial<Filters>;
+    try {
+      saved = JSON.parse(raw);
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    if (!hasActiveFilters(saved)) {
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    // Mark that we're mid-restore so the save-effect ignores the navigation
+    // that is about to happen (the props haven't updated yet at that point,
+    // so saving them would write stale data).
+    isRestoringRef.current = true;
+
+    router.get(
+      '/reimbursements',
+      filtersToQuery(saved as Filters),
+      {
+        replace: true,
+        preserveScroll: true,
+        onFinish: () => {
+          isRestoringRef.current = false;
+        },
+      },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally run once on mount only
+
+  // -------------------------------------------------------------------------
+  // Persist filters whenever they change (after the initial restore)
+  // -------------------------------------------------------------------------
+
   useEffect(() => {
-    if (!isInitialMount) {
+    // Don't save while we're in the middle of restoring — the incoming props
+    // at that moment reflect the old state, not the restored one.
+    if (isRestoringRef.current) return;
+
+    if (hasActiveFilters(filters)) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
+    } else {
+      // If all filters are back to defaults, wipe the entry so a fresh visit
+      // stays clean.
+      localStorage.removeItem(STORAGE_KEY);
     }
-  }, [filters, isInitialMount]);
+  }, [filters, STORAGE_KEY]);
 
-  const breadcrumbs = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Keuangan', href: '/reimbursements' },
-  ];
+  // -------------------------------------------------------------------------
+  // Navigation helper
+  // -------------------------------------------------------------------------
 
-  const navigate = (params: Record<string, string | number | undefined>) => {
-    const query: Record<string, string> = {};
+  const navigate = useCallback(
+    (params: Partial<Filters> & { page?: number }) => {
+      const { page, ...rest } = params;
 
-    const merged = { ...filters, ...params };
+      // Merge with current server-side filters so partial updates work.
+      const merged: Filters = { ...filters, ...rest };
+      const query = filtersToQuery(merged, page);
 
-    if (merged.type) query.type = String(merged.type);
-    if (merged.status) query.status = String(merged.status);
-    if (merged.search) query.search = String(merged.search);
-    if (merged.start_date) query.start_date = String(merged.start_date);
-    if (merged.end_date) query.end_date = String(merged.end_date);
-    if (merged.sort_by && merged.sort_by !== 'created_at') query.sort_by = String(merged.sort_by);
-    if (merged.sort_dir && merged.sort_dir !== 'desc') query.sort_dir = String(merged.sort_dir);
-    if (merged.per_page && merged.per_page !== 10) query.per_page = String(merged.per_page);
-    if (merged.division_id) query.division_id = String(merged.division_id);
-    if (params.page && Number(params.page) > 1) query.page = String(params.page);
+      router.get('/reimbursements', query, { preserveState: true, preserveScroll: true });
+    },
+    [filters],
+  );
 
-    router.get('/reimbursements', query, { preserveState: true, preserveScroll: true });
-  };
+  // -------------------------------------------------------------------------
+  // Reset: clear both URL and persisted state
+  // -------------------------------------------------------------------------
 
-  const handleSearch = () => {
-    navigate({ search: searchQuery, page: 1 });
-  };
+  const handleReset = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setSearchQuery('');
+    router.get('/reimbursements', {}, { replace: true });
+  }, [STORAGE_KEY]);
+
+  // -------------------------------------------------------------------------
+  // Other handlers
+  // -------------------------------------------------------------------------
+
+  const handleSearch = () => navigate({ search: searchQuery, page: 1 });
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
@@ -222,6 +355,10 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
     }
   };
 
+  // -------------------------------------------------------------------------
+  // Render helpers
+  // -------------------------------------------------------------------------
+
   const SortIcon = ({ column }: { column: string }) => {
     if (filters.sort_by !== column) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-40" />;
     return filters.sort_dir === 'asc'
@@ -229,14 +366,29 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
       : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
+  // -------------------------------------------------------------------------
+  // Derived values
+  // -------------------------------------------------------------------------
+
+  const breadcrumbs = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Keuangan', href: '/reimbursements' },
+  ];
+
   const activeTab = filters.type || (isHR ? 'allowance' : isPegawai ? 'atr' : 'all');
   const { data } = reimbursements;
   const { current_page, last_page, total, from, to } = reimbursements.meta;
+
+  // -------------------------------------------------------------------------
+  // JSX
+  // -------------------------------------------------------------------------
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
       <Head title="Keuangan" />
       <div className="p-6 md:p-8 space-y-6">
+
+        {/* ── Page header ──────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Keuangan</h1>
@@ -244,11 +396,17 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-            <a href={`/reimbursements/export-excel${window.location.search}`} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+            <a
+              href={`/reimbursements/export-excel${window.location.search}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto"
+            >
               <Button variant="outline" className="gap-2 w-full hover:bg-slate-100">
                 <Download className="h-4 w-4" /> Export ATR & EER
               </Button>
             </a>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="gap-2 bg-sidebar text-white hover:bg-sidebar/90 transition-transform hover:scale-105 active:scale-95 shadow-sm w-full sm:w-auto">
@@ -279,6 +437,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
           </div>
         </div>
 
+        {/* ── Main card ────────────────────────────────────────────────── */}
         <Card>
           <CardHeader className="pb-4">
             <div className="flex flex-col space-y-4">
@@ -291,8 +450,13 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                 </div>
               </div>
 
+              {/* Tabs + Search/Filter row */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <Tabs value={activeTab} onValueChange={(v) => navigate({ type: v === 'all' ? '' : v, page: 1 })} className="w-full md:w-auto">
+                <Tabs
+                  value={activeTab}
+                  onValueChange={(v) => navigate({ type: v === 'all' ? '' : v, page: 1 })}
+                  className="w-full md:w-auto"
+                >
                   <TabsList>
                     {(isSuperadmin || isFinance || isDirektur || isHead || isPegawai) && (
                       <>
@@ -301,7 +465,6 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                         <TabsTrigger value="eer">EER</TabsTrigger>
                       </>
                     )}
-
                     {(isSuperadmin || isFinance || isDirektur || isHead || isHR) && (
                       <TabsTrigger value="allowance">Allowance</TabsTrigger>
                     )}
@@ -309,6 +472,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                 </Tabs>
 
                 <div className="flex flex-1 items-center gap-2 w-full md:w-auto justify-end">
+                  {/* Search input */}
                   <div className="relative flex-1 md:w-auto min-w-[140px] max-w-[300px]">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -321,11 +485,15 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                     />
                   </div>
 
-                  {/* MOBILE: Icon Actions */}
+                  {/* ── MOBILE: icon buttons ─────────────────────────── */}
                   <div className="flex items-center gap-2 md:hidden">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className={(filters.start_date || filters.end_date) ? "bg-accent text-accent-foreground border-primary" : ""}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className={(filters.start_date || filters.end_date) ? 'bg-accent text-accent-foreground border-primary' : ''}
+                        >
                           <CalendarIcon className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -340,48 +508,72 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className={filters.status ? "bg-accent text-accent-foreground border-primary" : ""}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className={filters.status ? 'bg-accent text-accent-foreground border-primary' : ''}
+                        >
                           <ListFilter className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Filter Status</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem checked={!filters.status} onCheckedChange={() => navigate({ status: '', page: 1 })}>Semua</DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                          checked={!filters.status}
+                          onCheckedChange={() => navigate({ status: '', page: 1 })}
+                        >
+                          Semua
+                        </DropdownMenuCheckboxItem>
                         {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                          <DropdownMenuCheckboxItem key={key} checked={filters.status === key} onCheckedChange={() => navigate({ status: key, page: 1 })}>{cfg.label}</DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            key={key}
+                            checked={filters.status === key}
+                            onCheckedChange={() => navigate({ status: key, page: 1 })}
+                          >
+                            {cfg.label}
+                          </DropdownMenuCheckboxItem>
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
 
-                  {/* DESKTOP: Full Inputs */}
+                  {/* ── DESKTOP: full filter controls ───────────────── */}
                   <div className="hidden md:flex items-center gap-2">
+                    {/* Date range picker */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="outline"
                           className={cn(
-                            "justify-start text-left font-normal w-[240px] px-3 border-dashed",
-                            !filters.start_date && "text-muted-foreground",
-                            (filters.start_date || filters.end_date) && "border-solid bg-emerald-50/50 border-emerald-200 text-emerald-700"
+                            'justify-start text-left font-normal w-[240px] px-3 border-dashed',
+                            !filters.start_date && 'text-muted-foreground',
+                            (filters.start_date || filters.end_date) &&
+                            'border-solid bg-emerald-50/50 border-emerald-200 text-emerald-700',
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {filters.start_date ? (
                             filters.end_date ? (
                               <>
-                                {format(new Date(filters.start_date), "dd MMM yyyy", { locale: localeId })} -{" "}
-                                {format(new Date(filters.end_date), "dd MMM yyyy", { locale: localeId })}
+                                {format(new Date(filters.start_date), 'dd MMM yyyy', { locale: localeId })} –{' '}
+                                {format(new Date(filters.end_date), 'dd MMM yyyy', { locale: localeId })}
                               </>
                             ) : (
-                              format(new Date(filters.start_date), "dd MMM yyyy", { locale: localeId })
+                              format(new Date(filters.start_date), 'dd MMM yyyy', { locale: localeId })
                             )
                           ) : (
                             <span>Pilih Rentang Tanggal</span>
                           )}
                           {(filters.start_date || filters.end_date) && (
-                            <div className="ml-auto hover:bg-emerald-200 rounded-full p-0.5 transition-colors" role="button" onClick={(e) => { e.stopPropagation(); navigate({ start_date: '', end_date: '', page: 1 }); }}>
+                            <div
+                              className="ml-auto hover:bg-emerald-200 rounded-full p-0.5 transition-colors"
+                              role="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate({ start_date: '', end_date: '', page: 1 });
+                              }}
+                            >
                               <X className="h-3 w-3" />
                             </div>
                           )}
@@ -396,18 +588,25 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                       </DropdownMenuContent>
                     </DropdownMenu>
 
+                    {/* Division multi-select */}
                     <SearchableMultiSelect
-                      options={(divisions || []).map((div: any) => ({
+                      options={(divisions ?? []).map((div: any) => ({
                         label: `${div.division_code?.code} - ${div.name}`,
-                        value: div.id.toString()
+                        value: div.id.toString(),
                       }))}
                       value={filters.division_id ? filters.division_id.split(',') : []}
-                      onValueChange={(val: string[]) => navigate({ division_id: val.length > 0 ? val.join(',') : '', page: 1 })}
+                      onValueChange={(val: string[]) =>
+                        navigate({ division_id: val.length > 0 ? val.join(',') : '', page: 1 })
+                      }
                       placeholder="Semua Divisi"
                       className="w-40 sm:w-auto min-w-[160px]"
                     />
 
-                    <Select value={filters.status || 'all'} onValueChange={(v) => navigate({ status: v === 'all' ? '' : v, page: 1 })}>
+                    {/* Status select */}
+                    <Select
+                      value={filters.status || 'all'}
+                      onValueChange={(v) => navigate({ status: v === 'all' ? '' : v, page: 1 })}
+                    >
                       <SelectTrigger className="w-[160px]">
                         <div className="flex items-center gap-2">
                           <ListFilter className="h-3.5 w-3.5 text-muted-foreground" />
@@ -426,6 +625,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
               </div>
             </div>
           </CardHeader>
+
           <CardContent>
             {data.length > 0 ? (
               <div className="rounded-md border">
@@ -467,80 +667,109 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                   </TableHeader>
                   <TableBody>
                     {data.map((item) => {
-                      const statusCfg = STATUS_CONFIG[item.status] ?? { label: item.status, className: 'bg-gray-100 text-gray-600', icon: Clock };
+                      const statusCfg = STATUS_CONFIG[item.status] ?? {
+                        label: item.status, className: 'bg-gray-100 text-gray-600', icon: Clock,
+                      };
                       const StatusIcon = statusCfg.icon;
 
                       return (
                         <TableRow key={item.id}>
+                          {/* Type */}
                           <TableCell>
                             <div className="flex flex-col gap-1">
-                              <Badge variant="outline" className={cn("uppercase w-fit", TYPE_COLORS[item.type] || '')}>{item.type}</Badge>
+                              <Badge variant="outline" className={cn('uppercase w-fit', TYPE_COLORS[item.type] || '')}>
+                                {item.type}
+                              </Badge>
                               {item.type === 'eer' && item.eer_type && (
                                 <span className={cn(
-                                  "text-[10px] font-medium px-1.5 py-0.5 rounded-full border w-fit text-center",
-                                  item.eer_type === 'refund' ? "bg-orange-50 text-orange-600 border-orange-200" :
-                                  item.eer_type === 'reimbursement' ? "bg-blue-50 text-blue-600 border-blue-200" :
-                                  "bg-purple-50 text-purple-600 border-purple-200"
+                                  'text-[10px] font-medium px-1.5 py-0.5 rounded-full border w-fit text-center',
+                                  item.eer_type === 'refund' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                                    item.eer_type === 'reimbursement' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                      'bg-purple-50 text-purple-600 border-purple-200',
                                 )}>
                                   {item.eer_type === 'refund' ? 'Refund' :
-                                   item.eer_type === 'reimbursement' ? 'Reimbursement' :
-                                   'Balance'}
+                                    item.eer_type === 'reimbursement' ? 'Reimbursement' :
+                                      'Balance'}
                                 </span>
                               )}
                             </div>
                           </TableCell>
+
+                          {/* Code */}
                           <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
+
+                          {/* Date */}
                           <TableCell className="text-sm">
                             {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}
                           </TableCell>
+
+                          {/* Applicant */}
                           <TableCell className="text-sm">{item.user?.name ?? '-'}</TableCell>
+
+                          {/* Project code */}
                           <TableCell className="text-sm font-mono">{item.project?.code ?? '-'}</TableCell>
+
+                          {/* Initial project */}
                           <TableCell className="text-sm">{item.project?.initial_project ?? '-'}</TableCell>
+
+                          {/* Usage plan */}
                           <TableCell className="min-w-[150px] max-w-[250px] leading-relaxed">
                             <span className="whitespace-normal break-words text-sm">{item.usage_plan ?? '-'}</span>
                           </TableCell>
+
+                          {/* Amount */}
                           <TableCell className="font-medium">
                             Rp {parseFloat(item.amount).toLocaleString('id-ID')}
                           </TableCell>
+
+                          {/* Approval status */}
                           <TableCell>
                             <div className="flex flex-col gap-1.5">
-                              {item.approvals && item.approvals.length > 0 && (
+                              {item.approvals?.length > 0 && (
                                 <div className="mt-1 flex flex-col gap-1 inline-flex">
-                                  {[...item.approvals].sort((a, b) => {
-                                    const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
-                                    return (p[a.role] || 99) - (p[b.role] || 99);
-                                  }).map((approval) => (
-                                    <div key={approval.id} className="text-xs flex items-center gap-1.5">
-                                      {approval.status === 'approved' ? (
-                                        <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                                      ) : approval.status === 'revised' ? (
-                                        <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
-                                      ) : (
-                                        <XCircle className="h-3.5 w-3.5 text-red-500" />
-                                      )}
-                                      <span className={cn(
-                                        "whitespace-nowrap",
-                                        approval.status === 'approved' ? "text-green-700 font-medium" :
-                                          approval.status === 'revised' ? "text-blue-700 font-medium" :
-                                            "text-red-700 font-medium"
-                                      )}>
-                                        {approval.status === 'approved' ? 'Disetujui' :
-                                          approval.status === 'revised' ? 'Sudah Direvisi' :
-                                            'Menunggu'}{' '}
-                                        <span className="font-normal text-muted-foreground">{approval.approver?.name}</span>
-                                      </span>
-                                    </div>
-                                  ))}
+                                  {[...item.approvals]
+                                    .sort((a, b) => {
+                                      const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
+                                      return (p[a.role] ?? 99) - (p[b.role] ?? 99);
+                                    })
+                                    .map((approval) => (
+                                      <div key={approval.id} className="text-xs flex items-center gap-1.5">
+                                        {approval.status === 'approved' ? (
+                                          <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                        ) : approval.status === 'revised' ? (
+                                          <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
+                                        ) : (
+                                          <XCircle className="h-3.5 w-3.5 text-red-500" />
+                                        )}
+                                        <span className={cn(
+                                          'whitespace-nowrap',
+                                          approval.status === 'approved' ? 'text-green-700 font-medium' :
+                                            approval.status === 'revised' ? 'text-blue-700 font-medium' :
+                                              'text-red-700 font-medium',
+                                        )}>
+                                          {approval.status === 'approved' ? 'Disetujui' :
+                                            approval.status === 'revised' ? 'Sudah Direvisi' :
+                                              'Menunggu'}{' '}
+                                          <span className="font-normal text-muted-foreground">
+                                            {approval.approver?.name}
+                                          </span>
+                                        </span>
+                                      </div>
+                                    ))}
                                 </div>
                               )}
                             </div>
                           </TableCell>
+
+                          {/* Overall status badge */}
                           <TableCell className="font-medium">
                             <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
                               <StatusIcon className="h-3 w-3" />
                               {statusCfg.label}
                             </Badge>
                           </TableCell>
+
+                          {/* Actions */}
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -572,7 +801,10 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                 {(isSuperadmin || isFinance) && (
                                   <>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer" onClick={() => handleDelete(item.id)}>
+                                    <DropdownMenuItem
+                                      className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                                      onClick={() => handleDelete(item.id)}
+                                    >
                                       <Trash2 className="mr-2 h-4 w-4" /> Hapus
                                     </DropdownMenuItem>
                                   </>
@@ -592,14 +824,15 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                   <Search className="h-6 w-6 text-gray-400" />
                 </div>
                 <p>Tidak ada data pengajuan yang sesuai dengan filter.</p>
-                <Button variant="link" onClick={() => router.get('/reimbursements')} className="text-sidebar">
+                {/* Use handleReset so localStorage is also cleared */}
+                <Button variant="link" onClick={handleReset} className="text-sidebar">
                   Reset Filter
                 </Button>
               </div>
             )}
           </CardContent>
 
-          {/* Pagination */}
+          {/* ── Pagination ───────────────────────────────────────────── */}
           {total > 0 && (
             <div className="flex items-center justify-between px-6 py-4">
               <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
@@ -648,111 +881,6 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
           )}
         </Card>
       </div>
-
-      {/* Approve Dialog */}
-      {/* <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-700">
-              <CheckCircle className="h-5 w-5" />
-              Konfirmasi Approve
-            </DialogTitle>
-            <DialogDescription>
-              {selectedItem && (
-                <>
-                  Apakah Anda yakin ingin menyetujui pengajuan <strong>{selectedItem.type.toUpperCase()}</strong> dengan kode <strong className="font-mono">{selectedItem.code}</strong> dari <strong>{selectedItem.user?.name}</strong>?
-                  <br /><br />
-                  Setelah disetujui, pengajuan akan diproses lebih lanjut.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApproveDialogOpen(false)} disabled={actionLoading}>Batal</Button>
-            <Button
-              className="bg-green-600 hover:bg-green-700"
-              disabled={actionLoading}
-              onClick={async () => {
-                if (selectedItem) {
-                  setActionLoading(true);
-                  try {
-                    await axios.patch(`/api/v1/reimbursements/${selectedItem.id}/status`, { action: 'approved' });
-                    setApproveDialogOpen(false);
-                    setSelectedItem(null);
-                    router.reload({ only: ['reimbursements'] });
-                  } catch {
-                    alert('Gagal menyetujui pengajuan.');
-                  } finally {
-                    setActionLoading(false);
-                  }
-                }
-              }}
-            >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              {actionLoading ? 'Memproses...' : 'Ya, Approve'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
-
-      {/* Reject Dialog */}
-      {/* <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-700">
-              <XCircle className="h-5 w-5" />
-              Konfirmasi Reject
-            </DialogTitle>
-            <DialogDescription>
-              {selectedItem && (
-                <>
-                  Apakah Anda yakin ingin menolak pengajuan <strong>{selectedItem.type.toUpperCase()}</strong> dengan kode <strong className="font-mono">{selectedItem.code}</strong> dari <strong>{selectedItem.user?.name}</strong>?
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 py-4">
-            <Label htmlFor="rejection_reason_index">Alasan Penolakan <span className="text-red-500">*</span></Label>
-            <Textarea
-              id="rejection_reason_index"
-              placeholder="Jelaskan alasan penolakan pengajuan ini..."
-              className="min-h-[100px] resize-none"
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">Alasan penolakan akan dikirim ke pemohon</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setRejectDialogOpen(false); setRejectionReason(''); }} disabled={actionLoading}>Batal</Button>
-            <Button
-              className="bg-red-600 hover:bg-red-700"
-              disabled={!rejectionReason.trim() || actionLoading}
-              onClick={async () => {
-                if (selectedItem && rejectionReason.trim()) {
-                  setActionLoading(true);
-                  try {
-                    await axios.patch(`/api/v1/reimbursements/${selectedItem.id}/status`, {
-                      action: 'rejected',
-                      notes: rejectionReason,
-                    });
-                    setRejectDialogOpen(false);
-                    setSelectedItem(null);
-                    setRejectionReason('');
-                    router.reload({ only: ['reimbursements'] });
-                  } catch {
-                    alert('Gagal menolak pengajuan.');
-                  } finally {
-                    setActionLoading(false);
-                  }
-                }
-              }}
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              {actionLoading ? 'Memproses...' : 'Ya, Reject'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
     </AppSidebarLayout>
   );
 }
