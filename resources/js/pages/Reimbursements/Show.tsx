@@ -1696,11 +1696,7 @@ export default function Show() {
                                       <div className="md:col-span-5 lg:col-span-4 space-y-1">
                                         <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">JENIS BIAYA <span className="text-red-500">*</span></Label>
                                         <SearchableSelect
-                                          options={[
-                                            { value: 'Operational', label: 'Operational' },
-                                            { value: 'Management', label: 'Management' },
-                                            { value: 'Allowance', label: 'Allowance' },
-                                          ]}
+                                          options={expenseTypes.map(t => ({ value: t.value, label: t.label }))}
                                           value={item.expense_type}
                                           onValueChange={(v) => updateItemEerRevision(item.id, 'expense_type', v)}
                                           placeholder="Jenis..."
