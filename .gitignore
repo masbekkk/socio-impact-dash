@@ -27,6 +27,7 @@ yarn-error.log
 /.vscode
 /.zed
 /tmp/
+.agent/
 /config/database.php
 composer-latest.phar 
 composer.json
