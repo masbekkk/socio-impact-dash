@@ -45,6 +45,7 @@ final readonly class EerSheet implements FromCollection, ShouldAutoSize, WithHea
             'Nominal Refund/Reimbursement',
             'Total Nominal EER',
             'Nominal Ditransfer',
+            'Bukti Transfer Settlement',
             // Item columns
             'Nama Item',
             'Qty',
@@ -52,6 +53,7 @@ final readonly class EerSheet implements FromCollection, ShouldAutoSize, WithHea
             'Total Item',
             'Expense Type',
             'Catatan Item',
+            'Link Kwitansi',
             // Bank
             'Bank',
             'No. Rekening',
@@ -80,7 +82,7 @@ final readonly class EerSheet implements FromCollection, ShouldAutoSize, WithHea
             $financeApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Finance);
             $direkturApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Direktur);
 
-            $items = $r->items->where('parent_item_id', null);
+            $items = $r->items;
 
             if ($items->isEmpty()) {
                 // One row for the EER with no items
@@ -129,6 +131,7 @@ final readonly class EerSheet implements FromCollection, ShouldAutoSize, WithHea
             $r->refund_reimburse_amount !== null ? (float) $r->refund_reimburse_amount : '-',
             (float) $r->amount,
             (float) ($r->transferred_amount ?? 0),
+            $r->transfer_proof_path ? asset('storage/' . $r->transfer_proof_path) : '-',
             // Item
             $item?->item_name ?? '-',
             $item?->quantity ?? '-',
@@ -136,6 +139,7 @@ final readonly class EerSheet implements FromCollection, ShouldAutoSize, WithHea
             $item instanceof ReimbursementItem ? (float) $item->amount : '-',
             $item?->expense_type?->value ?? '-',
             $item?->notes ?? '-',
+            $item?->receipt_path ? asset('storage/' . $item->receipt_path) : '-',
             // Bank
             $r->bank_name ?? '-',
             $r->bank_account ?? '-',
