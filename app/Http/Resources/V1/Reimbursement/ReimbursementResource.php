@@ -75,10 +75,11 @@ final class ReimbursementResource extends JsonResource
             'bank_account' => $this->bank_account,
             'account_holder' => $this->account_holder,
             'bank_branch' => $this->bank_branch,
+            'notes' => $this->usage_plan,
             'usage_plan' => match ($this->type) {
                 ReimbursementType::ALLOWANCE => $this->usage_plan,
-                ReimbursementType::ATR, ReimbursementType::EER => $this->atrBudgetSelecteds->count() > 0 
-                    ? $this->atrBudgetSelecteds->pluck('notes')->filter()->implode(', ') 
+                ReimbursementType::ATR, ReimbursementType::EER => $this->atrBudgetSelecteds->count() > 0
+                    ? $this->atrBudgetSelecteds->pluck('notes')->filter()->implode(', ')
                     : $this->usage_plan,
                 default => $this->usage_plan,
             },

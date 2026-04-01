@@ -110,6 +110,7 @@ final class ReimbursementService
 
         if (is_numeric($identifier)) {
             $identifier = (int) $identifier;
+
             return $query->where('id', $identifier)->first();
         }
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
@@ -196,6 +196,7 @@ interface ReimbursementDetail {
   start_time: string | null;
   end_time: string | null;
   refund_reimburse_amount?: number;
+  notes: string | null;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -251,6 +252,21 @@ export default function Show() {
   const userId = auth?.user?.id || 0;
 
   const [data, setData] = useState<ReimbursementDetail | null>(null);
+
+  const totalEerSpent = useMemo(() => {
+    if (!data || data.type !== 'eer') return 0;
+    return (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
+  }, [data]);
+
+  const totalAtrAmount = useMemo(() => {
+    if (!data || data.type !== 'eer') return 0;
+    return data.atr_items?.total_amount || 0;
+  }, [data]);
+
+  const eerDifference = useMemo(() => {
+    return Math.abs(totalAtrAmount - totalEerSpent);
+  }, [totalAtrAmount, totalEerSpent]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -310,6 +326,7 @@ export default function Show() {
     refund_reimburse_amount: number;
     selected_activities: SelectedActivityRevision[];
     eer_items: EerItemRevision[];
+    notes: string;
   }>({
     project_id: '',
     replacement_pic_id: '',
@@ -325,6 +342,7 @@ export default function Show() {
     refund_reimburse_amount: 0,
     selected_activities: [],
     eer_items: [],
+    notes: '',
   });
   const [resubmitLoading, setResubmitLoading] = useState(false);
 
@@ -689,7 +707,7 @@ export default function Show() {
 
     setRevisionForm({
       project_id: data.project?.id?.toString() ?? '',
-      replacement_pic_id: '', // Unfortunately we don't have this in ReimbursementDetail right now, so we start empty.
+      replacement_pic_id: '',
       urgency: data.urgency ?? 'normal',
       usage_plan: data.usage_plan ?? '',
       start_date: data.start_date ?? '',
@@ -702,6 +720,7 @@ export default function Show() {
       refund_reimburse_amount: data.refund_reimburse_amount ?? 0,
       selected_activities,
       eer_items,
+      notes: data.notes ?? '',
     });
     setRevisionEditing(true);
   };
@@ -851,7 +870,7 @@ export default function Show() {
         ...(revisionForm.replacement_pic_id && { replacement_pic_id: revisionForm.replacement_pic_id }),
         ...(revisionForm.approver_head_id && { approver_head_id: revisionForm.approver_head_id }),
         ...(revisionForm.urgency && { urgency: revisionForm.urgency }),
-        usage_plan: revisionForm.usage_plan,
+        usage_plan: revisionForm.notes,
         start_date: revisionForm.start_date || null,
         end_date: revisionForm.end_date || null,
         revision_note: revisionForm.revision_note || 'Pengajuan telah direvisi dan diajukan kembali.',
@@ -952,11 +971,17 @@ export default function Show() {
 
   const addActivityRevision = (budgetDetailId: number) => {
     if (revisionForm.selected_activities.find(a => a.budget_detail_id === budgetDetailId)) return;
+
+    // Find the budget detail to get its name
+    const activity = data?.project?.budget_details?.find(bd => bd.id === budgetDetailId);
+    if (!activity) return;
+
     setRevisionForm(prev => ({
       ...prev,
       selected_activities: [...prev.selected_activities, {
         budget_detail_id: budgetDetailId,
         expanded: true,
+        activity_name: activity.item_name,
         detail_aktivitas: '',
         children: [{
           id: crypto.randomUUID(),
@@ -966,7 +991,7 @@ export default function Show() {
           amount: 0,
           expense_type: '',
           receipt: null,
-          notes: ''
+          notes: '',
         }]
       }]
     }));
@@ -1477,7 +1502,9 @@ export default function Show() {
                       </label>
                       <div className="flex items-baseline gap-3">
                         <div className="font-bold text-xl text-green-700 font-mono">
-                          Rp {data.amount.toLocaleString('id-ID')}
+                          Rp {(data.type === 'eer' && data.atr_items)
+                            ? eerDifference.toLocaleString('id-ID')
+                            : (data.amount || 0).toLocaleString('id-ID')}
                         </div>
                         {data.transferred_amount != null && data.transferred_amount > 0 && (
                           <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded text-blue-700">
@@ -1621,8 +1648,8 @@ export default function Show() {
                           <Label className="text-xs font-medium">Keterangan / Rencana Penggunaan</Label>
                           <Textarea
                             className="min-h-[80px] text-sm resize-none"
-                            value={revisionForm.usage_plan}
-                            onChange={(e) => setRevisionForm(p => ({ ...p, usage_plan: e.target.value }))}
+                            value={revisionForm.notes}
+                            onChange={(e) => setRevisionForm(p => ({ ...p, notes: e.target.value }))}
                             placeholder="Update rencana penggunaan..."
                           />
                         </div>
@@ -2086,87 +2113,8 @@ export default function Show() {
 
                   return (
                     <div className="space-y-6">
-                      {/* EER Claimed Items Table */}
-                      {eerItems.length > 0 && (
-                        <div className="space-y-3">
-                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500" /> Item Klaim EER (Aktual)
-                          </label>
-                          <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b bg-slate-50/50">
-                                    <th className="text-left p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Nama Item</th>
-                                    <th className="text-left p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Kegiatan</th>
-                                    <th className="text-right p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Nominal Klaim</th>
-                                    <th className="text-left p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Jenis</th>
-                                    <th className="text-center p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider w-24">Kwitansi</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {eerItems.map(item => (
-                                    <tr key={item.id} className="border-b last:border-0 hover:bg-slate-50/50 transition-colors">
-                                      <td className="p-4 font-semibold text-slate-900">{item.item_name}</td>
-                                      <td className="p-4 text-slate-500 font-medium">{item.activity_name}</td>
-                                      <td className="p-4 text-right font-mono font-bold text-blue-700">Rp {item.amount.toLocaleString('id-ID')}</td>
-                                      <td className="p-4">
-                                        {item.expense_type && (
-                                          <Badge variant="secondary" className="text-[10px] h-5 bg-blue-50 text-blue-700 border-blue-100">{item.expense_type}</Badge>
-                                        )}
-                                      </td>
-                                      <td className="p-4 text-center">
-                                        <div className="flex items-center justify-center gap-2">
-                                          {item.receipt_path ? (
-                                            <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
-                                              <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] gap-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200">
-                                                <Download className="h-3 w-3" /> Lihat
-                                              </Button>
-                                            </a>
-                                          ) : (
-                                            <span className="text-[10px] text-muted-foreground italic">—</span>
-                                          )}
-
-                                          {isFinanceOrAdmin && (
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
-                                              disabled={actionLoading && uploadingItemId === item.id}
-                                              onClick={() => {
-                                                setUploadingItemId(item.id);
-                                                fileInputRef.current?.click();
-                                              }}
-                                            >
-                                              {actionLoading && uploadingItemId === item.id ? (
-                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                              ) : (
-                                                <Upload className="h-3 w-3" />
-                                              )}
-                                            </Button>
-                                          )}
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                                <tfoot>
-                                  <tr className="bg-slate-900 text-white">
-                                    <td colSpan={2} className="p-4 text-right font-bold text-[10px] uppercase tracking-widest text-slate-400">Total Klaim EER</td>
-                                    <td className="p-4 text-right font-mono font-black text-white text-base">
-                                      Rp {eerItems.reduce((s, i) => s + i.amount, 0).toLocaleString('id-ID')}
-                                    </td>
-                                    <td colSpan={2}></td>
-                                  </tr>
-                                </tfoot>
-                              </table>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
                       {/* EER Summary (Refund/Reimburse Calculation) */}
-                      {data.type === 'eer' && data.atr_items && (
+                      {data.atr_items && (
                         <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
                           <div className="flex items-center gap-3 mb-4">
                             <div className="h-8 w-8 rounded-lg bg-slate-900 flex items-center justify-center">
@@ -2178,20 +2126,20 @@ export default function Show() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-1.5">
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Total Pengeluaran (EER)</span>
-                              <div className="flex items-baseline gap-1 text-slate-900 font-mono">
-                                <span className="text-xs font-semibold">Rp</span>
-                                <span className="text-lg font-black">{eerItems.reduce((s: number, i: any) => s + i.amount, 0).toLocaleString('id-ID')}</span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
+                            <div className="space-y-1.5 pb-2 border-b md:border-b-0 md:border-r md:pb-0 border-slate-200">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Total Dana ATR</span>
+                              <div className="flex items-baseline gap-1 justify-center md:justify-start text-slate-900 font-mono">
+                                <span className="text-xs font-semibold text-slate-400">Rp</span>
+                                <span className="text-lg font-black">{totalAtrAmount.toLocaleString('id-ID')}</span>
                               </div>
                             </div>
 
-                            <div className="space-y-1.5 pb-2 border-b md:border-b-0 md:pb-0">
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Total Dana ATR</span>
-                              <div className="flex items-baseline gap-1 text-slate-600 font-mono">
-                                <span className="text-xs font-semibold">Rp</span>
-                                <span className="text-lg font-bold">{data.atr_items.total_amount.toLocaleString('id-ID')}</span>
+                            <div className="space-y-1.5 pb-2 border-b md:border-b-0 md:border-r md:pb-0 border-slate-200">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Total Pengeluaran (Actual)</span>
+                              <div className="flex items-baseline gap-1 justify-center md:justify-start text-slate-600 font-mono">
+                                <span className="text-xs font-semibold text-slate-400">Rp</span>
+                                <span className="text-lg font-bold">{totalEerSpent.toLocaleString('id-ID')}</span>
                               </div>
                             </div>
 
@@ -2203,17 +2151,17 @@ export default function Show() {
                                 "text-[10px] font-bold uppercase tracking-tight",
                                 data.eer_type === 'refund' ? "text-emerald-700" : (data.eer_type === 'balance' ? "text-slate-600" : "text-blue-700")
                               )}>
-                                {data.eer_type === 'refund' ? 'Sisa Dana (Refund)' : (data.eer_type === 'balance' ? 'Penyelesaian' : 'Kekurangan Dana (Reimburse)')}
+                                {data.eer_type === 'refund' ? 'Total Refund (ATR - EER)' : (data.eer_type === 'balance' ? 'Penyelesaian' : 'Total Reimburse (EER - ATR)')}
                               </span>
                               <div className={cn(
-                                "flex items-baseline gap-1 font-mono",
+                                "flex items-baseline gap-1 justify-center md:justify-start font-mono",
                                 data.eer_type === 'refund' ? "text-emerald-900" : (data.eer_type === 'balance' ? "text-slate-900" : "text-blue-900")
                               )}>
                                 <span className="text-xs font-semibold">Rp</span>
                                 <span className={cn(
                                   "text-xl font-black",
                                   data.eer_type === 'balance' && "text-slate-500"
-                                )}>{Math.abs(data.amount || 0).toLocaleString('id-ID')}</span>
+                                )}>{eerDifference.toLocaleString('id-ID')}</span>
                               </div>
                               {data.eer_type === 'balance' && (
                                 <p className="text-[9px] text-slate-500 font-medium">EER Balance</p>
@@ -2222,6 +2170,84 @@ export default function Show() {
                           </div>
                         </div>
                       )}
+
+                      {/* Item Details Table (Original logic moved down) */}
+                      <div className="space-y-3">
+                        <label className="text-xs font-medium text-muted-foreground uppercase">Item Klaim EER</label>
+                        <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b bg-muted/30">
+                                  <th className="text-left p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Aktivitas / Nama Item</th>
+                                  <th className="text-center p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-16">Qty</th>
+                                  <th className="text-right p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Harga</th>
+                                  <th className="text-right p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Total</th>
+                                  <th className="text-left p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-32">Kwitansi</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {eerItems.map(item => (
+                                  <tr key={item.id} className="border-b last:border-0 hover:bg-muted/10 transition-colors">
+                                    <td className="p-4">
+                                      <div className="space-y-1">
+                                        <p className="font-bold text-slate-900 leading-tight">{item.item_name}</p>
+                                        <p className="text-[10px] text-muted-foreground font-medium uppercase">{item.activity_name}</p>
+                                        {item.notes && <p className="text-[10px] text-muted-foreground italic truncate max-w-xs">{item.notes}</p>}
+                                      </div>
+                                    </td>
+                                    <td className="p-4 text-center text-slate-600 font-medium">{item.quantity}</td>
+                                    <td className="p-4 text-right font-mono text-slate-500">Rp {item.unit_price.toLocaleString('id-ID')}</td>
+                                    <td className="p-4 text-right font-mono font-bold text-slate-900">Rp {item.amount.toLocaleString('id-ID')}</td>
+                                    <td className="p-4">
+                                      <div className="flex items-center gap-2">
+                                        {item.receipt_path ? (
+                                          <a
+                                            href={`/storage/${item.receipt_path}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-bold hover:bg-emerald-100 transition-colors border border-emerald-100"
+                                          >
+                                            <Download className="h-3 w-3" /> LIHAT
+                                          </a>
+                                        ) : (
+                                          <span className="text-[10px] text-slate-400 italic">No receipt</span>
+                                        )}
+                                        {hasRole(['finance', 'superadmin']) && (
+                                          <Label
+                                            htmlFor={`upload-receipt-${item.id}`}
+                                            className="cursor-pointer inline-flex items-center justify-center p-1 hover:bg-slate-100 rounded-full transition-colors"
+                                          >
+                                            <Upload className="h-3 w-3 text-slate-400" />
+                                            <input
+                                              id={`upload-receipt-${item.id}`}
+                                              type="file"
+                                              className="hidden"
+                                              onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleItemReceiptUpload(item.id, file);
+                                              }}
+                                            />
+                                          </Label>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot>
+                                <tr className="bg-slate-900 text-white">
+                                  <td colSpan={2} className="p-4 text-right font-bold text-[10px] uppercase tracking-widest text-slate-400">Total Klaim EER</td>
+                                  <td className="p-4 text-right font-mono font-black text-white text-base">
+                                    Rp {totalEerSpent.toLocaleString('id-ID')}
+                                  </td>
+                                  <td colSpan={2}></td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
 
                       {/* ATR Reference Context */}
                       {atrItems.length > 0 && (
@@ -2390,11 +2416,11 @@ export default function Show() {
                 )}
 
                 {/* Usage Plan */}
-                {data.usage_plan && (
+                {data.notes && (
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-muted-foreground uppercase">Keterangan / Rencana Penggunaan</label>
                     <div className="p-4 bg-muted/40 rounded-lg text-sm leading-relaxed border border-muted/60">
-                      {data.usage_plan}
+                      {data.notes}
                     </div>
                   </div>
                 )}
