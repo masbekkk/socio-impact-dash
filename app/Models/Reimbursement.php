@@ -84,4 +84,13 @@ final class Reimbursement extends Model
     {
         return $this->hasMany(ReimbursementItem::class);
     }
+
+    public function getRefundReimburseAmountAttribute(): ?float
+    {
+        if ($this->type !== ReimbursementType::EER || !$this->atr_id) {
+            return null;
+        }
+
+        return abs(($this->atr?->amount ?? 0) - (float) $this->amount);
+    }
 }
