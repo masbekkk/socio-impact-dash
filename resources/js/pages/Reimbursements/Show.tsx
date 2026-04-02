@@ -1052,6 +1052,13 @@ export default function Show() {
   const StatusIcon = statusCfg.icon;
   const canApproveReject = data.can_approve;
 
+  const formatTime = (time?: string | null) => {
+    if (!time) return null;
+
+    const [hour, minute] = time.split(":");
+    return `${hour}:${minute}`;
+  };
+
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
       <Head title={`Detail ${data.type.toUpperCase()} - ${data.code}`} />
@@ -1527,16 +1534,16 @@ export default function Show() {
                       "flex items-center gap-2 font-medium text-sm",
                       data.type === 'allowance' ? "text-emerald-800" : "text-blue-800"
                     )}>
-                      <Calendar className="h-4 w-4" /> 
-                      {data.type === 'atr' ? 'Tanggal Penggunaan Dana' : 
-                       data.type === 'allowance' ? 'Informasi Keberangkatan' : 'Jadwal Penggunaan Dana'}
+                      <Calendar className="h-4 w-4" />
+                      {data.type === 'atr' ? 'Tanggal Penggunaan Dana' :
+                        data.type === 'allowance' ? 'Informasi Keberangkatan' : 'Jadwal Penggunaan Dana'}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       {data.start_date && (
                         <div>
                           <span className="text-muted-foreground text-xs block">
-                            {data.type === 'atr' ? 'Tanggal Penggunaan' : 
-                             data.type === 'allowance' ? 'Tanggal Berangkat' : 'Tanggal Mulai'}
+                            {data.type === 'atr' ? 'Tanggal Penggunaan' :
+                              data.type === 'allowance' ? 'Tanggal Berangkat' : 'Tanggal Mulai'}
                           </span>
                           <span className="font-medium">
                             {format(new Date(data.start_date), 'dd MMMM yyyy', { locale: localeId })}
@@ -2404,32 +2411,48 @@ export default function Show() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-                      {/* Connector Line between dates */}
+                      {/* Connector Line */}
                       <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-px bg-amber-200 z-0" />
 
+                      {/* START */}
                       <div className="bg-white p-4 rounded-lg border border-amber-100 shadow-sm relative z-10 flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Mulai Perjalanan</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                          Mulai Perjalanan
+                        </span>
+
                         <div className="flex items-baseline gap-2">
                           <span className="text-xl font-bold text-slate-800">
-                            {format(new Date(data.start_date!), 'dd MMMM yyyy', { locale: localeId })}
+                            {data.start_date &&
+                              format(new Date(data.start_date), "dd MMMM yyyy", {
+                                locale: localeId,
+                              })}
                           </span>
-                          {data.start_time && (
+
+                          {formatTime(data.start_time) && (
                             <span className="text-xs font-mono font-medium px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
-                              {data.start_time}
+                              {formatTime(data.start_time)}
                             </span>
                           )}
                         </div>
                       </div>
 
+                      {/* END */}
                       <div className="bg-white p-4 rounded-lg border border-amber-100 shadow-sm relative z-10 flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Selesai Perjalanan</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                          Selesai Perjalanan
+                        </span>
+
                         <div className="flex items-baseline gap-2">
                           <span className="text-xl font-bold text-slate-800">
-                            {format(new Date(data.end_date!), 'dd MMMM yyyy', { locale: localeId })}
+                            {data.end_date &&
+                              format(new Date(data.end_date), "dd MMMM yyyy", {
+                                locale: localeId,
+                              })}
                           </span>
-                          {data.end_time && (
+
+                          {formatTime(data.end_time) && (
                             <span className="text-xs font-mono font-medium px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
-                              {data.end_time}
+                              {formatTime(data.end_time)}
                             </span>
                           )}
                         </div>
