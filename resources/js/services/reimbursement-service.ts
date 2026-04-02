@@ -35,7 +35,9 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     if (payload.approver_direktur_id) fd.append('approver_direktur_id', payload.approver_direktur_id);
     if (payload.approver_hr_id) fd.append('approver_hr_id', payload.approver_hr_id);
     if (payload.start_date) fd.append('start_date', payload.start_date);
+    if (payload.start_time) fd.append('start_time', payload.start_time);
     if (payload.end_date) fd.append('end_date', payload.end_date);
+    if (payload.end_time) fd.append('end_time', payload.end_time);
     if (payload.replacement_pic_id) fd.append('replacement_pic_id', payload.replacement_pic_id);
     if (payload.transfer_proof) fd.append('transfer_proof', payload.transfer_proof);
     if (payload.status) fd.append('status', payload.status);

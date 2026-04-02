@@ -259,7 +259,9 @@ final class ReimbursementController extends Controller
                 'usage_plan' => ['nullable', 'string'],
                 'amount' => ['nullable', 'numeric', 'min:0'],
                 'start_date' => ['nullable', 'date'],
+                'start_time' => ['nullable', 'string', 'max:10'],
                 'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+                'end_time' => ['nullable', 'string', 'max:10'],
                 'revision_note' => ['nullable', 'string'],
                 'items' => ['nullable', 'array'],
                 'selected_budget_details' => ['nullable', 'array'],
@@ -298,8 +300,14 @@ final class ReimbursementController extends Controller
                 if (isset($validated['start_date'])) {
                     $updateData['start_date'] = $validated['start_date'];
                 }
+                if (isset($validated['start_time'])) {
+                    $updateData['start_time'] = $validated['start_time'];
+                }
                 if (isset($validated['end_date'])) {
                     $updateData['end_date'] = $validated['end_date'];
+                }
+                if (isset($validated['end_time'])) {
+                    $updateData['end_time'] = $validated['end_time'];
                 }
                 if (isset($validated['eer_type'])) {
                     $updateData['eer_type'] = $validated['eer_type'];
