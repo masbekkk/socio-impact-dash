@@ -1518,27 +1518,50 @@ export default function Show() {
                 </div>
 
                 {/* Usage Date */}
-                {(data.start_date || data.end_date) && data.type !== 'allowance' && (
-                  <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 space-y-2">
-                    <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
-                      <Calendar className="h-4 w-4" /> {data.type === 'atr' ? 'Tanggal Penggunaan Dana' : 'Jadwal Penggunaan Dana'}
+                {(data.start_date || data.end_date) && (
+                  <div className={cn(
+                    "p-4 rounded-lg border space-y-2",
+                    data.type === 'allowance' ? "bg-emerald-50/50 border-emerald-100" : "bg-blue-50/50 border-blue-100"
+                  )}>
+                    <div className={cn(
+                      "flex items-center gap-2 font-medium text-sm",
+                      data.type === 'allowance' ? "text-emerald-800" : "text-blue-800"
+                    )}>
+                      <Calendar className="h-4 w-4" /> 
+                      {data.type === 'atr' ? 'Tanggal Penggunaan Dana' : 
+                       data.type === 'allowance' ? 'Informasi Keberangkatan' : 'Jadwal Penggunaan Dana'}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       {data.start_date && (
                         <div>
-                          <span className="text-muted-foreground text-xs block">{data.type === 'atr' ? 'Tanggal Penggunaan' : 'Tanggal Mulai'}</span>
+                          <span className="text-muted-foreground text-xs block">
+                            {data.type === 'atr' ? 'Tanggal Penggunaan' : 
+                             data.type === 'allowance' ? 'Tanggal Berangkat' : 'Tanggal Mulai'}
+                          </span>
                           <span className="font-medium">
                             {format(new Date(data.start_date), 'dd MMMM yyyy', { locale: localeId })}
-                            {data.start_time && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">{data.start_time}</span>}
+                            {data.start_time && (
+                              <span className={cn(
+                                "ml-2 text-xs px-1.5 py-0.5 rounded font-mono",
+                                data.type === 'allowance' ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                              )}>{data.start_time}</span>
+                            )}
                           </span>
                         </div>
                       )}
                       {data.end_date && data.type !== 'atr' && (
                         <div>
-                          <span className="text-muted-foreground text-xs block">Tanggal Selesai</span>
+                          <span className="text-muted-foreground text-xs block">
+                            {data.type === 'allowance' ? 'Tanggal Pulang' : 'Tanggal Selesai'}
+                          </span>
                           <span className="font-medium">
                             {format(new Date(data.end_date), 'dd MMMM yyyy', { locale: localeId })}
-                            {data.end_time && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">{data.end_time}</span>}
+                            {data.end_time && (
+                              <span className={cn(
+                                "ml-2 text-xs px-1.5 py-0.5 rounded font-mono",
+                                data.type === 'allowance' ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                              )}>{data.end_time}</span>
+                            )}
                           </span>
                         </div>
                       )}
