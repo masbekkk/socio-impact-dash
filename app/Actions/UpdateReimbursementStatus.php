@@ -77,6 +77,35 @@ final readonly class UpdateReimbursementStatus
                         'updated_by' => $approverId, // Track who actually took the action
                     ]);
             } else {
+                // Dual Role Logic for ATR/EER: If Finance is also Head, clear both.
+                if (in_array($reimbursement->type, [\App\Enums\ReimbursementType::ATR, \App\Enums\ReimbursementType::EER]) && 
+                    in_array($action, [ApprovalStatus::Approved->value, 'request_fund'])) {
+                    
+                    $user = \App\Models\User::find($approverId);
+                    if ($user && $user->hasRole('finance') && $user->hasRole('head')) {
+                        $isAssignedHead = ($user->id === $reimbursement->project?->head_id) || 
+                                         ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                                            ->where('role', 'head')
+                                            ->exists();
+
+                        if ($isAssignedHead) {
+                            // Automatically approve Head record if pending
+                            ReimbursementApproval::query()->where('reimbursement_id', $reimbursement->id)
+                                ->where('role', 'head')
+                                ->where('status', ApprovalStatus::Pending->value)
+                                ->update([
+                                    'status' => ApprovalStatus::Approved->value,
+                                    'approved_at' => now(),
+                                    'updated_by' => $approverId,
+                                    'notes' => ($notes ? $notes . ' ' : '') . '(Auto-approved by Finance with Dual Role)',
+                                ]);
+                            
+                            // Ensure we act as Finance to reach finance_approved status
+                            $role = 'finance';
+                        }
+                    }
+                }
+
                 $approval = ReimbursementApproval::query()->where('reimbursement_id', $reimbursement->id)
                     ->where('role', $role)
                     ->first();
