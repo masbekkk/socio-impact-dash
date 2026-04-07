@@ -125,6 +125,7 @@ interface DashboardProps extends SharedData {
     direktur_leaves: ApprovalItem[];
     hr_leaves: ApprovalItem[];
     hr_allowances: ApprovalItem[];
+    finance_request_funds: ApprovalItem[];
   };
 }
 
@@ -144,15 +145,16 @@ export default function Dashboard({
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalData, setModalData] = useState<{ title: string; items: any[]; type: 'reimbursement' | 'leave', role: string }>({
+  const [modalData, setModalData] = useState<{ title: string; items: any[]; type: 'reimbursement' | 'leave', role: string, actionType?: 'approve' | 'request_fund' }>({
     title: '',
     items: [],
     type: 'reimbursement',
-    role: ''
+    role: '',
+    actionType: 'approve'
   });
 
-  const openApprovalModal = (title: string, items: any[], type: 'reimbursement' | 'leave', role: string) => {
-    setModalData({ title, items, type, role });
+  const openApprovalModal = (title: string, items: any[], type: 'reimbursement' | 'leave', role: string, actionType: 'approve' | 'request_fund' = 'approve') => {
+    setModalData({ title, items, type, role, actionType });
     setModalOpen(true);
   };
 
@@ -325,6 +327,13 @@ export default function Dashboard({
                     color="blue"
                     onClick={() => openApprovalModal("Allowance Menunggu Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'allowance'), 'reimbursement', 'finance')}
                     icon={<Users className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard
+                    title="Request Fund Pending (Finance)"
+                    count={approvalItems.finance_request_funds.length}
+                    color="orange"
+                    onClick={() => openApprovalModal("Request Fund Pending (Finance)", approvalItems.finance_request_funds, 'reimbursement', 'finance', 'request_fund')}
+                    icon={<Banknote className="h-4 w-4" />}
                   />
                 </>
               )}
@@ -503,6 +512,7 @@ export default function Dashboard({
         items={modalData.items}
         type={modalData.type}
         role={modalData.role}
+        actionType={modalData.actionType}
       />
     </AppSidebarLayout>
   );

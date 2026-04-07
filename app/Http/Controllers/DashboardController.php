@@ -48,6 +48,7 @@ final class DashboardController extends Controller
             'direktur_leaves' => [],
             'hr_leaves' => [],
             'hr_allowances' => [],
+            'finance_request_funds' => [],
         ];
 
         // Head Logic
@@ -82,6 +83,13 @@ final class DashboardController extends Controller
             $approvalItems['finance_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
                 \App\Models\Reimbursement::query()
                     ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
+                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
+                    ->get()
+            )->resolve();
+
+            $approvalItems['finance_request_funds'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
+                \App\Models\Reimbursement::query()
+                    ->where('status', \App\Enums\ReimbursementStatus::Approved)
                     ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
                     ->get()
             )->resolve();

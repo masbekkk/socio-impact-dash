@@ -487,6 +487,20 @@ final readonly class ReimbursementController
         return back()->with('success', 'Berhasil menyetujui pengajuan terpilih.');
     }
 
+    public function bulkRequestFund(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $role = $request->input('role');
+        $user = $request->user();
+        if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
+            $bulkAction = new \App\Actions\BulkRequestFundReimbursements(new \App\Actions\UpdateReimbursementStatus());
+            $bulkAction->handle($ids, $user->id, $role);
+        }
+
+        return back()->with('success', 'Berhasil melakukan request fund untuk pengajuan terpilih.');
+    }
+
     public function bulkReject(Request $request): \Illuminate\Http\RedirectResponse
     {
         $ids = $request->input('ids', []);

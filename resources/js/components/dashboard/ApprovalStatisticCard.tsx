@@ -9,7 +9,7 @@ interface ApprovalStatisticCardProps {
     count: number;
     onClick: () => void;
     icon?: React.ReactNode;
-    color?: 'emerald' | 'blue' | 'amber' | 'rose';
+    color?: 'emerald' | 'blue' | 'amber' | 'rose' | 'orange';
 }
 
 export function ApprovalStatisticCard({ title, count, onClick, icon, color = 'emerald' }: ApprovalStatisticCardProps) {
@@ -18,6 +18,7 @@ export function ApprovalStatisticCard({ title, count, onClick, icon, color = 'em
         blue: 'bg-blue-50 border-blue-100 text-blue-800 hover:bg-blue-100',
         amber: 'bg-amber-50 border-amber-100 text-amber-800 hover:bg-amber-100',
         rose: 'bg-rose-50 border-rose-100 text-rose-800 hover:bg-rose-100',
+        orange: 'bg-orange-50 border-orange-100 text-orange-800 hover:bg-orange-100',
     };
 
     const iconColorClasses = {
@@ -25,6 +26,7 @@ export function ApprovalStatisticCard({ title, count, onClick, icon, color = 'em
         blue: 'bg-blue-200 text-blue-700',
         amber: 'bg-amber-200 text-amber-700',
         rose: 'bg-rose-200 text-rose-700',
+        orange: 'bg-orange-200 text-orange-700',
     };
 
     return (

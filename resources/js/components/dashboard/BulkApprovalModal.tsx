@@ -65,9 +65,10 @@ export interface BulkApprovalModalProps {
     items: Item[];
     type: 'reimbursement' | 'leave';
     role: string;
+    actionType?: 'approve' | 'request_fund';
 }
 
-export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, role }: BulkApprovalModalProps) {
+export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, role, actionType = 'approve' }: BulkApprovalModalProps) {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [actionMode, setActionMode] = useState<'approve' | 'reject' | 'revision' | null>(null);
     const [notes, setNotes] = useState<Record<number, string>>({});
@@ -92,7 +93,9 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, ro
     const handleApproveSelected = () => {
         if (selectedIds.length === 0) return;
         
-        const routeName = type === 'reimbursement' ? 'reimbursements.bulk-approve' : 'leaves.bulk-approve';
+        const routeName = actionType === 'request_fund' 
+            ? 'reimbursements.bulk-request-fund' 
+            : (type === 'reimbursement' ? 'reimbursements.bulk-approve' : 'leaves.bulk-approve');
         
         router.post(route(routeName), { ids: selectedIds, role }, {
             onSuccess: () => {
@@ -108,7 +111,9 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, ro
         if (selectedIds.length === 0 || !actionMode) return;
 
         const routeMap = {
-            approve: type === 'reimbursement' ? 'reimbursements.bulk-approve' : 'leaves.bulk-approve',
+            approve: actionType === 'request_fund' 
+                ? 'reimbursements.bulk-request-fund' 
+                : (type === 'reimbursement' ? 'reimbursements.bulk-approve' : 'leaves.bulk-approve'),
             reject: type === 'reimbursement' ? 'reimbursements.bulk-reject' : 'leaves.bulk-reject',
             revision: type === 'reimbursement' ? 'reimbursements.bulk-revision' : 'leaves.bulk-revision',
         };
@@ -165,7 +170,9 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, ro
 
     const handleApproveAll = () => {
         const allIds = items.map(item => item.id);
-        const routeName = type === 'reimbursement' ? 'reimbursements.bulk-approve' : 'leaves.bulk-approve';
+        const routeName = actionType === 'request_fund' 
+            ? 'reimbursements.bulk-request-fund' 
+            : (type === 'reimbursement' ? 'reimbursements.bulk-approve' : 'leaves.bulk-approve');
 
         router.post(route(routeName), { ids: allIds, role }, {
             onSuccess: () => {
@@ -506,7 +513,7 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, ro
                                     onClick={handleApproveAll} 
                                     disabled={items.length === 0}
                                 >
-                                    Setujui Semua
+                                    {actionType === 'request_fund' ? 'Request Fund Semua' : 'Setujui Semua'}
                                 </Button>
                             </div>
 
@@ -532,7 +539,7 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, ro
                                     disabled={selectedIds.length === 0}
                                     onClick={handleApproveSelected}
                                 >
-                                    Setujui Terpilih ({selectedIds.length})
+                                    {actionType === 'request_fund' ? `Request Fund (${selectedIds.length})` : `Setujui Terpilih (${selectedIds.length})`}
                                 </Button>
                             </div>
                         </div>

@@ -46,6 +46,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('reimbursements/bulk-approve', [ReimbursementController::class, 'bulkApprove'])->name('reimbursements.bulk-approve');
     Route::post('reimbursements/bulk-reject', [ReimbursementController::class, 'bulkReject'])->name('reimbursements.bulk-reject');
     Route::post('reimbursements/bulk-revision', [ReimbursementController::class, 'bulkRevision'])->name('reimbursements.bulk-revision');
+    Route::post('reimbursements/bulk-request-fund', [ReimbursementController::class, 'bulkRequestFund'])->name('reimbursements.bulk-request-fund');
 
     // Letter Requests
     Route::resource('letter-requests', LetterRequestController::class)->only(['index', 'create', 'store', 'edit']);
