@@ -106,7 +106,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
   reimbursement?: any,
   isEdit?: boolean,
 }) {
-  const { authUser, loading, errors, setErrors, clearFieldError, submitReimbursement } = useReimbursementForm([]);
+  const { authUser, loading, uploadProgress, errors, setErrors, clearFieldError, submitReimbursement } = useReimbursementForm([]);
   const { hasRole } = usePermission();
 
   const [items, setItems] = useState<({ id: string } & ChildItem & { project_budget_detail_id: number | '' })[]>([]);
@@ -798,7 +798,39 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
             </CardFooter>
           </form>
         </Card>
+
+        {/* Progress overlay when saving */}
+        {loading && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 flex flex-col items-center text-center space-y-6">
+              <div className="relative">
+                <div className="h-28 w-28 rounded-full border-4 border-slate-100 flex items-center justify-center shadow-inner">
+                  <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                  <span className="font-bold text-2xl text-slate-800">{uploadProgress}%</span>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Mengunggah Data</h3>
+                <p className="text-sm text-slate-500 max-w-[250px] mx-auto">
+                  {uploadProgress === 100 
+                    ? 'Sedang memproses data, mohon tunggu sebentar...' 
+                    : 'Mengunggah file bukti pembayaran dan kwitansi...'}
+                </p>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
+                <div 
+                  className="bg-blue-600 h-full transition-all duration-300 ease-out relative overflow-hidden" 
+                  style={{ width: `${uploadProgress}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20" style={{ transform: 'skewX(-20deg) translateX(-100%)', animation: 'shimmer 2s infinite' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </AppSidebarLayout >
+    </AppSidebarLayout>
   );
 }

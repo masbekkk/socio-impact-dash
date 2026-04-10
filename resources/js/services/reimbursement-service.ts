@@ -3,11 +3,12 @@ import type { ReimbursementPayload } from '@/types/reimbursement';
 
 const API_URL = '/api/v1/reimbursements';
 
-export async function storeReimbursement(payload: ReimbursementPayload): Promise<any> {
+export async function storeReimbursement(payload: ReimbursementPayload, onUploadProgress?: (progressEvent: any) => void): Promise<any> {
     const formData = buildFormData(payload);
 
     const response = await axios.post(API_URL, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress,
     });
 
     return response.data;
@@ -69,12 +70,13 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     return fd;
 }
 
-export async function resubmitReimbursement(id: number, payload: any): Promise<any> {
+export async function resubmitReimbursement(id: number, payload: any, onUploadProgress?: (progressEvent: any) => void): Promise<any> {
     const formData = buildFormData(payload);
     if (payload.revision_note) formData.append('revision_note', payload.revision_note);
 
     const response = await axios.post(`${API_URL}/${id}/resubmit`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress,
     });
 
     return response.data;
