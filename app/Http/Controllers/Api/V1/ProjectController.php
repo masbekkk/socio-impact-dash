@@ -29,7 +29,15 @@ final class ProjectController extends Controller
         $user = $request->user();
 
         if (! $user->hasAnyPermission(['view_all_projects'])) {
-            $query->where('created_by', $user->id);
+            $query->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id);
+
+                if ($user->hasRole(UserRole::Head)) {
+                    $q->orWhere('account_manager_id', $user->id)
+                        ->orWhere('head_id', $user->id)
+                        ->orWhere('pic_id', $user->id);
+                }
+            });
         }
 
         // Finance with division restriction
