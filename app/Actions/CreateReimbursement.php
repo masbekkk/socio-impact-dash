@@ -164,6 +164,14 @@ final readonly class CreateReimbursement
             $roles['hr'] = null;
         }
 
+        // Additional Logic: If submitter has both Head and HR roles, skip HR for EER (consistent with ATR behavior)
+        if ($reimbursement->type->value === 'eer') {
+            $submitter = \App\Models\User::find($reimbursement->user_id);
+            if ($submitter && $submitter->hasRole('head') && $submitter->hasRole('hr')) {
+                $roles['hr'] = null;
+            }
+        }
+
         foreach ($roles as $role => $approverId) {
             if ($approverId) {
                 $reimbursement->approvals()->create([

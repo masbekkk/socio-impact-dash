@@ -77,7 +77,7 @@ final readonly class UpdateReimbursementStatus
                         'updated_by' => $approverId, // Track who actually took the action
                     ]);
             } else {
-                // Dual Role Logic for ATR/EER: If Finance is also Head, clear both.
+                // Dual Role Logic for ATR/EER: If Finance/HR is also Head, clear both.
                 if (in_array($reimbursement->type, [\App\Enums\ReimbursementType::ATR, \App\Enums\ReimbursementType::EER]) && 
                     in_array($action, [ApprovalStatus::Approved->value, 'request_fund'])) {
                     
@@ -102,6 +102,19 @@ final readonly class UpdateReimbursementStatus
                             
                             // Ensure we act as Finance to reach finance_approved status
                             $role = 'finance';
+                        }
+                    }
+
+                    // Dual Role Logic for EER: Head + HR
+                    if ($user && $user->hasRole('hr') && $user->hasRole('head') && $reimbursement->type === \App\Enums\ReimbursementType::EER) {
+                        $isAssignedHead = ($user->id === $reimbursement->project?->head_id) || 
+                                         ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                                            ->where('role', 'head')
+                                            ->exists();
+
+                        if ($isAssignedHead) {
+                            // Prioritize acting as Head for EER to reach head_approved status
+                            $role = 'head';
                         }
                     }
                 }
