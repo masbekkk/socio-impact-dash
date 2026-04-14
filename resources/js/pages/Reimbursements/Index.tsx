@@ -163,10 +163,12 @@ function hasActiveFilters(f: Partial<Filters>): boolean {
 }
 
 /**
- * Detects whether the current URL already carries any filter params so we
- * know whether to honour the stored state or the explicit URL.
+ * Returns true only when the URL carries actual *filter* params (not just
+ * pagination). We intentionally exclude `page` here — a bare `?page=2` URL
+ * should still trigger storage restoration so the user lands on the right
+ * page with their saved filters intact.
  */
-function urlHasFilters(): boolean {
+function urlHasFilterParams(): boolean {
   const params = new URLSearchParams(window.location.search);
   return (
     params.has('type') ||
@@ -175,7 +177,6 @@ function urlHasFilters(): boolean {
     params.has('start_date') ||
     params.has('end_date') ||
     params.has('division_id') ||
-    params.has('page') ||
     params.has('sort_by') ||
     params.has('sort_dir') ||
     params.has('per_page')
@@ -216,8 +217,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
   const isHead = hasRole('head') && !isSuperadmin;
   const isPegawai = hasRole('pegawai') && !isSuperadmin && !isHead && !isFinance && !isDirektur && !isHR;
 
-  // Storage key is per-user so filters don't bleed across accounts on shared
-  // machines.
+  // Storage key is per-user so filters don't bleed across accounts.
   const STORAGE_KEY = `reimbursement_filters_${auth?.user?.id ?? 'guest'}`;
 
   // -------------------------------------------------------------------------
@@ -225,52 +225,63 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
   // -------------------------------------------------------------------------
 
   const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
-  const [actionLoading, setActionLoading] = useState(false);
 
-  // Use a ref (not state) so toggling it never triggers a re-render and can
-  // never cause the save-effect to fire prematurely.
-  const isRestoringRef = useRef(false);
+  /**
+   * Tracks whether the component has finished its mount-time restoration
+   * attempt. We must NOT save filters to localStorage until this is true,
+   * otherwise the initial `filters` prop (which reflects the old/stale URL
+   * before restoration navigates) would overwrite whatever is in storage.
+   *
+   * Starts as `false`. Becomes `true` either:
+   *  - immediately on mount when no restoration is needed, or
+   *  - inside the `onFinish` callback of the restoration navigation.
+   */
+  const mountDoneRef = useRef(false);
 
   // -------------------------------------------------------------------------
-  // Restore saved filters on first load (only when the URL is clean)
+  // Restore saved filters on first load (only when the URL has no filters)
   // -------------------------------------------------------------------------
 
   useEffect(() => {
-    // If the URL already has explicit filter params the user (or a bookmark /
-    // back-navigation) supplied them — respect that and update storage to
-    // match the URL instead of overwriting it.
-    if (urlHasFilters()) {
-      // Keep storage in sync with whatever the URL says.
+    // If the URL already carries real filter params, the user supplied them
+    // explicitly (bookmark, shared link, browser back/forward). Respect those
+    // and keep storage in sync with the current URL state.
+    if (urlHasFilterParams()) {
       if (hasActiveFilters(filters)) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
       } else {
         localStorage.removeItem(STORAGE_KEY);
       }
+      // Mount is effectively "done" — no restoration needed.
+      mountDoneRef.current = true;
       return;
     }
 
-    // Clean URL: try to restore from storage.
+    // Clean URL: attempt to restore from storage.
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
+    if (!raw) {
+      // Nothing to restore — mount is done immediately.
+      mountDoneRef.current = true;
+      return;
+    }
 
     let saved: Partial<Filters>;
     try {
       saved = JSON.parse(raw);
     } catch {
       localStorage.removeItem(STORAGE_KEY);
+      mountDoneRef.current = true;
       return;
     }
 
     if (!hasActiveFilters(saved)) {
       localStorage.removeItem(STORAGE_KEY);
+      mountDoneRef.current = true;
       return;
     }
 
-    // Mark that we're mid-restore so the save-effect ignores the navigation
-    // that is about to happen (the props haven't updated yet at that point,
-    // so saving them would write stale data).
-    isRestoringRef.current = true;
-
+    // Navigate to restore the saved filters. Mount is not "done" until the
+    // navigation finishes and new props arrive.
     router.get(
       '/reimbursements',
       filtersToQuery(saved as Filters),
@@ -278,7 +289,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
         replace: true,
         preserveScroll: true,
         onFinish: () => {
-          isRestoringRef.current = false;
+          mountDoneRef.current = true;
         },
       },
     );
@@ -286,19 +297,19 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
   }, []); // intentionally run once on mount only
 
   // -------------------------------------------------------------------------
-  // Persist filters whenever they change (after the initial restore)
+  // Persist filters whenever they change (only after mount restoration)
   // -------------------------------------------------------------------------
 
   useEffect(() => {
-    // Don't save while we're in the middle of restoring — the incoming props
-    // at that moment reflect the old state, not the restored one.
-    if (isRestoringRef.current) return;
+    // Don't save while mount-time restoration is still pending. The `filters`
+    // prop at this moment reflects the stale pre-restoration URL state, not
+    // the restored one.
+    if (!mountDoneRef.current) return;
 
     if (hasActiveFilters(filters)) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
     } else {
-      // If all filters are back to defaults, wipe the entry so a fresh visit
-      // stays clean.
+      // All filters back to defaults → wipe storage so a fresh visit stays clean.
       localStorage.removeItem(STORAGE_KEY);
     }
   }, [filters, STORAGE_KEY]);
@@ -824,7 +835,6 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                   <Search className="h-6 w-6 text-gray-400" />
                 </div>
                 <p>Tidak ada data pengajuan yang sesuai dengan filter.</p>
-                {/* Use handleReset so localStorage is also cleared */}
                 <Button variant="link" onClick={handleReset} className="text-sidebar">
                   Reset Filter
                 </Button>
