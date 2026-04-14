@@ -28,6 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // Presences
+    Route::get('presences/export-excel', [PresenceController::class, 'exportExcel'])->name('presences.export-excel');
     Route::resource('presences', PresenceController::class)->only(['index', 'create', 'store', 'show']);
     Route::post('presences/checkout', [PresenceController::class, 'checkOut'])->name('presences.checkout');
 

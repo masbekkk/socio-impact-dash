@@ -459,7 +459,19 @@ export default function PresenceIndex({ presences, todayPresence, filters }: Pag
             </DropdownMenu>
 
             <div className="flex-none">
-              <Button variant="outline" size="sm" className="h-9 gap-2" onClick={() => alert('Mendownload rekap presensi (CSV)...')}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-2"
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    search: searchQuery,
+                    start_date: startDate,
+                    end_date: endDate
+                  }).toString();
+                  window.location.href = route('presences.export-excel') + '?' + params;
+                }}
+              >
                 <Download className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Export</span>
               </Button>

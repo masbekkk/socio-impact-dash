@@ -26,12 +26,12 @@ final readonly class UpdateReimbursementStatus
                     $roles = $user->getRoleNames();
                     if ($roles->contains('head')) {
                         // Prioritize Head over Finance/HR if this user was assigned as Head
-                        $isHead = ($user->id === $reimbursement->project?->head_id) || 
+                        $isHead = ($user->id === $reimbursement->project?->head_id) ||
                                  ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
-                                    ->where('approver_id', $user->id)
-                                    ->where('role', 'head')
-                                    ->exists();
-                        
+                                     ->where('approver_id', $user->id)
+                                     ->where('role', 'head')
+                                     ->exists();
+
                         if ($isHead) {
                             $role = 'head';
                         } else {
@@ -78,15 +78,15 @@ final readonly class UpdateReimbursementStatus
                     ]);
             } else {
                 // Dual Role Logic for ATR/EER: If Finance/HR is also Head, clear both.
-                if (in_array($reimbursement->type, [\App\Enums\ReimbursementType::ATR, \App\Enums\ReimbursementType::EER]) && 
+                if (in_array($reimbursement->type, [\App\Enums\ReimbursementType::ATR, \App\Enums\ReimbursementType::EER]) &&
                     in_array($action, [ApprovalStatus::Approved->value, 'request_fund'])) {
-                    
+
                     $user = \App\Models\User::find($approverId);
                     if ($user && $user->hasRole('finance') && $user->hasRole('head')) {
-                        $isAssignedHead = ($user->id === $reimbursement->project?->head_id) || 
+                        $isAssignedHead = ($user->id === $reimbursement->project?->head_id) ||
                                          ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
-                                            ->where('role', 'head')
-                                            ->exists();
+                                             ->where('role', 'head')
+                                             ->exists();
 
                         if ($isAssignedHead) {
                             // Automatically approve Head record if pending
@@ -97,20 +97,20 @@ final readonly class UpdateReimbursementStatus
                                     'status' => ApprovalStatus::Approved->value,
                                     'approved_at' => now(),
                                     'updated_by' => $approverId,
-                                    'notes' => ($notes ? $notes . ' ' : '') . '(Auto-approved by Finance with Dual Role)',
+                                    'notes' => ($notes ? $notes.' ' : '').'(Auto-approved by Finance with Dual Role)',
                                 ]);
-                            
+
                             // Ensure we act as Finance to reach finance_approved status
                             $role = 'finance';
                         }
                     }
 
                     // Dual Role Logic for EER: Head + HR
-                    if ($user && $user->hasRole('hr') && $user->hasRole('head') && $reimbursement->type === \App\Enums\ReimbursementType::EER) {
-                        $isAssignedHead = ($user->id === $reimbursement->project?->head_id) || 
+                    if ($user && $user->hasRole('hr') && $user->hasRole('head') && ($reimbursement->type === \App\Enums\ReimbursementType::EER || $reimbursement->type === \App\Enums\ReimbursementType::ATR)) {
+                        $isAssignedHead = ($user->id === $reimbursement->project?->head_id) ||
                                          ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
-                                            ->where('role', 'head')
-                                            ->exists();
+                                             ->where('role', 'head')
+                                             ->exists();
 
                         if ($isAssignedHead) {
                             // Prioritize acting as Head for EER to reach head_approved status

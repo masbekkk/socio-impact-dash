@@ -123,6 +123,16 @@ final readonly class PresenceService
     {
         $query = Presence::with(['user', 'project']);
 
+        $this->applyFilters($query, $user, $filters);
+
+        return $query->orderBy('date', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Presence>  $query
+     */
+    public function applyFilters(\Illuminate\Database\Eloquent\Builder $query, ?User $user = null, array $filters = []): void
+    {
         if ($user instanceof User) {
             if ($user->hasAnyRole([\App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::Superadmin->value]) || $user->hasAnyPermission(['view_all_leaves'])) {
                 // These roles can view all presence
@@ -153,8 +163,6 @@ final readonly class PresenceService
                     ->orWhere('activity', 'like', "%{$filters['search']}%");
             });
         }
-
-        return $query->orderBy('date', 'desc')->paginate($perPage);
     }
 
     public function getMonthlySummary(User $user, int $month, int $year): array
