@@ -94,6 +94,50 @@ You should see 100% test coverage and all quality checks passing.
 ### Maintenance
 - `composer update:requirements` - Updates all PHP and NPM dependencies to latest versions
 
+## Deployment
+
+### Automated (CI/CD)
+
+Pushing to the `v2.3.27` branch triggers a GitHub Actions workflow that:
+
+1. Builds frontend assets (`npm run build:ssr`)
+2. Commits built assets to the `buildv2.3.27` branch
+3. Sends a webhook to the production server to pull & deploy
+
+> The workflow is defined in [`.github/workflows/deploy-build.yml`](.github/workflows/deploy-build.yml).
+
+#### Required GitHub Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `DEPLOY_SERVER_IP` | Hostinger server IP address |
+| `DEPLOY_HOST` | Production domain (e.g. `manajemensiid.id`) |
+| `DEPLOY_WEBHOOK_SECRET` | Token to authorize the webhook request |
+
+### Manual Deploy (Fallback)
+
+If the automated webhook step fails (e.g. Cloudflare blocks the request) but the build branch was pushed successfully, deploy manually via SSH:
+
+```bash
+# 1. SSH into the server
+ssh -p 65002 u[your-user]@[SERVER_IP]
+
+# 2. Navigate to project directory
+cd domains/manajemensiid.id
+
+# 3. Pull the latest build
+git fetch origin buildv2.3.27 --depth 1
+git checkout buildv2.3.27
+git reset --hard origin/buildv2.3.27
+git clean -fd -e .htaccess -e .env
+
+# 4. Run migrations & clear cache
+php artisan migrate --force --no-interaction
+php artisan optimize:clear
+```
+
+> **Note:** These are the same commands the [deploy webhook](public/deploy-webhook.php) executes automatically.
+
 ## License
 
 **Laravel Starter Kit Inertia React** was created by **[Nuno Maduro](https://x.com/enunomaduro)** under the **[MIT license](https://opensource.org/licenses/MIT)**.
