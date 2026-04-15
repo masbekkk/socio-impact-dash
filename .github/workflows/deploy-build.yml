@@ -82,17 +82,25 @@ jobs:
 
       - name: Deploy to Hostinger via Webhook
         run: |
-          MAX_RETRIES=3
+          MAX_RETRIES=5
           RETRY=0
+          WAIT=5
+
+          # Bypass Cloudflare by hitting the server IP directly
+          # Host header ensures Apache routes to the correct virtual host
+          DEPLOY_IP="${{ secrets.DEPLOY_SERVER_IP }}"
+          DEPLOY_HOST="${{ secrets.DEPLOY_HOST }}"
+          DEPLOY_PATH="/deploy-webhook.php"
 
           until [ $RETRY -ge $MAX_RETRIES ]; do
             HTTP_CODE=$(curl -s -o /tmp/deploy_response.json -w "%{http_code}" \
               --max-time 300 \
               --connect-timeout 30 \
               -X POST \
+              -H "Host: ${DEPLOY_HOST}" \
               -H "X-Deploy-Token: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}" \
               -H "Content-Type: application/json" \
-              "${{ secrets.DEPLOY_WEBHOOK_URL }}")
+              "http://${DEPLOY_IP}${DEPLOY_PATH}")
 
             if [ "$HTTP_CODE" = "200" ]; then
               echo "✅ Deployment successful!"
@@ -102,13 +110,19 @@ jobs:
 
             RETRY=$((RETRY + 1))
             echo "⚠️ Deploy returned HTTP $HTTP_CODE (attempt $RETRY/$MAX_RETRIES)"
-            cat /tmp/deploy_response.json 2>/dev/null || true
+
+            # Show first 500 chars of response for diagnostics
+            head -c 500 /tmp/deploy_response.json 2>/dev/null || true
+            echo ""
 
             if [ $RETRY -lt $MAX_RETRIES ]; then
-              echo "Retrying in 10 seconds..."
-              sleep 10
+              echo "Retrying in ${WAIT} seconds..."
+              sleep $WAIT
+              WAIT=$((WAIT * 2))
             fi
           done
 
           echo "❌ Deployment failed after $MAX_RETRIES attempts"
+          echo "Last response (full):"
+          cat /tmp/deploy_response.json 2>/dev/null || true
           exit 1

@@ -21,6 +21,7 @@ final class LetterRequestController extends Controller
 
         return Inertia::render('LetterRequests/Index', [
             'canAssign' => $user->hasRole([UserRole::Finance, UserRole::Superadmin]),
+            'canDelete' => $user->hasRole([UserRole::Finance, UserRole::Superadmin]),
         ]);
     }
 
