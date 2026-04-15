@@ -25,6 +25,7 @@ interface Project {
     id: number;
     name: string;
     code: string;
+    initial_project: string;
 }
 
 interface MasterData {
@@ -193,7 +194,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
                                     <div className="space-y-2">
                                         <Label htmlFor="project_id">Proyek Terkait <span className="text-red-500">*</span></Label>
                                         <SearchableSelect
-                                            options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.name}` }))}
+                                            options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.initial_project} - ${p.name}` }))}
                                             value={data.project_id}
                                             onValueChange={(val) => setData({ ...data, project_id: val })}
                                             placeholder="Pilih proyek"

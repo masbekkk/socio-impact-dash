@@ -333,7 +333,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                                     <div className="space-y-2">
                                         <Label htmlFor="project_id">Nama Project <span className="text-red-500">*</span></Label>
                                         <SearchableSelect
-                                            options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.name}` }))}
+                                            options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.initial_project} - ${p.name}` }))}
                                             value={formData.project_id}
                                             onValueChange={handleProjectChange}
                                             placeholder="Pilih project"
@@ -491,14 +491,14 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                             <div>
                                 <h3 className="text-xl font-bold text-slate-800 mb-2">Mengunggah Data</h3>
                                 <p className="text-sm text-slate-500 max-w-[250px] mx-auto">
-                                    {uploadProgress === 100 
-                                        ? 'Sedang memproses data, mohon tunggu sebentar...' 
+                                    {uploadProgress === 100
+                                        ? 'Sedang memproses data, mohon tunggu sebentar...'
                                         : 'Mengunggah dokumen pendukung...'}
                                 </p>
                             </div>
                             <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
-                                <div 
-                                    className="bg-blue-600 h-full transition-all duration-300 ease-out relative overflow-hidden" 
+                                <div
+                                    className="bg-blue-600 h-full transition-all duration-300 ease-out relative overflow-hidden"
                                     style={{ width: `${uploadProgress}%` }}
                                 >
                                     <div className="absolute inset-0 bg-white/20" style={{ transform: 'skewX(-20deg) translateX(-100%)', animation: 'shimmer 2s infinite' }} />
