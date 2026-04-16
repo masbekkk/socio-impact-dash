@@ -86,7 +86,7 @@ jobs:
           host: ${{ secrets.DEPLOY_SERVER_IP }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_SSH_PORT }}
+          port: 65002
           command_timeout: 5m
           script: |
             cd ${{ secrets.DEPLOY_PROJECT_PATH }}
