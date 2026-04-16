@@ -2243,23 +2243,23 @@ export default function Show() {
                                         ) : (
                                           <span className="text-[10px] text-slate-400 italic">No receipt</span>
                                         )}
-                                        {hasRole(['finance', 'superadmin']) && (
-                                          <Label
-                                            htmlFor={`upload-receipt-${item.id}`}
-                                            className="cursor-pointer inline-flex items-center justify-center p-1 hover:bg-slate-100 rounded-full transition-colors"
-                                          >
-                                            <Upload className="h-3 w-3 text-slate-400" />
-                                            <input
-                                              id={`upload-receipt-${item.id}`}
-                                              type="file"
-                                              className="hidden"
-                                              onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) handleItemReceiptUpload(item.id, file);
-                                              }}
-                                            />
-                                          </Label>
-                                        )}
+
+                                        <Label
+                                          htmlFor={`upload-receipt-${item.id}`}
+                                          className="cursor-pointer inline-flex items-center justify-center p-1 hover:bg-slate-100 rounded-full transition-colors"
+                                        >
+                                          <Upload className="h-3 w-3 text-slate-400" />
+                                          <input
+                                            id={`upload-receipt-${item.id}`}
+                                            type="file"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) handleItemReceiptUpload(item.id, file);
+                                            }}
+                                          />
+                                        </Label>
+
                                       </div>
                                     </td>
                                   </tr>
