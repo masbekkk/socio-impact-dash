@@ -111,8 +111,10 @@ Pushing to the `v2.3.27` branch triggers a GitHub Actions workflow that:
 | Secret | Description |
 |--------|-------------|
 | `DEPLOY_SERVER_IP` | Hostinger server IP address |
-| `DEPLOY_HOST` | Production domain (e.g. `manajemensiid.id`) |
-| `DEPLOY_WEBHOOK_SECRET` | Token to authorize the webhook request |
+| `DEPLOY_SSH_USER` | SSH username (e.g. `u123456789`) |
+| `DEPLOY_SSH_KEY` | SSH private key for authentication |
+| `DEPLOY_SSH_PORT` | SSH port (e.g. `65002`) |
+| `DEPLOY_PROJECT_PATH` | Project path on server (e.g. `domains/manajemensiid.id`) |
 
 ### Manual Deploy (Fallback)
 
