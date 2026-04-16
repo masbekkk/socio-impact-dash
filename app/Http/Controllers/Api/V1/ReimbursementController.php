@@ -17,7 +17,6 @@ use App\Services\ReimbursementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use ReflectionClass;
 use Throwable;
 
 final class ReimbursementController extends Controller
@@ -278,12 +277,12 @@ final class ReimbursementController extends Controller
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request): void {
                 $isRevision = $reimbursement->status === \App\Enums\ReimbursementStatus::Revision;
-                
-                // New Status logic: if explicitly draft, stay draft. 
-                // Else if it was a revision, it becomes revised. 
+
+                // New Status logic: if explicitly draft, stay draft.
+                // Else if it was a revision, it becomes revised.
                 // Otherwise it becomes submitted.
                 $requestedStatus = $validated['status'] ?? 'submitted';
-                
+
                 if ($requestedStatus === 'draft') {
                     $newStatus = \App\Enums\ReimbursementStatus::Draft;
                 } else {
@@ -293,7 +292,7 @@ final class ReimbursementController extends Controller
                 }
 
                 $updateData = ['status' => $newStatus];
-                
+
                 if (isset($validated['usage_plan'])) {
                     $updateData['usage_plan'] = $validated['usage_plan'];
                 }
@@ -353,7 +352,7 @@ final class ReimbursementController extends Controller
                     $reimbursement->items()->delete();
                     foreach ($validated['items'] as $index => $item) {
                         $receiptPath = null;
-                        
+
                         // Handle receipt file if provided in the items nested structure
                         $itemFiles = $request->file('items');
                         if ($itemFiles && isset($itemFiles[$index]['receipt']) && $itemFiles[$index]['receipt'] instanceof \Illuminate\Http\UploadedFile) {
@@ -410,7 +409,7 @@ final class ReimbursementController extends Controller
                 // Clear any existing approvals if it's NO LONGER a draft/revision
                 if ($newStatus !== \App\Enums\ReimbursementStatus::Draft) {
                     $reimbursement->approvals()->delete();
-                    
+
                     // Call assignApprovers to handle the workflow
                     $action = new CreateReimbursement($fileUploadService);
                     $action->assignApprovers($reimbursement, $request->all());
@@ -493,9 +492,6 @@ final class ReimbursementController extends Controller
     {
         try {
             $user = $request->user();
-            if (! $user->hasRole('finance') && ! $user->hasRole('superadmin')) {
-                return JsonResponseFormatter::error('Unauthorized', 403);
-            }
 
             $reimbursement = Reimbursement::query()->find($id);
             if (! $reimbursement) {
