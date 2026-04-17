@@ -809,7 +809,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                     </Link>
                                   </DropdownMenuItem>
                                 )}
-                                {(isSuperadmin || isFinance) && (
+                                {(isSuperadmin || isFinance || (item.type === 'allowance' && isHR)) && (
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem

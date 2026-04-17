@@ -208,6 +208,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
   finance_approved: { label: 'Finance Approved', className: 'bg-blue-50 text-blue-600 hover:bg-blue-50 border-blue-100', icon: CheckCircle },
   request_fund: { label: 'Request Fund', className: 'bg-orange-50 text-orange-600 hover:bg-orange-50 border-orange-100', icon: DollarSign },
   transferred: { label: 'Sudah Ditransfer', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle },
+  closed: { label: 'Ditutup', className: 'bg-indigo-100 text-indigo-800 border-indigo-200', icon: CheckCircle },
   revision: { label: 'Revisi', className: 'bg-orange-100 text-orange-700 border-orange-200', icon: AlertCircle },
   rejected: { label: 'Ditolak', className: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
 };
@@ -2621,7 +2622,7 @@ export default function Show() {
                   </div>
                 )}
 
-                {((data.status === 'submitted' || data.status === 'request_fund' || (data.type === 'eer' && data.eer_type === 'refund' && !data.transfer_proof_path && !['draft', 'rejected', 'transferred'].includes(data.status))) && isFinanceOrAdmin) && (
+                {((data.status === 'submitted' || data.status === 'request_fund' || (data.type === 'eer' && data.eer_type === 'refund' && !data.transfer_proof_path && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && isFinanceOrAdmin) && (
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <Button
                       onClick={() => setTransferDialogOpen(true)}
@@ -2701,7 +2702,7 @@ export default function Show() {
                 )}
 
                 {/* Refund Bank Info Reminder (if manual check needed) */}
-                {data.type === 'eer' && data.eer_type === 'refund' && data.status !== 'transferred' && isFinanceOrAdmin && (
+                {data.type === 'eer' && data.eer_type === 'refund' && !['transferred', 'closed'].includes(data.status) && isFinanceOrAdmin && (
                   <div className="bg-rose-50/50 p-4 rounded-lg border border-rose-100 space-y-3">
                     <div className="flex items-center gap-2 text-rose-800 font-medium text-sm">
                       <Info className="h-4 w-4" /> Rekening Refund (Reminder)

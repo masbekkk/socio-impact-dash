@@ -44,8 +44,14 @@ final readonly class UpdateReimbursementStatus
             }
 
             if ($action === 'transferred') {
+                $statusToSet = ReimbursementStatus::Transferred;
+
+                if ($reimbursement->type === \App\Enums\ReimbursementType::EER && in_array($reimbursement->eer_type, ['refund', 'reimbursement'], true)) {
+                    $statusToSet = ReimbursementStatus::Closed;
+                }
+
                 $updateData = [
-                    'status' => ReimbursementStatus::Transferred,
+                    'status' => $statusToSet,
                     'transferred_at' => now(),
                 ];
                 if (isset($data['transferred_amount'])) {
@@ -160,7 +166,11 @@ final readonly class UpdateReimbursementStatus
                     ];
 
                     if (isset($roleStatusMap[$role])) {
-                        $updateData['status'] = $roleStatusMap[$role];
+                        if ($role === 'direktur' && $reimbursement->type === \App\Enums\ReimbursementType::EER && $reimbursement->eer_type === 'balance') {
+                            $updateData['status'] = ReimbursementStatus::Closed;
+                        } else {
+                            $updateData['status'] = $roleStatusMap[$role];
+                        }
                     }
                 }
 
@@ -168,7 +178,12 @@ final readonly class UpdateReimbursementStatus
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
                     $updateData['transfer_proof_path'] = $path;
                     $updateData['transferred_at'] = now();
-                    $updateData['status'] = ReimbursementStatus::Transferred; // Explicitly set if proof uploaded
+                    
+                    $statusToSet = ReimbursementStatus::Transferred;
+                    if ($reimbursement->type === \App\Enums\ReimbursementType::EER && in_array($reimbursement->eer_type, ['refund', 'reimbursement'], true)) {
+                        $statusToSet = ReimbursementStatus::Closed;
+                    }
+                    $updateData['status'] = $statusToSet;
                 }
 
                 if (! empty($updateData)) {
