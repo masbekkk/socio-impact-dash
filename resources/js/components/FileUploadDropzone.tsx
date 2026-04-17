@@ -86,7 +86,7 @@ export default function FileUploadDropzone({ className, onFilesChange }: { class
           <UploadCloud className="h-5 w-5 text-primary" />
         </div>
         <p className="text-sm font-medium">Klik untuk upload atau drag & drop</p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">PDF, DOCX, JPG (Max 50MB)</p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">PDF, DOCX, JPG, EXCEL (Max 10MB)</p>
       </div>
 
       {files.length > 0 && (

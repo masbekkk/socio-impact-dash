@@ -327,6 +327,7 @@ export default function Show() {
     selected_activities: SelectedActivityRevision[];
     eer_items: EerItemRevision[];
     notes: string;
+    transfer_proof: File | null;
   }>({
     project_id: '',
     replacement_pic_id: '',
@@ -343,6 +344,7 @@ export default function Show() {
     selected_activities: [],
     eer_items: [],
     notes: '',
+    transfer_proof: null,
   });
   const [resubmitLoading, setResubmitLoading] = useState(false);
 
@@ -721,6 +723,7 @@ export default function Show() {
       selected_activities,
       eer_items,
       notes: data.notes ?? '',
+      transfer_proof: null,
     });
     setRevisionEditing(true);
   };
@@ -876,6 +879,7 @@ export default function Show() {
         revision_note: revisionForm.revision_note || 'Pengajuan telah direvisi dan diajukan kembali.',
         eer_type: data.type === 'eer' ? revisionForm.eer_type : undefined,
         refund_reimburse_amount: data.type === 'eer' ? revisionForm.refund_reimburse_amount : undefined,
+        ...(data.type === 'eer' && revisionForm.eer_type === 'refund' && revisionForm.transfer_proof && { transfer_proof: revisionForm.transfer_proof }),
       };
 
       if (data.type === 'eer') {
@@ -2017,6 +2021,27 @@ export default function Show() {
                                 </div>
                               </div>
                             )}
+                          </div>
+                        )}
+
+                        {data.type === 'eer' && revisionForm.eer_type === 'refund' && (
+                          <div className="space-y-4 pt-2 border-t mt-4">
+                            <Label className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+                              <Upload className="h-3 w-3" /> Update Bukti Refund (Opsional)
+                            </Label>
+                            <FileUploadDropzone
+                              className="bg-white h-[80px] overflow-hidden rounded-lg"
+                              onFilesChange={(files: File[]) => setRevisionForm(p => ({ ...p, transfer_proof: files[0] ?? null }))}
+                            />
+                            {revisionForm.transfer_proof ? (
+                              <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100 italic">
+                                <CheckCircle className="h-3 w-3" /> Baru: {revisionForm.transfer_proof.name}
+                              </div>
+                            ) : data.transfer_proof_path ? (
+                              <div className="flex items-center gap-2 text-[10px] text-blue-600 bg-blue-50 p-1.5 rounded mt-1 border border-blue-100 italic">
+                                <CheckCircle className="h-3 w-3" /> Sudah ada file sebelumnya. Kosongkan jika tidak ingin mengubah.
+                              </div>
+                            ) : null}
                           </div>
                         )}
 

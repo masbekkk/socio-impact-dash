@@ -110,6 +110,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
   const { hasRole } = usePermission();
 
   const [items, setItems] = useState<({ id: string } & ChildItem & { project_budget_detail_id: number | '' })[]>([]);
+  const [documents, setDocuments] = useState<{ id: string; file: File | null; type: string }[]>([]);
 
   const [formData, setFormData] = useState({
     code: '',
@@ -346,6 +347,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
       user_id: formData.user_id || undefined,
       is_edit: isEdit,
       reimbursement_id: isEdit ? (reimbursement.data?.id || reimbursement.id) : undefined,
+      documents: documents.filter(d => d.file).map(d => ({ file: d.file!, type: d.type })),
     } as any);
   };
 
@@ -735,6 +737,73 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                 <div className="py-12 text-center rounded-xl border border-dashed border-slate-300 bg-slate-50/50">
                   <Briefcase className="h-10 w-10 text-slate-300 mx-auto mb-3" />
                   <p className="text-slate-500 font-medium">Pilih ATR terlebih dahulu untuk mulai memasukkan pengeluaran.</p>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Dokumen Pendukung */}
+            <div className="p-6 md:p-8 bg-white">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Dokumen Pendukung</h3>
+                  <p className="text-sm text-muted-foreground">Lampirkan dokumen pendukung seperti TOR, Invoice, atau dokumen lainnya (Opsional).</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDocuments(prev => [...prev, { id: crypto.randomUUID(), file: null, type: 'other' }])}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" /> Tambah Dokumen
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {documents.map((doc, index) => (
+                  <div key={doc.id} className="border rounded-xl p-4 bg-slate-50/50 space-y-3 relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 absolute top-2 right-2 text-red-500 hover:bg-red-50"
+                      onClick={() => setDocuments(prev => prev.filter(d => d.id !== doc.id))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase font-bold text-muted-foreground">Nama / Jenis Dokumen</Label>
+                      <Input
+                        placeholder="Contoh: TOR, Invoice, dll"
+                        className="h-9 bg-white text-sm"
+                        value={doc.type}
+                        onChange={(e) => setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, type: e.target.value } : d))}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase font-bold text-muted-foreground">File Dokumen</Label>
+                      <FileUploadDropzone
+                        className="h-24 bg-white"
+                        onFilesChange={(files) => setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] ?? null } : d))}
+                      />
+                      {doc.file && (
+                        <p className="text-[10px] text-emerald-600 font-medium truncate">
+                          Terlampir: {doc.file.name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {documents.length === 0 && (
+                <div className="text-center py-8 border border-dashed rounded-xl bg-slate-50/50">
+                  <Briefcase className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500 italic">Belum ada dokumen tambahan yang dilampirkan.</p>
                 </div>
               )}
             </div>

@@ -81,28 +81,49 @@ jobs:
           git push origin buildv2.3.27 --force
 
       - name: Deploy to Hostinger via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_SERVER_IP }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
-          key: ${{ secrets.HOSTINGER_SSH_KEY }}
-          port: 65002
-          command_timeout: 5m
-          script: |
-            cd ${{ secrets.DEPLOY_PROJECT_PATH }}
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DEPLOY_SERVER_IP }}
+          SSH_USER: ${{ secrets.HOSTINGER_USERNAME }}
+          PROJECT_PATH: ${{ secrets.DEPLOY_PROJECT_PATH }}
+        run: |
+          # Setup SSH key
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p 65002 "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-            # Ensure known_hosts is set for GitHub
+          SSH_CMD="ssh -p 65002 -i ~/.ssh/deploy_key -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST}"
+
+          DEPLOY_SCRIPT="
+            cd ${PROJECT_PATH}
             mkdir -p ~/.ssh && ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null
-
-            # Pull latest build
             git fetch origin buildv2.3.27 --depth 1
             git checkout buildv2.3.27
             git reset --hard origin/buildv2.3.27
             git clean -fd -e .htaccess -e .env -e .env.staging -e staging
-
-            # Run migrations & clear cache
             php artisan migrate --force --no-interaction
             php artisan optimize:clear
+            echo '✅ Deployment completed successfully'
+          "
 
-            echo "✅ Deployment completed successfully"
+          MAX_RETRIES=3
+          RETRY=0
+          WAIT=15
 
+          until [ $RETRY -ge $MAX_RETRIES ]; do
+            echo "🚀 Deploy attempt $((RETRY + 1))/$MAX_RETRIES..."
+            if $SSH_CMD "$DEPLOY_SCRIPT"; then
+              exit 0
+            fi
+
+            RETRY=$((RETRY + 1))
+            if [ $RETRY -lt $MAX_RETRIES ]; then
+              echo "⚠️ SSH failed (attempt $RETRY/$MAX_RETRIES). Retrying in ${WAIT}s..."
+              sleep $WAIT
+              WAIT=$((WAIT * 2))
+            fi
+          done
+
+          echo "❌ Deployment failed after $MAX_RETRIES attempts"
+          exit 1

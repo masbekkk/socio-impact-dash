@@ -270,6 +270,7 @@ final class ReimbursementController extends Controller
                 'replacement_pic_id' => ['nullable', 'integer', 'exists:users,id'],
                 'approver_head_id' => ['nullable', 'integer', 'exists:users,id'],
                 'urgency' => ['nullable', 'string', 'max:20'],
+                'transfer_proof' => ['nullable', 'file', 'max:10240'],
                 'documents' => ['nullable', 'array'],
                 'documents.*.file' => ['required_with:documents', 'file', 'max:10240'],
                 'documents.*.type' => ['required_with:documents', 'string', 'max:50'],
@@ -325,6 +326,14 @@ final class ReimbursementController extends Controller
                 }
 
                 $fileUploadService = resolve(\App\Services\FileUploadService::class);
+
+                if ($request->hasFile('transfer_proof')) {
+                    $meta = $fileUploadService->uploadFile(
+                        $request->file('transfer_proof'),
+                        "reimbursements/{$reimbursement->id}/transfer-proofs"
+                    );
+                    $updateData['transfer_proof_path'] = $meta['path'];
+                }
 
                 // Sync documents if provided
                 if (isset($validated['documents'])) {
