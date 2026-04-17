@@ -272,7 +272,8 @@ final class ReimbursementController extends Controller
                 'urgency' => ['nullable', 'string', 'max:20'],
                 'transfer_proof' => ['nullable', 'file', 'max:10240'],
                 'documents' => ['nullable', 'array'],
-                'documents.*.file' => ['required_with:documents', 'file', 'max:10240'],
+                'documents.*.id' => ['nullable', 'integer'],
+                'documents.*.file' => ['required_without:documents.*.id', 'file', 'max:10240'],
                 'documents.*.type' => ['required_with:documents', 'string', 'max:50'],
             ]);
 
@@ -337,8 +338,17 @@ final class ReimbursementController extends Controller
 
                 // Sync documents if provided
                 if (isset($validated['documents'])) {
+                    $existingDocIds = $reimbursement->documents()->pluck('id')->toArray();
+                    $keptDocIds = [];
+
                     foreach ($validated['documents'] as $doc) {
-                        if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
+                        if (isset($doc['id']) && in_array($doc['id'], $existingDocIds)) {
+                            // Keep existing document, optionally update type
+                            $keptDocIds[] = $doc['id'];
+                            if (isset($doc['type'])) {
+                                $reimbursement->documents()->where('id', $doc['id'])->update(['type' => $doc['type']]);
+                            }
+                        } elseif (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
                             $meta = $fileUploadService->uploadFile(
                                 $doc['file'],
                                 "reimbursements/{$reimbursement->id}/documents"
@@ -354,6 +364,16 @@ final class ReimbursementController extends Controller
                             ]);
                         }
                     }
+
+                    // Delete documents that were not kept
+                    $docsToDelete = array_diff($existingDocIds, $keptDocIds);
+                    if (!empty($docsToDelete)) {
+                        $reimbursement->documents()->whereIn('id', $docsToDelete)->delete();
+                        // Additional storage deletion could be handled here if needed
+                    }
+                } else {
+                    // Empty array sent means delete all documents
+                    $reimbursement->documents()->delete();
                 }
 
                 // Sync items if provided

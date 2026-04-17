@@ -328,6 +328,7 @@ export default function Show() {
     eer_items: EerItemRevision[];
     notes: string;
     transfer_proof: File | null;
+    documents: { id: string; db_id?: number; type: string; file: File | null; original_name?: string }[];
   }>({
     project_id: '',
     replacement_pic_id: '',
@@ -345,6 +346,7 @@ export default function Show() {
     eer_items: [],
     notes: '',
     transfer_proof: null,
+    documents: [],
   });
   const [resubmitLoading, setResubmitLoading] = useState(false);
 
@@ -724,6 +726,13 @@ export default function Show() {
       eer_items,
       notes: data.notes ?? '',
       transfer_proof: null,
+      documents: data.documents ? data.documents.map((d: any) => ({
+        id: crypto.randomUUID(),
+        db_id: d.id,
+        type: d.type || 'other',
+        file: null,
+        original_name: d.original_name,
+      })) : [],
     });
     setRevisionEditing(true);
   };
@@ -880,6 +889,11 @@ export default function Show() {
         eer_type: data.type === 'eer' ? revisionForm.eer_type : undefined,
         refund_reimburse_amount: data.type === 'eer' ? revisionForm.refund_reimburse_amount : undefined,
         ...(data.type === 'eer' && revisionForm.eer_type === 'refund' && revisionForm.transfer_proof && { transfer_proof: revisionForm.transfer_proof }),
+        documents: revisionForm.documents.map(d => ({
+          ...(d.db_id ? { id: d.db_id } : {}),
+          type: d.type,
+          file: d.file || undefined,
+        })),
       };
 
       if (data.type === 'eer') {
@@ -2044,6 +2058,82 @@ export default function Show() {
                             ) : null}
                           </div>
                         )}
+
+                        <div className="space-y-4 pt-4 border-t mt-4 text-left">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                              Dokumen Pendukung / Tambahan
+                            </Label>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-[10px] gap-1"
+                              onClick={() => setRevisionForm(p => ({
+                                ...p,
+                                documents: [...p.documents, { id: crypto.randomUUID(), type: 'other', file: null }]
+                              }))}
+                            >
+                              <Plus className="h-3 w-3" /> Tambah 
+                            </Button>
+                          </div>
+                          
+                          {revisionForm.documents.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {revisionForm.documents.map((doc) => (
+                                <div key={doc.id} className="p-3 border rounded-lg bg-slate-50/50 relative space-y-3">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 absolute top-1 right-1 text-red-500 hover:bg-red-100"
+                                    onClick={() => setRevisionForm(p => ({
+                                      ...p,
+                                      documents: p.documents.filter(d => d.id !== doc.id)
+                                    }))}
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+
+                                  <div className="space-y-1.5 pr-6">
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nama / Jenis Dokumen</Label>
+                                    <Input
+                                      value={doc.type}
+                                      onChange={(e) => setRevisionForm(p => ({
+                                        ...p,
+                                        documents: p.documents.map(d => d.id === doc.id ? { ...d, type: e.target.value } : d)
+                                      }))}
+                                      className="h-8 text-xs bg-white"
+                                      placeholder="Contoh: Invoice, TOR"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase">File Dokumen</Label>
+                                    <FileUploadDropzone
+                                      className="h-16 bg-white shrink-0"
+                                      onFilesChange={(files) => setRevisionForm(p => ({
+                                        ...p,
+                                        documents: p.documents.map(d => d.id === doc.id ? { ...d, file: files[0] ?? null } : d)
+                                      }))}
+                                    />
+                                    {doc.file ? (
+                                      <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 italic">
+                                        <CheckCircle className="h-3 w-3 shrink-0" /> <span className="truncate">Baru: {doc.file.name}</span>
+                                      </div>
+                                    ) : doc.original_name ? (
+                                      <div className="flex items-center gap-1.5 text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 italic">
+                                        <CheckCircle className="h-3 w-3 shrink-0" /> <span className="truncate">Lama: {doc.original_name}</span>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground text-center italic p-4 border border-dashed rounded bg-slate-50/50">Tidak ada dokumen pendukung tambahan.</p>
+                          )}
+                        </div>
 
                         <div className="space-y-1 pb-2 border-t pt-4">
                           <Label className="text-xs font-medium">Catatan Revisi untuk Approver</Label>

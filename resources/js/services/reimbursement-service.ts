@@ -43,9 +43,16 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     if (payload.transfer_proof) fd.append('transfer_proof', payload.transfer_proof);
     if (payload.status) fd.append('status', payload.status);
 
-    payload.documents?.forEach((doc, index) => {
-        fd.append(`documents[${index}][file]`, doc.file);
-        fd.append(`documents[${index}][type]`, doc.type);
+    payload.documents?.forEach((doc: any, index: number) => {
+        if (doc.id) {
+            fd.append(`documents[${index}][id]`, doc.id.toString());
+        }
+        if (doc.file) {
+            fd.append(`documents[${index}][file]`, doc.file);
+        }
+        if (doc.type) {
+            fd.append(`documents[${index}][type]`, doc.type);
+        }
     });
 
     payload.selected_budget_details?.forEach((budget, index) => {
