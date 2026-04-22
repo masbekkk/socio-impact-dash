@@ -207,6 +207,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
                                         <DatePicker
                                             value={data.letter_date}
                                             onChange={(v) => setData({ ...data, letter_date: v })}
+                                            max={format(new Date(), 'yyyy-MM-dd')}
                                         />
                                         {errors.letter_date && <p className="text-sm text-destructive font-medium">{errors.letter_date}</p>}
                                     </div>

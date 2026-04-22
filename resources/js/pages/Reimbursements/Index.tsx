@@ -132,6 +132,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
   transferred: { label: 'Sudah Ditransfer', className: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200', icon: CheckCircle },
   revision: { label: 'Revisi', className: 'bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200', icon: AlertCircle },
   rejected: { label: 'Ditolak', className: 'bg-red-100 text-red-700 hover:bg-red-100 border-red-200', icon: XCircle },
+  closed: { label: 'Ditutup', className: 'bg-gray-300 text-gray-700 hover:bg-gray-300 border-gray-400', icon: XCircle },
 };
 
 const TYPE_COLORS: Record<string, string> = {
