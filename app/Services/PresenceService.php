@@ -7,7 +7,6 @@ namespace App\Services;
 use App\Enums\PresenceStatus;
 use App\Models\Presence;
 use App\Models\User;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -134,7 +133,7 @@ final readonly class PresenceService
     public function applyFilters(\Illuminate\Database\Eloquent\Builder $query, ?User $user = null, array $filters = []): void
     {
         if ($user instanceof User) {
-            if ($user->hasAnyRole([\App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::Superadmin->value]) || $user->hasAnyPermission(['view_all_leaves'])) {
+            if ($user->hasAnyRole([\App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Superadmin->value]) || $user->hasAnyPermission(['view_all_leaves'])) {
                 // These roles can view all presence
             } elseif ($user->hasRole(\App\Enums\UserRole::Head->value)) {
                 // Head can see:
