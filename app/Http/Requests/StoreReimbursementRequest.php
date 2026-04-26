@@ -46,7 +46,7 @@ final class StoreReimbursementRequest extends FormRequest
             ],
             'end_time' => ['nullable', 'string', 'max:10'],
             'documents' => ['nullable', 'array'],
-            'documents.*.file' => ['required_without:status,draft', 'file', 'max:10240'],
+            'documents.*.file' => ['required_unless:status,draft', 'file', 'max:10240'],
             'documents.*.type' => ['nullable', 'string'],
 
             'selected_budget_details' => ['nullable', 'array'],

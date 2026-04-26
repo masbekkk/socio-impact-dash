@@ -99,7 +99,7 @@ final class DashboardController extends Controller
         if (in_array('direktur', $roles)) {
             $approvalItems['direktur_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
                 \App\Models\Reimbursement::query()
-                    ->where('status', \App\Enums\ReimbursementStatus::FinanceApproved)
+                    ->whereIn('status', [\App\Enums\ReimbursementStatus::FinanceApproved, \App\Enums\ReimbursementStatus::HRApproved])
                     ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
                     ->get()
             )->resolve();

@@ -295,7 +295,7 @@ final readonly class ReimbursementController
      */
     public function edit(int $id, Request $request): \Inertia\Response
     {
-        $reimbursement = Reimbursement::with(['items.budgetDetail', 'project.division', 'project.pic', 'project.head', 'atrBudgetSelecteds.budgetDetail', 'approvals'])->findOrFail($id);
+        $reimbursement = Reimbursement::with(['items.budgetDetail', 'project.division', 'project.pic', 'project.head', 'atrBudgetSelecteds.budgetDetail', 'approvals', 'documents', 'user'])->findOrFail($id);
         $user = $request->user();
 
         // Security: only owner can edit draft

@@ -69,7 +69,9 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
   const { hasRole } = usePermission();
 
   const [selectedActivities, setSelectedActivities] = useState<SelectedActivity[]>([]);
-  const [documents, setDocuments] = useState<{ id: string; file: File | null; type: string }[]>([]);
+  const [documents, setDocuments] = useState<{ id: string; file: File | null; type: string, db_id?: number, original_name?: string }[]>([]);
+
+  const reimbursementData = reimbursement?.data || reimbursement;
 
   const [formData, setFormData] = useState({
     code: '',
@@ -95,7 +97,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
   // Populate data in edit mode
   React.useEffect(() => {
     if (isEdit && reimbursement) {
-      const data = reimbursement.data || reimbursement;
+      const data = reimbursementData;
       const projectID = data.project?.id?.toString() ?? '';
       const autoFill = projectID ? getAutoFill(projectID) : { division: '', pic: '' };
 
@@ -147,6 +149,16 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
         });
 
         setSelectedActivities(Array.from(activitiesMap.values()));
+      }
+
+      if (data.documents && data.documents.length > 0) {
+        setDocuments(data.documents.map((d: any) => ({
+          id: crypto.randomUUID(),
+          db_id: d.id,
+          type: d.type || 'other',
+          file: null,
+          original_name: d.original_name,
+        })));
       }
     }
   }, [isEdit, reimbursement]);
@@ -351,8 +363,12 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
       approver_head_id: formData.approver_head_id,
       user_id: formData.user_id || undefined,
       is_edit: isEdit,
-      reimbursement_id: isEdit ? (reimbursement.data?.id || reimbursement.id) : undefined,
-      documents: documents.filter(d => d.file).map(d => ({ file: d.file!, type: d.type })),
+      reimbursement_id: isEdit ? (reimbursementData?.id || reimbursement.id) : undefined,
+      documents: documents.filter(d => d.file || d.db_id).map(d => ({ 
+        id: d.db_id,
+        file: d.file ?? undefined, 
+        type: d.type 
+      })),
     });
   };
 
@@ -654,11 +670,15 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
                         className="h-24 bg-white"
                         onFilesChange={(files) => setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] ?? null } : d))}
                       />
-                      {doc.file && (
-                        <p className="text-[10px] text-emerald-600 font-medium truncate">
+                      {doc.file ? (
+                        <p className="text-[10px] text-emerald-600 font-medium truncate mt-2">
                           Terlampir: {doc.file.name}
                         </p>
-                      )}
+                      ) : doc.original_name ? (
+                        <p className="text-[10px] text-emerald-600 font-medium truncate mt-2">
+                          ✓ Tersimpan: {doc.original_name}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 ))}

@@ -343,10 +343,29 @@ final class ReimbursementController extends Controller
 
                     foreach ($validated['documents'] as $doc) {
                         if (isset($doc['id']) && in_array($doc['id'], $existingDocIds)) {
-                            // Keep existing document, optionally update type
+                            // Keep existing document
                             $keptDocIds[] = $doc['id'];
-                            if (isset($doc['type'])) {
-                                $reimbursement->documents()->where('id', $doc['id'])->update(['type' => $doc['type']]);
+                            
+                            $existingDoc = $reimbursement->documents()->where('id', $doc['id'])->first();
+                            
+                            if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
+                                // User replaced the file for this existing document
+                                $meta = $fileUploadService->replaceFile(
+                                    $doc['file'],
+                                    $existingDoc?->path,
+                                    "reimbursements/{$reimbursement->id}/documents"
+                                );
+                                $existingDoc->update([
+                                    'original_name' => $meta['original_name'],
+                                    'path' => $meta['path'],
+                                    'mime' => $meta['mime'],
+                                    'size' => $meta['size'],
+                                    'type' => $doc['type'] ?? $existingDoc->type,
+                                    'uploaded_by' => $user->id,
+                                ]);
+                            } elseif (isset($doc['type'])) {
+                                // Just update type if provided
+                                $existingDoc->update(['type' => $doc['type']]);
                             }
                         } elseif (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
                             $meta = $fileUploadService->uploadFile(

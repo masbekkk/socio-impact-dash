@@ -110,7 +110,9 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
   const { hasRole } = usePermission();
 
   const [items, setItems] = useState<({ id: string } & ChildItem & { project_budget_detail_id: number | '' })[]>([]);
-  const [documents, setDocuments] = useState<{ id: string; file: File | null; type: string }[]>([]);
+  const [documents, setDocuments] = useState<{ id: string; file: File | null; type: string, db_id?: number, original_name?: string }[]>([]);
+
+  const reimbursementData = reimbursement?.data || reimbursement;
 
   const [formData, setFormData] = useState({
     code: '',
@@ -132,7 +134,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
   // Populate data in edit mode
   React.useEffect(() => {
     if (isEdit && reimbursement) {
-      const data = reimbursement.data || reimbursement;
+      const data = reimbursementData;
       setFormData({
         code: data.code || '',
         user_id: data.user?.id?.toString() ?? '',
@@ -161,6 +163,16 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
           receipt: null,
           receipt_path: item.receipt_path,
           notes: item.notes || '',
+        })));
+      }
+
+      if (data.documents && data.documents.length > 0) {
+        setDocuments(data.documents.map((d: any) => ({
+          id: crypto.randomUUID(),
+          db_id: d.id,
+          type: d.type || 'other',
+          file: null,
+          original_name: d.original_name,
         })));
       }
     }
@@ -346,8 +358,12 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
       transfer_proof: transferProof,
       user_id: formData.user_id || undefined,
       is_edit: isEdit,
-      reimbursement_id: isEdit ? (reimbursement.data?.id || reimbursement.id) : undefined,
-      documents: documents.filter(d => d.file).map(d => ({ file: d.file!, type: d.type })),
+      reimbursement_id: isEdit ? (reimbursementData?.id || reimbursement.id) : undefined,
+      documents: documents.filter(d => d.file || d.db_id).map(d => ({ 
+        id: d.db_id,
+        file: d.file ?? undefined, 
+        type: d.type 
+      })),
     } as any);
   };
 
@@ -790,11 +806,15 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                         className="h-24 bg-white"
                         onFilesChange={(files) => setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] ?? null } : d))}
                       />
-                      {doc.file && (
-                        <p className="text-[10px] text-emerald-600 font-medium truncate">
+                      {doc.file ? (
+                        <p className="text-[10px] text-emerald-600 font-medium truncate mt-2">
                           Terlampir: {doc.file.name}
                         </p>
-                      )}
+                      ) : doc.original_name ? (
+                        <p className="text-[10px] text-emerald-600 font-medium truncate mt-2">
+                          ✓ Tersimpan: {doc.original_name}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 ))}

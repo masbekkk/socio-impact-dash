@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardFooter } from '@/components/ui/card';
 import {
-    ArrowLeft, Save, FileText, User, AlertCircle,
+    ArrowLeft, Save, FileText, User, AlertCircle, X,
     Building2, Briefcase, UserCheck, Loader2, Coins, Calendar
 } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
@@ -62,6 +62,9 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
     const { loading, uploadProgress, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
     const { hasRole } = usePermission();
 
+    const reimbursementData = reimbursement?.data || reimbursement;
+    const [deletedExistingDocument, setDeletedExistingDocument] = useState(false);
+
     const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
     const [formData, setFormData] = useState({
@@ -89,7 +92,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
     // Populate data in edit mode
     useEffect(() => {
         if (isEdit && reimbursement) {
-            const data = reimbursement.data || reimbursement;
+            const data = reimbursementData;
             const projectID = data.project?.id?.toString() ?? '';
             const autoFill = projectID ? getAutoFill(projectID) : { division: '', pic: '' };
 
@@ -180,6 +183,8 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
     };
 
     const handleSubmit = async (status: 'submitted' | 'draft' = 'submitted') => {
+        const hasExistingDocument = isEdit && reimbursementData?.documents && reimbursementData.documents.length > 0 && !deletedExistingDocument;
+
         if (status === 'submitted') {
             if (!formData.project_id) {
                 setErrors({ project_id: ['Pilih project terlebih dahulu.'] });
@@ -196,7 +201,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                 return;
             }
 
-            if (!attachmentFile) {
+            if (!attachmentFile && !hasExistingDocument) {
                 setErrors({ _general: ['Dokumen pendukung wajib diunggah.'] });
                 return;
             }
@@ -211,8 +216,12 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
             }
         }
 
-        const documents: { file: File; type: string }[] = [];
-        if (attachmentFile) documents.push({ file: attachmentFile, type: 'other' });
+        const documents: any[] = [];
+        if (attachmentFile) {
+            documents.push({ file: attachmentFile, type: 'other' });
+        } else if (hasExistingDocument) {
+            documents.push({ id: reimbursementData.documents[0].id, type: 'other' });
+        }
 
         await submitReimbursement({
             code: formData.code,
@@ -426,6 +435,22 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                             <p className="text-sm text-muted-foreground mb-6">Unggah dokumen pendukung untuk allowance.</p>
 
                             <FileUploadDropzone className="w-full" onFilesChange={(files: File[]) => setAttachmentFile(files[0] ?? null)} />
+                            {(isEdit && reimbursementData?.documents && reimbursementData.documents.length > 0 && !attachmentFile && !deletedExistingDocument) && (
+                                <div className="mt-4 flex items-center justify-between p-3 border rounded-lg bg-emerald-50 border-emerald-100">
+                                    <p className="text-sm text-emerald-700 font-medium truncate flex-1">
+                                        ✓ Dokumen sebelumnya sudah tersimpan ({reimbursementData.documents[0].original_name}).
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600 flex-shrink-0 ml-2"
+                                        onClick={() => setDeletedExistingDocument(true)}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
                             <p className="text-xs text-muted-foreground mt-4 italic">Format: PDF, JPG, PNG (Max 5MB). Lampirkan bukti pendukung jika ada.</p>
                         </div>
 
