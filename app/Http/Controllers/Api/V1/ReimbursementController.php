@@ -273,8 +273,8 @@ final class ReimbursementController extends Controller
                 'transfer_proof' => ['nullable', 'file', 'max:10240'],
                 'documents' => ['nullable', 'array'],
                 'documents.*.id' => ['nullable', 'integer'],
-                'documents.*.file' => ['required_without:documents.*.id', 'file', 'max:10240'],
-                'documents.*.type' => ['required_with:documents', 'string', 'max:50'],
+                'documents.*.file' => ['nullable', 'file', 'max:10240'],
+                'documents.*.type' => ['nullable', 'string', 'max:50'],
             ]);
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request): void {

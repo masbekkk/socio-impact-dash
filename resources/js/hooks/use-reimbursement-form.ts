@@ -59,6 +59,7 @@ export function useReimbursementForm(projects: Project[]) {
             } else {
                 setErrors({ _general: [error.response?.data?.message ?? 'Terjadi kesalahan saat menyimpan.'] });
             }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return false;
         } finally {
             setLoading(false);

@@ -188,21 +188,25 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
         if (status === 'submitted') {
             if (!formData.project_id) {
                 setErrors({ project_id: ['Pilih project terlebih dahulu.'] });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
 
             if (!formData.approver_head_id) {
                 setErrors({ _general: ['Persetujuan Head wajib dipilih.'] });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
 
             if (!formData.start_date || !formData.end_date) {
                 setErrors({ _general: ['Tanggal berangkat dan kembali wajib diisi.'] });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
 
             if (!attachmentFile && !hasExistingDocument) {
                 setErrors({ _general: ['Dokumen pendukung wajib diunggah.'] });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
 
@@ -211,6 +215,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                 const remaining = (selected.allowance_budget ?? 0) - (selected.used_allowance_budget ?? 0);
                 if (formData.amount > remaining) {
                     setErrors({ amount: ['Nominal pengajuan melebihi sisa pagu allowance proyek.'] });
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                     return;
                 }
             }
