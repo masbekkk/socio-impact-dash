@@ -276,7 +276,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                 )}
 
                 <Card className="border-none shadow-sm rounded-xl overflow-hidden">
-                    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+                    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} noValidate>
                         {/* Data Pemohon */}
                         <div className="p-6 md:p-8 bg-white">
                             <h3 className="text-lg font-semibold mb-1">Data Pemohon</h3>
@@ -297,7 +297,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                                 </div>
                                 {hasRole(['hr', 'superadmin']) && (
                                     <div className="md:col-span-3 space-y-2">
-                                        <Label htmlFor="user_id">Pilih Pegawai (Pemohon)</Label>
+                                        <Label>Pilih Pegawai (Pemohon)</Label>
                                         <SearchableSelect
                                             options={users.map(u => ({ value: u.id.toString(), label: `${u.nip ?? '-'} - ${u.name}` }))}
                                             value={formData.user_id}
@@ -340,7 +340,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label htmlFor="project_id">Nama Project <span className="text-red-500">*</span></Label>
+                                        <Label>Nama Project <span className="text-red-500">*</span></Label>
                                         <SearchableSelect
                                             options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.initial_project} - ${p.name}` }))}
                                             value={formData.project_id}
@@ -360,7 +360,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
                                     <div className="space-y-2 lg:col-span-1 border-r pr-4">
-                                        <Label htmlFor="start_date">Tanggal Berangkat <span className="text-red-500">*</span></Label>
+                                        <Label>Tanggal Berangkat <span className="text-red-500">*</span></Label>
                                         <DatePicker
                                             value={formData.start_date}
                                             onChange={(v) => handleValueChange('start_date', v)}
@@ -380,7 +380,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                                         />
                                     </div>
                                     <div className="space-y-2 lg:col-span-1 border-r pr-4">
-                                        <Label htmlFor="end_date">Tanggal Kembali <span className="text-red-500">*</span></Label>
+                                        <Label>Tanggal Kembali <span className="text-red-500">*</span></Label>
                                         <DatePicker
                                             value={formData.end_date}
                                             onChange={(v) => handleValueChange('end_date', v)}
@@ -463,7 +463,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="approver_head_id">Head Approver <span className="text-red-500">*</span></Label>
+                                    <Label>Head Approver <span className="text-red-500">*</span></Label>
                                     <SearchableSelect
                                         options={(approvers['head'] || []).map(u => ({ value: u.id.toString(), label: u.name }))}
                                         value={formData.approver_head_id}
@@ -493,7 +493,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                                 <Button type="button" variant="outline" disabled={loading} onClick={() => handleSubmit('draft')}>
                                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update Draft' : 'Simpan Draft'}</>}
                                 </Button>
-                                <Button type="submit" disabled={loading} className="bg-sidebar hover:bg-sidebar/90 min-w-[180px]">
+                                <Button type="button" disabled={loading} className="bg-sidebar hover:bg-sidebar/90 min-w-[180px]" onClick={() => handleSubmit('submitted')}>
                                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update & Ajukan Allowance' : 'Ajukan Allowance'}</>}
                                 </Button>
                             </div>
