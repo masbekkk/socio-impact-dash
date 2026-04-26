@@ -276,8 +276,16 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                     </div>
                 </div>
 
-                {errors._general && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">{errors._general[0]}</div>
+                {Object.keys(errors).length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 space-y-1">
+                        {errors._general && <p className="font-medium">{errors._general[0]}</p>}
+                        {Object.entries(errors)
+                            .filter(([key]) => key !== '_general')
+                            .map(([key, msgs]) => (
+                                <p key={key}><span className="font-medium">{key}:</span> {(msgs as string[])[0]}</p>
+                            ))
+                        }
+                    </div>
                 )}
 
                 <Card className="border-none shadow-sm rounded-xl overflow-hidden">
