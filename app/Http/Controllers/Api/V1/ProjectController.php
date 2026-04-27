@@ -52,7 +52,14 @@ final class ProjectController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('initial_project', 'like', "%{$search}%")
-                    ->orWhere('client_name', 'like', "%{$search}%");
+                    ->orWhere('client_name', 'like', "%{$search}%")
+                    ->orWhere('budget_total', 'like', "%{$search}%")
+                    ->orWhereHas('division', function ($query) use ($search) {
+                        $query->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('creator', function ($query) use ($search) {
+                        $query->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
