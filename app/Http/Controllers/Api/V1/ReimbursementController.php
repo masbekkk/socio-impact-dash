@@ -345,9 +345,9 @@ final class ReimbursementController extends Controller
                         if (isset($doc['id']) && in_array($doc['id'], $existingDocIds)) {
                             // Keep existing document
                             $keptDocIds[] = $doc['id'];
-                            
+
                             $existingDoc = $reimbursement->documents()->where('id', $doc['id'])->first();
-                            
+
                             if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
                                 // User replaced the file for this existing document
                                 $meta = $fileUploadService->replaceFile(
@@ -386,7 +386,7 @@ final class ReimbursementController extends Controller
 
                     // Delete documents that were not kept
                     $docsToDelete = array_diff($existingDocIds, $keptDocIds);
-                    if (!empty($docsToDelete)) {
+                    if (! empty($docsToDelete)) {
                         $reimbursement->documents()->whereIn('id', $docsToDelete)->delete();
                         // Additional storage deletion could be handled here if needed
                     }
@@ -489,7 +489,7 @@ final class ReimbursementController extends Controller
         try {
             $user = $request->user();
 
-            if (! $user->hasRole('superadmin') && ! $user->hasRole('finance')) {
+            if (! $user->hasRole('superadmin') && ! $user->hasRole('finance') && ! $user->hasRole('hr')) {
                 return JsonResponseFormatter::error('Unauthorized', 403);
             }
 
