@@ -25,6 +25,7 @@ export default function StatusBadge({ status }: Props) {
 
     finished: { cls: 'bg-blue-100 text-blue-800 border-blue-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
     completed: { cls: 'bg-blue-100 text-blue-800 border-blue-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
+    closed: { cls: 'bg-indigo-100 text-indigo-800 border-indigo-200', icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
 
     blocked: { cls: 'bg-red-100 text-red-800 border-red-200', icon: <XCircle className="w-3 h-3 mr-1" /> },
 
@@ -64,6 +65,7 @@ export default function StatusBadge({ status }: Props) {
     hr_approved: 'Disetujui HR',
     finance_approved: 'Disetujui Finance',
     transferred: 'Sudah Ditransfer',
+    closed: 'Ditutup',
     checked_in: 'Hadir',
     late: 'Terlambat',
   };

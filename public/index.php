@@ -7,6 +7,14 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+$host = $_SERVER['HTTP_HOST'] ?? '';
+
+if ($host === 'staging.manajemensiid.id') {
+    putenv('APP_ENV=staging');
+    $_ENV['APP_ENV'] = 'staging';
+    $_SERVER['APP_ENV'] = 'staging';
+}
+
 // Determine if the application is in maintenance mode...
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;

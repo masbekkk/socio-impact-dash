@@ -29,7 +29,15 @@ final class ProjectController extends Controller
         $user = $request->user();
 
         if (! $user->hasAnyPermission(['view_all_projects'])) {
-            $query->where('created_by', $user->id);
+            $query->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id);
+
+                if ($user->hasRole(UserRole::Head)) {
+                    $q->orWhere('account_manager_id', $user->id)
+                        ->orWhere('head_id', $user->id)
+                        ->orWhere('pic_id', $user->id);
+                }
+            });
         }
 
         // Finance with division restriction
@@ -44,7 +52,14 @@ final class ProjectController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('initial_project', 'like', "%{$search}%")
-                    ->orWhere('client_name', 'like', "%{$search}%");
+                    ->orWhere('client_name', 'like', "%{$search}%")
+                    ->orWhere('budget_total', 'like', "%{$search}%")
+                    ->orWhereHas('division', function ($query) use ($search) {
+                        $query->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('creator', function ($query) use ($search) {
+                        $query->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 

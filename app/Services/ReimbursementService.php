@@ -12,7 +12,7 @@ final class ReimbursementService
 {
     public function listReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver']);
+        $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver', 'atrBudgetSelecteds']);
 
         $this->applyFilters($query, $user, $filters);
 
@@ -98,8 +98,15 @@ final class ReimbursementService
             $search = $filters['search'];
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
                 $q->where('code', 'like', "%{$search}%")
+                    ->orWhere('usage_plan', 'like', "%{$search}%")
+                    ->orWhere('amount', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%")
                     ->orWhereHas('user', fn (\Illuminate\Database\Eloquent\Builder $u) => $u->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('project', fn (\Illuminate\Database\Eloquent\Builder $p) => $p->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('project', function (\Illuminate\Database\Eloquent\Builder $p) use ($search) {
+                        $p->where('name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%")
+                            ->orWhere('initial_project', 'like', "%{$search}%");
+                    });
             });
         }
     }
@@ -110,6 +117,7 @@ final class ReimbursementService
 
         if (is_numeric($identifier)) {
             $identifier = (int) $identifier;
+
             return $query->where('id', $identifier)->first();
         }
 

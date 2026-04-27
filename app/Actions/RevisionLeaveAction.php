@@ -5,26 +5,24 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Models\Leave;
-use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-final readonly class ApproveLeaveAction
+final readonly class RevisionLeaveAction
 {
     /**
      * Execute the action.
      */
-    public function handle(Leave $leave, ?string $notes = null, ?string $role = null): Leave
+    public function handle(Leave $leave, string $notes, ?string $role = null): Leave
     {
         return DB::transaction(function () use ($leave, $notes, $role): Leave {
             $user = Auth::user();
             throw_unless($user, \Exception::class, 'User not authenticated');
             /** @var \App\Models\User $user */
-            
+
             if ($role === null) {
                 $roles = $user->getRoleNames();
                 if ($roles->contains('head') && $roles->contains('finance')) {
-                    // Smart detection: if user is assigned as project head, act as head.
                     $role = ($user->id === $leave->project?->head_id) ? 'head' : 'finance';
                 } else {
                     $role = $roles->first();
@@ -38,30 +36,21 @@ final readonly class ApproveLeaveAction
 
             if ($approval) {
                 $approval->update([
-                    'status' => \App\Enums\ApprovalStatus::Approved,
+                    'status' => \App\Enums\ApprovalStatus::Rejected, // Approval status for 'needs revision' is often mapped to 'Rejected' record-wise but 'Revision' status-wise
                     'notes' => $notes,
                     'approved_at' => now(),
                 ]);
             } else {
-                // Fallback for superadmin or if specifically assigned
                 $leave->approvals()->create([
                     'approver_id' => $user->id,
                     'role' => $role,
-                    'status' => \App\Enums\ApprovalStatus::Approved,
+                    'status' => \App\Enums\ApprovalStatus::Rejected,
                     'notes' => $notes,
                     'approved_at' => now(),
                 ]);
             }
 
-            $nextStatus = match ($role) {
-                'head' => \App\Enums\LeaveStatus::HeadApproved,
-                'direktur' => \App\Enums\LeaveStatus::DirekturApproved,
-                'hr' => \App\Enums\LeaveStatus::HRApproved,
-                'superadmin' => \App\Enums\LeaveStatus::SuperAdminApproved,
-                default => $leave->status,
-            };
-
-            $leave->update(['status' => $nextStatus]);
+            $leave->update(['status' => \App\Enums\LeaveStatus::Revision]);
 
             return $leave->fresh(['user', 'project', 'replacementPic', 'approvals.approver']);
         });

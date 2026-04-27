@@ -3,11 +3,12 @@ import type { ReimbursementPayload } from '@/types/reimbursement';
 
 const API_URL = '/api/v1/reimbursements';
 
-export async function storeReimbursement(payload: ReimbursementPayload): Promise<any> {
+export async function storeReimbursement(payload: ReimbursementPayload, onUploadProgress?: (progressEvent: any) => void): Promise<any> {
     const formData = buildFormData(payload);
 
     const response = await axios.post(API_URL, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress,
     });
 
     return response.data;
@@ -35,14 +36,23 @@ function buildFormData(payload: ReimbursementPayload): FormData {
     if (payload.approver_direktur_id) fd.append('approver_direktur_id', payload.approver_direktur_id);
     if (payload.approver_hr_id) fd.append('approver_hr_id', payload.approver_hr_id);
     if (payload.start_date) fd.append('start_date', payload.start_date);
+    if (payload.start_time) fd.append('start_time', payload.start_time);
     if (payload.end_date) fd.append('end_date', payload.end_date);
+    if (payload.end_time) fd.append('end_time', payload.end_time);
     if (payload.replacement_pic_id) fd.append('replacement_pic_id', payload.replacement_pic_id);
     if (payload.transfer_proof) fd.append('transfer_proof', payload.transfer_proof);
     if (payload.status) fd.append('status', payload.status);
 
-    payload.documents?.forEach((doc, index) => {
-        fd.append(`documents[${index}][file]`, doc.file);
-        fd.append(`documents[${index}][type]`, doc.type);
+    payload.documents?.forEach((doc: any, index: number) => {
+        if (doc.id) {
+            fd.append(`documents[${index}][id]`, doc.id.toString());
+        }
+        if (doc.file) {
+            fd.append(`documents[${index}][file]`, doc.file);
+        }
+        if (doc.type) {
+            fd.append(`documents[${index}][type]`, doc.type);
+        }
     });
 
     payload.selected_budget_details?.forEach((budget, index) => {
@@ -60,17 +70,30 @@ function buildFormData(payload: ReimbursementPayload): FormData {
         if (item.parent_item_id) fd.append(`items[${index}][parent_item_id]`, item.parent_item_id.toString());
         if (item.expense_type) fd.append(`items[${index}][expense_type]`, item.expense_type);
         if (item.receipt) fd.append(`items[${index}][receipt]`, item.receipt);
+        if (item.receipt_path) fd.append(`items[${index}][receipt_path]`, item.receipt_path);
         if (item.notes) fd.append(`items[${index}][notes]`, item.notes);
     });
 
     return fd;
 }
 
-export async function resubmitReimbursement(id: number, payload: any): Promise<any> {
+export async function resubmitReimbursement(id: number, payload: any, onUploadProgress?: (progressEvent: any) => void): Promise<any> {
     const formData = buildFormData(payload);
     if (payload.revision_note) formData.append('revision_note', payload.revision_note);
 
     const response = await axios.post(`${API_URL}/${id}/resubmit`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress,
+    });
+
+    return response.data;
+}
+
+export async function updateItemReceipt(reimbursementId: number, itemId: number, file: File): Promise<any> {
+    const fd = new FormData();
+    fd.append('receipt', file);
+
+    const response = await axios.post(`${API_URL}/${reimbursementId}/items/${itemId}/receipt`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
     });
 

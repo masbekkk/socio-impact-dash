@@ -127,7 +127,7 @@ final readonly class CreateReimbursement
         }
     }
 
-    private function assignApprovers(Reimbursement $reimbursement, array $data): void
+    public function assignApprovers(Reimbursement $reimbursement, array $data): void
     {
         $roles = [
             'head' => $data['approver_head_id'] ?? null,
@@ -157,6 +157,19 @@ final readonly class CreateReimbursement
 
         if (empty($roles['direktur'])) {
             $roles['direktur'] = \App\Models\User::query()->where('email', 'direktur@socio-impact.test')->first()?->id;
+        }
+
+        // If Head and HR are the same person, skip the HR step (prioritize Head)
+        if ($roles['head'] && $roles['hr'] && (int) $roles['head'] === (int) $roles['hr']) {
+            $roles['hr'] = null;
+        }
+
+        // Additional Logic: If submitter has both Head and HR roles, skip HR for EER (consistent with ATR behavior)
+        if ($reimbursement->type->value === 'eer') {
+            $submitter = \App\Models\User::find($reimbursement->user_id);
+            if ($submitter && $submitter->hasRole('head') && $submitter->hasRole('hr')) {
+                $roles['hr'] = null;
+            }
         }
 
         foreach ($roles as $role => $approverId) {

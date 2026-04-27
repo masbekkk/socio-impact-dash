@@ -21,13 +21,14 @@ final class LetterRequestController extends Controller
 
         return Inertia::render('LetterRequests/Index', [
             'canAssign' => $user->hasRole([UserRole::Finance, UserRole::Superadmin]),
+            'canDelete' => $user->hasRole([UserRole::Finance, UserRole::Superadmin]),
         ]);
     }
 
     public function create(): Response
     {
         return Inertia::render('LetterRequests/Create', [
-            'projects' => Project::query()->select('id', 'name', 'code')->get(),
+            'projects' => Project::query()->select('id', 'name', 'code', 'initial_project')->get(),
         ]);
     }
 
@@ -35,7 +36,7 @@ final class LetterRequestController extends Controller
     {
         return Inertia::render('LetterRequests/Edit', [
             'letterRequestId' => $id,
-            'projects' => Project::query()->select('id', 'name', 'code')->get(),
+            'projects' => Project::query()->select('id', 'name', 'code', 'initial_project')->get(),
         ]);
     }
 

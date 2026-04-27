@@ -12,6 +12,7 @@ interface DatePickerProps {
     className?: string;
     error?: boolean;
     disabled?: boolean;
+    max?: string; // Expects YYYY-MM-DD
 }
 
 /**
@@ -28,7 +29,8 @@ const DatePicker = ({
     placeholder = 'DD/MM/YYYY',
     className,
     error,
-    disabled
+    disabled,
+    max
 }: DatePickerProps) => {
     const [displayValue, setDisplayValue] = useState('');
     const nativeInputRef = useRef<HTMLInputElement>(null);
@@ -99,6 +101,7 @@ const DatePicker = ({
                 className="absolute inset-0 opacity-0 -z-10 pointer-events-none"
                 tabIndex={-1}
                 disabled={disabled}
+                max={max}
             />
 
             <PatternFormat

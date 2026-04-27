@@ -65,11 +65,13 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
   reimbursement?: any,
   isEdit?: boolean,
 }) {
-  const { authUser, loading, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
+  const { authUser, loading, uploadProgress, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
   const { hasRole } = usePermission();
 
   const [selectedActivities, setSelectedActivities] = useState<SelectedActivity[]>([]);
-  const [documents, setDocuments] = useState<{ id: string; file: File | null; type: string }[]>([]);
+  const [documents, setDocuments] = useState<{ id: string; file: File | null; type: string, db_id?: number, original_name?: string }[]>([]);
+
+  const reimbursementData = reimbursement?.data || reimbursement;
 
   const [formData, setFormData] = useState({
     code: '',
@@ -85,6 +87,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
     bank_name: '',
     account_number: '',
     account_name: '',
+    bank_branch: '',
     usage_plan: '',
     urgency: 'normal',
     start_date: '',
@@ -94,7 +97,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
   // Populate data in edit mode
   React.useEffect(() => {
     if (isEdit && reimbursement) {
-      const data = reimbursement.data || reimbursement;
+      const data = reimbursementData;
       const projectID = data.project?.id?.toString() ?? '';
       const autoFill = projectID ? getAutoFill(projectID) : { division: '', pic: '' };
 
@@ -112,6 +115,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
         bank_name: data.bank_name || '',
         account_number: data.bank_account || '',
         account_name: data.account_holder || '',
+        bank_branch: data.bank_branch || '',
         usage_plan: data.usage_plan || '',
         urgency: Object.keys(URGENCY_MAP).find(key => URGENCY_MAP[key] === data.urgency) || 'normal',
         start_date: data.start_date || '',
@@ -145,6 +149,16 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
         });
 
         setSelectedActivities(Array.from(activitiesMap.values()));
+      }
+
+      if (data.documents && data.documents.length > 0) {
+        setDocuments(data.documents.map((d: any) => ({
+          id: crypto.randomUUID(),
+          db_id: d.id,
+          type: d.type || 'other',
+          file: null,
+          original_name: d.original_name,
+        })));
       }
     }
   }, [isEdit, reimbursement]);
@@ -340,6 +354,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
       bank_name: formData.bank_name,
       bank_account: formData.account_number,
       account_holder: formData.account_name,
+      bank_branch: formData.bank_branch,
       usage_plan: formData.usage_plan,
       urgency: URGENCY_MAP[formData.urgency] ?? 'normal',
       start_date: formData.start_date || undefined,
@@ -348,8 +363,12 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
       approver_head_id: formData.approver_head_id,
       user_id: formData.user_id || undefined,
       is_edit: isEdit,
-      reimbursement_id: isEdit ? (reimbursement.data?.id || reimbursement.id) : undefined,
-      documents: documents.filter(d => d.file).map(d => ({ file: d.file!, type: d.type })),
+      reimbursement_id: isEdit ? (reimbursementData?.id || reimbursement.id) : undefined,
+      documents: documents.filter(d => d.file || d.db_id).map(d => ({ 
+        id: d.db_id,
+        file: d.file ?? undefined, 
+        type: d.type 
+      })),
     });
   };
 
@@ -651,11 +670,15 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
                         className="h-24 bg-white"
                         onFilesChange={(files) => setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] ?? null } : d))}
                       />
-                      {doc.file && (
-                        <p className="text-[10px] text-emerald-600 font-medium truncate">
+                      {doc.file ? (
+                        <p className="text-[10px] text-emerald-600 font-medium truncate mt-2">
                           Terlampir: {doc.file.name}
                         </p>
-                      )}
+                      ) : doc.original_name ? (
+                        <p className="text-[10px] text-emerald-600 font-medium truncate mt-2">
+                          ✓ Tersimpan: {doc.original_name}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 ))}
@@ -673,8 +696,8 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
 
             {/* Rencana Penggunaan */}
             <div className="p-6 md:p-8 bg-white">
-              <h3 className="text-lg font-semibold mb-1">Rencana Penggunaan</h3>
-              <p className="text-sm text-muted-foreground mb-6">Jelaskan rencana penggunaan dana, jadwal pemakaian, dan tingkat urgensi.</p>
+              <h3 className="text-lg font-semibold mb-1">Catatan Tambahan</h3>
+              <p className="text-sm text-muted-foreground mb-6">Tambahkan catatan tambahan, seperti jadwal pemakaian, dan tingkat urgensi.</p>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -788,6 +811,13 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
                     <Input id="account_name" name="account_name" placeholder="Nama pemilik rekening" className="pl-9 h-10" value={formData.account_name} onChange={handleChange} />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bank_branch">Cabang Pembuka Rekening</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input id="bank_branch" name="bank_branch" placeholder="Contoh: KCP Sudirman" className="pl-9 h-10" value={formData.bank_branch} onChange={handleChange} />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -806,6 +836,38 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
             </CardFooter>
           </form>
         </Card>
+
+        {/* Progress overlay when saving */}
+        {loading && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 flex flex-col items-center text-center space-y-6">
+              <div className="relative">
+                <div className="h-28 w-28 rounded-full border-4 border-slate-100 flex items-center justify-center shadow-inner">
+                  <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                  <span className="font-bold text-2xl text-slate-800">{uploadProgress}%</span>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Mengunggah Data</h3>
+                <p className="text-sm text-slate-500 max-w-[250px] mx-auto">
+                  {uploadProgress === 100 
+                    ? 'Sedang memproses data, mohon tunggu sebentar...' 
+                    : 'Mengunggah dokumen pendukung...'}
+                </p>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
+                <div 
+                  className="bg-blue-600 h-full transition-all duration-300 ease-out relative overflow-hidden" 
+                  style={{ width: `${uploadProgress}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20" style={{ transform: 'skewX(-20deg) translateX(-100%)', animation: 'shimmer 2s infinite' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppSidebarLayout>
   );

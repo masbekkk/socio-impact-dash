@@ -295,7 +295,7 @@ final readonly class ReimbursementController
      */
     public function edit(int $id, Request $request): \Inertia\Response
     {
-        $reimbursement = Reimbursement::with(['items.budgetDetail', 'project.division', 'project.pic', 'project.head', 'atrBudgetSelecteds.budgetDetail', 'approvals'])->findOrFail($id);
+        $reimbursement = Reimbursement::with(['items.budgetDetail', 'project.division', 'project.pic', 'project.head', 'atrBudgetSelecteds.budgetDetail', 'approvals', 'documents', 'user'])->findOrFail($id);
         $user = $request->user();
 
         // Security: only owner can edit draft
@@ -476,13 +476,59 @@ final readonly class ReimbursementController
     public function bulkApprove(Request $request): \Illuminate\Http\RedirectResponse
     {
         $ids = $request->input('ids', []);
+        $role = $request->input('role');
         $user = $request->user();
         if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkApproveReimbursements(new \App\Actions\UpdateReimbursementStatus());
-            $bulkAction->handle($ids, $user->id, $user->getRoleNames()->first());
+            $bulkAction->handle($ids, $user->id, $role);
         }
 
         return back()->with('success', 'Berhasil menyetujui pengajuan terpilih.');
+    }
+
+    public function bulkRequestFund(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $role = $request->input('role');
+        $user = $request->user();
+        if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
+            $bulkAction = new \App\Actions\BulkRequestFundReimbursements(new \App\Actions\UpdateReimbursementStatus());
+            $bulkAction->handle($ids, $user->id, $role);
+        }
+
+        return back()->with('success', 'Berhasil melakukan request fund untuk pengajuan terpilih.');
+    }
+
+    public function bulkReject(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $notes = $request->input('notes', []);
+        $role = $request->input('role');
+        $user = $request->user();
+        if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
+            $bulkAction = new \App\Actions\BulkRejectReimbursements(new \App\Actions\UpdateReimbursementStatus());
+            $bulkAction->handle($ids, $notes, $user->id, $role);
+        }
+
+        return back()->with('success', 'Berhasil menolak pengajuan terpilih.');
+    }
+
+    public function bulkRevision(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $notes = $request->input('notes', []);
+        $role = $request->input('role');
+        $user = $request->user();
+        if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
+            $bulkAction = new \App\Actions\BulkRevisionReimbursements(new \App\Actions\UpdateReimbursementStatus());
+            $bulkAction->handle($ids, $notes, $user->id, $role);
+        }
+
+        return back()->with('success', 'Berhasil meminta revisi pengajuan terpilih.');
     }
 
     public function approve(): \Illuminate\Http\RedirectResponse

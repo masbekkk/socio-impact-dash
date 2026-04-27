@@ -9,6 +9,7 @@ export function useReimbursementForm(projects: Project[]) {
     const authUser = props.auth?.user;
 
     const [loading, setLoading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [errors, setErrors] = useState<Record<string, string[]>>({});
 
     const getAutoFill = (projectId: string): ProjectAutoFill => {
@@ -34,13 +35,21 @@ export function useReimbursementForm(projects: Project[]) {
 
     const submitReimbursement = async (payload: ReimbursementPayload): Promise<boolean> => {
         setLoading(true);
+        setUploadProgress(0);
         setErrors({});
+
+        const onUploadProgress = (progressEvent: any) => {
+            if (progressEvent.total) {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                setUploadProgress(percentCompleted);
+            }
+        };
 
         try {
             if (payload.is_edit && payload.reimbursement_id) {
-                await resubmitReimbursement(Number(payload.reimbursement_id), payload);
+                await resubmitReimbursement(Number(payload.reimbursement_id), payload, onUploadProgress);
             } else {
-                await storeReimbursement(payload);
+                await storeReimbursement(payload, onUploadProgress);
             }
             router.visit('/reimbursements');
             return true;
@@ -50,6 +59,7 @@ export function useReimbursementForm(projects: Project[]) {
             } else {
                 setErrors({ _general: [error.response?.data?.message ?? 'Terjadi kesalahan saat menyimpan.'] });
             }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return false;
         } finally {
             setLoading(false);
@@ -59,6 +69,7 @@ export function useReimbursementForm(projects: Project[]) {
     return {
         authUser,
         loading,
+        uploadProgress,
         errors,
         setErrors,
         getAutoFill,

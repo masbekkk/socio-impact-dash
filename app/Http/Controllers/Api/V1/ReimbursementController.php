@@ -17,7 +17,6 @@ use App\Services\ReimbursementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use ReflectionClass;
 use Throwable;
 
 final class ReimbursementController extends Controller
@@ -255,40 +254,61 @@ final class ReimbursementController extends Controller
             }
 
             $validated = $request->validate([
+                'status' => ['nullable', 'string', 'in:draft,submitted'],
                 'usage_plan' => ['nullable', 'string'],
                 'amount' => ['nullable', 'numeric', 'min:0'],
                 'start_date' => ['nullable', 'date'],
+                'start_time' => ['nullable', 'string', 'max:10'],
                 'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+                'end_time' => ['nullable', 'string', 'max:10'],
                 'revision_note' => ['nullable', 'string'],
                 'items' => ['nullable', 'array'],
                 'selected_budget_details' => ['nullable', 'array'],
-                'eer_type' => ['nullable', 'string', 'in:refund,reimbursement'],
+                'eer_type' => ['nullable', 'string', 'in:refund,reimbursement,balance'],
                 'refund_reimburse_amount' => ['nullable', 'numeric', 'min:0'],
                 'project_id' => ['nullable', 'integer', 'exists:projects,id'],
                 'replacement_pic_id' => ['nullable', 'integer', 'exists:users,id'],
                 'approver_head_id' => ['nullable', 'integer', 'exists:users,id'],
                 'urgency' => ['nullable', 'string', 'max:20'],
+                'transfer_proof' => ['nullable', 'file', 'max:10240'],
                 'documents' => ['nullable', 'array'],
-                'documents.*.file' => ['required_with:documents', 'file', 'max:10240'],
-                'documents.*.type' => ['required_with:documents', 'string', 'max:50'],
+                'documents.*.id' => ['nullable', 'integer'],
+                'documents.*.file' => ['nullable', 'file', 'max:10240'],
+                'documents.*.type' => ['nullable', 'string', 'max:50'],
             ]);
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request): void {
-                // Update editable fields
                 $isRevision = $reimbursement->status === \App\Enums\ReimbursementStatus::Revision;
-                $newStatus = $isRevision
-                    ? \App\Enums\ReimbursementStatus::Revised
-                    : \App\Enums\ReimbursementStatus::Submitted;
+
+                // New Status logic: if explicitly draft, stay draft.
+                // Else if it was a revision, it becomes revised.
+                // Otherwise it becomes submitted.
+                $requestedStatus = $validated['status'] ?? 'submitted';
+
+                if ($requestedStatus === 'draft') {
+                    $newStatus = \App\Enums\ReimbursementStatus::Draft;
+                } else {
+                    $newStatus = $isRevision
+                        ? \App\Enums\ReimbursementStatus::Revised
+                        : \App\Enums\ReimbursementStatus::Submitted;
+                }
 
                 $updateData = ['status' => $newStatus];
+
                 if (isset($validated['usage_plan'])) {
                     $updateData['usage_plan'] = $validated['usage_plan'];
                 }
                 if (isset($validated['start_date'])) {
                     $updateData['start_date'] = $validated['start_date'];
                 }
+                if (isset($validated['start_time'])) {
+                    $updateData['start_time'] = $validated['start_time'];
+                }
                 if (isset($validated['end_date'])) {
                     $updateData['end_date'] = $validated['end_date'];
+                }
+                if (isset($validated['end_time'])) {
+                    $updateData['end_time'] = $validated['end_time'];
                 }
                 if (isset($validated['eer_type'])) {
                     $updateData['eer_type'] = $validated['eer_type'];
@@ -306,11 +326,48 @@ final class ReimbursementController extends Controller
                     $updateData['urgency'] = $validated['urgency'];
                 }
 
+                $fileUploadService = resolve(\App\Services\FileUploadService::class);
+
+                if ($request->hasFile('transfer_proof')) {
+                    $meta = $fileUploadService->uploadFile(
+                        $request->file('transfer_proof'),
+                        "reimbursements/{$reimbursement->id}/transfer-proofs"
+                    );
+                    $updateData['transfer_proof_path'] = $meta['path'];
+                }
+
                 // Sync documents if provided
                 if (isset($validated['documents'])) {
+                    $existingDocIds = $reimbursement->documents()->pluck('id')->toArray();
+                    $keptDocIds = [];
+
                     foreach ($validated['documents'] as $doc) {
-                        if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
-                            $fileUploadService = resolve(\App\Services\FileUploadService::class);
+                        if (isset($doc['id']) && in_array($doc['id'], $existingDocIds)) {
+                            // Keep existing document
+                            $keptDocIds[] = $doc['id'];
+
+                            $existingDoc = $reimbursement->documents()->where('id', $doc['id'])->first();
+
+                            if (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
+                                // User replaced the file for this existing document
+                                $meta = $fileUploadService->replaceFile(
+                                    $doc['file'],
+                                    $existingDoc?->path,
+                                    "reimbursements/{$reimbursement->id}/documents"
+                                );
+                                $existingDoc->update([
+                                    'original_name' => $meta['original_name'],
+                                    'path' => $meta['path'],
+                                    'mime' => $meta['mime'],
+                                    'size' => $meta['size'],
+                                    'type' => $doc['type'] ?? $existingDoc->type,
+                                    'uploaded_by' => $user->id,
+                                ]);
+                            } elseif (isset($doc['type'])) {
+                                // Just update type if provided
+                                $existingDoc->update(['type' => $doc['type']]);
+                            }
+                        } elseif (isset($doc['file']) && $doc['file'] instanceof \Illuminate\Http\UploadedFile) {
                             $meta = $fileUploadService->uploadFile(
                                 $doc['file'],
                                 "reimbursements/{$reimbursement->id}/documents"
@@ -326,12 +383,36 @@ final class ReimbursementController extends Controller
                             ]);
                         }
                     }
+
+                    // Delete documents that were not kept
+                    $docsToDelete = array_diff($existingDocIds, $keptDocIds);
+                    if (! empty($docsToDelete)) {
+                        $reimbursement->documents()->whereIn('id', $docsToDelete)->delete();
+                        // Additional storage deletion could be handled here if needed
+                    }
+                } else {
+                    // Empty array sent means delete all documents
+                    $reimbursement->documents()->delete();
                 }
 
                 // Sync items if provided
                 if (isset($validated['items'])) {
                     $reimbursement->items()->delete();
-                    foreach ($validated['items'] as $item) {
+                    foreach ($validated['items'] as $index => $item) {
+                        $receiptPath = null;
+
+                        // Handle receipt file if provided in the items nested structure
+                        $itemFiles = $request->file('items');
+                        if ($itemFiles && isset($itemFiles[$index]['receipt']) && $itemFiles[$index]['receipt'] instanceof \Illuminate\Http\UploadedFile) {
+                            $meta = $fileUploadService->uploadFile(
+                                $itemFiles[$index]['receipt'],
+                                "reimbursements/{$reimbursement->id}/receipts"
+                            );
+                            $receiptPath = $meta['path'];
+                        } else {
+                            $receiptPath = $item['receipt_path'] ?? null;
+                        }
+
                         $reimbursement->items()->create([
                             'project_budget_detail_id' => $item['project_budget_detail_id'],
                             'parent_item_id' => $item['parent_item_id'] ?? null,
@@ -340,6 +421,7 @@ final class ReimbursementController extends Controller
                             'unit_price' => $item['unit_price'] ?? 0,
                             'amount' => $item['amount'] ?? 0,
                             'expense_type' => $item['expense_type'] ?? null,
+                            'receipt_path' => $receiptPath,
                             'notes' => $item['notes'] ?? null,
                         ]);
                     }
@@ -372,32 +454,30 @@ final class ReimbursementController extends Controller
 
                 $reimbursement->update($updateData);
 
-                $reimbursement->update($updateData);
+                // Clear any existing approvals if it's NO LONGER a draft/revision
+                if ($newStatus !== \App\Enums\ReimbursementStatus::Draft) {
+                    $reimbursement->approvals()->delete();
 
-                // Clear any existing approvals (relevant if it was a revision)
-                $reimbursement->approvals()->delete();
+                    // Call assignApprovers to handle the workflow
+                    $action = new CreateReimbursement($fileUploadService);
+                    $action->assignApprovers($reimbursement, $request->all());
 
-                // Call assignApprovers to handle the workflow
-                $action = new CreateReimbursement(resolve(\App\Services\FileUploadService::class));
-                $reflector = new ReflectionClass($action);
-                $method = $reflector->getMethod('assignApprovers');
-                $method->invoke($action, $reimbursement, $request->all());
-
-                // Add a system comment notifying approvers
-                $isDraft = $reimbursement->getOriginal('status') === \App\Enums\ReimbursementStatus::Draft;
-                $prefix = $isDraft ? '[Draft Diajukan]' : '[Revisi Diajukan Ulang]';
-                $note = $validated['revision_note'] ?? ($isDraft ? 'Draft pengajuan telah diajukan' : 'Pengajuan telah direvisi dan diajukan kembali.');
-                $reimbursement->comments()->create([
-                    'user_id' => $user->id,
-                    'comment' => "{$prefix} {$note}",
-                ]);
+                    // Add a system comment notifying approvers
+                    $isDraftOriginal = $reimbursement->getOriginal('status') === \App\Enums\ReimbursementStatus::Draft;
+                    $prefix = $isDraftOriginal ? '[Draft Diajukan]' : '[Revisi Diajukan Ulang]';
+                    $note = $validated['revision_note'] ?? ($isDraftOriginal ? 'Draft pengajuan telah diajukan' : 'Pengajuan telah direvisi dan diajukan kembali.');
+                    $reimbursement->comments()->create([
+                        'user_id' => $user->id,
+                        'comment' => "{$prefix} {$note}",
+                    ]);
+                }
             });
 
             $data = $this->reimbursementService->getReimbursementDetail($id);
 
             return JsonResponseFormatter::success(
                 new ReimbursementResource($data),
-                'Revisi berhasil diajukan kembali'
+                'Pengajuan berhasil diperbarui'
             );
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
@@ -409,7 +489,7 @@ final class ReimbursementController extends Controller
         try {
             $user = $request->user();
 
-            if (! $user->hasRole('superadmin') && ! $user->hasRole('finance')) {
+            if (! $user->hasRole('superadmin') && ! $user->hasRole('finance') && ! $user->hasRole('hr')) {
                 return JsonResponseFormatter::error('Unauthorized', 403);
             }
 
@@ -450,6 +530,48 @@ final class ReimbursementController extends Controller
             return JsonResponseFormatter::success(
                 new ReimbursementResource($reimbursement),
                 'Kode reimbursement berhasil diupdate'
+            );
+        } catch (Throwable $e) {
+            return JsonResponseFormatter::error($e->getMessage(), 500);
+        }
+    }
+
+    public function updateItemReceipt(int $id, int $itemId, Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            $reimbursement = Reimbursement::query()->find($id);
+            if (! $reimbursement) {
+                return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
+            }
+
+            $item = \App\Models\ReimbursementItem::query()
+                ->where('reimbursement_id', $id)
+                ->where('id', $itemId)
+                ->first();
+
+            if (! $item) {
+                return JsonResponseFormatter::notFound('Item reimbursement tidak ditemukan');
+            }
+
+            $request->validate([
+                'receipt' => ['required', 'file', 'max:10240'], // 10MB
+            ]);
+
+            $fileUploadService = resolve(\App\Services\FileUploadService::class);
+            $meta = $fileUploadService->uploadFile(
+                $request->file('receipt'),
+                "reimbursements/{$id}/items"
+            );
+
+            $item->update([
+                'receipt_path' => $meta['path'],
+            ]);
+
+            return JsonResponseFormatter::success(
+                new ReimbursementResource($reimbursement->fresh()),
+                'Kwitansi item berhasil diupload'
             );
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);

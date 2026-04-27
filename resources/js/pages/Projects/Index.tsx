@@ -42,43 +42,140 @@ import { DateFilterPresets } from '@/components/DateFilterPresets';
 import axios from 'axios';
 import { usePermission } from '@/hooks/use-permission';
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface FilterState {
+  search: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  division: string;
+  perPage: number;
+  sortBy: string;
+  sortDir: string;
+}
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const DEFAULT_FILTER_STATE: FilterState = {
+  search: '',
+  startDate: '',
+  endDate: '',
+  status: 'all',
+  division: 'all',
+  perPage: 10,
+  sortBy: 'created_at',
+  sortDir: 'desc',
+};
+
+function hasActiveFilters(f: FilterState): boolean {
+  return (
+    !!f.search ||
+    !!f.startDate ||
+    !!f.endDate ||
+    (!!f.status && f.status !== 'all') ||
+    (!!f.division && f.division !== 'all') ||
+    f.perPage !== DEFAULT_FILTER_STATE.perPage ||
+    f.sortBy !== DEFAULT_FILTER_STATE.sortBy ||
+    f.sortDir !== DEFAULT_FILTER_STATE.sortDir
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function ProjectsIndex({ filters, divisions }: { filters?: any, divisions?: any[] }) {
   const { auth } = usePage().props as any;
   const { hasRole, hasPermission } = usePermission();
   const permissions = auth.permissions || [];
   const canUpdateCode = hasPermission('create_code_project');
 
+  // Per-user storage key so filters don't bleed across accounts.
+  const STORAGE_KEY = `project_filters_${auth?.user?.id ?? 'guest'}`;
+
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Proyek', href: '/projects' },
   ];
 
+  // -------------------------------------------------------------------------
+  // Initialise filter state — prefer localStorage over server-side `filters`
+  // prop so the user's last session is restored immediately on mount.
+  // -------------------------------------------------------------------------
+
+  const getInitialFilters = (): FilterState => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved: FilterState = JSON.parse(raw);
+        if (hasActiveFilters(saved)) return saved;
+      }
+    } catch {
+      // ignore parse errors
+    }
+    // Fall back to server-supplied filters (e.g. from a direct URL) or defaults.
+    return {
+      search: filters?.search ?? DEFAULT_FILTER_STATE.search,
+      startDate: filters?.start_date ?? DEFAULT_FILTER_STATE.startDate,
+      endDate: filters?.end_date ?? DEFAULT_FILTER_STATE.endDate,
+      status: filters?.status ?? DEFAULT_FILTER_STATE.status,
+      division: filters?.division ?? DEFAULT_FILTER_STATE.division,
+      perPage: filters?.per_page ?? DEFAULT_FILTER_STATE.perPage,
+      sortBy: filters?.sort_by ?? DEFAULT_FILTER_STATE.sortBy,
+      sortDir: filters?.sort_dir ?? DEFAULT_FILTER_STATE.sortDir,
+    };
+  };
+
+  const initial = getInitialFilters();
+
   const [projects, setProjects] = React.useState<any[]>([]);
   const [pagination, setPagination] = React.useState<any>({
     current_page: 1,
     last_page: 1,
-    per_page: 10,
+    per_page: initial.perPage,
     total: 0,
     from: 0,
-    to: 0
+    to: 0,
   });
   const [loading, setLoading] = React.useState(true);
 
-  const [search, setSearch] = React.useState(filters?.search || '');
-  const [startDate, setStartDate] = React.useState(filters?.start_date || '');
-  const [endDate, setEndDate] = React.useState(filters?.end_date || '');
-  const [status, setStatus] = React.useState(filters?.status || 'all');
-  const [division, setDivision] = React.useState(filters?.division || 'all');
-  const [perPage, setPerPage] = React.useState(10);
+  const [search, setSearch] = React.useState(initial.search);
+  const [startDate, setStartDate] = React.useState(initial.startDate);
+  const [endDate, setEndDate] = React.useState(initial.endDate);
+  const [status, setStatus] = React.useState(initial.status);
+  const [division, setDivision] = React.useState(initial.division);
+  const [perPage, setPerPage] = React.useState(initial.perPage);
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [sortBy, setSortBy] = React.useState(filters?.sort_by || 'created_at');
-  const [sortDir, setSortDir] = React.useState(filters?.sort_dir || 'desc');
+  const [sortBy, setSortBy] = React.useState(initial.sortBy);
+  const [sortDir, setSortDir] = React.useState(initial.sortDir);
 
   // Delete Dialog & Toast State
   const [projectToDelete, setProjectToDelete] = React.useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [toast, setToast] = React.useState({ show: false, message: '', type: 'success' });
+
+  // -------------------------------------------------------------------------
+  // Persist filters to localStorage whenever they change
+  // -------------------------------------------------------------------------
+
+  React.useEffect(() => {
+    const current: FilterState = { search, startDate, endDate, status, division, perPage, sortBy, sortDir };
+    if (hasActiveFilters(current)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [search, startDate, endDate, status, division, perPage, sortBy, sortDir, STORAGE_KEY]);
+
+  // -------------------------------------------------------------------------
+  // Data fetching
+  // -------------------------------------------------------------------------
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -93,7 +190,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
           per_page: perPage,
           page: currentPage,
           sort_by: sortBy,
-          sort_dir: sortDir
+          sort_dir: sortDir,
         },
       });
       setProjects(response.data.data.data);
@@ -144,14 +241,34 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
     }
   };
 
-  // Fetch data on filter change
+  // Fetch data on filter / page change (debounced for search input)
   React.useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
+    const delay = setTimeout(() => {
       fetchProjects();
     }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
+    return () => clearTimeout(delay);
   }, [search, startDate, endDate, status, division, perPage, currentPage, sortBy, sortDir]);
+
+  // -------------------------------------------------------------------------
+  // Reset — clear storage and revert everything to defaults
+  // -------------------------------------------------------------------------
+
+  const handleReset = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setSearch(DEFAULT_FILTER_STATE.search);
+    setStartDate(DEFAULT_FILTER_STATE.startDate);
+    setEndDate(DEFAULT_FILTER_STATE.endDate);
+    setStatus(DEFAULT_FILTER_STATE.status);
+    setDivision(DEFAULT_FILTER_STATE.division);
+    setPerPage(DEFAULT_FILTER_STATE.perPage);
+    setSortBy(DEFAULT_FILTER_STATE.sortBy);
+    setSortDir(DEFAULT_FILTER_STATE.sortDir);
+    setCurrentPage(1);
+  };
+
+  // -------------------------------------------------------------------------
+  // Other handlers
+  // -------------------------------------------------------------------------
 
   const handleSort = (column: string) => {
     const newDir = sortBy === column && sortDir === 'asc' ? 'desc' : 'asc';
@@ -170,13 +287,13 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
   const handleFilterChange = (key: string, value: string) => {
     if (key === 'status') setStatus(value);
     if (key === 'division') setDivision(value);
-    setCurrentPage(1); // Reset to first page on filter change
+    setCurrentPage(1);
   };
 
   const renderPagination = () => {
     const { current_page, last_page } = pagination;
-    const pages = [];
-    const delta = 1; // Number of siblings to show on each side
+    const pages: (number | string)[] = [];
+    const delta = 1;
 
     for (let i = 1; i <= last_page; i++) {
       if (
@@ -206,6 +323,10 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
       </Button>
     ));
   };
+
+  // -------------------------------------------------------------------------
+  // JSX
+  // -------------------------------------------------------------------------
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -238,8 +359,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               />
             </div>
 
-            {/* Date Range Filter */}
-            {/* Desktop View */}
+            {/* Date Range Filter — Desktop */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -264,7 +384,11 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                     <span>Pilih Rentang Tanggal</span>
                   )}
                   {(startDate || endDate) && (
-                    <div className="ml-auto hover:bg-emerald-200 rounded-full p-0.5 transition-colors" role="button" onClick={(e) => { e.stopPropagation(); setStartDate(''); setEndDate(''); }}>
+                    <div
+                      className="ml-auto hover:bg-emerald-200 rounded-full p-0.5 transition-colors"
+                      role="button"
+                      onClick={(e) => { e.stopPropagation(); setStartDate(''); setEndDate(''); }}
+                    >
                       <X className="h-3 w-3" />
                     </div>
                   )}
@@ -279,10 +403,14 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Mobile View Icon */}
+            {/* Date Range Filter — Mobile icon */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className={cn("md:hidden", (startDate || endDate) ? "bg-accent text-accent-foreground border-primary" : "")}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={cn("md:hidden", (startDate || endDate) ? "bg-accent text-accent-foreground border-primary" : "")}
+                >
                   <Calendar className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -315,7 +443,12 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
           {/* MOBILE VIEW (CARDS) */}
           <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
             {projects.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground border rounded-md">Belum ada proyek.</div>
+              <div className="text-center py-8 text-muted-foreground border rounded-md">
+                Belum ada proyek.{' '}
+                {hasActiveFilters({ search, startDate, endDate, status, division, perPage, sortBy, sortDir }) && (
+                  <button onClick={handleReset} className="text-sidebar underline ml-1">Reset Filter</button>
+                )}
+              </div>
             ) : (
               projects.map((p: any) => (
                 <Card key={p.id} className="overflow-hidden">
@@ -342,7 +475,9 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                       <div>
                         <p className="text-xs text-muted-foreground">Nilai Kontrak</p>
                         <p className="font-medium text-green-700">
-                          {p.budget_total ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.budget_total) : '-'}
+                          {p.budget_total
+                            ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.budget_total)
+                            : '-'}
                         </p>
                       </div>
                     </div>
@@ -413,7 +548,10 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                 {projects.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={canUpdateCode ? 10 : 9} className="h-24 text-center">
-                      Belum ada proyek. Silakan tambah proyek baru.
+                      Belum ada proyek yang sesuai filter.{' '}
+                      {hasActiveFilters({ search, startDate, endDate, status, division, perPage, sortBy, sortDir }) && (
+                        <button onClick={handleReset} className="text-sidebar underline ml-1">Reset Filter</button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -470,7 +608,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <span className="text-xs font-medium">{(p.creator ? p.creator.name : '-')}</span>
+                          <span className="text-xs font-medium">{p.creator ? p.creator.name : '-'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -488,7 +626,9 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">
-                        {p.budget_total ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(p.budget_total) : '-'}
+                        {p.budget_total
+                          ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(p.budget_total)
+                          : '-'}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -570,7 +710,6 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-
                 <Button
                   variant="outline"
                   size="icon"
@@ -676,5 +815,5 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
         </div>
       )}
     </AppSidebarLayout>
-  )
+  );
 }

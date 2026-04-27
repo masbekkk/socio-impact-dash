@@ -17,4 +17,5 @@ enum ReimbursementStatus: string
     case Transferred = 'transferred';
     case Rejected = 'rejected';
     case Revision = 'revision';
+    case Closed = 'closed';
 }

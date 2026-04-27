@@ -42,6 +42,7 @@ export interface ReimbursementItemPayload {
     amount: number;
     expense_type?: string;
     receipt?: File | null;
+    receipt_path?: string | null;
     notes?: string;
 }
 
@@ -51,9 +52,11 @@ export interface ReimbursementPayload {
     user_id?: string;
     project_id?: string;
     amount?: number;
+    transferred_amount?: number;
     bank_name?: string;
     bank_account?: string;
     account_holder?: string;
+    bank_branch?: string;
     usage_plan?: string;
     urgency?: string;
     eer_type?: string;

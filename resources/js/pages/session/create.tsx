@@ -44,10 +44,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 {/* Main Content */}
                 <div className="relative z-10 max-w-lg space-y-6">
                     <h1 className="text-5xl font-bold leading-tight tracking-tight">
-                        Kelola Proyek Anda Dengan Mudah
+                        Make A Greatest and Sustainable Impact
                     </h1>
                     <p className="text-lg text-white/80">
-                        Platform manajemen proyek terintegrasi untuk memantau, mengelola, dan melaporkan kebutuhan Anda.
+                        Socialimpact.ID is a management consulting firm with expertise in Sustainability, Corporate Social Responsibility (CSR), Environmental, Social and Governance (ESG), and Community Involvement and Development (CID) programmes
                     </p>
 
                     {/* Community Badge */}

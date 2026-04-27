@@ -48,6 +48,14 @@ final class LetterRequestController extends Controller
             });
         }
 
+        // Date range filter
+        if ($request->filled('date_from')) {
+            $query->whereDate('letter_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('letter_date', '<=', $request->date_to);
+        }
+
         $letterRequests = $query->latest()->paginate($request->integer('per_page', 10));
 
         return JsonResponseFormatter::success(
@@ -222,6 +230,19 @@ final class LetterRequestController extends Controller
         );
     }
 
+    /**
+     * Extract the base sequence number (without suffix) from a letter_number string.
+     * e.g. "247/SPeng.BOD/Socim.id/3-2026" => 247
+     * e.g. "247.A/SPeng.BOD/Socim.id/3-2026" => 247
+     */
+    private function extractBaseSeq(string $letterNumber): int
+    {
+        $parts = explode('/', $letterNumber);
+        $basePart = explode('.', $parts[0]);
+
+        return is_numeric($basePart[0]) ? (int) $basePart[0] : 0;
+    }
+
     private function generateLetterNumber(
         \Carbon\CarbonInterface $letterDate,
         string $perusahaan,
@@ -240,51 +261,54 @@ final class LetterRequestController extends Controller
             'EBLI' => 8,
         ];
 
-        // 1. Get the latest letter issued for this company and year (to find if it's a backdate)
-        $latestIssued = LetterRequest::query()
+        $baseQuery = fn () => LetterRequest::query()
             ->whereYear('letter_date', $year)
             ->whereNotNull('letter_number')
             ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
-            ->whereHas('division', fn ($q) => $q->where('code', $perusahaan))
+            ->whereHas('division', fn ($q) => $q->where('code', $perusahaan));
+
+        // 1. Get the latest letter by date for this company/year (to detect backdate)
+        $latestByDate = $baseQuery()
             ->orderBy('letter_date', 'desc')
             ->orderBy('created_at', 'desc')
             ->first();
 
-        // 2. Get all requests for this year/company to find max sequence and existing suffixes
-        $allRequests = LetterRequest::query()
-            ->whereYear('letter_date', $year)
-            ->whereNotNull('letter_number')
-            ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
-            ->whereHas('division', fn ($q) => $q->where('code', $perusahaan))
-            ->get();
-
-        $maxBaseSeq = $startNumbers[$perusahaan] ?? 1;
-        foreach ($allRequests as $req) {
-            $parts = explode('/', (string) $req->letter_number);
-            $basePart = explode('.', $parts[0])[0];
-            if (is_numeric($basePart)) {
-                $maxBaseSeq = max($maxBaseSeq, (int) $basePart);
-            }
-        }
-
-        $isBackdate = $latestIssued && $letterDate->lt($latestIssued->letter_date->startOfDay());
+        $isBackdate = $latestByDate && $letterDate->lt($latestByDate->letter_date->startOfDay());
 
         if (! $isBackdate) {
-            // Normal numbering: increment maxBaseSeq if we actually found existing letters,
-            // or if we are at the start number and it was already used.
-            $nextSeq = $maxBaseSeq;
-            if ($latestIssued) {
-                $nextSeq = $maxBaseSeq + 1;
+            // Normal: find max base sequence across all letters this year for this company
+            $allRequests = $baseQuery()->get();
+            $maxBaseSeq = $startNumbers[$perusahaan] ?? 1;
+            foreach ($allRequests as $req) {
+                $maxBaseSeq = max($maxBaseSeq, $this->extractBaseSeq((string) $req->letter_number));
             }
+
+            $nextSeq = $latestByDate ? $maxBaseSeq + 1 : $maxBaseSeq;
             $formattedSeq = mb_str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
 
             return "{$formattedSeq}/{$kode}.{$divisi}/{$perusahaan}/{$month}-{$year}";
         }
 
-        // Backdate logic: Use maxBaseSeq and add alphabet suffix
-        $baseStr = mb_str_pad((string) $maxBaseSeq, 3, '0', STR_PAD_LEFT);
+        // --- Backdate logic ---
+        // Find the nearest letter on or before the selected date
+        $nearestBefore = $baseQuery()
+            ->whereDate('letter_date', '<=', $letterDate->toDateString())
+            ->orderBy('letter_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->first();
 
-        // Find existing suffixes for this base
+        if ($nearestBefore) {
+            // Use the base seq from the nearest letter on/before this date
+            $baseSeq = $this->extractBaseSeq((string) $nearestBefore->letter_number);
+        } else {
+            // No letter on or before this date — use the start number
+            $baseSeq = $startNumbers[$perusahaan] ?? 1;
+        }
+
+        $baseStr = mb_str_pad((string) $baseSeq, 3, '0', STR_PAD_LEFT);
+
+        // Find existing suffixes for this base across all letters this year
+        $allRequests = $baseQuery()->get();
         $existingSuffixes = [];
         foreach ($allRequests as $req) {
             $parts = explode('/', (string) $req->letter_number);

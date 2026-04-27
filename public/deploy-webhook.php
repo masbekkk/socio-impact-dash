@@ -151,9 +151,9 @@ $steps = [
     'mkdir -p ~/.ssh && ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null',
 
     // Step 2: Git updates
-    'git fetch origin build --depth 1',
-    'git checkout build',
-    'git reset --hard origin/build',
+    'git fetch origin buildv2.3.27 --depth 1',
+    'git checkout buildv2.3.27',
+    'git reset --hard origin/buildv2.3.27',
     'git clean -fd -e .htaccess -e .env',
     'php artisan migrate --force --no-interaction',
     'php artisan optimize:clear',

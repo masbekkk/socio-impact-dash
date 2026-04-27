@@ -3,10 +3,10 @@ name: Build, Push to Build Branch, and Deploy
 on:
   push:
     branches:
-      - main
+      - v2.3.27
   pull_request:
     branches:
-      - main
+      - v2.3.27
     types: [closed]
 
 permissions:
@@ -57,14 +57,14 @@ jobs:
       - name: Build Assets
         run: npm run build:ssr
 
-      - name: Commit and Push to 'build' branch
+      - name: Commit and Push to 'buildv2.3.27' branch
         run: |
           # Configure Git user for GitHub Actions Bot
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Switch to 'build' branch, or create it based on current commit on main
-          git checkout -B build
+          # Switch to 'buildv2.3.27' branch, or create it based on current commit on v2.3.27
+          git checkout -B buildv2.3.27
           
           # Force add the 'public/build' directory, SSR bundle, and wayfinder generated files
           git add -f public/build/
@@ -74,39 +74,54 @@ jobs:
           git add -f resources/js/wayfinder/
           
           # Commit the changes (it will safely do nothing if there are no changes)
-          git commit -m "Auto-build assets from main ($GITHUB_SHA)" || echo "No changes to commit"
+          git commit -m "Auto-build assets from v2.3.27 ($GITHUB_SHA)" || echo "No changes to commit"
           
           # Force push the 'build' branch back to GitHub
           # The secrets.GITHUB_TOKEN is automatically provided by GitHub Actions
-          git push origin build --force
+          git push origin buildv2.3.27 --force
 
-      - name: Deploy to Hostinger via Webhook
+      - name: Deploy to Hostinger via SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DEPLOY_SERVER_IP }}
+          SSH_USER: ${{ secrets.HOSTINGER_USERNAME }}
+          PROJECT_PATH: ${{ secrets.DEPLOY_PROJECT_PATH }}
         run: |
+          # Setup SSH key
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p 65002 "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          SSH_CMD="ssh -p 65002 -i ~/.ssh/deploy_key -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST}"
+
+          DEPLOY_SCRIPT="
+            cd ${PROJECT_PATH}
+            mkdir -p ~/.ssh && ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null
+            git fetch origin buildv2.3.27 --depth 1
+            git checkout buildv2.3.27
+            git reset --hard origin/buildv2.3.27
+            git clean -fd -e .htaccess -e .env -e .env.staging -e staging
+            php artisan migrate --force --no-interaction
+            php artisan optimize:clear
+            echo '✅ Deployment completed successfully'
+          "
+
           MAX_RETRIES=3
           RETRY=0
+          WAIT=15
 
           until [ $RETRY -ge $MAX_RETRIES ]; do
-            HTTP_CODE=$(curl -s -o /tmp/deploy_response.json -w "%{http_code}" \
-              --max-time 300 \
-              --connect-timeout 30 \
-              -X POST \
-              -H "X-Deploy-Token: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}" \
-              -H "Content-Type: application/json" \
-              "${{ secrets.DEPLOY_WEBHOOK_URL }}")
-
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "✅ Deployment successful!"
-              cat /tmp/deploy_response.json
+            echo "🚀 Deploy attempt $((RETRY + 1))/$MAX_RETRIES..."
+            if $SSH_CMD "$DEPLOY_SCRIPT"; then
               exit 0
             fi
 
             RETRY=$((RETRY + 1))
-            echo "⚠️ Deploy returned HTTP $HTTP_CODE (attempt $RETRY/$MAX_RETRIES)"
-            cat /tmp/deploy_response.json 2>/dev/null || true
-
             if [ $RETRY -lt $MAX_RETRIES ]; then
-              echo "Retrying in 10 seconds..."
-              sleep 10
+              echo "⚠️ SSH failed (attempt $RETRY/$MAX_RETRIES). Retrying in ${WAIT}s..."
+              sleep $WAIT
+              WAIT=$((WAIT * 2))
             fi
           done
 

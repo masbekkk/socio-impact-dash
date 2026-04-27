@@ -95,8 +95,8 @@ final readonly class CreateLeave
 
         $roles = [
             'head' => null,
-            'hr' => \App\Models\User::query()->where('email', 'hr@socio-impact.test')->first()?->id,
             'direktur' => \App\Models\User::query()->where('email', 'direktur@socio-impact.test')->first()?->id,
+            'hr' => \App\Models\User::query()->where('email', 'hr@socio-impact.test')->first()?->id,
         ];
 
         if ($user->hasRole('pegawai')) {

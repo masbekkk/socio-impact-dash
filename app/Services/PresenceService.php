@@ -7,7 +7,6 @@ namespace App\Services;
 use App\Enums\PresenceStatus;
 use App\Models\Presence;
 use App\Models\User;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -123,8 +122,18 @@ final readonly class PresenceService
     {
         $query = Presence::with(['user', 'project']);
 
+        $this->applyFilters($query, $user, $filters);
+
+        return $query->orderBy('date', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Presence>  $query
+     */
+    public function applyFilters(\Illuminate\Database\Eloquent\Builder $query, ?User $user = null, array $filters = []): void
+    {
         if ($user instanceof User) {
-            if ($user->hasAnyRole([\App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::Superadmin->value]) || $user->hasAnyPermission(['view_all_leaves'])) {
+            if ($user->hasAnyRole([\App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Superadmin->value]) || $user->hasAnyPermission(['view_all_leaves'])) {
                 // These roles can view all presence
             } elseif ($user->hasRole(\App\Enums\UserRole::Head->value)) {
                 // Head can see:
@@ -147,19 +156,12 @@ final readonly class PresenceService
             $query->whereDate('date', '<=', $filters['end_date']);
         }
 
-        if (! empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+        if (! empty($filters['search'])) {
+            $query->where(function ($q) use ($filters): void {
+                $q->whereHas('user', fn ($uq) => $uq->where('name', 'like', "%{$filters['search']}%"))
+                    ->orWhere('activity', 'like', "%{$filters['search']}%");
+            });
         }
-
-        if (! empty($filters['month'])) {
-            $query->whereMonth('date', $filters['month']);
-        }
-
-        if (! empty($filters['year'])) {
-            $query->whereYear('date', $filters['year']);
-        }
-
-        return $query->orderBy('date', 'desc')->paginate($perPage);
     }
 
     public function getMonthlySummary(User $user, int $month, int $year): array

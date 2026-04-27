@@ -125,6 +125,7 @@ interface DashboardProps extends SharedData {
     direktur_leaves: ApprovalItem[];
     hr_leaves: ApprovalItem[];
     hr_allowances: ApprovalItem[];
+    finance_request_funds: ApprovalItem[];
   };
 }
 
@@ -144,14 +145,16 @@ export default function Dashboard({
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalData, setModalData] = useState<{ title: string; items: any[]; type: 'reimbursement' | 'leave' }>({
+  const [modalData, setModalData] = useState<{ title: string; items: any[]; type: 'reimbursement' | 'leave', role: string, actionType?: 'approve' | 'request_fund' }>({
     title: '',
     items: [],
-    type: 'reimbursement'
+    type: 'reimbursement',
+    role: '',
+    actionType: 'approve'
   });
 
-  const openApprovalModal = (title: string, items: any[], type: 'reimbursement' | 'leave') => {
-    setModalData({ title, items, type });
+  const openApprovalModal = (title: string, items: any[], type: 'reimbursement' | 'leave', role: string, actionType: 'approve' | 'request_fund' = 'approve') => {
+    setModalData({ title, items, type, role, actionType });
     setModalOpen(true);
   };
 
@@ -274,28 +277,28 @@ export default function Dashboard({
                     title="ATR Menunggu Approval (Head)"
                     count={approvalItems.head_reimbursements.filter(i => i.type === 'atr').length}
                     color="emerald"
-                    onClick={() => openApprovalModal("ATR Menunggu Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'atr'), 'reimbursement')}
+                    onClick={() => openApprovalModal("ATR Menunggu Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'atr'), 'reimbursement', 'head')}
                     icon={<Banknote className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
                     title="EER Menunggu Approval (Head)"
                     count={approvalItems.head_reimbursements.filter(i => i.type === 'eer').length}
                     color="emerald"
-                    onClick={() => openApprovalModal("EER Menunggu Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'eer'), 'reimbursement')}
+                    onClick={() => openApprovalModal("EER Menunggu Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'eer'), 'reimbursement', 'head')}
                     icon={<FileText className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
                     title="Allowance Menunggu Approval (Head)"
                     count={approvalItems.head_reimbursements.filter(i => i.type === 'allowance').length}
                     color="emerald"
-                    onClick={() => openApprovalModal("Allowance Menunggu Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'allowance'), 'reimbursement')}
+                    onClick={() => openApprovalModal("Allowance Menunggu Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'allowance'), 'reimbursement', 'head')}
                     icon={<Users className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
                     title="Cuti Menunggu Approval (Head)"
                     count={approvalItems.head_leaves.length}
                     color="emerald"
-                    onClick={() => openApprovalModal("Cuti Menunggu Approval (Head)", approvalItems.head_leaves, 'leave')}
+                    onClick={() => openApprovalModal("Cuti Menunggu Approval (Head)", approvalItems.head_leaves, 'leave', 'head')}
                     icon={<Clock className="h-4 w-4" />}
                   />
                 </>
@@ -308,22 +311,29 @@ export default function Dashboard({
                     title="ATR Menunggu Approval (Finance)"
                     count={approvalItems.finance_reimbursements.filter(i => i.type === 'atr').length}
                     color="blue"
-                    onClick={() => openApprovalModal("ATR Menunggu Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'atr'), 'reimbursement')}
+                    onClick={() => openApprovalModal("ATR Menunggu Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'atr'), 'reimbursement', 'finance')}
                     icon={<Banknote className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
                     title="EER Menunggu Approval (Finance)"
                     count={approvalItems.finance_reimbursements.filter(i => i.type === 'eer').length}
                     color="blue"
-                    onClick={() => openApprovalModal("EER Menunggu Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'eer'), 'reimbursement')}
+                    onClick={() => openApprovalModal("EER Menunggu Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'eer'), 'reimbursement', 'finance')}
                     icon={<FileText className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
                     title="Allowance Menunggu Approval (Finance)"
                     count={approvalItems.finance_reimbursements.filter(i => i.type === 'allowance').length}
                     color="blue"
-                    onClick={() => openApprovalModal("Allowance Menunggu Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'allowance'), 'reimbursement')}
+                    onClick={() => openApprovalModal("Allowance Menunggu Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'allowance'), 'reimbursement', 'finance')}
                     icon={<Users className="h-4 w-4" />}
+                  />
+                  <ApprovalStatisticCard
+                    title="Request Fund Pending (Finance)"
+                    count={approvalItems.finance_request_funds.length}
+                    color="orange"
+                    onClick={() => openApprovalModal("Request Fund Pending (Finance)", approvalItems.finance_request_funds, 'reimbursement', 'finance', 'request_fund')}
+                    icon={<Banknote className="h-4 w-4" />}
                   />
                 </>
               )}
@@ -335,28 +345,28 @@ export default function Dashboard({
                     title="ATR Menunggu Approval (Direktur)"
                     count={approvalItems.direktur_reimbursements.filter(i => i.type === 'atr').length}
                     color="amber"
-                    onClick={() => openApprovalModal("ATR Menunggu Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'atr'), 'reimbursement')}
+                    onClick={() => openApprovalModal("ATR Menunggu Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'atr'), 'reimbursement', 'direktur')}
                     icon={<Banknote className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
                     title="EER Menunggu Approval (Direktur)"
                     count={approvalItems.direktur_reimbursements.filter(i => i.type === 'eer').length}
                     color="amber"
-                    onClick={() => openApprovalModal("EER Menunggu Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'eer'), 'reimbursement')}
+                    onClick={() => openApprovalModal("EER Menunggu Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'eer'), 'reimbursement', 'direktur')}
                     icon={<FileText className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
                     title="Allowance Menunggu Approval (Direktur)"
                     count={approvalItems.direktur_reimbursements.filter(i => i.type === 'allowance').length}
                     color="amber"
-                    onClick={() => openApprovalModal("Allowance Menunggu Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'allowance'), 'reimbursement')}
+                    onClick={() => openApprovalModal("Allowance Menunggu Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'allowance'), 'reimbursement', 'direktur')}
                     icon={<Users className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
                     title="Cuti Menunggu Approval (Direktur)"
                     count={approvalItems.direktur_leaves.length}
                     color="amber"
-                    onClick={() => openApprovalModal("Cuti Menunggu Approval (Direktur)", approvalItems.direktur_leaves, 'leave')}
+                    onClick={() => openApprovalModal("Cuti Menunggu Approval (Direktur)", approvalItems.direktur_leaves, 'leave', 'direktur')}
                     icon={<Clock className="h-4 w-4" />}
                   />
                 </>
@@ -369,14 +379,14 @@ export default function Dashboard({
                     title="Cuti Menunggu Approval (HR)"
                     count={approvalItems.hr_leaves.length}
                     color="rose"
-                    onClick={() => openApprovalModal("Cuti Menunggu Approval (HR)", approvalItems.hr_leaves, 'leave')}
+                    onClick={() => openApprovalModal("Cuti Menunggu Approval (HR)", approvalItems.hr_leaves, 'leave', 'hr')}
                     icon={<Clock className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
                     title="Allowance Menunggu Approval (HR)"
                     count={approvalItems.hr_allowances.length}
                     color="rose"
-                    onClick={() => openApprovalModal("Allowance Menunggu Approval (HR)", approvalItems.hr_allowances, 'reimbursement')}
+                    onClick={() => openApprovalModal("Allowance Menunggu Approval (HR)", approvalItems.hr_allowances, 'reimbursement', 'hr')}
                     icon={<Users className="h-4 w-4" />}
                   />
                 </>
@@ -501,6 +511,8 @@ export default function Dashboard({
         title={modalData.title}
         items={modalData.items}
         type={modalData.type}
+        role={modalData.role}
+        actionType={modalData.actionType}
       />
     </AppSidebarLayout>
   );

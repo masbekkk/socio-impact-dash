@@ -114,12 +114,48 @@ final class LeaveController
     public function bulkApprove(Request $request): \Illuminate\Http\RedirectResponse
     {
         $ids = $request->input('ids', []);
-        if (! empty($ids)) {
+        $role = $request->input('role');
+        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkApproveLeaves(new \App\Actions\ApproveLeaveAction());
-            $bulkAction->handle($ids);
+            $bulkAction->handle($ids, $role);
         }
 
         return back()->with('success', 'Berhasil menyetujui pengajuan cuti terpilih.');
+    }
+
+    public function bulkReject(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $notes = $request->input('notes', []);
+        $role = $request->input('role');
+        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
+            $bulkAction = new \App\Actions\BulkRejectLeaves(new \App\Actions\RejectLeaveAction());
+            $bulkAction->handle($ids, $notes, $role);
+        }
+
+        return back()->with('success', 'Berhasil menolak pengajuan cuti terpilih.');
+    }
+
+    public function bulkRevision(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        $notes = $request->input('notes', []);
+        $role = $request->input('role');
+        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        if ($user && ! empty($ids)) {
+            $role = $role ?? $user->getRoleNames()->first();
+            $bulkAction = new \App\Actions\BulkRevisionLeaves(new \App\Actions\RevisionLeaveAction());
+            $bulkAction->handle($ids, $notes, $role);
+        }
+
+        return back()->with('success', 'Berhasil meminta revisi pengajuan cuti terpilih.');
     }
 
     public function approve(string $code): \Illuminate\Http\RedirectResponse

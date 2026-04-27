@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Search, CheckCircle, XCircle, Hash, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from 'lucide-react';
+import { Plus, Search, CheckCircle, XCircle, Hash, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Trash2, CalendarRange } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import axios from 'axios';
@@ -30,6 +30,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { SearchableSelect } from '@/components/SearchableSelect';
+import DatePicker from '@/components/DatePicker';
 
 interface LetterRequest {
     id: number;
@@ -64,17 +65,23 @@ interface LetterRequest {
 
 interface Props {
     canAssign: boolean;
+    canDelete: boolean;
 }
 
-export default function LetterRequestsIndex({ canAssign }: Props) {
+export default function LetterRequestsIndex({ canAssign, canDelete }: Props) {
     const [requests, setRequests] = useState<LetterRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<LetterRequest | null>(null);
     const [letterNumber, setLetterNumber] = useState('');
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState<Record<string, string[]>>({});
+
+    // Date range filter
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
 
     // Pagination State
     const [pagination, setPagination] = useState({
@@ -99,6 +106,8 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                     search: searchQuery,
                     page: pagination.current_page,
                     per_page: pagination.per_page,
+                    date_from: dateFrom || undefined,
+                    date_to: dateTo || undefined,
                 }
             });
             setRequests(response.data.data.data);
@@ -122,7 +131,7 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
             fetchRequests();
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchQuery, pagination.current_page, pagination.per_page]);
+    }, [searchQuery, pagination.current_page, pagination.per_page, dateFrom, dateTo]);
 
     const handleAssign = (req: LetterRequest) => {
         setSelectedRequest(req);
@@ -165,6 +174,33 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
         }
     };
 
+    const handleDeleteClick = (req: LetterRequest) => {
+        setSelectedRequest(req);
+        setDeleteDialogOpen(true);
+    };
+
+    const submitDelete = async () => {
+        if (!selectedRequest) return;
+        setProcessing(true);
+        try {
+            await axios.delete(`/api/v1/letter-requests/${selectedRequest.id}`);
+            setDeleteDialogOpen(false);
+            setSelectedRequest(null);
+            fetchRequests();
+        } catch (error) {
+            console.error("Error deleting letter request:", error);
+            alert("Gagal menghapus nomor surat.");
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const clearDateFilter = () => {
+        setDateFrom('');
+        setDateTo('');
+        setPagination(prev => ({ ...prev, current_page: 1 }));
+    };
+
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
             <Head title="Nomor Surat" />
@@ -202,6 +238,42 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                         setPagination(prev => ({ ...prev, current_page: 1 }));
                                     }}
                                 />
+                            </div>
+                        </div>
+
+                        {/* Date Range Filter */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 pt-3 border-t mt-3">
+                            <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                                <CalendarRange className="h-4 w-4" />
+                                Filter Tanggal
+                            </div>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">Dari</Label>
+                                    <DatePicker
+                                        value={dateFrom}
+                                        onChange={(v) => {
+                                            setDateFrom(v);
+                                            setPagination(prev => ({ ...prev, current_page: 1 }));
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">Sampai</Label>
+                                    <DatePicker
+                                        value={dateTo}
+                                        onChange={(v) => {
+                                            setDateTo(v);
+                                            setPagination(prev => ({ ...prev, current_page: 1 }));
+                                        }}
+                                    />
+                                </div>
+                                {(dateFrom || dateTo) && (
+                                    <Button variant="ghost" size="sm" onClick={clearDateFilter} className="text-xs h-8">
+                                        <XCircle className="h-3 w-3 mr-1" />
+                                        Reset
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </CardHeader>
@@ -292,32 +364,23 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                                                     </Badge>
                                                 </TableCell> */}
                                                 <TableCell className="text-right">
-                                                    {/* {canAssign && (
-                                                        <div className="flex justify-end gap-2">
-                                                            {req.status !== 'rejected' && (
-                                                                <Button variant="outline" size="sm" asChild>
-                                                                    <Link href={`/letter-requests/${req.id}/edit`}>
-                                                                        Edit
-                                                                    </Link>
-                                                                </Button>
-                                                            )}
-                                                            {req.status === 'pending' && (
-                                                                <>
-                                                                    <Button variant="default" className="bg-[var(--sidebar)] text-white hover:bg-[var(--sidebar)]/90" size="sm" onClick={() => handleAssign(req)}>
-                                                                        Beri Nomor
-                                                                    </Button>
-                                                                    <Button variant="ghost" size="sm" className="text-destructive h-8 w-8 p-0" onClick={() => handleReject(req)}>
-                                                                        <XCircle className="h-4 w-4" />
-                                                                    </Button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    )} */}
-                                                    <Button variant="outline" size="sm" asChild>
-                                                        <Link href={`/letter-requests/${req.id}/edit`}>
-                                                            Edit
-                                                        </Link>
-                                                    </Button>
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button variant="outline" size="sm" asChild>
+                                                            <Link href={`/letter-requests/${req.id}/edit`}>
+                                                                Edit
+                                                            </Link>
+                                                        </Button>
+                                                        {canDelete && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                                                                onClick={() => handleDeleteClick(req)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -421,6 +484,41 @@ export default function LetterRequestsIndex({ canAssign }: Props) {
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Hapus Nomor Surat</DialogTitle>
+                        <DialogDescription>
+                            Apakah Anda yakin ingin menghapus pengajuan nomor surat ini?
+                            {selectedRequest && (
+                                <span className="block mt-2 font-medium text-foreground">
+                                    {selectedRequest.subject}
+                                    {selectedRequest.letter_number && (
+                                        <span className="block text-sm text-muted-foreground font-normal mt-1">
+                                            Nomor: {selectedRequest.letter_number}
+                                        </span>
+                                    )}
+                                </span>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" type="button" onClick={() => setDeleteDialogOpen(false)}>
+                            Batal
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            disabled={processing}
+                            onClick={submitDelete}
+                        >
+                            {processing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                            Hapus
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </AppSidebarLayout>

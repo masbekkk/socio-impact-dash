@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardFooter } from '@/components/ui/card';
 import {
-    ArrowLeft, Save, FileText, User, AlertCircle,
+    ArrowLeft, Save, FileText, User, AlertCircle, X,
     Building2, Briefcase, UserCheck, Loader2, Coins, Calendar
 } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
@@ -59,8 +59,11 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
     reimbursement?: any,
     isEdit?: boolean,
 }) {
-    const { loading, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
+    const { loading, uploadProgress, errors, setErrors, getAutoFill, clearFieldError, submitReimbursement } = useReimbursementForm(projects);
     const { hasRole } = usePermission();
+
+    const reimbursementData = reimbursement?.data || reimbursement;
+    const [deletedExistingDocument, setDeletedExistingDocument] = useState(false);
 
     const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
@@ -89,7 +92,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
     // Populate data in edit mode
     useEffect(() => {
         if (isEdit && reimbursement) {
-            const data = reimbursement.data || reimbursement;
+            const data = reimbursementData;
             const projectID = data.project?.id?.toString() ?? '';
             const autoFill = projectID ? getAutoFill(projectID) : { division: '', pic: '' };
 
@@ -180,24 +183,30 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
     };
 
     const handleSubmit = async (status: 'submitted' | 'draft' = 'submitted') => {
+        const hasExistingDocument = isEdit && reimbursementData?.documents && reimbursementData.documents.length > 0 && !deletedExistingDocument;
+
         if (status === 'submitted') {
             if (!formData.project_id) {
                 setErrors({ project_id: ['Pilih project terlebih dahulu.'] });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
 
             if (!formData.approver_head_id) {
                 setErrors({ _general: ['Persetujuan Head wajib dipilih.'] });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
 
             if (!formData.start_date || !formData.end_date) {
                 setErrors({ _general: ['Tanggal berangkat dan kembali wajib diisi.'] });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
 
-            if (!attachmentFile) {
+            if (!attachmentFile && !hasExistingDocument) {
                 setErrors({ _general: ['Dokumen pendukung wajib diunggah.'] });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
             }
 
@@ -206,13 +215,18 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                 const remaining = (selected.allowance_budget ?? 0) - (selected.used_allowance_budget ?? 0);
                 if (formData.amount > remaining) {
                     setErrors({ amount: ['Nominal pengajuan melebihi sisa pagu allowance proyek.'] });
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                     return;
                 }
             }
         }
 
-        const documents: { file: File; type: string }[] = [];
-        if (attachmentFile) documents.push({ file: attachmentFile, type: 'other' });
+        const documents: any[] = [];
+        if (attachmentFile) {
+            documents.push({ file: attachmentFile, type: 'other' });
+        } else if (hasExistingDocument) {
+            documents.push({ id: reimbursementData.documents[0].id, type: 'other' });
+        }
 
         await submitReimbursement({
             code: formData.code,
@@ -262,12 +276,20 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                     </div>
                 </div>
 
-                {errors._general && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">{errors._general[0]}</div>
+                {Object.keys(errors).length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 space-y-1">
+                        {errors._general && <p className="font-medium">{errors._general[0]}</p>}
+                        {Object.entries(errors)
+                            .filter(([key]) => key !== '_general')
+                            .map(([key, msgs]) => (
+                                <p key={key}><span className="font-medium">{key}:</span> {(msgs as string[])[0]}</p>
+                            ))
+                        }
+                    </div>
                 )}
 
                 <Card className="border-none shadow-sm rounded-xl overflow-hidden">
-                    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+                    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} noValidate>
                         {/* Data Pemohon */}
                         <div className="p-6 md:p-8 bg-white">
                             <h3 className="text-lg font-semibold mb-1">Data Pemohon</h3>
@@ -288,7 +310,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                                 </div>
                                 {hasRole(['hr', 'superadmin']) && (
                                     <div className="md:col-span-3 space-y-2">
-                                        <Label htmlFor="user_id">Pilih Pegawai (Pemohon)</Label>
+                                        <Label>Pilih Pegawai (Pemohon)</Label>
                                         <SearchableSelect
                                             options={users.map(u => ({ value: u.id.toString(), label: `${u.nip ?? '-'} - ${u.name}` }))}
                                             value={formData.user_id}
@@ -331,9 +353,9 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label htmlFor="project_id">Nama Project <span className="text-red-500">*</span></Label>
+                                        <Label>Nama Project <span className="text-red-500">*</span></Label>
                                         <SearchableSelect
-                                            options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.name}` }))}
+                                            options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.initial_project} - ${p.name}` }))}
                                             value={formData.project_id}
                                             onValueChange={handleProjectChange}
                                             placeholder="Pilih project"
@@ -351,7 +373,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
                                     <div className="space-y-2 lg:col-span-1 border-r pr-4">
-                                        <Label htmlFor="start_date">Tanggal Berangkat <span className="text-red-500">*</span></Label>
+                                        <Label>Tanggal Berangkat <span className="text-red-500">*</span></Label>
                                         <DatePicker
                                             value={formData.start_date}
                                             onChange={(v) => handleValueChange('start_date', v)}
@@ -371,7 +393,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                                         />
                                     </div>
                                     <div className="space-y-2 lg:col-span-1 border-r pr-4">
-                                        <Label htmlFor="end_date">Tanggal Kembali <span className="text-red-500">*</span></Label>
+                                        <Label>Tanggal Kembali <span className="text-red-500">*</span></Label>
                                         <DatePicker
                                             value={formData.end_date}
                                             onChange={(v) => handleValueChange('end_date', v)}
@@ -426,6 +448,22 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                             <p className="text-sm text-muted-foreground mb-6">Unggah dokumen pendukung untuk allowance.</p>
 
                             <FileUploadDropzone className="w-full" onFilesChange={(files: File[]) => setAttachmentFile(files[0] ?? null)} />
+                            {(isEdit && reimbursementData?.documents && reimbursementData.documents.length > 0 && !attachmentFile && !deletedExistingDocument) && (
+                                <div className="mt-4 flex items-center justify-between p-3 border rounded-lg bg-emerald-50 border-emerald-100">
+                                    <p className="text-sm text-emerald-700 font-medium truncate flex-1">
+                                        ✓ Dokumen sebelumnya sudah tersimpan ({reimbursementData.documents[0].original_name}).
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600 flex-shrink-0 ml-2"
+                                        onClick={() => setDeletedExistingDocument(true)}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
                             <p className="text-xs text-muted-foreground mt-4 italic">Format: PDF, JPG, PNG (Max 5MB). Lampirkan bukti pendukung jika ada.</p>
                         </div>
 
@@ -438,7 +476,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="approver_head_id">Head Approver <span className="text-red-500">*</span></Label>
+                                    <Label>Head Approver <span className="text-red-500">*</span></Label>
                                     <SearchableSelect
                                         options={(approvers['head'] || []).map(u => ({ value: u.id.toString(), label: u.name }))}
                                         value={formData.approver_head_id}
@@ -468,13 +506,45 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                                 <Button type="button" variant="outline" disabled={loading} onClick={() => handleSubmit('draft')}>
                                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update Draft' : 'Simpan Draft'}</>}
                                 </Button>
-                                <Button type="submit" disabled={loading} className="bg-sidebar hover:bg-sidebar/90 min-w-[180px]">
+                                <Button type="button" disabled={loading} className="bg-sidebar hover:bg-sidebar/90 min-w-[180px]" onClick={() => handleSubmit('submitted')}>
                                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update & Ajukan Allowance' : 'Ajukan Allowance'}</>}
                                 </Button>
                             </div>
                         </CardFooter>
                     </form>
                 </Card>
+
+                {/* Progress overlay when saving */}
+                {loading && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 flex flex-col items-center text-center space-y-6">
+                            <div className="relative">
+                                <div className="h-28 w-28 rounded-full border-4 border-slate-100 flex items-center justify-center shadow-inner">
+                                    <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
+                                </div>
+                                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                                    <span className="font-bold text-2xl text-slate-800">{uploadProgress}%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-800 mb-2">Mengunggah Data</h3>
+                                <p className="text-sm text-slate-500 max-w-[250px] mx-auto">
+                                    {uploadProgress === 100
+                                        ? 'Sedang memproses data, mohon tunggu sebentar...'
+                                        : 'Mengunggah dokumen pendukung...'}
+                                </p>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
+                                <div
+                                    className="bg-blue-600 h-full transition-all duration-300 ease-out relative overflow-hidden"
+                                    style={{ width: `${uploadProgress}%` }}
+                                >
+                                    <div className="absolute inset-0 bg-white/20" style={{ transform: 'skewX(-20deg) translateX(-100%)', animation: 'shimmer 2s infinite' }} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </AppSidebarLayout>
     );

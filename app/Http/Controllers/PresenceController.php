@@ -34,7 +34,19 @@ final class PresenceController
         return Inertia::render('Presence/Index', [
             'presences' => $presences,
             'todayPresence' => $presenceService->getTodayPresence($user),
+            'filters' => request()->only(['search', 'start_date', 'end_date']),
         ]);
+    }
+
+    public function exportExcel(\Illuminate\Http\Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $user = auth()->user();
+        $filters = $request->only(['search', 'start_date', 'end_date']);
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\PresenceExport($user, $filters),
+            'presensi_' . now()->format('Ymd_His') . '.xlsx'
+        );
     }
 
     public function checkIn(): void

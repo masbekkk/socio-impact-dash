@@ -16,6 +16,8 @@ final class ReimbursementResource extends JsonResource
         return [
             'id' => $this->id,
             'code' => $this->code,
+            'atr_id' => $this->atr_id,
+            'replacement_pic_id' => $this->replacement_pic_id,
             'user' => [
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,
@@ -68,10 +70,19 @@ final class ReimbursementResource extends JsonResource
             'refund_reimburse_amount' => $this->amount,
             'status' => $this->status?->value,
             'amount' => (float) $this->amount,
+            'transferred_amount' => (float) $this->transferred_amount,
             'bank_name' => $this->bank_name,
             'bank_account' => $this->bank_account,
             'account_holder' => $this->account_holder,
-            'usage_plan' => $this->usage_plan,
+            'bank_branch' => $this->bank_branch,
+            'notes' => $this->usage_plan,
+            'usage_plan' => match ($this->type) {
+                ReimbursementType::ALLOWANCE => $this->usage_plan,
+                ReimbursementType::ATR, ReimbursementType::EER => $this->atrBudgetSelecteds->count() > 0
+                    ? $this->atrBudgetSelecteds->pluck('notes')->filter()->implode(', ')
+                    : $this->usage_plan,
+                default => $this->usage_plan,
+            },
             'urgency' => $this->urgency,
             'transferred_at' => $this->transferred_at?->toISOString(),
             'transfer_proof_path' => $this->transfer_proof_path,
@@ -144,21 +155,27 @@ final class ReimbursementResource extends JsonResource
                 function () {
                     $atr = $this->atr;
                     if (! $atr) {
-                        return [];
+                        return [
+                            'items' => [],
+                            'total_amount' => 0,
+                        ];
                     }
                     $atr->loadMissing('items');
 
-                    return $atr->items->where('parent_item_id', null)->map(fn (\App\Models\ReimbursementItem $item): array => [
-                        'id' => $item->id,
-                        'item_name' => $item->item_name,
-                        'quantity' => $item->quantity,
-                        'unit_price' => (float) $item->unit_price,
-                        'amount' => (float) $item->amount,
-                        'expense_type' => $item->expense_type?->value,
-                        'notes' => $item->notes,
-                        'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
-                        'activity_id' => $item->project_budget_detail_id,
-                    ])->values();
+                    return [
+                        'items' => $atr->items->where('parent_item_id', null)->map(fn (\App\Models\ReimbursementItem $item): array => [
+                            'id' => $item->id,
+                            'item_name' => $item->item_name,
+                            'quantity' => $item->quantity,
+                            'unit_price' => (float) $item->unit_price,
+                            'amount' => (float) $item->amount,
+                            'expense_type' => $item->expense_type?->value,
+                            'notes' => $item->notes,
+                            'activity_name' => $item->budgetDetail?->item_name ?? $item->budgetDetail?->notes ?? '-',
+                            'activity_id' => $item->project_budget_detail_id,
+                        ])->values(),
+                        'total_amount' => (float) $atr->amount,
+                    ];
                 }
             ),
         ];

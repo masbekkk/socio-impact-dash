@@ -20,11 +20,43 @@ final readonly class UpdateReimbursementStatus
             $notes = $data['notes'] ?? null;
             $role = $data['role'] ?? null;
 
+            if ($role === null) {
+                $user = \App\Models\User::find($approverId);
+                if ($user) {
+                    $roles = $user->getRoleNames();
+                    if ($roles->contains('head')) {
+                        // Prioritize Head over Finance/HR if this user was assigned as Head
+                        $isHead = ($user->id === $reimbursement->project?->head_id) ||
+                                 ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                                     ->where('approver_id', $user->id)
+                                     ->where('role', 'head')
+                                     ->exists();
+
+                        if ($isHead) {
+                            $role = 'head';
+                        } else {
+                            $role = $roles->first();
+                        }
+                    } else {
+                        $role = $roles->first();
+                    }
+                }
+            }
+
             if ($action === 'transferred') {
+                $statusToSet = ReimbursementStatus::Transferred;
+
+                if ($reimbursement->type === \App\Enums\ReimbursementType::EER && in_array($reimbursement->eer_type, ['refund', 'reimbursement'], true)) {
+                    $statusToSet = ReimbursementStatus::Closed;
+                }
+
                 $updateData = [
-                    'status' => ReimbursementStatus::Transferred,
+                    'status' => $statusToSet,
                     'transferred_at' => now(),
                 ];
+                if (isset($data['transferred_amount'])) {
+                    $updateData['transferred_amount'] = (float) $data['transferred_amount'];
+                }
                 if ($transferProof instanceof UploadedFile) {
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
                     $updateData['transfer_proof_path'] = $path;
@@ -51,6 +83,48 @@ final readonly class UpdateReimbursementStatus
                         'updated_by' => $approverId, // Track who actually took the action
                     ]);
             } else {
+                // Dual Role Logic for ATR/EER: If Finance/HR is also Head, clear both.
+                if (in_array($reimbursement->type, [\App\Enums\ReimbursementType::ATR, \App\Enums\ReimbursementType::EER]) &&
+                    in_array($action, [ApprovalStatus::Approved->value, 'request_fund'])) {
+
+                    $user = \App\Models\User::find($approverId);
+                    if ($user && $user->hasRole('finance') && $user->hasRole('head')) {
+                        $isAssignedHead = ($user->id === $reimbursement->project?->head_id) ||
+                                         ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                                             ->where('role', 'head')
+                                             ->exists();
+
+                        if ($isAssignedHead) {
+                            // Automatically approve Head record if pending
+                            ReimbursementApproval::query()->where('reimbursement_id', $reimbursement->id)
+                                ->where('role', 'head')
+                                ->where('status', ApprovalStatus::Pending->value)
+                                ->update([
+                                    'status' => ApprovalStatus::Approved->value,
+                                    'approved_at' => now(),
+                                    'updated_by' => $approverId,
+                                    'notes' => ($notes ? $notes.' ' : '').'(Auto-approved by Finance with Dual Role)',
+                                ]);
+
+                            // Ensure we act as Finance to reach finance_approved status
+                            $role = 'finance';
+                        }
+                    }
+
+                    // Dual Role Logic for EER: Head + HR
+                    if ($user && $user->hasRole('hr') && $user->hasRole('head') && ($reimbursement->type === \App\Enums\ReimbursementType::EER || $reimbursement->type === \App\Enums\ReimbursementType::ATR)) {
+                        $isAssignedHead = ($user->id === $reimbursement->project?->head_id) ||
+                                         ReimbursementApproval::where('reimbursement_id', $reimbursement->id)
+                                             ->where('role', 'head')
+                                             ->exists();
+
+                        if ($isAssignedHead) {
+                            // Prioritize acting as Head for EER to reach head_approved status
+                            $role = 'head';
+                        }
+                    }
+                }
+
                 $approval = ReimbursementApproval::query()->where('reimbursement_id', $reimbursement->id)
                     ->where('role', $role)
                     ->first();
@@ -92,7 +166,11 @@ final readonly class UpdateReimbursementStatus
                     ];
 
                     if (isset($roleStatusMap[$role])) {
-                        $updateData['status'] = $roleStatusMap[$role];
+                        if ($role === 'direktur' && $reimbursement->type === \App\Enums\ReimbursementType::EER && $reimbursement->eer_type === 'balance') {
+                            $updateData['status'] = ReimbursementStatus::Closed;
+                        } else {
+                            $updateData['status'] = $roleStatusMap[$role];
+                        }
                     }
                 }
 
@@ -100,7 +178,12 @@ final readonly class UpdateReimbursementStatus
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
                     $updateData['transfer_proof_path'] = $path;
                     $updateData['transferred_at'] = now();
-                    $updateData['status'] = ReimbursementStatus::Transferred; // Explicitly set if proof uploaded
+                    
+                    $statusToSet = ReimbursementStatus::Transferred;
+                    if ($reimbursement->type === \App\Enums\ReimbursementType::EER && in_array($reimbursement->eer_type, ['refund', 'reimbursement'], true)) {
+                        $statusToSet = ReimbursementStatus::Closed;
+                    }
+                    $updateData['status'] = $statusToSet;
                 }
 
                 if (! empty($updateData)) {

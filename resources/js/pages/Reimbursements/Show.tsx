@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
@@ -100,9 +100,10 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Receipt,
 } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
-import { resubmitReimbursement } from '@/services/reimbursement-service';
+import { resubmitReimbursement, updateItemReceipt } from '@/services/reimbursement-service';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -142,9 +143,11 @@ interface ReimbursementDetail {
   eer_type: string | null;
   status: string;
   amount: number | null;
+  transferred_amount: number | null;
   bank_name: string | null;
   bank_account: string | null;
   account_holder: string | null;
+  bank_branch: string | null;
   usage_plan: string | null;
   urgency: string | null;
   transferred_at: string | null;
@@ -184,12 +187,16 @@ interface ReimbursementDetail {
   can_approve: boolean;
   atr_budget_selecteds?: AtrBudgetSelected[];
   items?: ReimbursementItem[];
-  atr_items?: { id: number; item_name: string; quantity: number; unit_price: number; amount: number; expense_type: string | null; notes: string | null; activity_name: string; activity_id: number }[];
+  atr_items?: {
+    items: { id: number; item_name: string; quantity: number; unit_price: number; amount: number; expense_type: string | null; notes: string | null; activity_name: string; activity_id: number }[];
+    total_amount: number;
+  };
   start_date: string | null;
   end_date: string | null;
   start_time: string | null;
   end_time: string | null;
   refund_reimburse_amount?: number;
+  notes: string | null;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -201,6 +208,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
   finance_approved: { label: 'Finance Approved', className: 'bg-blue-50 text-blue-600 hover:bg-blue-50 border-blue-100', icon: CheckCircle },
   request_fund: { label: 'Request Fund', className: 'bg-orange-50 text-orange-600 hover:bg-orange-50 border-orange-100', icon: DollarSign },
   transferred: { label: 'Sudah Ditransfer', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle },
+  closed: { label: 'Ditutup', className: 'bg-indigo-100 text-indigo-800 border-indigo-200', icon: CheckCircle },
   revision: { label: 'Revisi', className: 'bg-orange-100 text-orange-700 border-orange-200', icon: AlertCircle },
   rejected: { label: 'Ditolak', className: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
 };
@@ -245,6 +253,21 @@ export default function Show() {
   const userId = auth?.user?.id || 0;
 
   const [data, setData] = useState<ReimbursementDetail | null>(null);
+
+  const totalEerSpent = useMemo(() => {
+    if (!data || data.type !== 'eer') return 0;
+    return (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
+  }, [data]);
+
+  const totalAtrAmount = useMemo(() => {
+    if (!data || data.type !== 'eer') return 0;
+    return data.atr_items?.total_amount || 0;
+  }, [data]);
+
+  const eerDifference = useMemo(() => {
+    return Math.abs(totalAtrAmount - totalEerSpent);
+  }, [totalAtrAmount, totalEerSpent]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -252,10 +275,29 @@ export default function Show() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [revisiDialogOpen, setRevisiDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingItemId, setUploadingItemId] = useState<number | null>(null);
+
+  const handleItemReceiptUpload = async (itemId: number, file: File) => {
+    if (!data) return;
+    try {
+      setActionLoading(true);
+      await updateItemReceipt(data.id, itemId, file);
+      // Refresh the page to show the new receipt
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to upload receipt:', error);
+      alert('Gagal mengupload kwitansi. Silakan coba lagi.');
+    } finally {
+      setActionLoading(false);
+      setUploadingItemId(null);
+    }
+  };
   const [rejectionReason, setRejectionReason] = useState('');
   const [revisiReason, setRevisiReason] = useState('');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [transferProof, setTransferProof] = useState<File | null>(null);
+  const [transferredAmount, setTransferredAmount] = useState<number>(0);
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
 
@@ -285,6 +327,9 @@ export default function Show() {
     refund_reimburse_amount: number;
     selected_activities: SelectedActivityRevision[];
     eer_items: EerItemRevision[];
+    notes: string;
+    transfer_proof: File | null;
+    documents: { id: string; db_id?: number; type: string; file: File | null; original_name?: string }[];
   }>({
     project_id: '',
     replacement_pic_id: '',
@@ -296,10 +341,13 @@ export default function Show() {
     end_time: '17:00',
     revision_note: '',
     approver_head_id: '',
-    eer_type: 'refund',
+    eer_type: 'refund' as 'refund' | 'reimbursement' | 'balance',
     refund_reimburse_amount: 0,
     selected_activities: [],
     eer_items: [],
+    notes: '',
+    transfer_proof: null,
+    documents: [],
   });
   const [resubmitLoading, setResubmitLoading] = useState(false);
 
@@ -349,6 +397,29 @@ export default function Show() {
     }
   }, [data?.comments]);
 
+  // Automatic EER Type Detection for Revision Form
+  useEffect(() => {
+    if (data?.type === 'eer' && data?.atr_items?.total_amount !== undefined) {
+      const totalClaim = revisionForm.eer_items.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const atrTotal = data.atr_items.total_amount;
+      const diff = totalClaim - atrTotal;
+
+      let newType: 'reimbursement' | 'refund' | 'balance' = 'balance';
+      if (diff > 0) newType = 'reimbursement';
+      else if (diff < 0) newType = 'refund';
+
+      const newAmount = Math.abs(diff);
+
+      if (revisionForm.eer_type !== newType || revisionForm.refund_reimburse_amount !== newAmount) {
+        setRevisionForm(prev => ({
+          ...prev,
+          eer_type: newType,
+          refund_reimburse_amount: newAmount
+        }));
+      }
+    }
+  }, [revisionForm.eer_items, data?.atr_items?.total_amount, data?.type]);
+
   // handleFileChange removed as it is no longer needed for approval
 
   const getCurrentUserRole = () => {
@@ -383,6 +454,7 @@ export default function Show() {
   const resetTransferDialog = () => {
     setTransferDialogOpen(false);
     setTransferProof(null);
+    setTransferredAmount(0);
   };
 
   const handleRequestFund = async () => {
@@ -478,7 +550,8 @@ export default function Show() {
     try {
       const formData = new FormData();
       formData.append('action', 'transferred');
-      formData.append('transfer_proof', transferProof);
+      if (transferProof) formData.append('transfer_proof', transferProof);
+      if (transferredAmount > 0) formData.append('transferred_amount', transferredAmount.toString());
 
       const role = getCurrentUserRole();
 
@@ -639,7 +712,7 @@ export default function Show() {
 
     setRevisionForm({
       project_id: data.project?.id?.toString() ?? '',
-      replacement_pic_id: '', // Unfortunately we don't have this in ReimbursementDetail right now, so we start empty.
+      replacement_pic_id: '',
       urgency: data.urgency ?? 'normal',
       usage_plan: data.usage_plan ?? '',
       start_date: data.start_date ?? '',
@@ -652,6 +725,15 @@ export default function Show() {
       refund_reimburse_amount: data.refund_reimburse_amount ?? 0,
       selected_activities,
       eer_items,
+      notes: data.notes ?? '',
+      transfer_proof: null,
+      documents: data.documents ? data.documents.map((d: any) => ({
+        id: crypto.randomUUID(),
+        db_id: d.id,
+        type: d.type || 'other',
+        file: null,
+        original_name: d.original_name,
+      })) : [],
     });
     setRevisionEditing(true);
   };
@@ -753,6 +835,7 @@ export default function Show() {
             amount: item.amount,
             expense_type: item.expense_type,
             receipt: item.receipt ?? undefined,
+            receipt_path: item.receipt_path ?? undefined,
             notes: item.notes,
           });
           const actId = Number(item.project_budget_detail_id);
@@ -779,6 +862,7 @@ export default function Show() {
               amount: child.quantity * child.unit_price,
               expense_type: child.expense_type,
               receipt: child.receipt ?? undefined,
+              receipt_path: child.receipt_path ?? undefined,
               notes: child.notes,
             });
             actTotal += child.quantity * child.unit_price;
@@ -799,12 +883,18 @@ export default function Show() {
         ...(revisionForm.replacement_pic_id && { replacement_pic_id: revisionForm.replacement_pic_id }),
         ...(revisionForm.approver_head_id && { approver_head_id: revisionForm.approver_head_id }),
         ...(revisionForm.urgency && { urgency: revisionForm.urgency }),
-        usage_plan: revisionForm.usage_plan,
+        usage_plan: revisionForm.notes,
         start_date: revisionForm.start_date || null,
         end_date: revisionForm.end_date || null,
         revision_note: revisionForm.revision_note || 'Pengajuan telah direvisi dan diajukan kembali.',
         eer_type: data.type === 'eer' ? revisionForm.eer_type : undefined,
         refund_reimburse_amount: data.type === 'eer' ? revisionForm.refund_reimburse_amount : undefined,
+        ...(data.type === 'eer' && revisionForm.eer_type === 'refund' && revisionForm.transfer_proof && { transfer_proof: revisionForm.transfer_proof }),
+        documents: revisionForm.documents.map(d => ({
+          ...(d.db_id ? { id: d.db_id } : {}),
+          type: d.type,
+          file: d.file || undefined,
+        })),
       };
 
       if (data.type === 'eer') {
@@ -900,11 +990,17 @@ export default function Show() {
 
   const addActivityRevision = (budgetDetailId: number) => {
     if (revisionForm.selected_activities.find(a => a.budget_detail_id === budgetDetailId)) return;
+
+    // Find the budget detail to get its name
+    const activity = data?.project?.budget_details?.find(bd => bd.id === budgetDetailId);
+    if (!activity) return;
+
     setRevisionForm(prev => ({
       ...prev,
       selected_activities: [...prev.selected_activities, {
         budget_detail_id: budgetDetailId,
         expanded: true,
+        activity_name: activity.item_name,
         detail_aktivitas: '',
         children: [{
           id: crypto.randomUUID(),
@@ -914,7 +1010,7 @@ export default function Show() {
           amount: 0,
           expense_type: '',
           receipt: null,
-          notes: ''
+          notes: '',
         }]
       }]
     }));
@@ -974,6 +1070,13 @@ export default function Show() {
   const statusCfg = STATUS_CONFIG[data.status] ?? { label: data.status, className: 'bg-gray-100 text-gray-600', icon: Clock };
   const StatusIcon = statusCfg.icon;
   const canApproveReject = data.can_approve;
+
+  const formatTime = (time?: string | null) => {
+    if (!time) return null;
+
+    const [hour, minute] = time.split(":");
+    return `${hour}:${minute}`;
+  };
 
   return (
     <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -1099,7 +1202,7 @@ export default function Show() {
             )}
 
             {/* Post-Approval Finance Actions */}
-            {hasRole('finance') && (
+            {isFinanceOrAdmin && (
               <>
                 {data.status === 'approved' && (
                   <Button
@@ -1392,8 +1495,16 @@ export default function Show() {
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Tipe EER</label>
                       <div>
-                        <Badge variant="outline" className="capitalize px-3 border-blue-200 bg-blue-50 text-blue-700">
-                          {data.eer_type}
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "capitalize px-3 border",
+                            data.eer_type === 'refund' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                              data.eer_type === 'balance' ? "bg-slate-50 text-slate-700 border-slate-200" :
+                                "bg-blue-50 text-blue-700 border-blue-200"
+                          )}
+                        >
+                          {data.eer_type === 'balance' ? 'balance (sesuai budget)' : data.eer_type}
                         </Badge>
                       </div>
                     </div>
@@ -1408,38 +1519,75 @@ export default function Show() {
                       {format(new Date(data.created_at), 'dd MMMM yyyy', { locale: localeId })}
                     </div>
                   </div>
-                  {data.amount != null && data.amount > 0 && (
+                  {(data.amount != null && (data.amount > 0 || (data.type === 'eer' && data.eer_type === 'balance'))) && (
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Total Biaya</label>
-                      <div className="font-bold text-xl text-green-700 font-mono">
-                        Rp {data.amount.toLocaleString('id-ID')}
+                      <label className="text-xs font-medium text-muted-foreground uppercase">
+                        {data.type === 'eer'
+                          ? (data.eer_type === 'refund' ? 'Nominal Refund' : (data.eer_type === 'balance' ? 'Penyelesaian' : 'Nominal Reimburse'))
+                          : 'Total Biaya'}
+                      </label>
+                      <div className="flex items-baseline gap-3">
+                        <div className="font-bold text-xl text-green-700 font-mono">
+                          Rp {(data.type === 'eer' && data.atr_items)
+                            ? eerDifference.toLocaleString('id-ID')
+                            : (data.amount || 0).toLocaleString('id-ID')}
+                        </div>
+                        {data.transferred_amount != null && data.transferred_amount > 0 && (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded text-blue-700">
+                            <span className="text-[10px] font-bold uppercase tracking-tighter opacity-70">Ditransfer:</span>
+                            <span className="text-xs font-mono font-bold">Rp {data.transferred_amount.toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
                 </div>
 
                 {/* Usage Date */}
-                {(data.start_date || data.end_date) && data.type !== 'allowance' && (
-                  <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 space-y-2">
-                    <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
-                      <Calendar className="h-4 w-4" /> {data.type === 'atr' ? 'Tanggal Penggunaan Dana' : 'Jadwal Penggunaan Dana'}
+                {(data.start_date || data.end_date) && (
+                  <div className={cn(
+                    "p-4 rounded-lg border space-y-2",
+                    data.type === 'allowance' ? "bg-emerald-50/50 border-emerald-100" : "bg-blue-50/50 border-blue-100"
+                  )}>
+                    <div className={cn(
+                      "flex items-center gap-2 font-medium text-sm",
+                      data.type === 'allowance' ? "text-emerald-800" : "text-blue-800"
+                    )}>
+                      <Calendar className="h-4 w-4" />
+                      {data.type === 'atr' ? 'Tanggal Penggunaan Dana' :
+                        data.type === 'allowance' ? 'Informasi Keberangkatan' : 'Jadwal Penggunaan Dana'}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       {data.start_date && (
                         <div>
-                          <span className="text-muted-foreground text-xs block">{data.type === 'atr' ? 'Tanggal Penggunaan' : 'Tanggal Mulai'}</span>
+                          <span className="text-muted-foreground text-xs block">
+                            {data.type === 'atr' ? 'Tanggal Penggunaan' :
+                              data.type === 'allowance' ? 'Tanggal Berangkat' : 'Tanggal Mulai'}
+                          </span>
                           <span className="font-medium">
                             {format(new Date(data.start_date), 'dd MMMM yyyy', { locale: localeId })}
-                            {data.start_time && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">{data.start_time}</span>}
+                            {data.start_time && (
+                              <span className={cn(
+                                "ml-2 text-xs px-1.5 py-0.5 rounded font-mono",
+                                data.type === 'allowance' ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                              )}>{data.start_time}</span>
+                            )}
                           </span>
                         </div>
                       )}
                       {data.end_date && data.type !== 'atr' && (
                         <div>
-                          <span className="text-muted-foreground text-xs block">Tanggal Selesai</span>
+                          <span className="text-muted-foreground text-xs block">
+                            {data.type === 'allowance' ? 'Tanggal Pulang' : 'Tanggal Selesai'}
+                          </span>
                           <span className="font-medium">
                             {format(new Date(data.end_date), 'dd MMMM yyyy', { locale: localeId })}
-                            {data.end_time && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">{data.end_time}</span>}
+                            {data.end_time && (
+                              <span className={cn(
+                                "ml-2 text-xs px-1.5 py-0.5 rounded font-mono",
+                                data.type === 'allowance' ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                              )}>{data.end_time}</span>
+                            )}
                           </span>
                         </div>
                       )}
@@ -1549,8 +1697,8 @@ export default function Show() {
                           <Label className="text-xs font-medium">Keterangan / Rencana Penggunaan</Label>
                           <Textarea
                             className="min-h-[80px] text-sm resize-none"
-                            value={revisionForm.usage_plan}
-                            onChange={(e) => setRevisionForm(p => ({ ...p, usage_plan: e.target.value }))}
+                            value={revisionForm.notes}
+                            onChange={(e) => setRevisionForm(p => ({ ...p, notes: e.target.value }))}
                             placeholder="Update rencana penggunaan..."
                           />
                         </div>
@@ -1629,11 +1777,7 @@ export default function Show() {
                                       <div className="md:col-span-5 lg:col-span-4 space-y-1">
                                         <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">JENIS BIAYA <span className="text-red-500">*</span></Label>
                                         <SearchableSelect
-                                          options={[
-                                            { value: 'Operational', label: 'Operational' },
-                                            { value: 'Management', label: 'Management' },
-                                            { value: 'Allowance', label: 'Allowance' },
-                                          ]}
+                                          options={expenseTypes.map(t => ({ value: t.value, label: t.label }))}
                                           value={item.expense_type}
                                           onValueChange={(v) => updateItemEerRevision(item.id, 'expense_type', v)}
                                           placeholder="Jenis..."
@@ -1653,10 +1797,12 @@ export default function Show() {
                                         <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                                           KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500">*</span>
                                         </Label>
+
                                         <FileUploadDropzone
                                           className="bg-white h-[80px] overflow-hidden rounded-lg"
                                           onFilesChange={(files: File[]) => updateItemEerRevision(item.id, 'receipt', files[0] ?? null)}
                                         />
+
                                         {(item.receipt || item.receipt_path) && (
                                           <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100 italic">
                                             <CheckCircle className="h-3 w-3" /> {item.receipt ? `Baru: ${item.receipt.name}` : 'Sudah terlampir'}
@@ -1835,42 +1981,160 @@ export default function Show() {
 
                             {data.type === 'eer' && (
                               <div className="mt-4 p-4 border rounded-xl bg-slate-50/50 space-y-4">
-                                <div className="space-y-3">
-                                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tipe Hasil EER</Label>
-                                  <RadioGroup
-                                    value={revisionForm.eer_type}
-                                    onValueChange={(v: string) => setRevisionForm(p => ({ ...p, eer_type: v }))}
-                                    className="grid grid-cols-2 gap-2"
-                                  >
+                                <div className="space-y-4">
+                                  <div className="space-y-3">
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Hasil Kalkulasi EER (Otomatis)</Label>
                                     <div className={cn(
-                                      "flex items-center space-x-2 p-2 rounded-lg border bg-white cursor-pointer",
-                                      revisionForm.eer_type === 'refund' && "border-blue-500 bg-blue-50/30"
+                                      "flex items-center space-x-2 p-3 rounded-lg border shadow-sm",
+                                      revisionForm.eer_type === 'refund' ? "bg-emerald-50/30 border-emerald-200" :
+                                        revisionForm.eer_type === 'balance' ? "bg-slate-50/30 border-slate-200" :
+                                          "bg-blue-50/30 border-blue-200"
                                     )}>
-                                      <RadioGroupItem value="refund" id="rev-refund" />
-                                      <Label htmlFor="rev-refund" className="text-xs cursor-pointer font-medium">Refund</Label>
+                                      <div className="flex-1">
+                                        <div className={cn(
+                                          "font-bold text-[11px]",
+                                          revisionForm.eer_type === 'refund' ? "text-emerald-900" :
+                                            revisionForm.eer_type === 'balance' ? "text-slate-900" :
+                                              "text-blue-900"
+                                        )}>
+                                          {revisionForm.eer_type === 'balance' ? '⚖️ BALANCE (Sesuai Budget)' : (
+                                            revisionForm.eer_type === 'refund' ? '💰 REFUND (Pengembalian Kelebihan)' : '💳 REIMBURSEMENT (Kekurangan Dana)'
+                                          )}
+                                        </div>
+                                        <div className={cn(
+                                          "text-[10px] mt-0.5 leading-relaxed",
+                                          revisionForm.eer_type === 'refund' ? "text-emerald-700" :
+                                            revisionForm.eer_type === 'balance' ? "text-slate-600" :
+                                              "text-blue-700"
+                                        )}>
+                                          {revisionForm.eer_type === 'refund'
+                                            ? 'Total klaim lebih kecil dari limit ATR. Selisih dana wajib dikembalikan ke kantor.'
+                                            : revisionForm.eer_type === 'balance'
+                                              ? 'Total klaim sesuai dengan budget ATR. Tidak ada pengembalian atau penambahan dana.'
+                                              : 'Total klaim melampaui limit ATR. Kantor akan membayarkan selisihnya.'}
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div className={cn(
-                                      "flex items-center space-x-2 p-2 rounded-lg border bg-white cursor-pointer",
-                                      revisionForm.eer_type === 'reimbursement' && "border-blue-500 bg-blue-50/30"
-                                    )}>
-                                      <RadioGroupItem value="reimbursement" id="rev-reimbursement" />
-                                      <Label htmlFor="rev-reimbursement" className="text-xs cursor-pointer font-medium">Reimbursement</Label>
-                                    </div>
-                                  </RadioGroup>
-                                </div>
+                                  </div>
 
-                                <div className="space-y-1">
-                                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nominal {revisionForm.eer_type === 'refund' ? 'Refund' : 'Reimburse'}</Label>
-                                  <Textarea
-                                    value={revisionForm.usage_plan}
-                                    onChange={(e) => setRevisionForm(p => ({ ...p, usage_plan: e.target.value }))}
-                                    placeholder="Update rencana penggunaan..."
-                                  />
+                                  <div className="space-y-2">
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                      {revisionForm.eer_type === 'balance' ? 'Selisih Nominal' : `Nominal ${revisionForm.eer_type === 'refund' ? 'Refund' : 'Reimburse'}`}
+                                    </Label>
+                                    <div className={cn(
+                                      "h-10 text-sm font-black flex items-center px-4 rounded-xl text-white shadow-inner",
+                                      revisionForm.eer_type === 'refund' ? "bg-emerald-600" :
+                                        revisionForm.eer_type === 'balance' ? "bg-slate-600" :
+                                          "bg-blue-600"
+                                    )}>
+                                      Rp {revisionForm.refund_reimburse_amount.toLocaleString('id-ID')}
+                                    </div>
+                                    <p className="text-[9px] text-muted-foreground italic leading-tight">
+                                      * Dikalkulasi otomatis dari selisih limit ATR dan total rincian klaim di atas.
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
                             )}
                           </div>
                         )}
+
+                        {data.type === 'eer' && revisionForm.eer_type === 'refund' && (
+                          <div className="space-y-4 pt-2 border-t mt-4">
+                            <Label className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+                              <Upload className="h-3 w-3" /> Update Bukti Refund (Opsional)
+                            </Label>
+                            <FileUploadDropzone
+                              className="bg-white h-[80px] overflow-hidden rounded-lg"
+                              onFilesChange={(files: File[]) => setRevisionForm(p => ({ ...p, transfer_proof: files[0] ?? null }))}
+                            />
+                            {revisionForm.transfer_proof ? (
+                              <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100 italic">
+                                <CheckCircle className="h-3 w-3" /> Baru: {revisionForm.transfer_proof.name}
+                              </div>
+                            ) : data.transfer_proof_path ? (
+                              <div className="flex items-center gap-2 text-[10px] text-blue-600 bg-blue-50 p-1.5 rounded mt-1 border border-blue-100 italic">
+                                <CheckCircle className="h-3 w-3" /> Sudah ada file sebelumnya. Kosongkan jika tidak ingin mengubah.
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+
+                        <div className="space-y-4 pt-4 border-t mt-4 text-left">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                              Dokumen Pendukung / Tambahan
+                            </Label>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-[10px] gap-1"
+                              onClick={() => setRevisionForm(p => ({
+                                ...p,
+                                documents: [...p.documents, { id: crypto.randomUUID(), type: 'other', file: null }]
+                              }))}
+                            >
+                              <Plus className="h-3 w-3" /> Tambah 
+                            </Button>
+                          </div>
+                          
+                          {revisionForm.documents.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {revisionForm.documents.map((doc) => (
+                                <div key={doc.id} className="p-3 border rounded-lg bg-slate-50/50 relative space-y-3">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 absolute top-1 right-1 text-red-500 hover:bg-red-100"
+                                    onClick={() => setRevisionForm(p => ({
+                                      ...p,
+                                      documents: p.documents.filter(d => d.id !== doc.id)
+                                    }))}
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+
+                                  <div className="space-y-1.5 pr-6">
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nama / Jenis Dokumen</Label>
+                                    <Input
+                                      value={doc.type}
+                                      onChange={(e) => setRevisionForm(p => ({
+                                        ...p,
+                                        documents: p.documents.map(d => d.id === doc.id ? { ...d, type: e.target.value } : d)
+                                      }))}
+                                      className="h-8 text-xs bg-white"
+                                      placeholder="Contoh: Invoice, TOR"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase">File Dokumen</Label>
+                                    <FileUploadDropzone
+                                      className="h-16 bg-white shrink-0"
+                                      onFilesChange={(files) => setRevisionForm(p => ({
+                                        ...p,
+                                        documents: p.documents.map(d => d.id === doc.id ? { ...d, file: files[0] ?? null } : d)
+                                      }))}
+                                    />
+                                    {doc.file ? (
+                                      <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 italic">
+                                        <CheckCircle className="h-3 w-3 shrink-0" /> <span className="truncate">Baru: {doc.file.name}</span>
+                                      </div>
+                                    ) : doc.original_name ? (
+                                      <div className="flex items-center gap-1.5 text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 italic">
+                                        <CheckCircle className="h-3 w-3 shrink-0" /> <span className="truncate">Lama: {doc.original_name}</span>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground text-center italic p-4 border border-dashed rounded bg-slate-50/50">Tidak ada dokumen pendukung tambahan.</p>
+                          )}
+                        </div>
 
                         <div className="space-y-1 pb-2 border-t pt-4">
                           <Label className="text-xs font-medium">Catatan Revisi untuk Approver</Label>
@@ -1900,10 +2164,10 @@ export default function Show() {
                   atrItems.forEach(item => {
                     if (!grouped[item.activity_id]) {
                       const budgetSelected = data.atr_budget_selecteds?.find(abs => abs.project_budget_detail_id === item.activity_id);
-                      grouped[item.activity_id] = { 
-                        name: item.activity_name, 
+                      grouped[item.activity_id] = {
+                        name: item.activity_name,
                         notes: budgetSelected?.notes || '',
-                        items: [] 
+                        items: []
                       };
                     }
                     grouped[item.activity_id].items.push(item);
@@ -1967,7 +2231,7 @@ export default function Show() {
                 {/* EER Claimed Items + All ATR Items */}
                 {data.type === 'eer' && (() => {
                   const eerItems = data.items || [];
-                  const atrItems = data.atr_items || [];
+                  const atrItems = data.atr_items?.items || [];
 
                   // Calculate totals per activity for EER claims
                   const activityClaimTotals: Record<number, number> = {};
@@ -1982,11 +2246,11 @@ export default function Show() {
                   atrItems.forEach(item => {
                     if (!groupedAtr[item.activity_id]) {
                       const budgetSelected = data.atr_budget_selecteds?.find(abs => abs.project_budget_detail_id === item.activity_id);
-                      groupedAtr[item.activity_id] = { 
-                        name: item.activity_name, 
+                      groupedAtr[item.activity_id] = {
+                        name: item.activity_name,
                         notes: budgetSelected?.notes || '',
-                        items: [], 
-                        plannedAmount: 0 
+                        items: [],
+                        plannedAmount: 0
                       };
                     }
                     groupedAtr[item.activity_id].items.push(item);
@@ -1995,63 +2259,141 @@ export default function Show() {
 
                   return (
                     <div className="space-y-6">
-                      {/* EER Claimed Items Table */}
-                      {eerItems.length > 0 && (
-                        <div className="space-y-3">
-                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500" /> Item Klaim EER (Aktual)
-                          </label>
-                          <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b bg-slate-50/50">
-                                    <th className="text-left p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Nama Item</th>
-                                    <th className="text-left p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Kegiatan</th>
-                                    <th className="text-right p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Nominal Klaim</th>
-                                    <th className="text-left p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider">Jenis</th>
-                                    <th className="text-center p-4 font-bold text-slate-600 text-[10px] uppercase tracking-wider w-24">Kwitansi</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {eerItems.map(item => (
-                                    <tr key={item.id} className="border-b last:border-0 hover:bg-slate-50/50 transition-colors">
-                                      <td className="p-4 font-semibold text-slate-900">{item.item_name}</td>
-                                      <td className="p-4 text-slate-500 font-medium">{item.activity_name}</td>
-                                      <td className="p-4 text-right font-mono font-bold text-blue-700">Rp {item.amount.toLocaleString('id-ID')}</td>
-                                      <td className="p-4">
-                                        {item.expense_type && (
-                                          <Badge variant="secondary" className="text-[10px] h-5 bg-blue-50 text-blue-700 border-blue-100">{item.expense_type}</Badge>
-                                        )}
-                                      </td>
-                                      <td className="p-4 text-center">
-                                        {item.receipt_path ? (
-                                          <a href={`/storage/${item.receipt_path}`} target="_blank" rel="noopener noreferrer">
-                                            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] gap-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200">
-                                              <Download className="h-3 w-3" /> Lihat
-                                            </Button>
-                                          </a>
-                                        ) : (
-                                          <span className="text-[10px] text-muted-foreground italic">—</span>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                                <tfoot>
-                                  <tr className="bg-slate-900 text-white">
-                                    <td colSpan={2} className="p-4 text-right font-bold text-[10px] uppercase tracking-widest text-slate-400">Total Klaim EER</td>
-                                    <td className="p-4 text-right font-mono font-black text-white text-base">
-                                      Rp {eerItems.reduce((s, i) => s + i.amount, 0).toLocaleString('id-ID')}
-                                    </td>
-                                    <td colSpan={2}></td>
-                                  </tr>
-                                </tfoot>
-                              </table>
+                      {/* EER Summary (Refund/Reimburse Calculation) */}
+                      {data.atr_items && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm mb-6">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="h-8 w-8 rounded-lg bg-slate-900 flex items-center justify-center">
+                              <Receipt className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-bold text-slate-900">Ringkasan Biaya EER</h3>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Kalkulasi Penggunaan Dana</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
+                            <div className="space-y-1.5 pb-2 border-b md:border-b-0 md:border-r md:pb-0 border-slate-200">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Total Dana ATR</span>
+                              <div className="flex items-baseline gap-1 justify-center md:justify-start text-slate-900 font-mono">
+                                <span className="text-xs font-semibold text-slate-400">Rp</span>
+                                <span className="text-lg font-black">{totalAtrAmount.toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5 pb-2 border-b md:border-b-0 md:border-r md:pb-0 border-slate-200">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Total Pengeluaran (Actual)</span>
+                              <div className="flex items-baseline gap-1 justify-center md:justify-start text-slate-600 font-mono">
+                                <span className="text-xs font-semibold text-slate-400">Rp</span>
+                                <span className="text-lg font-bold">{totalEerSpent.toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+
+                            <div className={cn(
+                              "space-y-1.5 p-3 rounded-lg border",
+                              data.eer_type === 'refund' ? "bg-emerald-50 border-emerald-100" : (data.eer_type === 'balance' ? "bg-slate-100 border-slate-200" : "bg-blue-50 border-blue-100")
+                            )}>
+                              <span className={cn(
+                                "text-[10px] font-bold uppercase tracking-tight",
+                                data.eer_type === 'refund' ? "text-emerald-700" : (data.eer_type === 'balance' ? "text-slate-600" : "text-blue-700")
+                              )}>
+                                {data.eer_type === 'refund' ? 'Total Refund (ATR - EER)' : (data.eer_type === 'balance' ? 'Penyelesaian' : 'Total Reimburse (EER - ATR)')}
+                              </span>
+                              <div className={cn(
+                                "flex items-baseline gap-1 justify-center md:justify-start font-mono",
+                                data.eer_type === 'refund' ? "text-emerald-900" : (data.eer_type === 'balance' ? "text-slate-900" : "text-blue-900")
+                              )}>
+                                <span className="text-xs font-semibold">Rp</span>
+                                <span className={cn(
+                                  "text-xl font-black",
+                                  data.eer_type === 'balance' && "text-slate-500"
+                                )}>{eerDifference.toLocaleString('id-ID')}</span>
+                              </div>
+                              {data.eer_type === 'balance' && (
+                                <p className="text-[9px] text-slate-500 font-medium">EER Balance</p>
+                              )}
                             </div>
                           </div>
                         </div>
                       )}
+
+                      {/* Item Details Table (Original logic moved down) */}
+                      <div className="space-y-3">
+                        <label className="text-xs font-medium text-muted-foreground uppercase">Item Klaim EER</label>
+                        <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b bg-muted/30">
+                                  <th className="text-left p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Aktivitas / Nama Item</th>
+                                  <th className="text-center p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-16">Qty</th>
+                                  <th className="text-right p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Harga</th>
+                                  <th className="text-right p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Total</th>
+                                  <th className="text-left p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-32">Kwitansi</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {eerItems.map(item => (
+                                  <tr key={item.id} className="border-b last:border-0 hover:bg-muted/10 transition-colors">
+                                    <td className="p-4">
+                                      <div className="space-y-1">
+                                        <p className="font-bold text-slate-900 leading-tight">{item.item_name}</p>
+                                        <p className="text-[10px] text-muted-foreground font-medium uppercase">{item.activity_name}</p>
+                                        {item.notes && <p className="text-[10px] text-muted-foreground italic truncate max-w-xs">{item.notes}</p>}
+                                      </div>
+                                    </td>
+                                    <td className="p-4 text-center text-slate-600 font-medium">{item.quantity}</td>
+                                    <td className="p-4 text-right font-mono text-slate-500">Rp {item.unit_price.toLocaleString('id-ID')}</td>
+                                    <td className="p-4 text-right font-mono font-bold text-slate-900">Rp {item.amount.toLocaleString('id-ID')}</td>
+                                    <td className="p-4">
+                                      <div className="flex items-center gap-2">
+                                        {item.receipt_path ? (
+                                          <a
+                                            href={`/storage/${item.receipt_path}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-bold hover:bg-emerald-100 transition-colors border border-emerald-100"
+                                          >
+                                            <Download className="h-3 w-3" /> LIHAT
+                                          </a>
+                                        ) : (
+                                          <span className="text-[10px] text-slate-400 italic">No receipt</span>
+                                        )}
+
+                                        <Label
+                                          htmlFor={`upload-receipt-${item.id}`}
+                                          className="cursor-pointer inline-flex items-center justify-center p-1 hover:bg-slate-100 rounded-full transition-colors"
+                                        >
+                                          <Upload className="h-3 w-3 text-slate-400" />
+                                          <input
+                                            id={`upload-receipt-${item.id}`}
+                                            type="file"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) handleItemReceiptUpload(item.id, file);
+                                            }}
+                                          />
+                                        </Label>
+
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot>
+                                <tr className="bg-slate-900 text-white">
+                                  <td colSpan={2} className="p-4 text-right font-bold text-[10px] uppercase tracking-widest text-slate-400">Total Klaim EER</td>
+                                  <td className="p-4 text-right font-mono font-black text-white text-base">
+                                    Rp {totalEerSpent.toLocaleString('id-ID')}
+                                  </td>
+                                  <td colSpan={2}></td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
 
                       {/* ATR Reference Context */}
                       {atrItems.length > 0 && (
@@ -2183,34 +2525,50 @@ export default function Show() {
                         );
                       })()}
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-                      {/* Connector Line between dates */}
+                      {/* Connector Line */}
                       <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-px bg-amber-200 z-0" />
-                      
+
+                      {/* START */}
                       <div className="bg-white p-4 rounded-lg border border-amber-100 shadow-sm relative z-10 flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Mulai Perjalanan</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                          Mulai Perjalanan
+                        </span>
+
                         <div className="flex items-baseline gap-2">
                           <span className="text-xl font-bold text-slate-800">
-                            {format(new Date(data.start_date!), 'dd MMMM yyyy', { locale: localeId })}
+                            {data.start_date &&
+                              format(new Date(data.start_date), "dd MMMM yyyy", {
+                                locale: localeId,
+                              })}
                           </span>
-                          {data.start_time && (
+
+                          {formatTime(data.start_time) && (
                             <span className="text-xs font-mono font-medium px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
-                              {data.start_time}
+                              {formatTime(data.start_time)}
                             </span>
                           )}
                         </div>
                       </div>
 
+                      {/* END */}
                       <div className="bg-white p-4 rounded-lg border border-amber-100 shadow-sm relative z-10 flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Selesai Perjalanan</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                          Selesai Perjalanan
+                        </span>
+
                         <div className="flex items-baseline gap-2">
                           <span className="text-xl font-bold text-slate-800">
-                            {format(new Date(data.end_date!), 'dd MMMM yyyy', { locale: localeId })}
+                            {data.end_date &&
+                              format(new Date(data.end_date), "dd MMMM yyyy", {
+                                locale: localeId,
+                              })}
                           </span>
-                          {data.end_time && (
+
+                          {formatTime(data.end_time) && (
                             <span className="text-xs font-mono font-medium px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
-                              {data.end_time}
+                              {formatTime(data.end_time)}
                             </span>
                           )}
                         </div>
@@ -2220,11 +2578,11 @@ export default function Show() {
                 )}
 
                 {/* Usage Plan */}
-                {data.usage_plan && (
+                {data.notes && (
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-muted-foreground uppercase">Keterangan / Rencana Penggunaan</label>
                     <div className="p-4 bg-muted/40 rounded-lg text-sm leading-relaxed border border-muted/60">
-                      {data.usage_plan}
+                      {data.notes}
                     </div>
                   </div>
                 )}
@@ -2254,11 +2612,17 @@ export default function Show() {
                           <span className="font-medium">{data.account_holder}</span>
                         </div>
                       )}
+                      {data.bank_branch && (
+                        <div>
+                          <span className="text-muted-foreground text-xs block">Cabang Pembuka</span>
+                          <span className="font-medium">{data.bank_branch}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {((data.status === 'submitted' || data.status === 'request_fund') && (isFinanceOrAdmin || (data.type === 'allowance' && isHrOrAdmin))) && (
+                {((data.status === 'submitted' || data.status === 'request_fund' || (data.type === 'eer' && data.eer_type === 'refund' && !data.transfer_proof_path && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && isFinanceOrAdmin) && (
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <Button
                       onClick={() => setTransferDialogOpen(true)}
@@ -2338,7 +2702,7 @@ export default function Show() {
                 )}
 
                 {/* Refund Bank Info Reminder (if manual check needed) */}
-                {data.type === 'eer' && data.eer_type === 'refund' && data.status !== 'transferred' && (
+                {data.type === 'eer' && data.eer_type === 'refund' && !['transferred', 'closed'].includes(data.status) && isFinanceOrAdmin && (
                   <div className="bg-rose-50/50 p-4 rounded-lg border border-rose-100 space-y-3">
                     <div className="flex items-center gap-2 text-rose-800 font-medium text-sm">
                       <Info className="h-4 w-4" /> Rekening Refund (Reminder)
@@ -2721,6 +3085,20 @@ export default function Show() {
                 </a>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-500 uppercase">
+                Nominal Ditransfer <span className="text-red-500">*</span>
+              </Label>
+              <MoneyInput
+                value={transferredAmount || (data?.amount ?? 0)}
+                onValueChange={(v) => setTransferredAmount(v.floatValue || 0)}
+                className="text-lg font-bold text-blue-700 h-12"
+              />
+              <p className="text-[10px] text-muted-foreground italic">
+                * Masukkan nominal aktual yang ditransfer ke penerima.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={resetTransferDialog} disabled={actionLoading}>Batal</Button>
@@ -2730,7 +3108,7 @@ export default function Show() {
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-blue-600 hover:bg-blue-700"
               )}
-              disabled={(!(data?.eer_type === 'refund' && data?.transfer_proof_path) && !transferProof) || actionLoading}
+              disabled={(!(data?.eer_type === 'refund' && data?.transfer_proof_path) && !transferProof) || actionLoading || (transferredAmount <= 0 && !(data?.amount ?? 0))}
               onClick={handleTransfer}
             >
               {actionLoading ? (
@@ -2744,6 +3122,20 @@ export default function Show() {
           </DialogFooter>
         </DialogContent>
       </Dialog >
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*,application/pdf"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file && uploadingItemId) {
+            handleItemReceiptUpload(uploadingItemId, file);
+          }
+          // Reset value to allow uploading same file again
+          e.target.value = '';
+        }}
+      />
     </AppSidebarLayout >
   );
 }

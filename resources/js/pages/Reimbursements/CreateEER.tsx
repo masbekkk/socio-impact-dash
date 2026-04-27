@@ -35,6 +35,7 @@ import { useReimbursementForm } from '@/hooks/use-reimbursement-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { usePermission } from '@/hooks/use-permission';
+import { Badge } from '@/components/ui/badge';
 
 interface Approver {
   id: number;
@@ -63,6 +64,7 @@ interface Atr {
   id: number;
   code: string;
   amount: number;
+  transferred_amount: number | null;
   usage_plan: string;
   project_id: number;
   project_name: string;
@@ -83,6 +85,7 @@ interface ChildItem {
   amount: number;
   expense_type: string;
   receipt: File | null;
+  receipt_path?: string | null;
   notes: string;
 }
 
@@ -103,10 +106,13 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
   reimbursement?: any,
   isEdit?: boolean,
 }) {
-  const { authUser, loading, errors, setErrors, clearFieldError, submitReimbursement } = useReimbursementForm([]);
+  const { authUser, loading, uploadProgress, errors, setErrors, clearFieldError, submitReimbursement } = useReimbursementForm([]);
   const { hasRole } = usePermission();
 
   const [items, setItems] = useState<({ id: string } & ChildItem & { project_budget_detail_id: number | '' })[]>([]);
+  const [documents, setDocuments] = useState<{ id: string; file: File | null; type: string, db_id?: number, original_name?: string }[]>([]);
+
+  const reimbursementData = reimbursement?.data || reimbursement;
 
   const [formData, setFormData] = useState({
     code: '',
@@ -120,7 +126,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
     pic: '',
     approver_head_id: '',
     description: '',
-    eer_type: 'refund' as 'refund' | 'reimbursement',
+    eer_type: 'refund' as 'refund' | 'reimbursement' | 'balance',
     refund_reimburse_amount: 0,
   });
   const [transferProof, setTransferProof] = useState<File | null>(null);
@@ -128,7 +134,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
   // Populate data in edit mode
   React.useEffect(() => {
     if (isEdit && reimbursement) {
-      const data = reimbursement.data || reimbursement;
+      const data = reimbursementData;
       setFormData({
         code: data.code || '',
         user_id: data.user?.id?.toString() ?? '',
@@ -154,8 +160,19 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
           unit_price: item.unit_price,
           amount: item.amount,
           expense_type: item.expense_type || '',
-          receipt: null, // Keep receipt as null since we can't easily repopulate File object from URL
+          receipt: null,
+          receipt_path: item.receipt_path,
           notes: item.notes || '',
+        })));
+      }
+
+      if (data.documents && data.documents.length > 0) {
+        setDocuments(data.documents.map((d: any) => ({
+          id: crypto.randomUUID(),
+          db_id: d.id,
+          type: d.type || 'other',
+          file: null,
+          original_name: d.original_name,
         })));
       }
     }
@@ -269,8 +286,12 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
   const eerCalculation = useMemo(() => {
     if (!selectedAtr) return { type: 'refund' as const, amount: 0 };
     const diff = totalEerAmount - selectedAtr.amount;
+    let type: 'reimbursement' | 'refund' | 'balance' = 'balance';
+    if (diff > 0) type = 'reimbursement';
+    else if (diff < 0) type = 'refund';
+
     return {
-      type: diff > 0 ? ('reimbursement' as const) : ('refund' as const),
+      type,
       amount: Math.abs(diff),
     };
   }, [totalEerAmount, selectedAtr]);
@@ -291,7 +312,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
         i.quantity <= 0 ||
         i.unit_price <= 0 ||
         !i.expense_type ||
-        !i.receipt
+        (hasRole(['finance', 'superadmin']) && !i.receipt)
       );
 
       if (isInvalid) {
@@ -299,7 +320,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
         return;
       }
 
-      if (eerCalculation.type === 'refund' && !transferProof) {
+      if (eerCalculation.type === 'refund' && hasRole(['finance', 'superadmin']) && !transferProof) {
         setErrors({ _general: ['Bukti transfer refund wajib diunggah.'] });
         return;
       }
@@ -318,6 +339,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
       amount: i.amount,
       expense_type: i.expense_type,
       receipt: i.receipt ?? undefined,
+      receipt_path: i.receipt_path ?? undefined,
       notes: i.notes || undefined,
     }));
 
@@ -336,7 +358,12 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
       transfer_proof: transferProof,
       user_id: formData.user_id || undefined,
       is_edit: isEdit,
-      reimbursement_id: isEdit ? (reimbursement.data?.id || reimbursement.id) : undefined,
+      reimbursement_id: isEdit ? (reimbursementData?.id || reimbursement.id) : undefined,
+      documents: documents.filter(d => d.file || d.db_id).map(d => ({ 
+        id: d.db_id,
+        file: d.file ?? undefined, 
+        type: d.type 
+      })),
     } as any);
   };
 
@@ -454,9 +481,16 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                   <p className="text-sm text-muted-foreground">Input pengeluaran aktual secara manual. Semua detail item (Kegiatan, Nama, Qty, Harga, Jenis, Kwitansi) wajib diisi sesuai bukti pembayaran.</p>
                 </div>
                 {selectedAtr && (
-                  <div className="bg-slate-50 border p-3 rounded-lg text-right">
+                  <div className="bg-slate-50 border p-3 rounded-lg text-right flex flex-col gap-1">
                     <p className="text-xs text-slate-500 font-medium">Limit ATR Tersedia</p>
-                    <p className="text-lg font-bold text-slate-800">{fmt(selectedAtr.amount)}</p>
+                    <div className="flex items-center justify-end gap-2">
+                      <p className="text-lg font-bold text-slate-800">{fmt(selectedAtr.amount)}</p>
+                      {selectedAtr.transferred_amount != null && selectedAtr.transferred_amount > 0 && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-bold">
+                          Transferred: {fmt(selectedAtr.transferred_amount)}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -550,6 +584,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                         </div>
 
                         {/* Row 3: Receipt & Notes */}
+                        {/* {hasRole(['finance', 'superadmin']) && ( */}
                         <div className="md:col-span-12 lg:col-span-6 space-y-2">
                           <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                             KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500 ml-1">*</span>
@@ -563,7 +598,13 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                               <CheckCircle className="h-3 w-3" /> Terlampir: {item.receipt.name}
                             </div>
                           )}
+                          {!item.receipt && item.receipt_path && (
+                            <div className="flex items-center gap-2 text-[10px] text-blue-600 bg-blue-50 p-1.5 rounded mt-1 border border-blue-100">
+                              <CheckCircle className="h-3 w-3" /> Kwitansi Tersimpan: <a href={item.receipt_path} target="_blank" rel="noopener noreferrer" className="underline font-bold">Lihat File</a>
+                            </div>
+                          )}
                         </div>
+                        {/* )} */}
 
                         <div className="md:col-span-12 lg:col-span-6 space-y-2">
                           <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">CATATAN TAMBAHAN</Label>
@@ -603,16 +644,23 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                           </Label>
                           <div className="space-y-2">
                             <div className={cn(
-                              "flex items-center space-x-2 p-3 rounded-lg border bg-blue-50/30 border-blue-200"
+                              "flex items-center space-x-2 p-3 rounded-lg border",
+                              eerCalculation.type === 'refund' ? "bg-emerald-50/30 border-emerald-200" :
+                                eerCalculation.type === 'balance' ? "bg-slate-50/30 border-slate-200" :
+                                  "bg-blue-50/30 border-blue-200"
                             )}>
                               <div className="flex-1">
                                 <div className="font-semibold text-sm">
-                                  {eerCalculation.type === 'refund' ? 'Refund (Pengembalian Kelebihan)' : 'Reimbursement (Kekurangan Dana)'}
+                                  {eerCalculation.type === 'balance' ? 'Balance (Sesuai Budget)' : (
+                                    eerCalculation.type === 'refund' ? 'Refund (Pengembalian Kelebihan)' : 'Reimbursement (Kekurangan Dana)'
+                                  )}
                                 </div>
                                 <div className="text-[10px] text-muted-foreground">
                                   {eerCalculation.type === 'refund'
                                     ? 'Total EER lebih kecil dari ATR. Selisih dana dikembalikan ke kantor.'
-                                    : 'Total EER lebih besar dari ATR. Kantor akan membayarkan selisihnya.'}
+                                    : eerCalculation.type === 'balance'
+                                      ? 'Total EER sesuai dengan budget ATR. Tidak ada pengembalian atau penambahan dana.'
+                                      : 'Total EER lebih besar dari ATR. Kantor akan membayarkan selisihnya.'}
                                 </div>
                               </div>
                             </div>
@@ -633,7 +681,9 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
 
                             <div className="space-y-2 text-blue-800">
                               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                Nominal Otomatis ({eerCalculation.type === 'refund' ? 'Refund' : 'Reimburse'})
+                                Nominal Otomatis ({eerCalculation.type === 'refund' ? 'Refund' : (
+                                  eerCalculation.type === 'balance' ? 'Balance' : 'Reimburse'
+                                )})
                               </p>
                               <div className="h-10 text-lg font-bold flex items-center px-3 rounded-md bg-blue-50 border border-blue-100">
                                 {fmt(eerCalculation.amount)}
@@ -646,7 +696,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                         </div>
                       </div>
 
-                      {eerCalculation.type === 'refund' && eerCalculation.amount > 0 && (
+                      {eerCalculation.type === 'refund' && eerCalculation.amount > 0 && hasRole(['finance', 'superadmin']) && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t">
                           <div className="space-y-4">
                             <Label className="text-sm font-bold flex items-center gap-2 text-rose-600">
@@ -709,6 +759,77 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
 
             <Separator />
 
+            {/* Dokumen Pendukung */}
+            <div className="p-6 md:p-8 bg-white">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Dokumen Pendukung</h3>
+                  <p className="text-sm text-muted-foreground">Lampirkan dokumen pendukung seperti TOR, Invoice, atau dokumen lainnya (Opsional).</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDocuments(prev => [...prev, { id: crypto.randomUUID(), file: null, type: 'other' }])}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" /> Tambah Dokumen
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {documents.map((doc, index) => (
+                  <div key={doc.id} className="border rounded-xl p-4 bg-slate-50/50 space-y-3 relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 absolute top-2 right-2 text-red-500 hover:bg-red-50"
+                      onClick={() => setDocuments(prev => prev.filter(d => d.id !== doc.id))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase font-bold text-muted-foreground">Nama / Jenis Dokumen</Label>
+                      <Input
+                        placeholder="Contoh: TOR, Invoice, dll"
+                        className="h-9 bg-white text-sm"
+                        value={doc.type}
+                        onChange={(e) => setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, type: e.target.value } : d))}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase font-bold text-muted-foreground">File Dokumen</Label>
+                      <FileUploadDropzone
+                        className="h-24 bg-white"
+                        onFilesChange={(files) => setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] ?? null } : d))}
+                      />
+                      {doc.file ? (
+                        <p className="text-[10px] text-emerald-600 font-medium truncate mt-2">
+                          Terlampir: {doc.file.name}
+                        </p>
+                      ) : doc.original_name ? (
+                        <p className="text-[10px] text-emerald-600 font-medium truncate mt-2">
+                          ✓ Tersimpan: {doc.original_name}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {documents.length === 0 && (
+                <div className="text-center py-8 border border-dashed rounded-xl bg-slate-50/50">
+                  <Briefcase className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500 italic">Belum ada dokumen tambahan yang dilampirkan.</p>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
             {/* Persetujuan */}
             <div className="p-6 md:p-8 bg-white">
               <h3 className="text-lg font-semibold mb-1">Persetujuan</h3>
@@ -718,6 +839,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                 <div className="space-y-2">
                   <Label className="text-sm font-medium flex items-center gap-2">
                     <User className="h-4 w-4 text-blue-600" /> Head Approver
+                    <span className="text-rose-500">*</span>
                   </Label>
                   <SearchableSelect
                     options={(approvers['head'] || []).map(u => ({ value: u.id.toString(), label: u.name }))}
@@ -765,7 +887,39 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
             </CardFooter>
           </form>
         </Card>
+
+        {/* Progress overlay when saving */}
+        {loading && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 flex flex-col items-center text-center space-y-6">
+              <div className="relative">
+                <div className="h-28 w-28 rounded-full border-4 border-slate-100 flex items-center justify-center shadow-inner">
+                  <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                  <span className="font-bold text-2xl text-slate-800">{uploadProgress}%</span>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Mengunggah Data</h3>
+                <p className="text-sm text-slate-500 max-w-[250px] mx-auto">
+                  {uploadProgress === 100 
+                    ? 'Sedang memproses data, mohon tunggu sebentar...' 
+                    : 'Mengunggah file bukti pembayaran dan kwitansi...'}
+                </p>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
+                <div 
+                  className="bg-blue-600 h-full transition-all duration-300 ease-out relative overflow-hidden" 
+                  style={{ width: `${uploadProgress}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20" style={{ transform: 'skewX(-20deg) translateX(-100%)', animation: 'shimmer 2s infinite' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </AppSidebarLayout >
+    </AppSidebarLayout>
   );
 }

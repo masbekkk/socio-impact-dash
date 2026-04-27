@@ -20,6 +20,8 @@ import { Separator } from '@/components/ui/separator';
 interface Project {
     id: string;
     name: string;
+    code: string;
+    initial_project: string;
 }
 
 interface PageProps {
@@ -213,7 +215,7 @@ export default function CreatePresence({ projects }: PageProps) {
                                             Proyek
                                         </Label>
                                         <SearchableSelect
-                                            options={projects.map(p => ({ value: p.id.toString(), label: p.name }))}
+                                            options={projects.map(p => ({ value: p.id.toString(), label: `${p.code} - ${p.initial_project} - ${p.name}` }))}
                                             value={data.project_id}
                                             onValueChange={(val) => setData('project_id', val)}
                                             placeholder="Pilih Proyek..."
