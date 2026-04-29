@@ -78,6 +78,7 @@ const LEAVE_TYPE_LABELS: Record<string, string> = {
   wedding: 'Cuti Menikah',
   birth: 'Cuti Melahirkan',
   important: 'Cuti Alasan Penting',
+  make_up: 'Cuti Ganti Hari Libur (dengan konfirmasi)',
 };
 
 const STATUS_OPTIONS = [

@@ -51,6 +51,7 @@ const LEAVE_TYPES: { label: string; value: string }[] = [
   { label: 'Cuti Berduka', value: 'berduka' },
   { label: 'Cuti Alasan Penting', value: 'important' },
   { label: 'Cuti Tanpa Gaji', value: 'unpaid' },
+  { label: 'Cuti Ganti Hari Libur (dengan konfirmasi)', value: 'make_up' },
 ];
 
 export default function CreateLeave({ authUser, projects, users, approvers }: Props) {
