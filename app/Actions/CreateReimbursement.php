@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Enums\ReimbursementStatus;
 use App\Models\Reimbursement;
 use App\Services\FileUploadService;
+use BackedEnum;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -33,10 +34,67 @@ final readonly class CreateReimbursement
 
             if ($reimbursement->status !== ReimbursementStatus::Draft) {
                 $this->assignApprovers($reimbursement, $data);
+                $this->notifyApprovers($reimbursement);
             }
 
             return $reimbursement->load(['documents', 'atrBudgetSelecteds.budgetDetail', 'approvals.approver', 'items.budgetDetail']);
         });
+    }
+
+    public function assignApprovers(Reimbursement $reimbursement, array $data): void
+    {
+        $roles = [
+            'head' => $data['approver_head_id'] ?? null,
+            'hr' => $data['approver_hr_id'] ?? null,
+            'finance' => $data['approver_finance_id'] ?? null,
+            'direktur' => $data['approver_direktur_id'] ?? null,
+        ];
+
+        // Fallback for Head: if not provided, try project PIC or then Project Head
+        if (empty($roles['head']) && $reimbursement->project) {
+            $roles['head'] = $reimbursement->project->pic_id ?? $reimbursement->project->head_id;
+        }
+
+        // Ensure Allowance skips finance and direktur even if passed in data
+        if ($reimbursement->type->value === 'allowance') {
+            $roles['finance'] = null;
+        }
+
+        // Default approvers if not provided
+        if (empty($roles['finance']) && $reimbursement->type->value !== 'allowance') {
+            $roles['finance'] = \App\Models\User::query()->where('email', 'finance@socio-impact.test')->first()?->id;
+        }
+
+        if (empty($roles['hr']) && $reimbursement->type->value === 'allowance') {
+            $roles['hr'] = \App\Models\User::query()->where('email', 'hr@socio-impact.test')->first()?->id;
+        }
+
+        if (empty($roles['direktur'])) {
+            $roles['direktur'] = \App\Models\User::query()->where('email', 'direktur@socio-impact.test')->first()?->id;
+        }
+
+        // If Head and HR are the same person, skip the HR step (prioritize Head)
+        if ($roles['head'] && $roles['hr'] && (int) $roles['head'] === (int) $roles['hr']) {
+            $roles['hr'] = null;
+        }
+
+        // Additional Logic: If submitter has both Head and HR roles, skip HR for EER (consistent with ATR behavior)
+        if ($reimbursement->type->value === 'eer') {
+            $submitter = \App\Models\User::find($reimbursement->user_id);
+            if ($submitter && $submitter->hasRole('head') && $submitter->hasRole('hr')) {
+                $roles['hr'] = null;
+            }
+        }
+
+        foreach ($roles as $role => $approverId) {
+            if ($approverId) {
+                $reimbursement->approvals()->create([
+                    'approver_id' => $approverId,
+                    'role' => $role,
+                    'status' => \App\Enums\ApprovalStatus::Pending->value,
+                ]);
+            }
+        }
     }
 
     private function createReimbursementRecord(array $data, int $userId): Reimbursement
@@ -127,59 +185,33 @@ final readonly class CreateReimbursement
         }
     }
 
-    public function assignApprovers(Reimbursement $reimbursement, array $data): void
+    private function notifyApprovers(Reimbursement $reimbursement): void
     {
-        $roles = [
-            'head' => $data['approver_head_id'] ?? null,
-            'hr' => $data['approver_hr_id'] ?? null,
-            'finance' => $data['approver_finance_id'] ?? null,
-            'direktur' => $data['approver_direktur_id'] ?? null,
-        ];
+        /** @var array<int> $approverIds */
+        $approverIds = $reimbursement->approvals()->pluck('approver_id')->filter()->unique()->toArray();
 
-        // Fallback for Head: if not provided, try project PIC or then Project Head
-        if (empty($roles['head']) && $reimbursement->project) {
-            $roles['head'] = $reimbursement->project->pic_id ?? $reimbursement->project->head_id;
+        if (empty($approverIds)) {
+            return;
         }
 
-        // Ensure Allowance skips finance and direktur even if passed in data
-        if ($reimbursement->type->value === 'allowance') {
-            $roles['finance'] = null;
-        }
+        /** @var BackedEnum|string $type */
+        $type = $reimbursement->type;
+        $typeString = $type instanceof BackedEnum ? (string) $type->value : (string) $type;
+        /** @var \App\Models\Project|null $project */
+        $project = $reimbursement->project;
+        $projectName = $project ? $project->name : 'Non-Project';
+        $amount = 'Rp '.number_format((float) $reimbursement->amount, 0, ',', '.');
+        $code = $reimbursement->code ?? 'Draft';
 
-        // Default approvers if not provided
-        if (empty($roles['finance']) && $reimbursement->type->value !== 'allowance') {
-            $roles['finance'] = \App\Models\User::query()->where('email', 'finance@socio-impact.test')->first()?->id;
-        }
-
-        if (empty($roles['hr']) && $reimbursement->type->value === 'allowance') {
-            $roles['hr'] = \App\Models\User::query()->where('email', 'hr@socio-impact.test')->first()?->id;
-        }
-
-        if (empty($roles['direktur'])) {
-            $roles['direktur'] = \App\Models\User::query()->where('email', 'direktur@socio-impact.test')->first()?->id;
-        }
-
-        // If Head and HR are the same person, skip the HR step (prioritize Head)
-        if ($roles['head'] && $roles['hr'] && (int) $roles['head'] === (int) $roles['hr']) {
-            $roles['hr'] = null;
-        }
-
-        // Additional Logic: If submitter has both Head and HR roles, skip HR for EER (consistent with ATR behavior)
-        if ($reimbursement->type->value === 'eer') {
-            $submitter = \App\Models\User::find($reimbursement->user_id);
-            if ($submitter && $submitter->hasRole('head') && $submitter->hasRole('hr')) {
-                $roles['hr'] = null;
-            }
-        }
-
-        foreach ($roles as $role => $approverId) {
-            if ($approverId) {
-                $reimbursement->approvals()->create([
-                    'approver_id' => $approverId,
-                    'role' => $role,
-                    'status' => \App\Enums\ApprovalStatus::Pending->value,
-                ]);
-            }
-        }
+        $notifier = new CreateNotification();
+        $notifier->handle(
+            type: 'reimbursement_created',
+            title: 'Pengajuan Reimbursement Baru',
+            message: 'Pengajuan '.mb_strtoupper($typeString)." ({$code}) untuk proyek '{$projectName}' senilai {$amount} telah dibuat dan membutuhkan persetujuan Anda.",
+            recipientUserIds: $approverIds,
+            referenceType: Reimbursement::class,
+            referenceId: $reimbursement->id,
+            createdBy: $reimbursement->user_id,
+        );
     }
 }

@@ -178,7 +178,7 @@ final readonly class UpdateReimbursementStatus
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
                     $updateData['transfer_proof_path'] = $path;
                     $updateData['transferred_at'] = now();
-                    
+
                     $statusToSet = ReimbursementStatus::Transferred;
                     if ($reimbursement->type === \App\Enums\ReimbursementType::EER && in_array($reimbursement->eer_type, ['refund', 'reimbursement'], true)) {
                         $statusToSet = ReimbursementStatus::Closed;
@@ -244,10 +244,19 @@ final readonly class UpdateReimbursementStatus
                 $recipientIds = array_filter($recipientIds, fn (int $id): bool => $id !== $approverId);
 
                 if ($recipientIds !== []) {
+                    /** @var \App\Models\Project|null $project */
+                    $project = $reimbursement->project;
+                    $projectName = $project ? $project->name : 'Non-Project';
+                    $amount = 'Rp '.number_format((float) $reimbursement->amount, 0, ',', '.');
+
+                    /** @var \App\Models\User|null $approverUser */
+                    $approverUser = \App\Models\User::query()->find($approverId);
+                    $approverName = $approverUser ? $approverUser->name : 'System';
+
                     $notifier->handle(
                         type: 'reimbursement_'.$action,
                         title: 'Update Pengajuan Keuangan',
-                        message: "Pengajuan {$reimbursement->code} telah {$label} oleh ".(\App\Models\User::query()->find($approverId)?->name ?? 'System').'.',
+                        message: "Pengajuan {$reimbursement->code} untuk proyek '{$projectName}' senilai {$amount} telah {$label} oleh {$approverName}.",
                         recipientUserIds: array_values($recipientIds),
                         referenceType: 'reimbursement',
                         referenceId: $reimbursement->id,
