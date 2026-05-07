@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Enums\ReimbursementStatus;
 use App\Models\Reimbursement;
 use App\Services\FileUploadService;
+use BackedEnum;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -33,6 +34,7 @@ final readonly class CreateReimbursement
 
             if ($reimbursement->status !== ReimbursementStatus::Draft) {
                 $this->assignApprovers($reimbursement, $data);
+                $this->notifyApprovers($reimbursement);
             }
 
             return $reimbursement->load(['documents', 'atrBudgetSelecteds.budgetDetail', 'approvals.approver', 'items.budgetDetail']);
@@ -181,5 +183,35 @@ final readonly class CreateReimbursement
                 'notes' => $item['notes'] ?? null,
             ]);
         }
+    }
+
+    private function notifyApprovers(Reimbursement $reimbursement): void
+    {
+        /** @var array<int> $approverIds */
+        $approverIds = $reimbursement->approvals()->pluck('approver_id')->filter()->unique()->toArray();
+
+        if (empty($approverIds)) {
+            return;
+        }
+
+        /** @var BackedEnum|string $type */
+        $type = $reimbursement->type;
+        $typeString = $type instanceof BackedEnum ? (string) $type->value : (string) $type;
+        /** @var \App\Models\Project|null $project */
+        $project = $reimbursement->project;
+        $projectName = $project ? $project->name : 'Non-Project';
+        $amount = 'Rp '.number_format((float) $reimbursement->amount, 0, ',', '.');
+        $code = $reimbursement->code ?? 'Draft';
+
+        $notifier = new CreateNotification();
+        $notifier->handle(
+            type: 'reimbursement_created',
+            title: 'Pengajuan Reimbursement Baru',
+            message: 'Pengajuan '.mb_strtoupper($typeString)." ({$code}) untuk proyek '{$projectName}' senilai {$amount} telah dibuat dan membutuhkan persetujuan Anda.",
+            recipientUserIds: $approverIds,
+            referenceType: Reimbursement::class,
+            referenceId: $reimbursement->id,
+            createdBy: $reimbursement->user_id,
+        );
     }
 }
