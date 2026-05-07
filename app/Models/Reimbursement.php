@@ -10,10 +10,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 final class Reimbursement extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'code', 'user_id', 'project_id', 'atr_id', 'type', 'eer_type', 'status',
@@ -92,5 +93,26 @@ final class Reimbursement extends Model
         }
 
         return abs(($this->atr?->amount ?? 0) - (float) $this->amount);
+    }
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        self::deleting(function (self $model): void {
+            if (! $model->isForceDeleting()) {
+                $model->documents()->delete();
+                $model->approvals()->delete();
+                $model->items()->delete();
+                $model->comments()->delete();
+                $model->atrBudgetSelecteds()->delete();
+            } else {
+                $model->documents()->forceDelete();
+                $model->approvals()->forceDelete();
+                $model->items()->forceDelete();
+                $model->comments()->forceDelete();
+                $model->atrBudgetSelecteds()->forceDelete();
+            }
+        });
     }
 }

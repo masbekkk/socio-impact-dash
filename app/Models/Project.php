@@ -145,5 +145,28 @@ final class Project extends Model
                 $model->uuid = (string) Str::uuid();
             }
         });
+
+        self::deleting(function (self $model): void {
+            if (! $model->isForceDeleting()) {
+                $model->documents()->delete();
+                $model->monitorings()->delete();
+                $model->terminPayments()->delete();
+                $model->approvals()->delete();
+                $model->events()->delete();
+                $model->locations()->delete();
+                $model->budgetDetails()->delete();
+                // Reimbursements cascade to their own children via Reimbursement::boot()
+                $model->reimbursements->each->delete();
+            } else {
+                $model->documents()->forceDelete();
+                $model->monitorings()->forceDelete();
+                $model->terminPayments()->forceDelete();
+                $model->approvals()->forceDelete();
+                $model->events()->forceDelete();
+                $model->locations()->forceDelete();
+                $model->budgetDetails()->forceDelete();
+                $model->reimbursements->each->forceDelete();
+            }
+        });
     }
 }
