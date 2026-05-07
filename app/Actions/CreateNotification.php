@@ -6,6 +6,8 @@ namespace App\Actions;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Notifications\SystemNotification;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 
 final readonly class CreateNotification
 {
@@ -35,6 +37,11 @@ final readonly class CreateNotification
 
         $uniqueIds = array_unique(array_filter($recipientUserIds));
 
+        $users = User::query()->whereIn('id', $uniqueIds)->get();
+        if ($users->isNotEmpty()) {
+            NotificationFacade::send($users, new SystemNotification($title, $message));
+        }
+
         foreach ($uniqueIds as $userId) {
             $notification->recipients()->create([
                 'user_id' => $userId,
@@ -53,6 +60,9 @@ final readonly class CreateNotification
      */
     public function getUserIdsByRoles(array $roleNames): array
     {
-        return User::query()->role($roleNames)->pluck('id')->all();
+        /** @var array<int> $ids */
+        $ids = User::query()->role($roleNames)->pluck('id')->all();
+
+        return $ids;
     }
 }
