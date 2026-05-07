@@ -27,7 +27,22 @@ final class UpdateReimbursementStatusRequest extends FormRequest
                 'file',
                 'mimes:jpg,jpeg,png,pdf',
                 'max:5120',
-                Rule::requiredIf($this->input('action') === 'transferred'),
+                Rule::requiredIf(function () {
+                    if ($this->input('action') !== 'transferred') {
+                        return false;
+                    }
+                    
+                    $reimbursement = $this->route('reimbursement');
+                    if (is_string($reimbursement) || is_numeric($reimbursement)) {
+                        $reimbursement = \App\Models\Reimbursement::find($reimbursement);
+                    }
+                    
+                    if ($reimbursement && $reimbursement->type === \App\Enums\ReimbursementType::ALLOWANCE) {
+                        return false;
+                    }
+                    
+                    return true;
+                }),
             ],
             'amount' => ['nullable', 'numeric', 'min:0'],
         ];
