@@ -236,6 +236,13 @@ export default function PresenceIndex({ presences, todayPresence, filters }: Pag
   // --- Handlers ---
   const handleFetchLocation = () => {
     setLoadingLocation(true);
+
+    if (!window.isSecureContext) {
+      alert('Fitur lokasi membutuhkan koneksi aman (HTTPS). Silakan akses aplikasi menggunakan HTTPS atau localhost.');
+      setLoadingLocation(false);
+      return;
+    }
+
     if (!navigator.geolocation) {
       alert('Geolocation tidak didukung oleh browser ini.');
       setLoadingLocation(false);
@@ -252,14 +259,39 @@ export default function PresenceIndex({ presences, todayPresence, filters }: Pag
         setLoadingLocation(false);
       },
       (err) => {
-        alert('Gagal mengambil lokasi: ' + err.message);
+        let errorMessage = 'Gagal mengambil lokasi.';
+        switch(err.code) {
+          case err.PERMISSION_DENIED:
+            errorMessage = "Akses lokasi ditolak. Harap izinkan akses lokasi di pengaturan browser Anda.";
+            break;
+          case err.POSITION_UNAVAILABLE:
+            errorMessage = "Informasi lokasi tidak tersedia. Pastikan GPS perangkat Anda aktif.";
+            break;
+          case err.TIMEOUT:
+            errorMessage = "Permintaan lokasi kehabisan waktu.";
+            break;
+        }
+        alert(errorMessage);
+        console.error('Geolocation Error:', err);
         setLoadingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
   };
 
   const handleFetchCheckoutLocation = () => {
     setLoadingLocation(true);
+
+    if (!window.isSecureContext) {
+      alert('Fitur lokasi membutuhkan koneksi aman (HTTPS). Silakan akses aplikasi menggunakan HTTPS atau localhost.');
+      setLoadingLocation(false);
+      return;
+    }
+
     if (!navigator.geolocation) {
       alert('Geolocation tidak didukung oleh browser ini.');
       setLoadingLocation(false);
@@ -276,8 +308,26 @@ export default function PresenceIndex({ presences, todayPresence, filters }: Pag
         setLoadingLocation(false);
       },
       (err) => {
-        alert('Gagal mengambil lokasi: ' + err.message);
+        let errorMessage = 'Gagal mengambil lokasi.';
+        switch(err.code) {
+          case err.PERMISSION_DENIED:
+            errorMessage = "Akses lokasi ditolak. Harap izinkan akses lokasi di pengaturan browser Anda.";
+            break;
+          case err.POSITION_UNAVAILABLE:
+            errorMessage = "Informasi lokasi tidak tersedia. Pastikan GPS perangkat Anda aktif.";
+            break;
+          case err.TIMEOUT:
+            errorMessage = "Permintaan lokasi kehabisan waktu.";
+            break;
+        }
+        alert(errorMessage);
+        console.error('Geolocation Error:', err);
         setLoadingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
   };

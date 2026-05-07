@@ -545,13 +545,15 @@ export default function Show() {
   };
 
   const handleTransfer = async () => {
-    if (!data || !transferProof) return;
+    if (!data || (!transferProof && data?.type?.toLowerCase() !== 'allowance')) return;
     setActionLoading(true);
     try {
       const formData = new FormData();
       formData.append('action', 'transferred');
       if (transferProof) formData.append('transfer_proof', transferProof);
-      if (transferredAmount > 0) formData.append('transferred_amount', transferredAmount.toString());
+      
+      const finalTransferredAmount = transferredAmount || (data?.amount ?? 0);
+      if (finalTransferredAmount > 0) formData.append('transferred_amount', finalTransferredAmount.toString());
 
       const role = getCurrentUserRole();
 
@@ -2622,7 +2624,7 @@ export default function Show() {
                   </div>
                 )}
 
-                {((data.status === 'submitted' || data.status === 'request_fund' || (data.type === 'eer' && data.eer_type === 'refund' && !data.transfer_proof_path && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && isFinanceOrAdmin) && (
+                {(((data.status === 'submitted' || data.status === 'request_fund' || (data.type === 'eer' && data.eer_type === 'refund' && !data.transfer_proof_path && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && isFinanceOrAdmin) || (data.type === 'allowance' && isHrOrAdmin && data.approvals?.some(a => a.role === 'direktur' && a.status === 'approved') && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && (
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <Button
                       onClick={() => setTransferDialogOpen(true)}
@@ -2674,10 +2676,10 @@ export default function Show() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-medium text-muted-foreground uppercase">
-                        {data.eer_type === 'refund' ? 'Bukti Refund (User)' : 'Bukti Transfer (Finance)'}
+                        {data.eer_type === 'refund' ? 'Bukti Refund (User)' : 'Bukti Transfer (Finance/HR)'}
                       </label>
                       <Badge variant="outline" className={cn("text-xs", data.eer_type === 'refund' ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-blue-50 text-blue-700 border-blue-200")}>
-                        {data.eer_type === 'refund' ? 'User' : 'Finance'}
+                        {data.eer_type === 'refund' ? 'User' : 'Finance/HR'}
                       </Badge>
                     </div>
                     <div className={cn("p-4 rounded-lg border space-y-3", data.eer_type === 'refund' ? "bg-emerald-50/50 border-emerald-200" : "bg-blue-50/50 border-blue-200")}>
@@ -3057,7 +3059,7 @@ export default function Show() {
             {!(data?.eer_type === 'refund' && data?.transfer_proof_path) ? (
               <div className="space-y-2">
                 <Label>
-                  Bukti Transfer (Image/PDF) <span className="text-red-500">*</span>
+                  Bukti Transfer (Image/PDF) {data?.type === 'allowance' ? <span className="text-muted-foreground italic font-normal">(Opsional)</span> : <span className="text-red-500">*</span>}
                 </Label>
                 <Input
                   type="file"
@@ -3108,7 +3110,7 @@ export default function Show() {
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-blue-600 hover:bg-blue-700"
               )}
-              disabled={(!(data?.eer_type === 'refund' && data?.transfer_proof_path) && !transferProof) || actionLoading || (transferredAmount <= 0 && !(data?.amount ?? 0))}
+              disabled={(!(data?.eer_type === 'refund' && data?.transfer_proof_path) && !transferProof && data?.type?.toLowerCase() !== 'allowance') || actionLoading || (transferredAmount <= 0 && !(data?.amount ?? 0))}
               onClick={handleTransfer}
             >
               {actionLoading ? (

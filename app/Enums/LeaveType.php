@@ -14,6 +14,7 @@ enum LeaveType: string
     case Wedding = 'wedding';
     case Birth = 'birth';
     case Important = 'important';
+    case MakeUp = 'make_up';
 
     public function label(): string
     {
@@ -26,6 +27,7 @@ enum LeaveType: string
             self::Wedding => 'Menikah',
             self::Birth => 'Melahirkan',
             self::Important => 'Urusan Penting',
+            self::MakeUp => 'Cuti Ganti Hari Libur (dengan konfirmasi)',
         };
     }
 }
