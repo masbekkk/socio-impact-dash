@@ -580,7 +580,7 @@ export default function PresenceIndex({ presences, todayPresence, filters }: Pag
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-semibold text-sm">{log.date}</h3>
+                        <h3 className="font-semibold text-sm">{format(new Date(log.date), 'dd MMM yyyy', { locale: id })}</h3>
                         <p className="text-xs text-muted-foreground">{log.check_in_at ? format(new Date(log.check_in_at), 'HH:mm') : '-'}</p>
                       </div>
                       <StatusBadge status={log.status} />
@@ -637,7 +637,9 @@ export default function PresenceIndex({ presences, todayPresence, filters }: Pag
                     </div>
 
                     <div className="pt-2 border-t flex justify-end gap-2">
-                      <Button variant="outline" size="sm" className="w-full h-8 text-xs">View Details</Button>
+                      <Button variant="outline" size="sm" className="w-full h-8 text-xs" asChild>
+                        <Link href={`/presences/${log.id}`}>View Details</Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
