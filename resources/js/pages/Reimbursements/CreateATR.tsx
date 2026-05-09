@@ -471,12 +471,12 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
             {/* Kegiatan & Item Section */}
             <div className="p-6 md:p-8 bg-white">
               <h3 className="text-lg font-semibold mb-1">Kegiatan & Item Anggaran</h3>
-              <p className="text-sm text-muted-foreground mb-6">Pilih kegiatan dari proyek, lalu tambahkan item detail untuk setiap kegiatan.</p>
+              <p className="text-sm text-muted-foreground mb-6">Pilih kegiatan dari proyek, lalu tambahkan item detail untuk kegiatan tersebut.</p>
 
               {selectedProject ? (
                 <div className="space-y-4">
                   {/* Activity Selector */}
-                  {availableActivities.length > 0 && (
+                  {availableActivities.length > 0 && selectedActivities.length === 0 && (
                     <div className="space-y-2">
                       <Label>Tambah Kegiatan</Label>
                       <SearchableSelect
