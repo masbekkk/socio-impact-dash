@@ -17,7 +17,8 @@ final class ReimbursementCommentController extends Controller
     {
         try {
             $validated = $request->validate([
-                'comment' => ['required', 'string', 'min:3'],
+                'comment' => ['required_without:image', 'nullable', 'string'],
+                'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:5120'],
             ]);
 
             $reimbursement = Reimbursement::query()->findOrFail($id);
@@ -26,9 +27,17 @@ final class ReimbursementCommentController extends Controller
                 return JsonResponseFormatter::error('Unauthorized', 403);
             }
 
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                $file = $request->file('image');
+                $upload = resolve(\App\Services\FileUploadService::class)->uploadFile($file, 'reimbursement-comments', 'public');
+                $imagePath = $upload['path'];
+            }
+
             $comment = $reimbursement->comments()->create([
                 'user_id' => $request->user()->id,
-                'comment' => $validated['comment'],
+                'comment' => $validated['comment'] ?? '',
+                'image_path' => $imagePath,
             ]);
 
             return JsonResponseFormatter::created(
@@ -37,6 +46,7 @@ final class ReimbursementCommentController extends Controller
                     'user_id' => $comment->user_id,
                     'user_name' => $comment->user->name,
                     'comment' => $comment->comment,
+                    'image_path' => $comment->image_path,
                     'created_at' => $comment->created_at->toISOString(),
                 ],
                 'Komentar berhasil ditambahkan'

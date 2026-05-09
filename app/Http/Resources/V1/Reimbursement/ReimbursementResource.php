@@ -99,6 +99,7 @@ final class ReimbursementResource extends JsonResource
                 'user_id' => $item->user_id,
                 'user_name' => $item->user?->name ?? 'Unknown',
                 'comment' => $item->comment,
+                'image_path' => $item->image_path,
                 'created_at' => $item->created_at?->toISOString(),
             ])),
             'approvals' => $this->whenLoaded('approvals', function (): \Illuminate\Support\Collection {

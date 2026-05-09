@@ -101,6 +101,9 @@ import {
   ChevronDown,
   ChevronUp,
   Receipt,
+  Edit,
+  Paperclip,
+  Image as ImageIcon,
 } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
 import { resubmitReimbursement, updateItemReceipt } from '@/services/reimbursement-service';
@@ -300,6 +303,8 @@ export default function Show() {
   const [transferredAmount, setTransferredAmount] = useState<number>(0);
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
+  const [commentImage, setCommentImage] = useState<File | null>(null);
+  const [commentImagePreview, setCommentImagePreview] = useState<string | null>(null);
 
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [budgetEdits, setBudgetEdits] = useState<Record<number, number>>({});
@@ -572,15 +577,47 @@ export default function Show() {
     }
   };
 
+  const handleCommentImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setCommentImage(file);
+      setCommentImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeCommentImage = () => {
+    setCommentImage(null);
+    if (commentImagePreview) {
+      URL.revokeObjectURL(commentImagePreview);
+      setCommentImagePreview(null);
+    }
+  };
+
   const submitComment = async () => {
-    if (!data || !newComment.trim()) return;
+    if (!data) return;
+    if (!newComment.trim() && !commentImage) return;
     setCommentLoading(true);
     try {
-      await axios.post(`/api/v1/reimbursements/${data.id}/comments`, {
-        comment: newComment,
+      const formData = new FormData();
+      if (newComment.trim()) {
+        formData.append('comment', newComment);
+      }
+      if (commentImage) {
+        formData.append('image', commentImage);
+      }
+
+      await axios.post(`/api/v1/reimbursements/${data.id}/comments`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       setNewComment('');
+      setCommentImage(null);
+      if (commentImagePreview) {
+        URL.revokeObjectURL(commentImagePreview);
+        setCommentImagePreview(null);
+      }
       await fetchDetail();
     } catch {
       alert('Gagal mengirim komentar.');
@@ -2624,7 +2661,7 @@ export default function Show() {
                   </div>
                 )}
 
-                {(((data.status === 'submitted' || data.status === 'request_fund' || (data.type === 'eer' && data.eer_type === 'refund' && !data.transfer_proof_path && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && isFinanceOrAdmin) || (data.type === 'allowance' && isHrOrAdmin && data.approvals?.some(a => a.role === 'direktur' && a.status === 'approved') && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && (
+                {(((data.approvals?.some(a => a.role === 'direktur' && ['approved', 'request_fund'].includes(a.status)) || (data.type === 'eer' && data.eer_type === 'refund' && !data.transfer_proof_path)) && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status) && isFinanceOrAdmin) || (data.type === 'allowance' && isHrOrAdmin && data.approvals?.some(a => a.role === 'direktur' && ['approved', 'request_fund'].includes(a.status)) && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && (
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <Button
                       onClick={() => setTransferDialogOpen(true)}
@@ -2688,11 +2725,18 @@ export default function Show() {
                           <CheckCircle className="h-4 w-4" />
                           {data.eer_type === 'refund' ? 'Refund Telah Dilakukan' : 'Transfer Telah Dilakukan'}
                         </div>
-                        <a href={`/storage/${data.transfer_proof_path}`} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="outline" className={cn("gap-1.5", data.eer_type === 'refund' ? "text-emerald-700 border-emerald-300 hover:bg-emerald-100" : "text-blue-700 border-blue-300 hover:bg-blue-100")}>
-                            <Download className="h-3.5 w-3.5" /> Lihat Bukti
-                          </Button>
-                        </a>
+                        <div className="flex gap-2">
+                          <a href={`/storage/${data.transfer_proof_path}`} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" variant="outline" className={cn("gap-1.5", data.eer_type === 'refund' ? "text-emerald-700 border-emerald-300 hover:bg-emerald-100" : "text-blue-700 border-blue-300 hover:bg-blue-100")}>
+                              <Download className="h-3.5 w-3.5" /> Lihat Bukti
+                            </Button>
+                          </a>
+                          {(isFinanceOrAdmin || (data.type === 'allowance' && isHrOrAdmin)) && (
+                            <Button size="sm" variant="outline" onClick={() => setTransferDialogOpen(true)} className="gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-100">
+                              <Edit className="h-3.5 w-3.5" /> Edit
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       {data.transferred_at && (
                         <div className="text-xs text-muted-foreground italic">
@@ -2769,7 +2813,18 @@ export default function Show() {
                                 ? 'bg-primary text-primary-foreground'
                                 : 'bg-white border text-foreground'
                                 }`}>
-                                {comment.comment}
+                                {comment.comment && <p>{comment.comment}</p>}
+                                {comment.image_path && (
+                                  <div className="mt-2 rounded-md overflow-hidden max-w-xs border border-muted/50">
+                                    <a href={`/storage/${comment.image_path}`} target="_blank" rel="noopener noreferrer">
+                                      <img
+                                        src={`/storage/${comment.image_path}`}
+                                        alt="Lampiran diskusi"
+                                        className="w-full h-auto object-cover max-h-[160px] hover:scale-105 transition-transform duration-200"
+                                      />
+                                    </a>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -2784,24 +2839,57 @@ export default function Show() {
                   )}
                 </ScrollArea>
 
-                <div className="flex gap-2 items-end pt-2">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor="comment-input" className="sr-only">Tambah Komentar</Label>
-                    <Textarea
-                      id="comment-input"
-                      placeholder="Tulis pesan atau tanggapan..."
-                      className="min-h-[80px] resize-none"
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                    />
+                <div className="space-y-3 pt-2">
+                  {commentImagePreview && (
+                    <div className="relative inline-block border rounded-md p-1 bg-muted/10">
+                      <img src={commentImagePreview} alt="Preview lampiran" className="h-20 w-auto object-contain rounded-sm" />
+                      <button
+                        type="button"
+                        onClick={removeCommentImage}
+                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 shadow-md hover:bg-red-600 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1 relative space-y-1">
+                      <Label htmlFor="comment-input" className="sr-only">Tambah Komentar</Label>
+                      <Textarea
+                        id="comment-input"
+                        placeholder="Tulis pesan atau tanggapan..."
+                        className="min-h-[80px] pr-10 resize-none"
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            submitComment();
+                          }
+                        }}
+                      />
+                      <div className="absolute right-3 bottom-3 flex items-center">
+                        <label htmlFor="comment-image-upload" className="cursor-pointer text-muted-foreground hover:text-primary transition-colors p-1 rounded-full hover:bg-muted/50">
+                          <ImageIcon className="h-4 w-4" />
+                          <input
+                            type="file"
+                            id="comment-image-upload"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleCommentImageChange}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                    <Button
+                      className="h-[80px]"
+                      disabled={commentLoading || (!newComment.trim() && !commentImage)}
+                      onClick={submitComment}
+                    >
+                      {commentLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Kirim'}
+                    </Button>
                   </div>
-                  <Button
-                    className="h-[80px]"
-                    disabled={commentLoading || !newComment.trim()}
-                    onClick={submitComment}
-                  >
-                    {commentLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Kirim'}
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -3059,7 +3147,7 @@ export default function Show() {
             {!(data?.eer_type === 'refund' && data?.transfer_proof_path) ? (
               <div className="space-y-2">
                 <Label>
-                  Bukti Transfer (Image/PDF) {data?.type === 'allowance' ? <span className="text-muted-foreground italic font-normal">(Opsional)</span> : <span className="text-red-500">*</span>}
+                  Bukti Transfer (Image/PDF) {data?.type?.toLowerCase() === 'allowance' || data?.transfer_proof_path ? <span className="text-muted-foreground italic font-normal">(Opsional)</span> : <span className="text-red-500">*</span>}
                 </Label>
                 <Input
                   type="file"
@@ -3110,7 +3198,7 @@ export default function Show() {
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-blue-600 hover:bg-blue-700"
               )}
-              disabled={(!(data?.eer_type === 'refund' && data?.transfer_proof_path) && !transferProof && data?.type?.toLowerCase() !== 'allowance') || actionLoading || (transferredAmount <= 0 && !(data?.amount ?? 0))}
+              disabled={(!data?.transfer_proof_path && !transferProof && data?.type?.toLowerCase() !== 'allowance') || actionLoading || (transferredAmount <= 0 && !(data?.amount ?? 0))}
               onClick={handleTransfer}
             >
               {actionLoading ? (

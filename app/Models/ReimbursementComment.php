@@ -17,6 +17,7 @@ final class ReimbursementComment extends Model
         'reimbursement_id',
         'user_id',
         'comment',
+        'image_path',
     ];
 
     public function reimbursement(): BelongsTo
