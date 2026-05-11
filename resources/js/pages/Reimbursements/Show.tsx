@@ -125,6 +125,7 @@ interface ReimbursementComment {
   user_id: number;
   user_name: string;
   comment: string;
+  image_path?: string | null;
   created_at: string;
 }
 

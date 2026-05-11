@@ -12,7 +12,7 @@ final class ReimbursementService
 {
     public function listReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver', 'atrBudgetSelecteds']);
+        $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver', 'atrBudgetSelecteds', 'eers.user', 'eers.project', 'eers.approvals.approver']);
 
         $this->applyFilters($query, $user, $filters);
 
@@ -75,6 +75,8 @@ final class ReimbursementService
 
         if (! empty($filters['type'])) {
             $query->where('type', $filters['type']);
+        } else {
+            $query->where('type', '!=', \App\Enums\ReimbursementType::EER);
         }
 
         if (! empty($filters['project_id'])) {

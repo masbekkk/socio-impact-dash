@@ -27,7 +27,7 @@ import {
   FileText, Plus, Receipt, Eye, Search, CheckCircle, XCircle, Clock,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ListFilter,
   Calendar as CalendarIcon, X, MoreHorizontal, Wallet, ArrowUpDown,
-  ArrowUp, ArrowDown, DollarSign, AlertCircle, Trash2, Download,
+  ArrowUp, ArrowDown, DollarSign, AlertCircle, Trash2, Download, Info,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -70,6 +70,7 @@ interface Reimbursement {
   user: { id: number; name: string } | null;
   project: { id: number; name: string; code: string; initial_project: string | null; division_name?: string } | null;
   approvals: ReimbursementApproval[];
+  eers?: Reimbursement[];
 }
 
 interface PaginatedData {
@@ -474,7 +475,6 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                       <>
                         <TabsTrigger value="all">Semua</TabsTrigger>
                         <TabsTrigger value="atr">ATR</TabsTrigger>
-                        <TabsTrigger value="eer">EER</TabsTrigger>
                       </>
                     )}
                     {(isSuperadmin || isFinance || isDirektur || isHead || isHR) && (
@@ -685,146 +685,237 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                       const StatusIcon = statusCfg.icon;
 
                       return (
-                        <TableRow key={item.id}>
-                          {/* Type */}
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
-                              <Badge variant="outline" className={cn('uppercase w-fit', TYPE_COLORS[item.type] || '')}>
-                                {item.type}
-                              </Badge>
-                              {item.type === 'eer' && item.eer_type && (
-                                <span className={cn(
-                                  'text-[10px] font-medium px-1.5 py-0.5 rounded-full border w-fit text-center',
-                                  item.eer_type === 'refund' ? 'bg-orange-50 text-orange-600 border-orange-200' :
-                                    item.eer_type === 'reimbursement' ? 'bg-blue-50 text-blue-600 border-blue-200' :
-                                      'bg-purple-50 text-purple-600 border-purple-200',
-                                )}>
-                                  {item.eer_type === 'refund' ? 'Refund' :
-                                    item.eer_type === 'reimbursement' ? 'Reimbursement' :
-                                      'Balance'}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
+                        <React.Fragment key={item.id}>
+                          <TableRow>
+                            {/* Type */}
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <Badge variant="outline" className={cn('uppercase w-fit', TYPE_COLORS[item.type] || '')}>
+                                  {item.type}
+                                </Badge>
+                                {item.type === 'eer' && item.eer_type && (
+                                  <span className={cn(
+                                    'text-[10px] font-medium px-1.5 py-0.5 rounded-full border w-fit text-center',
+                                    item.eer_type === 'refund' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                                      item.eer_type === 'reimbursement' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                        'bg-purple-50 text-purple-600 border-purple-200',
+                                  )}>
+                                    {item.eer_type === 'refund' ? 'Refund' :
+                                      item.eer_type === 'reimbursement' ? 'Reimbursement' :
+                                        'Balance'}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
 
-                          {/* Code */}
-                          <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
+                            {/* Code */}
+                            <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
 
-                          {/* Date */}
-                          <TableCell className="text-sm">
-                            {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}
-                          </TableCell>
+                            {/* Date */}
+                            <TableCell className="text-sm">
+                              {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}
+                            </TableCell>
 
-                          {/* Applicant */}
-                          <TableCell className="text-sm">{item.user?.name ?? '-'}</TableCell>
+                            {/* Applicant */}
+                            <TableCell className="text-sm">{item.user?.name ?? '-'}</TableCell>
 
-                          {/* Project code */}
-                          <TableCell className="text-sm font-mono">{item.project?.code ?? '-'}</TableCell>
+                            {/* Project code */}
+                            <TableCell className="text-sm font-mono">{item.project?.code ?? '-'}</TableCell>
 
-                          {/* Initial project */}
-                          <TableCell className="text-sm">{item.project?.initial_project ?? '-'}</TableCell>
+                            {/* Initial project */}
+                            <TableCell className="text-sm">{item.project?.initial_project ?? '-'}</TableCell>
 
-                          {/* Usage plan */}
-                          <TableCell className="min-w-[150px] max-w-[250px] leading-relaxed">
-                            <span className="whitespace-normal break-words text-sm">{item.usage_plan ?? '-'}</span>
-                          </TableCell>
+                            {/* Usage plan */}
+                            <TableCell className="min-w-[150px] max-w-[250px] leading-relaxed">
+                              <span className="whitespace-normal break-words text-sm">{item.usage_plan ?? '-'}</span>
+                            </TableCell>
 
-                          {/* Amount */}
-                          <TableCell className="font-medium">
-                            Rp {parseFloat(item.amount).toLocaleString('id-ID')}
-                          </TableCell>
+                            {/* Amount */}
+                            <TableCell className="font-medium">
+                              Rp {parseFloat(item.amount).toLocaleString('id-ID')}
+                            </TableCell>
 
-                          {/* Approval status */}
-                          <TableCell>
-                            <div className="flex flex-col gap-1.5">
-                              {item.approvals?.length > 0 && (
-                                <div className="mt-1 flex flex-col gap-1 inline-flex">
-                                  {[...item.approvals]
-                                    .sort((a, b) => {
-                                      const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
-                                      return (p[a.role] ?? 99) - (p[b.role] ?? 99);
-                                    })
-                                    .map((approval) => (
-                                      <div key={approval.id} className="text-xs flex items-center gap-1.5">
-                                        {approval.status === 'approved' ? (
-                                          <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                                        ) : approval.status === 'revised' ? (
-                                          <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
-                                        ) : (
-                                          <XCircle className="h-3.5 w-3.5 text-red-500" />
-                                        )}
-                                        <span className={cn(
-                                          'whitespace-nowrap',
-                                          approval.status === 'approved' ? 'text-green-700 font-medium' :
-                                            approval.status === 'revised' ? 'text-blue-700 font-medium' :
-                                              'text-red-700 font-medium',
-                                        )}>
-                                          {approval.status === 'approved' ? 'Disetujui' :
-                                            approval.status === 'revised' ? 'Sudah Direvisi' :
-                                              'Menunggu'}{' '}
-                                          <span className="font-normal text-muted-foreground">
-                                            {approval.approver?.name}
+                            {/* Approval status */}
+                            <TableCell>
+                              <div className="flex flex-col gap-1.5">
+                                {item.approvals?.length > 0 && (
+                                  <div className="mt-1 flex flex-col gap-1 inline-flex">
+                                    {[...item.approvals]
+                                      .sort((a, b) => {
+                                        const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
+                                        return (p[a.role] ?? 99) - (p[b.role] ?? 99);
+                                      })
+                                      .map((approval) => (
+                                        <div key={approval.id} className="text-xs flex items-center gap-1.5">
+                                          {approval.status === 'approved' ? (
+                                            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                          ) : approval.status === 'revised' ? (
+                                            <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
+                                          ) : (
+                                            <XCircle className="h-3.5 w-3.5 text-red-500" />
+                                          )}
+                                          <span className={cn(
+                                            'whitespace-nowrap',
+                                            approval.status === 'approved' ? 'text-green-700 font-medium' :
+                                              approval.status === 'revised' ? 'text-blue-700 font-medium' :
+                                                'text-red-700 font-medium',
+                                          )}>
+                                            {approval.status === 'approved' ? 'Disetujui' :
+                                              approval.status === 'revised' ? 'Sudah Direvisi' :
+                                                'Menunggu'}{' '}
+                                            <span className="font-normal text-muted-foreground">
+                                              {approval.approver?.name}
+                                            </span>
                                           </span>
-                                        </span>
-                                      </div>
-                                    ))}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
+                                        </div>
+                                      ))}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
 
-                          {/* Overall status badge */}
-                          <TableCell className="font-medium">
-                            <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
-                              <StatusIcon className="h-3 w-3" />
-                              {statusCfg.label}
-                            </Badge>
-                          </TableCell>
+                            {/* Overall status badge */}
+                            <TableCell className="font-medium">
+                              <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
+                                <StatusIcon className="h-3 w-3" />
+                                {statusCfg.label}
+                              </Badge>
+                            </TableCell>
 
-                          {/* Actions */}
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/reimbursements/${item.id}`} className="cursor-pointer">
-                                    <Eye className="mr-2 h-4 w-4" /> Lihat Detail
-                                  </Link>
-                                </DropdownMenuItem>
-                                {item.status === 'draft' && item.user?.id === auth.user.id && (
+                            {/* Actions */}
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
                                   <DropdownMenuItem asChild>
-                                    <Link href={`/reimbursements/${item.id}/edit`} className="cursor-pointer">
-                                      <FileText className="mr-2 h-4 w-4" /> Edit Draft
+                                    <Link href={`/reimbursements/${item.id}`} className="cursor-pointer">
+                                      <Eye className="mr-2 h-4 w-4" /> Lihat Detail
                                     </Link>
                                   </DropdownMenuItem>
-                                )}
-                                {item.type === 'atr' && item.status === 'approved' && (
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/reimbursements/create/eer?atr_code=${item.code}`} className="cursor-pointer">
-                                      <Receipt className="mr-2 h-4 w-4" /> Buat EER
-                                    </Link>
-                                  </DropdownMenuItem>
-                                )}
-                                {(isSuperadmin || isFinance || (item.type === 'allowance' && isHR)) && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-                                      onClick={() => handleDelete(item.id)}
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                                  {item.status === 'draft' && item.user?.id === auth.user.id && (
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/reimbursements/${item.id}/edit`} className="cursor-pointer">
+                                        <FileText className="mr-2 h-4 w-4" /> Edit Draft
+                                      </Link>
                                     </DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
+                                  )}
+                                  {item.type === 'atr' && item.status === 'transferred' && (
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/reimbursements/create/eer?atr_code=${item.code}`} className="cursor-pointer">
+                                        <Receipt className="mr-2 h-4 w-4" /> Buat EER
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  )}
+                                  {(isSuperadmin || isFinance || (item.type === 'allowance' && isHR)) && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                                        onClick={() => handleDelete(item.id)}
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+
+                          {item.type === 'atr' && (
+                            <TableRow className="bg-muted/5 hover:bg-muted/10 border-t-0">
+                              <TableCell colSpan={11} className="pl-12 py-3 bg-slate-50/50">
+                                <div className="space-y-3">
+                                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                                    <Receipt className="h-3.5 w-3.5 text-indigo-500" /> Expense Event Reimbursement (EER)
+                                  </h4>
+
+                                  {item.eers && item.eers.length > 0 ? (
+                                    <div className="border rounded-lg overflow-hidden bg-white shadow-sm max-w-5xl">
+                                      <Table className="min-w-full">
+                                        <TableHeader className="bg-slate-100/70">
+                                          <TableRow>
+                                            <TableHead className="h-8 text-xs font-semibold text-slate-600">Kode EER</TableHead>
+                                            <TableHead className="h-8 text-xs font-semibold text-slate-600">Tgl Diajukan</TableHead>
+                                            <TableHead className="h-8 text-xs font-semibold text-slate-600">Tipe EER</TableHead>
+                                            <TableHead className="h-8 text-xs font-semibold text-slate-600">Detail Kegiatan</TableHead>
+                                            <TableHead className="h-8 text-xs font-semibold text-slate-600">Nominal</TableHead>
+                                            <TableHead className="h-8 text-xs font-semibold text-slate-600">Status</TableHead>
+                                            <TableHead className="h-8 text-xs font-semibold text-slate-600 text-right">Aksi</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {item.eers.map((eer) => {
+                                            const eerStatusCfg = STATUS_CONFIG[eer.status] ?? {
+                                              label: eer.status, className: 'bg-gray-100 text-gray-600', icon: Clock,
+                                            };
+                                            const EerStatusIcon = eerStatusCfg.icon;
+                                            return (
+                                              <TableRow key={eer.id} className="hover:bg-slate-50/50">
+                                                <TableCell className="py-2 text-xs font-mono font-medium">{eer.code}</TableCell>
+                                                <TableCell className="py-2 text-xs">
+                                                  {format(new Date(eer.created_at), 'dd MMM yyyy', { locale: localeId })}
+                                                </TableCell>
+                                                <TableCell className="py-2 text-xs">
+                                                  <span className={cn(
+                                                    'text-[10px] font-semibold px-2 py-0.5 rounded-full border uppercase',
+                                                    eer.eer_type === 'refund' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                                                      eer.eer_type === 'reimbursement' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                                        'bg-purple-50 text-purple-600 border-purple-200',
+                                                  )}>
+                                                    {eer.eer_type === 'refund' ? 'Refund' :
+                                                      eer.eer_type === 'reimbursement' ? 'Reimbursement' :
+                                                        'Balance'}
+                                                  </span>
+                                                </TableCell>
+                                                <TableCell className="py-2 text-xs truncate max-w-[200px]">{eer.usage_plan ?? '-'}</TableCell>
+                                                <TableCell className="py-2 text-xs font-medium text-slate-700">
+                                                  Rp {parseFloat(eer.amount).toLocaleString('id-ID')}
+                                                </TableCell>
+                                                <TableCell className="py-2 text-xs">
+                                                  <Badge className={cn('gap-1 text-[10px] px-1.5 py-0', eerStatusCfg.className)}>
+                                                    <EerStatusIcon className="h-2.5 w-2.5" />
+                                                    {eerStatusCfg.label}
+                                                  </Badge>
+                                                </TableCell>
+                                                <TableCell className="py-2 text-right">
+                                                  <Button variant="ghost" size="sm" asChild className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+                                                    <Link href={`/reimbursements/${eer.id}`}>
+                                                      <Eye className="h-3.5 w-3.5 mr-1" /> Lihat
+                                                    </Link>
+                                                  </Button>
+                                                </TableCell>
+                                              </TableRow>
+                                            );
+                                          })}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between p-3 rounded-lg border border-dashed bg-white max-w-5xl">
+                                      <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                        <Info className="h-4 w-4 text-slate-400" />
+                                        <span>Belum ada Expense Event Reimbursement (EER) untuk ATR ini.</span>
+                                      </div>
+                                      {item.status === 'transferred' && (
+                                        <Button size="sm" variant="outline" className="gap-1 h-8 px-3 bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700" asChild>
+                                          <Link href={`/reimbursements/create/eer?atr_code=${item.code}`}>
+                                            <Plus className="h-3.5 w-3.5" /> Buat EER
+                                          </Link>
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                   </TableBody>

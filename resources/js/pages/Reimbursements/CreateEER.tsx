@@ -23,6 +23,7 @@ import {
   Loader2,
   Briefcase,
   Upload,
+  Receipt,
 } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
 import MoneyInput from '@/components/MoneyInput';
@@ -237,6 +238,28 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
     return atrs.find(a => a.id.toString() === formData.atr_id) ?? null;
   }, [formData.atr_id, atrs]);
 
+  const hasAtrQueryParam = React.useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return !!params.get('atr_code');
+    }
+    return false;
+  }, []);
+
+  // Auto select ATR if passed in query params
+  React.useEffect(() => {
+    if (!isEdit && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const atrCode = params.get('atr_code');
+      if (atrCode) {
+        const foundAtr = atrs.find(a => a.code === atrCode);
+        if (foundAtr) {
+          handleAtrChange(foundAtr.id.toString());
+        }
+      }
+    }
+  }, [isEdit, atrs]);
+
   // Derived available activities from the selected ATR's items
   const availableActivities = useMemo(() => {
     if (!selectedAtr) return [];
@@ -434,19 +457,33 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                     <Input id="nip" name="nip" className="pl-9 h-10 bg-muted/30" value={formData.nip} readOnly />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="atr_id">Pilih ATR</Label>
-                  <SearchableSelect
-                    options={atrs.map(atr => ({
-                      value: atr.id.toString(),
-                      label: `${atr.code} — ${fmt(atr.amount)} (${atr.project_name})`
-                    }))}
-                    value={formData.atr_id}
-                    onValueChange={handleAtrChange}
-                    placeholder="Pilih ATR terkait"
-                  />
-                  {errors.atr_id && <p className="text-xs text-red-500">{errors.atr_id[0]}</p>}
-                </div>
+                {hasAtrQueryParam ? (
+                  <div className="space-y-2">
+                    <Label>ATR Terpilih</Label>
+                    <div className="relative">
+                      <Receipt className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        className="pl-9 h-10 bg-muted/30 font-semibold text-indigo-700 border-indigo-200"
+                        value={selectedAtr ? `${selectedAtr.code} — Rp ${selectedAtr.amount.toLocaleString('id-ID')} (${selectedAtr.project_name})` : 'Loading...'}
+                        readOnly
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="atr_id">Pilih ATR</Label>
+                    <SearchableSelect
+                      options={atrs.map(atr => ({
+                        value: atr.id.toString(),
+                        label: `${atr.code} — ${fmt(atr.amount)} (${atr.project_name})`
+                      }))}
+                      value={formData.atr_id}
+                      onValueChange={handleAtrChange}
+                      placeholder="Pilih ATR terkait"
+                    />
+                    {errors.atr_id && <p className="text-xs text-red-500">{errors.atr_id[0]}</p>}
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>Nama Project</Label>
                   <div className="relative">

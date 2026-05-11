@@ -10,9 +10,15 @@ use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
     // Ensure roles exist
-    Role::query()->firstOrCreate(['name' => 'head']);
-    Role::query()->firstOrCreate(['name' => 'finance']);
+    $headRole = Role::query()->firstOrCreate(['name' => 'head']);
+    $financeRole = Role::query()->firstOrCreate(['name' => 'finance']);
     Role::query()->firstOrCreate(['name' => 'pegawai']);
+
+    $approvePerm = Spatie\Permission\Models\Permission::query()->firstOrCreate(['name' => 'approve_reimbursements']);
+    $rejectPerm = Spatie\Permission\Models\Permission::query()->firstOrCreate(['name' => 'reject_reimbursements']);
+
+    $headRole->givePermissionTo([$approvePerm, $rejectPerm]);
+    $financeRole->givePermissionTo([$approvePerm, $rejectPerm]);
 
     if (App\Models\Division::query()->count() === 0) {
         App\Models\Division::factory()->create();
