@@ -25,7 +25,7 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
 
     public function title(): string
     {
-        return 'ATR';
+        return 'Reimbursement';
     }
 
     public function headings(): array
@@ -38,13 +38,14 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
             'Initial Project',
             'Project',
             'Divisi',
-            'Status',
+            'Status ATR',
             'Urgensi',
             'Tanggal Pengajuan',
             'Tanggal Mulai',
             'Tanggal Selesai',
-            'Total Nominal',
-            'Nominal Ditransfer',
+            'Total Nominal ATR',
+            'Nominal Ditransfer ATR',
+            'Bukti Transfer ATR',
             'Detail Kegiatan',
             'Keterangan / Rencana Penggunaan',
             'Bank',
@@ -52,20 +53,35 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
             'Atas Nama',
             'Cabang Bank',
             // Approval columns
-            'Head Approver',
-            'Head Status',
-            'Head Catatan',
-            'Finance Approver',
-            'Finance Status',
-            'Finance Catatan',
-            'Direktur Approver',
-            'Direktur Status',
-            'Direktur Catatan',
+            'Head Approver ATR',
+            'Head Status ATR',
+            'Head Catatan ATR',
+            'Finance Approver ATR',
+            'Finance Status ATR',
+            'Finance Catatan ATR',
+            'Direktur Approver ATR',
+            'Direktur Status ATR',
+            'Direktur Catatan ATR',
             // Linked EER columns
-            'Kode EER',
-            'Tipe EER',
-            'Nominal EER',
             'Status EER',
+            'Tipe EER',
+            'Nominal Selisih EER',
+            'Nominal Pengeluaran EER',
+            'Nominal Ditransfer EER',
+            'Catatan Tambahan EER',
+            'Link Excel EER',
+            'Link Kwitansi EER',
+            'Bukti Transfer Settlement EER',
+            // EER Approvals
+            'Head Approver EER',
+            'Head Status EER',
+            'Head Catatan EER',
+            'Finance Approver EER',
+            'Finance Status EER',
+            'Finance Catatan EER',
+            'Direktur Approver EER',
+            'Direktur Status EER',
+            'Direktur Catatan EER',
         ];
     }
 
@@ -80,11 +96,62 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
             $budgetItems = $r->atrBudgetSelecteds->pluck('notes')->filter()->implode('; ');
 
             // Linked EERs
-            $eers = $r->eers;
-            $eerCodes = $eers->pluck('code')->implode(', ') ?: '-';
-            $eerTypes = $eers->pluck('eer_type')->unique()->implode(', ') ?: '-';
-            $eerNominals = $eers->count() > 0 ? $eers->sum('amount') : '-';
-            $eerStatuses = $eers->map(fn ($e) => $e->status?->value ?? '-')->unique()->implode(', ') ?: '-';
+            $eer = $r->eers->first();
+
+            if ($eer) {
+                $eerItem = $eer->items->first();
+                $eerHead = $eer->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Head);
+                $eerFinance = $eer->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Finance);
+                $eerDirektur = $eer->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Direktur);
+
+                // Find EER excel document
+                $eerExcelDoc = $eer->documents->first(fn ($d): bool => $d->type === 'excel');
+                $eerExcelUrl = $eerExcelDoc ? asset('storage/' . $eerExcelDoc->path) : '-';
+
+                $eerStatus = $eer->status?->value ?? '-';
+                $eerType = $eer->eer_type ?? '-';
+                $eerDiff = abs((float) $eer->amount - (float) $r->amount);
+                $eerNominal = (float) $eer->amount;
+                $eerTransferred = (float) ($eer->transferred_amount ?? 0);
+                $eerProof = $eer->transfer_proof_path ? asset('storage/' . $eer->transfer_proof_path) : '-';
+
+                $eerItemNotes = $eerItem?->notes ?? $eer->usage_plan ?? '-';
+                $eerItemReceipt = $eerItem?->receipt_path ? asset('storage/' . $eerItem->receipt_path) : '-';
+
+                $eerHeadName = $eerHead?->approver?->name ?? '-';
+                $eerHeadStatus = $eerHead?->status?->value ?? '-';
+                $eerHeadNotes = $eerHead?->notes ?? '-';
+
+                $eerFinanceName = $eerFinance?->approver?->name ?? '-';
+                $eerFinanceStatus = $eerFinance?->status?->value ?? '-';
+                $eerFinanceNotes = $eerFinance?->notes ?? '-';
+
+                $eerDirekturName = $eerDirektur?->approver?->name ?? '-';
+                $eerDirekturStatus = $eerDirektur?->status?->value ?? '-';
+                $eerDirekturNotes = $eerDirektur?->notes ?? '-';
+            } else {
+                $eerStatus = '-';
+                $eerType = '-';
+                $eerDiff = '-';
+                $eerNominal = '-';
+                $eerTransferred = '-';
+                $eerExcelUrl = '-';
+                $eerItemNotes = '-';
+                $eerItemReceipt = '-';
+                $eerProof = '-';
+
+                $eerHeadName = '-';
+                $eerHeadStatus = '-';
+                $eerHeadNotes = '-';
+
+                $eerFinanceName = '-';
+                $eerFinanceStatus = '-';
+                $eerFinanceNotes = '-';
+
+                $eerDirekturName = '-';
+                $eerDirekturStatus = '-';
+                $eerDirekturNotes = '-';
+            }
 
             return [
                 $r->code,
@@ -101,6 +168,7 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
                 $r->end_date?->format('Y-m-d') ?? '-',
                 (float) $r->amount,
                 (float) ($r->transferred_amount ?? 0),
+                $r->transfer_proof_path ? asset('storage/' . $r->transfer_proof_path) : '-',
                 $budgetItems ?: '-',
                 $r->usage_plan ?? '-',
                 $r->bank_name ?? '-',
@@ -119,11 +187,26 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
                 $direkturApproval?->approver?->name ?? '-',
                 $direkturApproval?->status?->value ?? '-',
                 $direkturApproval?->notes ?? '-',
-                // EER
-                $eerCodes,
-                $eerTypes,
-                is_numeric($eerNominals) ? (float) $eerNominals : $eerNominals,
-                $eerStatuses,
+                // EER general info
+                $eerStatus,
+                $eerType,
+                $eerDiff,
+                $eerNominal,
+                $eerTransferred,
+                $eerItemNotes,
+                $eerExcelUrl,
+                $eerItemReceipt,
+                $eerProof,
+                // EER approvals
+                $eerHeadName,
+                $eerHeadStatus,
+                $eerHeadNotes,
+                $eerFinanceName,
+                $eerFinanceStatus,
+                $eerFinanceNotes,
+                $eerDirekturName,
+                $eerDirekturStatus,
+                $eerDirekturNotes,
             ];
         });
     }

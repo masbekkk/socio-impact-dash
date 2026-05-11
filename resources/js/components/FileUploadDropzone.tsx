@@ -3,7 +3,21 @@ import { Button } from '@/components/ui/button'
 import { UploadCloud, FileText, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export default function FileUploadDropzone({ className, onFilesChange }: { className?: string, onFilesChange?: (files: File[]) => void }) {
+export default function FileUploadDropzone({ 
+  className, 
+  onFilesChange,
+  accept,
+  multiple = true,
+  labelText = "Klik untuk upload atau drag & drop",
+  helperText = "PDF, DOCX, JPG, EXCEL (Max 10MB)"
+}: { 
+  className?: string, 
+  onFilesChange?: (files: File[]) => void,
+  accept?: string,
+  multiple?: boolean,
+  labelText?: string,
+  helperText?: string
+}) {
   const [files, setFiles] = useState<File[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const onFilesChangeRef = useRef(onFilesChange)
@@ -26,7 +40,11 @@ export default function FileUploadDropzone({ className, onFilesChange }: { class
   }
 
   function addFiles(newFiles: File[]) {
-    setFiles((prev) => [...prev, ...newFiles])
+    if (!multiple) {
+      setFiles(newFiles.slice(0, 1));
+    } else {
+      setFiles((prev) => [...prev, ...newFiles])
+    }
   }
 
   function removeFile(index: number) {
@@ -77,7 +95,8 @@ export default function FileUploadDropzone({ className, onFilesChange }: { class
       >
         <input
           type="file"
-          multiple
+          multiple={multiple}
+          accept={accept}
           className="hidden"
           ref={inputRef}
           onChange={onChange}
@@ -85,8 +104,8 @@ export default function FileUploadDropzone({ className, onFilesChange }: { class
         <div className="bg-primary/10 p-2 rounded-full mb-2">
           <UploadCloud className="h-5 w-5 text-primary" />
         </div>
-        <p className="text-sm font-medium">Klik untuk upload atau drag & drop</p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">PDF, DOCX, JPG, EXCEL (Max 10MB)</p>
+        <p className="text-sm font-medium">{labelText}</p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">{helperText}</p>
       </div>
 
       {files.length > 0 && (

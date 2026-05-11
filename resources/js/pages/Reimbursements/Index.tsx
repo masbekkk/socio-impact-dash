@@ -435,11 +435,11 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                     <FileText className="mr-2 h-4 w-4" /> Pengajuan ATR
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
+                {/* <DropdownMenuItem asChild>
                   <Link href="/reimbursements/create/eer" className="cursor-pointer">
                     <Receipt className="mr-2 h-4 w-4" /> Pengajuan EER
                   </Link>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuItem asChild>
                   <Link href="/reimbursements/create/allowance" className="cursor-pointer">
                     <Wallet className="mr-2 h-4 w-4" /> Pengajuan Allowance
@@ -804,7 +804,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                       </Link>
                                     </DropdownMenuItem>
                                   )}
-                                  {item.type === 'atr' && item.status === 'transferred' && (
+                                  {item.type === 'atr' && item.status === 'transferred' && (!item.eers || item.eers.length === 0) && (
                                     <DropdownMenuItem asChild>
                                       <Link href={`/reimbursements/create/eer?atr_code=${item.code}`} className="cursor-pointer">
                                         <Receipt className="mr-2 h-4 w-4" /> Buat EER
@@ -840,11 +840,11 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                       <Table className="min-w-full">
                                         <TableHeader className="bg-slate-100/70">
                                           <TableRow>
-                                            <TableHead className="h-8 text-xs font-semibold text-slate-600">Kode EER</TableHead>
                                             <TableHead className="h-8 text-xs font-semibold text-slate-600">Tgl Diajukan</TableHead>
                                             <TableHead className="h-8 text-xs font-semibold text-slate-600">Tipe EER</TableHead>
                                             <TableHead className="h-8 text-xs font-semibold text-slate-600">Detail Kegiatan</TableHead>
                                             <TableHead className="h-8 text-xs font-semibold text-slate-600">Nominal</TableHead>
+                                            <TableHead className="h-8 text-xs font-semibold text-slate-600">Status Approval</TableHead>
                                             <TableHead className="h-8 text-xs font-semibold text-slate-600">Status</TableHead>
                                             <TableHead className="h-8 text-xs font-semibold text-slate-600 text-right">Aksi</TableHead>
                                           </TableRow>
@@ -857,7 +857,6 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                             const EerStatusIcon = eerStatusCfg.icon;
                                             return (
                                               <TableRow key={eer.id} className="hover:bg-slate-50/50">
-                                                <TableCell className="py-2 text-xs font-mono font-medium">{eer.code}</TableCell>
                                                 <TableCell className="py-2 text-xs">
                                                   {format(new Date(eer.created_at), 'dd MMM yyyy', { locale: localeId })}
                                                 </TableCell>
@@ -874,8 +873,43 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                                   </span>
                                                 </TableCell>
                                                 <TableCell className="py-2 text-xs truncate max-w-[200px]">{eer.usage_plan ?? '-'}</TableCell>
-                                                <TableCell className="py-2 text-xs font-medium text-slate-700">
-                                                  Rp {parseFloat(eer.amount).toLocaleString('id-ID')}
+                                                <TableCell className="py-2 text-xs font-medium text-slate-700 font-mono">
+                                                  Rp {Math.abs(parseFloat(eer.amount) - parseFloat(item.amount)).toLocaleString('id-ID')}
+                                                </TableCell>
+                                                <TableCell className="py-2 text-xs">
+                                                  {eer.approvals?.length > 0 && (
+                                                    <div className="flex flex-col gap-1">
+                                                      {[...eer.approvals]
+                                                        .sort((a, b) => {
+                                                          const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
+                                                          return (p[a.role] ?? 99) - (p[b.role] ?? 99);
+                                                        })
+                                                        .map((approval) => (
+                                                          <div key={approval.id} className="text-[10px] flex items-center gap-1">
+                                                            {approval.status === 'approved' ? (
+                                                              <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
+                                                            ) : approval.status === 'revised' ? (
+                                                              <AlertCircle className="h-3 w-3 text-blue-500 shrink-0" />
+                                                            ) : (
+                                                              <XCircle className="h-3 w-3 text-red-500 shrink-0" />
+                                                            )}
+                                                            <span className={cn(
+                                                              'whitespace-nowrap',
+                                                              approval.status === 'approved' ? 'text-green-700 font-medium' :
+                                                                approval.status === 'revised' ? 'text-blue-700 font-medium' :
+                                                                  'text-red-700 font-medium',
+                                                            )}>
+                                                              {approval.status === 'approved' ? 'Disetujui' :
+                                                                approval.status === 'revised' ? 'Sudah Direvisi' :
+                                                                  'Menunggu'}{' '}
+                                                              <span className="font-normal text-muted-foreground text-[9px]">
+                                                                {approval.approver?.name}
+                                                              </span>
+                                                            </span>
+                                                          </div>
+                                                        ))}
+                                                    </div>
+                                                  )}
                                                 </TableCell>
                                                 <TableCell className="py-2 text-xs">
                                                   <Badge className={cn('gap-1 text-[10px] px-1.5 py-0', eerStatusCfg.className)}>

@@ -104,6 +104,7 @@ import {
   Edit,
   Paperclip,
   Image as ImageIcon,
+  FileSpreadsheet,
 } from 'lucide-react';
 import FileUploadDropzone from '@/components/FileUploadDropzone';
 import { resubmitReimbursement, updateItemReceipt } from '@/services/reimbursement-service';
@@ -795,6 +796,50 @@ export default function Show() {
     }));
   };
 
+  const handleExcelChangeRevision = (file: File | null) => {
+    setRevisionForm(prev => {
+      const filtered = prev.documents.filter(d => d.type !== 'excel');
+      if (file) {
+        return {
+          ...prev,
+          documents: [...filtered, { id: crypto.randomUUID(), type: 'excel', file, original_name: file.name }]
+        };
+      }
+      return {
+        ...prev,
+        documents: filtered
+      };
+    });
+  };
+
+  const handleNominalChangeRevision = (value: number) => {
+    setRevisionForm(prev => {
+      let budgetDetailId: number | string = '';
+      if (data?.items && data.items[0]) {
+        budgetDetailId = data.items[0].activity_id;
+      }
+      const firstItem = prev.eer_items[0] || {
+        id: crypto.randomUUID(),
+        project_budget_detail_id: budgetDetailId,
+        item_name: 'Pengeluaran EER',
+        quantity: 1,
+        unit_price: 0,
+        amount: 0,
+        expense_type: data?.items?.[0]?.expense_type || 'other',
+        receipt: null,
+        notes: ''
+      };
+      return {
+        ...prev,
+        eer_items: [{
+          ...firstItem,
+          unit_price: value,
+          amount: value
+        }]
+      };
+    });
+  };
+
   const removeItemEerRevision = (id: string | number) => {
     setRevisionForm(prev => ({
       ...prev,
@@ -821,19 +866,19 @@ export default function Show() {
 
     // Validate
     if (data.type === 'eer') {
-      if (revisionForm.eer_items.length === 0) {
-        alert('Minimal harus memiliki 1 item.');
+      const firstItem = revisionForm.eer_items[0];
+      if (!firstItem || firstItem.amount <= 0) {
+        alert('Nominal pengeluaran wajib diisi dan harus lebih besar dari 0.');
         return;
       }
-      for (const item of revisionForm.eer_items) {
-        if (!item.project_budget_detail_id || !item.item_name.trim() || item.unit_price <= 0 || !item.expense_type) {
-          alert('Semua detail item (Kegiatan, Nama, Harga, Jenis) wajib diisi.');
-          return;
-        }
-        if (!item.receipt && !item.receipt_path) {
-          alert('Setiap item pengeluaran EER wajib melampirkan kwitansi.');
-          return;
-        }
+      if (!firstItem.receipt && !firstItem.receipt_path) {
+        alert('Kwitansi / Bukti Pembayaran wajib diunggah.');
+        return;
+      }
+      const excelDoc = revisionForm.documents.find(d => d.type === 'excel');
+      if (!excelDoc || (!excelDoc.file && !excelDoc.original_name)) {
+        alert('File Excel (Detail Breakdown) wajib diunggah.');
+        return;
       }
     } else {
       for (const act of revisionForm.selected_activities) {
@@ -1747,130 +1792,109 @@ export default function Show() {
                         {(data.type === 'atr' || data.type === 'eer') && (
                           <div className="space-y-4 pt-2 border-t mt-4">
                             <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              {data.type === 'eer' ? 'Klaim Item EER' : 'Item & Rincian Kegiatan ATR'}
+                              {data.type === 'eer' ? 'Form Pengeluaran EER' : 'Item & Rincian Kegiatan ATR'}
                             </Label>
                             {data.type === 'eer' ? (
                               <div className="space-y-4">
-                                {revisionForm.eer_items.map((item, idx) => (
-                                  <div key={item.id} className="border rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow relative group">
-                                    <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Button
-                                        type="button"
-                                        variant="destructive"
-                                        size="icon"
-                                        className="h-7 w-7 rounded-full shadow-lg"
-                                        onClick={() => removeItemEerRevision(item.id)}
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
+                                {(() => {
+                                  const firstItem = revisionForm.eer_items[0] || {
+                                    id: crypto.randomUUID(),
+                                    project_budget_detail_id: '',
+                                    item_name: 'Pengeluaran EER',
+                                    quantity: 1,
+                                    unit_price: 0,
+                                    amount: 0,
+                                    expense_type: '',
+                                    receipt: null,
+                                    notes: ''
+                                  };
 
-                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-3">
-                                      {/* Row 1: Activity & Name */}
-                                      <div className="md:col-span-12 lg:col-span-5 space-y-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                          PILIH KEGIATAN <span className="text-red-500">*</span>
-                                        </Label>
-                                        <SearchableSelect
-                                          options={(data.atr_budget_selecteds || []).map(act => ({ value: act.project_budget_detail_id.toString(), label: act.activity_name || 'Kegiatan' }))}
-                                          value={item.project_budget_detail_id?.toString() || 'none'}
-                                          onValueChange={(v) => updateItemEerRevision(item.id, 'project_budget_detail_id', v === 'none' ? null : parseInt(v))}
-                                          placeholder="Pilih kegiatan..."
-                                          className="h-8 text-xs bg-slate-50 border-slate-200"
-                                        />
-                                      </div>
+                                  const excelDoc = revisionForm.documents.find(d => d.type === 'excel');
 
-                                      <div className="md:col-span-12 lg:col-span-7 space-y-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                          NAMA ITEM <span className="text-red-500">*</span>
-                                        </Label>
-                                        <Input
-                                          value={item.item_name}
-                                          onChange={(e) => updateItemEerRevision(item.id, 'item_name', e.target.value)}
-                                          placeholder="Nama item pengeluaran..."
-                                          className="h-8 text-sm bg-slate-50"
-                                        />
-                                      </div>
+                                  return (
+                                    <div className="border rounded-xl bg-slate-50/30 p-4 md:p-6 transition-all hover:border-blue-200 hover:shadow-sm space-y-6 text-left">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Left Column: Nominal and Notes */}
+                                        <div className="space-y-4">
+                                          <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                              Nominal Pengeluaran <span className="text-red-500">*</span>
+                                            </Label>
+                                            <MoneyInput
+                                              value={firstItem.unit_price}
+                                              onValueChange={(v) => handleNominalChangeRevision(v.floatValue ?? 0)}
+                                              placeholder="Masukkan nominal total pengeluaran..."
+                                              className="h-11 text-base bg-white font-bold"
+                                            />
+                                          </div>
 
-                                      {/* Row 2: Qty, Price, Type */}
-                                      <div className="md:col-span-3 lg:col-span-2 space-y-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">QTY <span className="text-red-500">*</span></Label>
-                                        <Input
-                                          type="number"
-                                          min="1"
-                                          value={item.quantity}
-                                          onChange={(e) => updateItemEerRevision(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                                          className="h-8 text-sm bg-slate-50"
-                                        />
-                                      </div>
+                                          <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                              Catatan Tambahan
+                                            </Label>
+                                            <Textarea
+                                              value={firstItem.notes || ''}
+                                              onChange={(e) => updateItemEerRevision(firstItem.id, 'notes', e.target.value)}
+                                              placeholder="Keterangan tambahan mengenai pengeluaran..."
+                                              className="min-h-[148px] text-sm resize-none bg-white font-normal text-slate-800"
+                                            />
+                                          </div>
+                                        </div>
 
-                                      <div className="md:col-span-4 lg:col-span-3 space-y-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">HARGA SATUAN <span className="text-red-500">*</span></Label>
-                                        <MoneyInput
-                                          value={item.unit_price}
-                                          onValueChange={(v) => updateItemEerRevision(item.id, 'unit_price', v.floatValue || 0)}
-                                          placeholder="0"
-                                          className="h-8 text-sm bg-slate-50"
-                                        />
-                                      </div>
+                                        {/* Right Column: Excel and Receipt Files */}
+                                        <div className="space-y-4">
+                                          <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                              Upload File Excel Only <span className="text-red-500">*</span>
+                                            </Label>
+                                            <FileUploadDropzone
+                                              className="bg-white h-[96px] overflow-hidden rounded-lg"
+                                              multiple={false}
+                                              accept=".xlsx,.xls"
+                                              labelText="Klik untuk upload Excel (.xlsx, .xls)"
+                                              helperText="Hanya menerima file format spreadsheet Excel"
+                                              onFilesChange={(files: File[]) => handleExcelChangeRevision(files[0] ?? null)}
+                                            />
+                                            {excelDoc?.file && (
+                                              <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100">
+                                                <CheckCircle className="h-3 w-3" /> Terlampir: {excelDoc.file.name}
+                                              </div>
+                                            )}
+                                            {!excelDoc?.file && excelDoc?.original_name && (
+                                              <div className="flex items-center gap-2 text-[10px] text-blue-600 bg-blue-50 p-1.5 rounded mt-1 border border-blue-100">
+                                                <CheckCircle className="h-3 w-3" /> Excel Tersimpan: <span className="font-bold">{excelDoc.original_name}</span>
+                                              </div>
+                                            )}
+                                          </div>
 
-                                      <div className="md:col-span-5 lg:col-span-4 space-y-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">JENIS BIAYA <span className="text-red-500">*</span></Label>
-                                        <SearchableSelect
-                                          options={expenseTypes.map(t => ({ value: t.value, label: t.label }))}
-                                          value={item.expense_type}
-                                          onValueChange={(v) => updateItemEerRevision(item.id, 'expense_type', v)}
-                                          placeholder="Jenis..."
-                                          className="h-8 text-xs bg-slate-50 border-slate-200"
-                                        />
-                                      </div>
-
-                                      <div className="md:col-span-12 lg:col-span-3 space-y-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">TOTAL</Label>
-                                        <div className="h-8 bg-emerald-50 border border-emerald-100 rounded-md flex items-center px-3 font-bold text-emerald-800 text-xs">
-                                          Rp {item.amount.toLocaleString('id-ID')}
+                                          <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                              Receipt / Kwitansi (PDF/JPEG) <span className="text-red-500">*</span>
+                                            </Label>
+                                            <FileUploadDropzone
+                                              className="bg-white h-[96px] overflow-hidden rounded-lg"
+                                              multiple={false}
+                                              accept="image/*,.pdf"
+                                              labelText="Klik untuk upload Receipt (PDF, JPEG, PNG)"
+                                              helperText="Hanya menerima format gambar atau dokumen PDF"
+                                              onFilesChange={(files: File[]) => updateItemEerRevision(firstItem.id, 'receipt', files[0] ?? null)}
+                                            />
+                                            {firstItem.receipt && (
+                                              <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100">
+                                                <CheckCircle className="h-3 w-3" /> Terlampir: {firstItem.receipt.name}
+                                              </div>
+                                            )}
+                                            {!firstItem.receipt && firstItem.receipt_path && (
+                                              <div className="flex items-center gap-2 text-[10px] text-blue-600 bg-blue-50 p-1.5 rounded mt-1 border border-blue-100">
+                                                <CheckCircle className="h-3 w-3" /> Kwitansi Tersimpan: <a href={firstItem.receipt_path} target="_blank" rel="noopener noreferrer" className="underline font-bold">Lihat File</a>
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
                                       </div>
-
-                                      {/* Row 3: Receipt & Notes */}
-                                      <div className="md:col-span-12 lg:col-span-6 space-y-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                                          KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500">*</span>
-                                        </Label>
-
-                                        <FileUploadDropzone
-                                          className="bg-white h-[80px] overflow-hidden rounded-lg"
-                                          onFilesChange={(files: File[]) => updateItemEerRevision(item.id, 'receipt', files[0] ?? null)}
-                                        />
-
-                                        {(item.receipt || item.receipt_path) && (
-                                          <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100 italic">
-                                            <CheckCircle className="h-3 w-3" /> {item.receipt ? `Baru: ${item.receipt.name}` : 'Sudah terlampir'}
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      <div className="md:col-span-12 lg:col-span-6 space-y-1">
-                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">CATATAN TAMBAHAN</Label>
-                                        <Textarea
-                                          value={item.notes}
-                                          onChange={(e) => updateItemEerRevision(item.id, 'notes', e.target.value)}
-                                          placeholder="Keterangan item ini..."
-                                          className="min-h-[80px] text-[11px] resize-none bg-slate-50 border-slate-200"
-                                        />
-                                      </div>
                                     </div>
-                                  </div>
-                                ))}
-
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  className="w-full border-dashed h-9 text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-all text-xs"
-                                  onClick={addItemEerRevision}
-                                >
-                                  <Plus className="h-4 w-4 mr-2" /> Tambah Item Klaim Baru
-                                </Button>
+                                  );
+                                })()}
                               </div>
                             ) : (
                               <div className="space-y-4">
@@ -2100,81 +2124,83 @@ export default function Show() {
                           </div>
                         )}
 
-                        <div className="space-y-4 pt-4 border-t mt-4 text-left">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              Dokumen Pendukung / Tambahan
-                            </Label>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-[10px] gap-1"
-                              onClick={() => setRevisionForm(p => ({
-                                ...p,
-                                documents: [...p.documents, { id: crypto.randomUUID(), type: 'other', file: null }]
-                              }))}
-                            >
-                              <Plus className="h-3 w-3" /> Tambah 
-                            </Button>
-                          </div>
-                          
-                          {revisionForm.documents.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {revisionForm.documents.map((doc) => (
-                                <div key={doc.id} className="p-3 border rounded-lg bg-slate-50/50 relative space-y-3">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 absolute top-1 right-1 text-red-500 hover:bg-red-100"
-                                    onClick={() => setRevisionForm(p => ({
-                                      ...p,
-                                      documents: p.documents.filter(d => d.id !== doc.id)
-                                    }))}
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </Button>
-
-                                  <div className="space-y-1.5 pr-6">
-                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nama / Jenis Dokumen</Label>
-                                    <Input
-                                      value={doc.type}
-                                      onChange={(e) => setRevisionForm(p => ({
-                                        ...p,
-                                        documents: p.documents.map(d => d.id === doc.id ? { ...d, type: e.target.value } : d)
-                                      }))}
-                                      className="h-8 text-xs bg-white"
-                                      placeholder="Contoh: Invoice, TOR"
-                                    />
-                                  </div>
-
-                                  <div className="space-y-1.5">
-                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase">File Dokumen</Label>
-                                    <FileUploadDropzone
-                                      className="h-16 bg-white shrink-0"
-                                      onFilesChange={(files) => setRevisionForm(p => ({
-                                        ...p,
-                                        documents: p.documents.map(d => d.id === doc.id ? { ...d, file: files[0] ?? null } : d)
-                                      }))}
-                                    />
-                                    {doc.file ? (
-                                      <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 italic">
-                                        <CheckCircle className="h-3 w-3 shrink-0" /> <span className="truncate">Baru: {doc.file.name}</span>
-                                      </div>
-                                    ) : doc.original_name ? (
-                                      <div className="flex items-center gap-1.5 text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 italic">
-                                        <CheckCircle className="h-3 w-3 shrink-0" /> <span className="truncate">Lama: {doc.original_name}</span>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              ))}
+                        {data.type !== 'eer' && (
+                          <div className="space-y-4 pt-4 border-t mt-4 text-left">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                Dokumen Pendukung / Tambahan
+                              </Label>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-[10px] gap-1"
+                                onClick={() => setRevisionForm(p => ({
+                                  ...p,
+                                  documents: [...p.documents, { id: crypto.randomUUID(), type: 'other', file: null }]
+                                }))}
+                              >
+                                <Plus className="h-3 w-3" /> Tambah 
+                              </Button>
                             </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground text-center italic p-4 border border-dashed rounded bg-slate-50/50">Tidak ada dokumen pendukung tambahan.</p>
-                          )}
-                        </div>
+                            
+                            {revisionForm.documents.filter(d => d.type !== 'excel').length > 0 ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {revisionForm.documents.filter(d => d.type !== 'excel').map((doc) => (
+                                  <div key={doc.id} className="p-3 border rounded-lg bg-slate-50/50 relative space-y-3">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 absolute top-1 right-1 text-red-500 hover:bg-red-100"
+                                      onClick={() => setRevisionForm(p => ({
+                                        ...p,
+                                        documents: p.documents.filter(d => d.id !== doc.id)
+                                      }))}
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </Button>
+
+                                    <div className="space-y-1.5 pr-6">
+                                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nama / Jenis Dokumen</Label>
+                                      <Input
+                                        value={doc.type}
+                                        onChange={(e) => setRevisionForm(p => ({
+                                          ...p,
+                                          documents: p.documents.map(d => d.id === doc.id ? { ...d, type: e.target.value } : d)
+                                        }))}
+                                        className="h-8 text-xs bg-white"
+                                        placeholder="Contoh: Invoice, TOR"
+                                      />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">File Dokumen</Label>
+                                      <FileUploadDropzone
+                                        className="h-16 bg-white shrink-0"
+                                        onFilesChange={(files) => setRevisionForm(p => ({
+                                          ...p,
+                                          documents: p.documents.map(d => d.id === doc.id ? { ...d, file: files[0] ?? null } : d)
+                                        }))}
+                                      />
+                                      {doc.file ? (
+                                        <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 italic">
+                                          <CheckCircle className="h-3 w-3 shrink-0" /> <span className="truncate">Baru: {doc.file.name}</span>
+                                        </div>
+                                      ) : doc.original_name ? (
+                                        <div className="flex items-center gap-1.5 text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 italic">
+                                          <CheckCircle className="h-3 w-3 shrink-0" /> <span className="truncate">Lama: {doc.original_name}</span>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground text-center italic p-4 border border-dashed rounded bg-slate-50/50">Tidak ada dokumen pendukung tambahan.</p>
+                            )}
+                          </div>
+                        )}
 
                         <div className="space-y-1 pb-2 border-t pt-4">
                           <Label className="text-xs font-medium">Catatan Revisi untuk Approver</Label>
@@ -2357,80 +2383,87 @@ export default function Show() {
                         </div>
                       )}
 
-                      {/* Item Details Table (Original logic moved down) */}
-                      <div className="space-y-3">
-                        <label className="text-xs font-medium text-muted-foreground uppercase">Item Klaim EER</label>
-                        <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b bg-muted/30">
-                                  <th className="text-left p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Aktivitas / Nama Item</th>
-                                  <th className="text-center p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-16">Qty</th>
-                                  <th className="text-right p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Harga</th>
-                                  <th className="text-right p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Total</th>
-                                  <th className="text-left p-4 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-32">Kwitansi</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {eerItems.map(item => (
-                                  <tr key={item.id} className="border-b last:border-0 hover:bg-muted/10 transition-colors">
-                                    <td className="p-4">
-                                      <div className="space-y-1">
-                                        <p className="font-bold text-slate-900 leading-tight">{item.item_name}</p>
-                                        <p className="text-[10px] text-muted-foreground font-medium uppercase">{item.activity_name}</p>
-                                        {item.notes && <p className="text-[10px] text-muted-foreground italic truncate max-w-xs">{item.notes}</p>}
-                                      </div>
-                                    </td>
-                                    <td className="p-4 text-center text-slate-600 font-medium">{item.quantity}</td>
-                                    <td className="p-4 text-right font-mono text-slate-500">Rp {item.unit_price.toLocaleString('id-ID')}</td>
-                                    <td className="p-4 text-right font-mono font-bold text-slate-900">Rp {item.amount.toLocaleString('id-ID')}</td>
-                                    <td className="p-4">
-                                      <div className="flex items-center gap-2">
-                                        {item.receipt_path ? (
-                                          <a
-                                            href={`/storage/${item.receipt_path}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-bold hover:bg-emerald-100 transition-colors border border-emerald-100"
-                                          >
-                                            <Download className="h-3 w-3" /> LIHAT
-                                          </a>
-                                        ) : (
-                                          <span className="text-[10px] text-slate-400 italic">No receipt</span>
-                                        )}
+                      {/* Detail Pengeluaran EER (Single-Item Architecture) */}
+                      <div className="space-y-3 text-left">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Detail Pengeluaran EER</label>
+                        <div className="border rounded-2xl bg-white shadow-sm overflow-hidden p-6 space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Left column: Key details & Receipt */}
+                            <div className="space-y-5">
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nominal Klaim</span>
+                                <p className="text-2xl font-black text-slate-900 font-mono">
+                                  Rp {totalEerSpent.toLocaleString('id-ID')}
+                                </p>
+                              </div>
 
-                                        <Label
-                                          htmlFor={`upload-receipt-${item.id}`}
-                                          className="cursor-pointer inline-flex items-center justify-center p-1 hover:bg-slate-100 rounded-full transition-colors"
-                                        >
-                                          <Upload className="h-3 w-3 text-slate-400" />
-                                          <input
-                                            id={`upload-receipt-${item.id}`}
-                                            type="file"
-                                            className="hidden"
-                                            onChange={(e) => {
-                                              const file = e.target.files?.[0];
-                                              if (file) handleItemReceiptUpload(item.id, file);
-                                            }}
-                                          />
-                                        </Label>
+                              <div className="space-y-1.5">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kwitansi / Bukti Pembayaran</span>
+                                {eerItems[0]?.receipt_path ? (
+                                  <div className="flex items-center gap-3 p-3.5 bg-slate-50 border rounded-xl hover:bg-slate-100/80 transition-colors">
+                                    <div className="bg-rose-50 p-2.5 rounded-lg text-rose-600">
+                                      <FileText className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-slate-800 truncate">Kwitansi Pengeluaran</p>
+                                      <p className="text-[10px] text-muted-foreground">Format Image / PDF</p>
+                                    </div>
+                                    <a
+                                      href={`/storage/${eerItems[0].receipt_path}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-colors border border-emerald-100"
+                                    >
+                                      <Download className="h-3.5 w-3.5" /> LIHAT FILE
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-slate-400 italic bg-slate-50 border rounded-xl p-4 text-center">
+                                    Belum ada kwitansi yang diunggah.
+                                  </div>
+                                )}
+                              </div>
+                            </div>
 
+                            {/* Right column: Spreadsheet breakdown & Notes */}
+                            <div className="space-y-5">
+                              <div className="space-y-1.5">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">File Spreadsheet Excel (Detail Breakdown)</span>
+                                {(() => {
+                                  const excelDoc = data.documents?.find(d => d.type === 'excel');
+                                  return excelDoc ? (
+                                    <div className="flex items-center gap-3 p-3.5 bg-emerald-50/20 border border-emerald-100 rounded-xl hover:bg-emerald-50/40 transition-colors">
+                                      <div className="bg-emerald-500 p-2.5 rounded-lg text-white">
+                                        <FileSpreadsheet className="h-5 w-5" />
                                       </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                              <tfoot>
-                                <tr className="bg-slate-900 text-white">
-                                  <td colSpan={2} className="p-4 text-right font-bold text-[10px] uppercase tracking-widest text-slate-400">Total Klaim EER</td>
-                                  <td className="p-4 text-right font-mono font-black text-white text-base">
-                                    Rp {totalEerSpent.toLocaleString('id-ID')}
-                                  </td>
-                                  <td colSpan={2}></td>
-                                </tr>
-                              </tfoot>
-                            </table>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-emerald-950 truncate">{excelDoc.original_name}</p>
+                                        <p className="text-[10px] text-emerald-700">Format Microsoft Excel Spreadsheet</p>
+                                      </div>
+                                      <a
+                                        href={`/storage/${excelDoc.path}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                                      >
+                                        <Download className="h-3.5 w-3.5" /> DOWNLOAD
+                                      </a>
+                                    </div>
+                                  ) : (
+                                    <div className="text-sm text-slate-400 italic bg-slate-50 border rounded-xl p-4 text-center">
+                                      Belum ada file Excel detail breakdown.
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Catatan Tambahan</span>
+                                <div className="p-4 bg-slate-50 border rounded-xl min-h-[90px] text-sm text-slate-700 leading-relaxed font-normal whitespace-pre-wrap">
+                                  {eerItems[0]?.notes || <span className="text-slate-400 italic">Tidak ada catatan tambahan.</span>}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Exports;
 
 use App\Exports\Sheets\AtrSheet;
-use App\Exports\Sheets\EerSheet;
 use App\Models\Reimbursement;
 use App\Models\User;
 use App\Services\ReimbursementService;
@@ -30,6 +29,7 @@ final readonly class ReimbursementExport implements WithMultipleSheets
             'user', 'project.division', 'approvals.approver',
             'atrBudgetSelecteds.budgetDetail', 'items.budgetDetail',
             'eers.approvals.approver', 'eers.items', 'eers.user', 'eers.project.division',
+            'eers.documents',
             'atr',
         ];
 
@@ -42,11 +42,9 @@ final readonly class ReimbursementExport implements WithMultipleSheets
         $all = $query->latest()->get();
 
         $atrs = $all->where('type', \App\Enums\ReimbursementType::ATR)->values();
-        $eers = $all->where('type', \App\Enums\ReimbursementType::EER)->values();
 
         return [
             new AtrSheet($atrs),
-            new EerSheet($eers),
         ];
     }
 }

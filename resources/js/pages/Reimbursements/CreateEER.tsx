@@ -156,10 +156,10 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
         setItems(data.items.map((item: any) => ({
           id: item.id?.toString() || crypto.randomUUID(),
           project_budget_detail_id: item.activity_id,
-          item_name: item.item_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          amount: item.amount,
+          item_name: item.item_name || 'Pengeluaran EER',
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+          amount: item.amount || 0,
           expense_type: item.expense_type || '',
           receipt: null,
           receipt_path: item.receipt_path,
@@ -190,14 +190,17 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
     if (!selected) return;
 
     clearFieldError('atr_id');
+    const firstAtrItem = selected.items && selected.items[0];
+    const budgetDetailId = firstAtrItem ? firstAtrItem.activity_id : '';
+
     setItems([{
       id: crypto.randomUUID(),
-      project_budget_detail_id: '',
-      item_name: '',
+      project_budget_detail_id: budgetDetailId,
+      item_name: 'Pengeluaran EER',
       quantity: 1,
       unit_price: 0,
       amount: 0,
-      expense_type: '',
+      expense_type: firstAtrItem?.expense_type || 'other',
       receipt: null,
       notes: ''
     }]);
@@ -273,24 +276,6 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
   }, [selectedAtr]);
 
   // Item management
-  const addItem = () => {
-    setItems(prev => [...prev, {
-      id: crypto.randomUUID(),
-      project_budget_detail_id: '',
-      item_name: '',
-      quantity: 1,
-      unit_price: 0,
-      amount: 0,
-      expense_type: '',
-      receipt: null,
-      notes: ''
-    }]);
-  };
-
-  const removeItem = (id: string) => {
-    setItems(prev => prev.filter(i => i.id !== id));
-  };
-
   const updateItem = (id: string, field: string, value: any) => {
     setItems(prev => prev.map(i => {
       if (i.id !== id) return i;
@@ -300,6 +285,41 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
       }
       return updated;
     }));
+  };
+
+  const handleExcelChange = (file: File | null) => {
+    setDocuments(prev => {
+      const filtered = prev.filter(d => d.type !== 'excel');
+      if (file) {
+        return [...filtered, { id: crypto.randomUUID(), type: 'excel', file, original_name: file.name }];
+      }
+      return filtered;
+    });
+  };
+
+  const handleNominalChange = (value: number) => {
+    setItems(prev => {
+      let budgetDetailId: number | '' = '';
+      if (selectedAtr && selectedAtr.items && selectedAtr.items[0]) {
+        budgetDetailId = selectedAtr.items[0].activity_id;
+      }
+      const firstItem = prev[0] || {
+        id: crypto.randomUUID(),
+        project_budget_detail_id: budgetDetailId,
+        item_name: 'Pengeluaran EER',
+        quantity: 1,
+        unit_price: 0,
+        amount: 0,
+        expense_type: (selectedAtr && selectedAtr.items && selectedAtr.items[0]?.expense_type) || 'other',
+        receipt: null,
+        notes: ''
+      };
+      return [{
+        ...firstItem,
+        unit_price: value,
+        amount: value
+      }];
+    });
   };
 
   const totalEerAmount = useMemo(() => {
@@ -323,23 +343,22 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
 
   const handleSubmit = async (status: 'submitted' | 'draft' = 'submitted') => {
     if (status === 'submitted') {
-      if (items.length === 0 || totalEerAmount <= 0) {
-        setErrors({ _general: ['Tambahkan minimal 1 item pengeluaran.'] });
+      const firstItem = items[0];
+      if (!firstItem || firstItem.amount <= 0) {
+        setErrors({ _general: ['Nominal pengeluaran wajib diisi dan harus lebih besar dari 0.'] });
         return;
       }
 
-      // Validation: Check if all mandatory fields are filled
-      const isInvalid = items.some(i =>
-        !i.project_budget_detail_id ||
-        !i.item_name.trim() ||
-        i.quantity <= 0 ||
-        i.unit_price <= 0 ||
-        !i.expense_type ||
-        (hasRole(['finance', 'superadmin']) && !i.receipt)
-      );
+      const hasReceipt = firstItem.receipt || firstItem.receipt_path;
+      if (!hasReceipt) {
+        setErrors({ _general: ['Kwitansi / Bukti Pembayaran wajib diunggah.'] });
+        return;
+      }
 
-      if (isInvalid) {
-        setErrors({ _general: ['Semua detail item (Kegiatan, Nama, Qty, Harga, Jenis, Kwitansi) wajib diisi.'] });
+      const excelDoc = documents.find(d => d.type === 'excel');
+      const hasExcel = excelDoc && (excelDoc.file || excelDoc.original_name);
+      if (!hasExcel) {
+        setErrors({ _general: ['File Excel (Detail Breakdown) wajib diunggah.'] });
         return;
       }
 
@@ -514,8 +533,8 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
             <div className="p-6 md:p-8 bg-white">
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
                 <div>
-                  <h3 className="text-lg font-semibold mb-1">Rincian Pengeluaran Aktual (EER)</h3>
-                  <p className="text-sm text-muted-foreground">Input pengeluaran aktual secara manual. Semua detail item (Kegiatan, Nama, Qty, Harga, Jenis, Kwitansi) wajib diisi sesuai bukti pembayaran.</p>
+                  <h3 className="text-lg font-semibold mb-1">Form Pengeluaran EER</h3>
+                  <p className="text-sm text-muted-foreground">Isi detail pengeluaran EER dengan mengunggah spreadsheet Excel rincian dan bukti kwitansi.</p>
                 </div>
                 {selectedAtr && (
                   <div className="bg-slate-50 border p-3 rounded-lg text-right flex flex-col gap-1">
@@ -534,131 +553,105 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
 
               {selectedAtr ? (
                 <div className="space-y-6">
-                  {items.map((item, idx) => (
-                    <div key={item.id} className="border rounded-xl bg-slate-50/30 p-4 md:p-6 relative transition-all hover:border-blue-200 hover:shadow-sm">
-                      <div className="flex items-center justify-between mb-4 pb-2 border-b border-dashed">
-                        <h5 className="font-bold text-sm text-blue-900 flex items-center gap-2">
-                          <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px]">{idx + 1}</div>
-                          Item Pengeluaran
-                        </h5>
-                        {items.length > 1 && (
-                          <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => removeItem(item.id)}>
-                            <Trash2 className="h-3.5 w-3.5 mr-1" /> Hapus
-                          </Button>
-                        )}
-                      </div>
+                  {(() => {
+                    const firstItem = items[0] || {
+                      id: crypto.randomUUID(),
+                      project_budget_detail_id: '',
+                      item_name: 'Pengeluaran EER',
+                      quantity: 1,
+                      unit_price: 0,
+                      amount: 0,
+                      expense_type: '',
+                      receipt: null,
+                      notes: ''
+                    };
 
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
-                        {/* Row 1: Activity & Name */}
-                        <div className="md:col-span-12 lg:col-span-5 space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                            Pilih Kegiatan <span className="text-red-500">*</span>
-                          </Label>
-                          <SearchableSelect
-                            options={availableActivities.map(act => ({ value: act.id.toString(), label: act.name }))}
-                            value={item.project_budget_detail_id.toString()}
-                            onValueChange={(v) => updateItem(item.id, 'project_budget_detail_id', parseInt(v))}
-                            placeholder="Pilih kegiatan dari ATR..."
-                          />
-                        </div>
+                    const excelDoc = documents.find(d => d.type === 'excel');
 
-                        <div className="md:col-span-12 lg:col-span-7 space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                            Nama Barang / Pengeluaran <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            value={item.item_name}
-                            onChange={(e) => updateItem(item.id, 'item_name', e.target.value)}
-                            placeholder="Contoh: Tiket Pesawat JKT-SUB"
-                            className="h-10 text-sm bg-white"
-                          />
-                        </div>
+                    return (
+                      <div className="border rounded-xl bg-slate-50/30 p-4 md:p-6 transition-all hover:border-blue-200 hover:shadow-sm space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Left Column: Nominal and Notes */}
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                Nominal Pengeluaran <span className="text-red-500">*</span>
+                              </Label>
+                              <MoneyInput
+                                value={firstItem.unit_price}
+                                onValueChange={(v) => handleNominalChange(v.floatValue ?? 0)}
+                                placeholder="Masukkan nominal total pengeluaran..."
+                                className="h-11 text-base bg-white font-bold"
+                              />
+                            </div>
 
-                        {/* Row 2: Qty, Price, Type */}
-                        <div className="md:col-span-4 lg:col-span-2 space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                            Qty <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.quantity || ''}
-                            onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                            className="h-10 text-sm bg-white"
-                          />
-                        </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                Catatan Tambahan
+                              </Label>
+                              <Textarea
+                                value={firstItem.notes || ''}
+                                onChange={(e) => updateItem(firstItem.id, 'notes', e.target.value)}
+                                placeholder="Keterangan tambahan mengenai pengeluaran..."
+                                className="min-h-[148px] text-sm resize-none bg-white font-normal text-slate-800"
+                              />
+                            </div>
+                          </div>
 
-                        <div className="md:col-span-8 lg:col-span-4 space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                            Harga Satuan <span className="text-red-500">*</span>
-                          </Label>
-                          <MoneyInput
-                            value={item.unit_price}
-                            onValueChange={(v) => updateItem(item.id, 'unit_price', v.floatValue ?? 0)}
-                            placeholder="0"
-                            className="h-10 text-sm bg-white"
-                          />
-                        </div>
+                          {/* Right Column: Excel and Receipt Files */}
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                Upload File Excel Only <span className="text-red-500">*</span>
+                              </Label>
+                              <FileUploadDropzone
+                                className="bg-white h-[96px] overflow-hidden rounded-lg"
+                                multiple={false}
+                                accept=".xlsx,.xls"
+                                labelText="Klik untuk upload Excel (.xlsx, .xls)"
+                                helperText="Hanya menerima file format spreadsheet Excel"
+                                onFilesChange={(files: File[]) => handleExcelChange(files[0] ?? null)}
+                              />
+                              {excelDoc?.file && (
+                                <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100">
+                                  <CheckCircle className="h-3 w-3" /> Terlampir: {excelDoc.file.name}
+                                </div>
+                              )}
+                              {!excelDoc?.file && excelDoc?.original_name && (
+                                <div className="flex items-center gap-2 text-[10px] text-blue-600 bg-blue-50 p-1.5 rounded mt-1 border border-blue-100">
+                                  <CheckCircle className="h-3 w-3" /> Excel Tersimpan: <span className="font-bold">{excelDoc.original_name}</span>
+                                </div>
+                              )}
+                            </div>
 
-                        <div className="md:col-span-12 lg:col-span-3 space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                            Jenis Expense <span className="text-red-500">*</span>
-                          </Label>
-                          <SearchableSelect
-                            options={expenseTypes.map(t => ({ value: t.value, label: t.label }))}
-                            value={item.expense_type}
-                            onValueChange={(v) => updateItem(item.id, 'expense_type', v)}
-                            placeholder="Pilih..."
-                            className="h-10"
-                          />
-                        </div>
-
-                        <div className="md:col-span-12 lg:col-span-3 space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Jumlah Total</Label>
-                          <div className="h-10 bg-emerald-50 border border-emerald-100 rounded-md flex items-center px-4 font-bold text-emerald-800 text-sm">
-                            {fmt(item.amount)}
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                Receipt / Kwitansi (PDF/JPEG) <span className="text-red-500">*</span>
+                              </Label>
+                              <FileUploadDropzone
+                                className="bg-white h-[96px] overflow-hidden rounded-lg"
+                                multiple={false}
+                                accept="image/*,.pdf"
+                                labelText="Klik untuk upload Receipt (PDF, JPEG, PNG)"
+                                helperText="Hanya menerima format gambar atau dokumen PDF"
+                                onFilesChange={(files: File[]) => updateItem(firstItem.id, 'receipt', files[0] ?? null)}
+                              />
+                              {firstItem.receipt && (
+                                <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100">
+                                  <CheckCircle className="h-3 w-3" /> Terlampir: {firstItem.receipt.name}
+                                </div>
+                              )}
+                              {!firstItem.receipt && firstItem.receipt_path && (
+                                <div className="flex items-center gap-2 text-[10px] text-blue-600 bg-blue-50 p-1.5 rounded mt-1 border border-blue-100">
+                                  <CheckCircle className="h-3 w-3" /> Kwitansi Tersimpan: <a href={firstItem.receipt_path} target="_blank" rel="noopener noreferrer" className="underline font-bold">Lihat File</a>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-
-                        {/* Row 3: Receipt & Notes */}
-                        {/* {hasRole(['finance', 'superadmin']) && ( */}
-                        <div className="md:col-span-12 lg:col-span-6 space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                            KWITANSI / BUKTI PEMBAYARAN <span className="text-red-500 ml-1">*</span>
-                          </Label>
-                          <FileUploadDropzone
-                            className="bg-white h-[120px] overflow-hidden rounded-lg"
-                            onFilesChange={(files: File[]) => updateItem(item.id, 'receipt', files[0] ?? null)}
-                          />
-                          {item.receipt && (
-                            <div className="flex items-center gap-2 text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded mt-1 border border-emerald-100">
-                              <CheckCircle className="h-3 w-3" /> Terlampir: {item.receipt.name}
-                            </div>
-                          )}
-                          {!item.receipt && item.receipt_path && (
-                            <div className="flex items-center gap-2 text-[10px] text-blue-600 bg-blue-50 p-1.5 rounded mt-1 border border-blue-100">
-                              <CheckCircle className="h-3 w-3" /> Kwitansi Tersimpan: <a href={item.receipt_path} target="_blank" rel="noopener noreferrer" className="underline font-bold">Lihat File</a>
-                            </div>
-                          )}
-                        </div>
-                        {/* )} */}
-
-                        <div className="md:col-span-12 lg:col-span-6 space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">CATATAN TAMBAHAN</Label>
-                          <Textarea
-                            value={item.notes}
-                            onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
-                            placeholder="Keterangan tambahan untuk item ini..."
-                            className="min-h-[120px] text-sm resize-none bg-white font-normal"
-                          />
-                        </div>
                       </div>
-                    </div>
-                  ))}
-
-                  <Button type="button" variant="outline" className="w-full border-dashed h-12 text-slate-500 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50" onClick={addItem}>
-                    <Plus className="h-4 w-4 mr-2" /> Tambah Item Pengeluaran Baru
-                  </Button>
+                    );
+                  })()}
 
                   {/* Total Checking */}
                   <div className="space-y-4">
@@ -790,77 +783,6 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                 <div className="py-12 text-center rounded-xl border border-dashed border-slate-300 bg-slate-50/50">
                   <Briefcase className="h-10 w-10 text-slate-300 mx-auto mb-3" />
                   <p className="text-slate-500 font-medium">Pilih ATR terlebih dahulu untuk mulai memasukkan pengeluaran.</p>
-                </div>
-              )}
-            </div>
-
-            <Separator />
-
-            {/* Dokumen Pendukung */}
-            <div className="p-6 md:p-8 bg-white">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-1">Dokumen Pendukung</h3>
-                  <p className="text-sm text-muted-foreground">Lampirkan dokumen pendukung seperti TOR, Invoice, atau dokumen lainnya (Opsional).</p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDocuments(prev => [...prev, { id: crypto.randomUUID(), file: null, type: 'other' }])}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" /> Tambah Dokumen
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {documents.map((doc, index) => (
-                  <div key={doc.id} className="border rounded-xl p-4 bg-slate-50/50 space-y-3 relative">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 absolute top-2 right-2 text-red-500 hover:bg-red-50"
-                      onClick={() => setDocuments(prev => prev.filter(d => d.id !== doc.id))}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs uppercase font-bold text-muted-foreground">Nama / Jenis Dokumen</Label>
-                      <Input
-                        placeholder="Contoh: TOR, Invoice, dll"
-                        className="h-9 bg-white text-sm"
-                        value={doc.type}
-                        onChange={(e) => setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, type: e.target.value } : d))}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs uppercase font-bold text-muted-foreground">File Dokumen</Label>
-                      <FileUploadDropzone
-                        className="h-24 bg-white"
-                        onFilesChange={(files) => setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] ?? null } : d))}
-                      />
-                      {doc.file ? (
-                        <p className="text-[10px] text-emerald-600 font-medium truncate mt-2">
-                          Terlampir: {doc.file.name}
-                        </p>
-                      ) : doc.original_name ? (
-                        <p className="text-[10px] text-emerald-600 font-medium truncate mt-2">
-                          ✓ Tersimpan: {doc.original_name}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {documents.length === 0 && (
-                <div className="text-center py-8 border border-dashed rounded-xl bg-slate-50/50">
-                  <Briefcase className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-                  <p className="text-sm text-slate-500 italic">Belum ada dokumen tambahan yang dilampirkan.</p>
                 </div>
               )}
             </div>

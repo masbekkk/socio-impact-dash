@@ -125,6 +125,10 @@ final class ReimbursementResource extends JsonResource
                     'id' => $app->id,
                     'role' => $app->role instanceof \UnitEnum ? $app->role->value : $app->role,
                     'status' => $app->status instanceof \UnitEnum ? $app->status->value : $app->status,
+                    'approver' => [
+                        'id' => $app->approver?->id,
+                        'name' => $app->approver?->name,
+                    ],
                 ]),
             ])),
             'approvals' => $this->whenLoaded('approvals', function (): \Illuminate\Support\Collection {
