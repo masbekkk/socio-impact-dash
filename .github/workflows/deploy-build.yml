@@ -3,10 +3,10 @@ name: Build, Push to Build Branch, and Deploy
 on:
   push:
     branches:
-      - v2.3.27
+      - v3.5.9-rev-finance
   pull_request:
     branches:
-      - v2.3.27
+      - v3.5.9-rev-finance
     types: [closed]
 
 permissions:
