@@ -918,11 +918,39 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                                   </Badge>
                                                 </TableCell>
                                                 <TableCell className="py-2 text-right">
-                                                  <Button variant="ghost" size="sm" asChild className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
-                                                    <Link href={`/reimbursements/${eer.id}`}>
-                                                      <Eye className="h-3.5 w-3.5 mr-1" /> Lihat
-                                                    </Link>
-                                                  </Button>
+                                                  <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                      <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <span className="sr-only">Open menu</span>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                      </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                      <DropdownMenuItem asChild>
+                                                        <Link href={`/reimbursements/${eer.id}`} className="cursor-pointer">
+                                                          <Eye className="mr-2 h-4 w-4" /> Lihat Detail
+                                                        </Link>
+                                                      </DropdownMenuItem>
+                                                      {eer.status === 'draft' && eer.user?.id === auth.user.id && (
+                                                        <DropdownMenuItem asChild>
+                                                          <Link href={`/reimbursements/${eer.id}/edit`} className="cursor-pointer">
+                                                            <FileText className="mr-2 h-4 w-4" /> Edit Draft
+                                                          </Link>
+                                                        </DropdownMenuItem>
+                                                      )}
+                                                      {(isSuperadmin || isFinance || (eer.user?.id === auth.user.id)) && (
+                                                        <>
+                                                          <DropdownMenuSeparator />
+                                                          <DropdownMenuItem
+                                                            className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                                                            onClick={() => handleDelete(eer.id)}
+                                                          >
+                                                            <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                                                          </DropdownMenuItem>
+                                                        </>
+                                                      )}
+                                                    </DropdownMenuContent>
+                                                  </DropdownMenu>
                                                 </TableCell>
                                               </TableRow>
                                             );

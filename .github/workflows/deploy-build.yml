@@ -63,7 +63,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Switch to 'buildv2.3.27' branch, or create it based on current commit on v2.3.27
+          # Switch to 'buildv2.3.27' branch, or create it based on current commit on v3.5.9-rev-finance
           git checkout -B buildv2.3.27
           
           # Force add the 'public/build' directory, SSR bundle, and wayfinder generated files
@@ -74,7 +74,7 @@ jobs:
           git add -f resources/js/wayfinder/
           
           # Commit the changes (it will safely do nothing if there are no changes)
-          git commit -m "Auto-build assets from v2.3.27 ($GITHUB_SHA)" || echo "No changes to commit"
+          git commit -m "Auto-build assets from v3.5.9-rev-finance ($GITHUB_SHA)" || echo "No changes to commit"
           
           # Force push the 'build' branch back to GitHub
           # The secrets.GITHUB_TOKEN is automatically provided by GitHub Actions
