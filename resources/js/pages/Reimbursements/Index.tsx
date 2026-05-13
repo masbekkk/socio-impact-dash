@@ -938,7 +938,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                                           </Link>
                                                         </DropdownMenuItem>
                                                       )}
-                                                      {(isSuperadmin || isFinance || (eer.user?.id === auth.user.id)) && (
+                                                      {(isSuperadmin || isFinance || eer.user?.id === auth.user.id) && (
                                                         <>
                                                           <DropdownMenuSeparator />
                                                           <DropdownMenuItem

@@ -60,7 +60,7 @@ final class DashboardController extends Controller
                             ->where('status', \App\Enums\ApprovalStatus::Pending)
                             ->where('role', 'head');
                     })
-                    ->where('status', \App\Enums\ReimbursementStatus::Submitted)
+                    ->whereIn('status', [\App\Enums\ReimbursementStatus::Submitted, \App\Enums\ReimbursementStatus::Revised])
                     ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
                     ->get()
             )->resolve();
@@ -114,7 +114,7 @@ final class DashboardController extends Controller
 
         // HR Logic
         if (in_array('hr', $roles)) {
-            $approvalItems['hr_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
+            $approvalItems['hr_allowances'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
                 \App\Models\Reimbursement::query()
                     ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
                     ->where('type', \App\Enums\ReimbursementType::ALLOWANCE)
