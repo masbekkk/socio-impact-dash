@@ -116,7 +116,7 @@ final class LeaveController
         $ids = $request->input('ids', []);
         $role = $request->input('role');
         $user = Auth::user();
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         if ($user && ! empty($ids)) {
             $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkApproveLeaves(new \App\Actions\ApproveLeaveAction());
@@ -132,7 +132,7 @@ final class LeaveController
         $notes = $request->input('notes', []);
         $role = $request->input('role');
         $user = Auth::user();
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         if ($user && ! empty($ids)) {
             $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkRejectLeaves(new \App\Actions\RejectLeaveAction());
@@ -148,7 +148,7 @@ final class LeaveController
         $notes = $request->input('notes', []);
         $role = $request->input('role');
         $user = Auth::user();
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         if ($user && ! empty($ids)) {
             $role = $role ?? $user->getRoleNames()->first();
             $bulkAction = new \App\Actions\BulkRevisionLeaves(new \App\Actions\RevisionLeaveAction());

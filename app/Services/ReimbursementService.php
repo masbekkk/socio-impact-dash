@@ -6,13 +6,30 @@ namespace App\Services;
 
 use App\Models\Reimbursement;
 use App\Models\User;
+use Closure;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 final class ReimbursementService
 {
     public function listReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Reimbursement::with(['user', 'project', 'documents', 'approvals.approver', 'atrBudgetSelecteds', 'eers.user', 'eers.project', 'eers.approvals.approver']);
+        $isAtrTab = ($filters['type'] ?? '') === 'atr';
+        $eerFilterClosure = $isAtrTab ? $this->buildEerFilterClosure($filters) : null;
+
+        $eagerLoads = ['user', 'project', 'documents', 'approvals.approver', 'atrBudgetSelecteds'];
+
+        if ($eerFilterClosure !== null) {
+            $eagerLoads['eers'] = $eerFilterClosure;
+            $eagerLoads[] = 'eers.user';
+            $eagerLoads[] = 'eers.project';
+            $eagerLoads[] = 'eers.approvals.approver';
+        } else {
+            $eagerLoads[] = 'eers.user';
+            $eagerLoads[] = 'eers.project';
+            $eagerLoads[] = 'eers.approvals.approver';
+        }
+
+        $query = Reimbursement::with($eagerLoads);
 
         $this->applyFilters($query, $user, $filters);
 
@@ -57,19 +74,39 @@ final class ReimbursementService
             $query->where('user_id', $user->id);
         }
 
+        $isAtrTab = ($filters['type'] ?? '') === 'atr';
+
         if (! empty($filters['status'])) {
             $status = $filters['status'];
             if (is_string($status) && str_contains($status, ',')) {
                 $status = explode(',', $status);
             }
 
-            if (is_array($status)) {
-                $query->whereIn('status', $status);
-            } elseif ($status === 'revision' || $status === 'revised') {
-                // Special handling for 'revision' to include both 'revised' and 'revision'
-                $query->whereIn('status', ['revision', 'revised']);
+            $statusCondition = function (\Illuminate\Database\Eloquent\Builder $q) use ($status): void {
+                if (is_array($status)) {
+                    $q->whereIn('status', $status);
+                } elseif ($status === 'revision' || $status === 'revised') {
+                    $q->whereIn('status', ['revision', 'revised']);
+                } else {
+                    $q->where('status', $status);
+                }
+            };
+
+            if ($isAtrTab) {
+                $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($statusCondition, $status): void {
+                    $statusCondition($q);
+                    $q->orWhereHas('eers', function (\Illuminate\Database\Eloquent\Builder $eerQ) use ($status): void {
+                        if (is_array($status)) {
+                            $eerQ->whereIn('status', $status);
+                        } elseif ($status === 'revision' || $status === 'revised') {
+                            $eerQ->whereIn('status', ['revision', 'revised']);
+                        } else {
+                            $eerQ->where('status', $status);
+                        }
+                    });
+                });
             } else {
-                $query->where('status', $status);
+                $statusCondition($query);
             }
         }
 
@@ -89,16 +126,30 @@ final class ReimbursementService
         }
 
         if (! empty($filters['start_date'])) {
-            $query->whereDate('created_at', '>=', $filters['start_date']);
+            if ($isAtrTab) {
+                $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($filters): void {
+                    $q->whereDate('created_at', '>=', $filters['start_date'])
+                        ->orWhereHas('eers', fn (\Illuminate\Database\Eloquent\Builder $eerQ) => $eerQ->whereDate('created_at', '>=', $filters['start_date']));
+                });
+            } else {
+                $query->whereDate('created_at', '>=', $filters['start_date']);
+            }
         }
 
         if (! empty($filters['end_date'])) {
-            $query->whereDate('created_at', '<=', $filters['end_date']);
+            if ($isAtrTab) {
+                $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($filters): void {
+                    $q->whereDate('created_at', '<=', $filters['end_date'])
+                        ->orWhereHas('eers', fn (\Illuminate\Database\Eloquent\Builder $eerQ) => $eerQ->whereDate('created_at', '<=', $filters['end_date']));
+                });
+            } else {
+                $query->whereDate('created_at', '<=', $filters['end_date']);
+            }
         }
 
         if (! empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search): void {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search, $isAtrTab): void {
                 $q->where('code', 'like', "%{$search}%")
                     ->orWhere('usage_plan', 'like', "%{$search}%")
                     ->orWhere('amount', 'like', "%{$search}%")
@@ -109,6 +160,15 @@ final class ReimbursementService
                             ->orWhere('code', 'like', "%{$search}%")
                             ->orWhere('initial_project', 'like', "%{$search}%");
                     });
+
+                if ($isAtrTab) {
+                    $q->orWhereHas('eers', function (\Illuminate\Database\Eloquent\Builder $eerQ) use ($search): void {
+                        $eerQ->where('code', 'like', "%{$search}%")
+                            ->orWhere('usage_plan', 'like', "%{$search}%")
+                            ->orWhere('amount', 'like', "%{$search}%")
+                            ->orWhereHas('user', fn (\Illuminate\Database\Eloquent\Builder $u) => $u->where('name', 'like', "%{$search}%"));
+                    });
+                }
             });
         }
     }
@@ -124,5 +184,47 @@ final class ReimbursementService
         }
 
         return $query->where('code', $identifier)->first();
+    }
+
+    /**
+     * Build a closure that constrains the eager-loaded eers relationship
+     * to only include EERs matching the active filters.
+     */
+    private function buildEerFilterClosure(array $filters): Closure
+    {
+        return function (\Illuminate\Database\Eloquent\Relations\HasMany $q) use ($filters): void {
+            if (! empty($filters['status'])) {
+                $status = $filters['status'];
+                if (is_string($status) && str_contains($status, ',')) {
+                    $status = explode(',', $status);
+                }
+
+                if (is_array($status)) {
+                    $q->whereIn('status', $status);
+                } elseif ($status === 'revision' || $status === 'revised') {
+                    $q->whereIn('status', ['revision', 'revised']);
+                } else {
+                    $q->where('status', $status);
+                }
+            }
+
+            if (! empty($filters['start_date'])) {
+                $q->whereDate('created_at', '>=', $filters['start_date']);
+            }
+
+            if (! empty($filters['end_date'])) {
+                $q->whereDate('created_at', '<=', $filters['end_date']);
+            }
+
+            if (! empty($filters['search'])) {
+                $search = $filters['search'];
+                $q->where(function (\Illuminate\Database\Eloquent\Builder $sq) use ($search): void {
+                    $sq->where('code', 'like', "%{$search}%")
+                        ->orWhere('usage_plan', 'like', "%{$search}%")
+                        ->orWhere('amount', 'like', "%{$search}%")
+                        ->orWhereHas('user', fn (\Illuminate\Database\Eloquent\Builder $u) => $u->where('name', 'like', "%{$search}%"));
+                });
+            }
+        };
     }
 }

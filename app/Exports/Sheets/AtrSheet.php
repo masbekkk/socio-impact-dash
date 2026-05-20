@@ -106,17 +106,17 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
 
                 // Find EER excel document
                 $eerExcelDoc = $eer->documents->first(fn ($d): bool => $d->type === 'excel');
-                $eerExcelUrl = $eerExcelDoc ? asset('storage/' . $eerExcelDoc->path) : '-';
+                $eerExcelUrl = $eerExcelDoc ? asset('storage/'.$eerExcelDoc->path) : '-';
 
                 $eerStatus = $eer->status?->value ?? '-';
                 $eerType = $eer->eer_type ?? '-';
                 $eerDiff = abs((float) $eer->amount - (float) $r->amount);
                 $eerNominal = (float) $eer->amount;
                 $eerTransferred = (float) ($eer->transferred_amount ?? 0);
-                $eerProof = $eer->transfer_proof_path ? asset('storage/' . $eer->transfer_proof_path) : '-';
+                $eerProof = $eer->transfer_proof_path ? asset('storage/'.$eer->transfer_proof_path) : '-';
 
                 $eerItemNotes = $eerItem?->notes ?? $eer->usage_plan ?? '-';
-                $eerItemReceipt = $eerItem?->receipt_path ? asset('storage/' . $eerItem->receipt_path) : '-';
+                $eerItemReceipt = $eerItem?->receipt_path ? asset('storage/'.$eerItem->receipt_path) : '-';
 
                 $eerHeadName = $eerHead?->approver?->name ?? '-';
                 $eerHeadStatus = $eerHead?->status?->value ?? '-';
@@ -168,7 +168,7 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
                 $r->end_date?->format('Y-m-d') ?? '-',
                 (float) $r->amount,
                 (float) ($r->transferred_amount ?? 0),
-                $r->transfer_proof_path ? asset('storage/' . $r->transfer_proof_path) : '-',
+                $r->transfer_proof_path ? asset('storage/'.$r->transfer_proof_path) : '-',
                 $budgetItems ?: '-',
                 $r->usage_plan ?? '-',
                 $r->bank_name ?? '-',

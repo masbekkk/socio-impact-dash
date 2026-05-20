@@ -88,7 +88,7 @@ final class Reimbursement extends Model
 
     public function getRefundReimburseAmountAttribute(): ?float
     {
-        if ($this->type !== ReimbursementType::EER || !$this->atr_id) {
+        if ($this->type !== ReimbursementType::EER || ! $this->atr_id) {
             return null;
         }
 
@@ -101,6 +101,11 @@ final class Reimbursement extends Model
 
         self::deleting(function (self $model): void {
             if (! $model->isForceDeleting()) {
+                if ($model->code && ! str_starts_with($model->code, '//')) {
+                    $model->code = '//'.$model->code;
+                    $model->updateQuietly(['code' => $model->code]);
+                }
+
                 $model->documents()->delete();
                 $model->approvals()->delete();
                 $model->items()->delete();

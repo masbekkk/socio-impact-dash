@@ -148,18 +148,18 @@ final class LetterRequestController extends Controller
         $oldDate = \Illuminate\Support\Facades\Date::parse($letterRequest->letter_date);
         $newDate = \Illuminate\Support\Facades\Date::parse($validated['letter_date']);
 
-        if ($oldDate->year != $newDate->year ||
-            $oldDate->month != $newDate->month ||
-            $letterRequest->letter_code_id != $validated['letter_code_id'] ||
-            $letterRequest->letter_division_id != $validated['letter_division_id'] ||
-            $letterRequest->division_id != $validated['division_id']) {
+        if ($oldDate->year !== $newDate->year ||
+            $oldDate->month !== $newDate->month ||
+            $letterRequest->letter_code_id !== $validated['letter_code_id'] ||
+            $letterRequest->letter_division_id !== $validated['letter_division_id'] ||
+            $letterRequest->division_id !== $validated['division_id']) {
             $needsNewNumber = true;
         }
 
         // If date changed, check if it became a backdate or needs a new backdate sequence
         if (! $needsNewNumber && $oldDate->toDateString() !== $newDate->toDateString()) {
             $perusahaan = DivisionCode::query()->find($validated['division_id'])->code;
-            
+
             $latestIssued = LetterRequest::query()
                 ->whereYear('letter_date', $newDate->year)
                 ->whereNotNull('letter_number')
@@ -170,7 +170,7 @@ final class LetterRequestController extends Controller
                 ->first();
 
             $isBackdate = $latestIssued && $newDate->lt($latestIssued->letter_date->startOfDay());
-            
+
             if ($isBackdate) {
                 $needsNewNumber = true;
             }
@@ -332,7 +332,7 @@ final class LetterRequestController extends Controller
         $existingSuffixes = [];
         foreach ($allRequests as $req) {
             $parts = explode('/', (string) $req->letter_number);
-            if (str_starts_with($parts[0], $baseStr . '.')) {
+            if (str_starts_with($parts[0], $baseStr.'.')) {
                 $suffix = mb_substr($parts[0], mb_strlen($baseStr) + 1);
                 $existingSuffixes[] = $suffix;
             }

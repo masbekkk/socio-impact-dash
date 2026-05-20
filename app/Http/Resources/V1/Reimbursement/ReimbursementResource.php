@@ -105,9 +105,9 @@ final class ReimbursementResource extends JsonResource
             'eers' => $this->whenLoaded('eers', fn (): \Illuminate\Support\Collection => $this->eers->map(fn (\App\Models\Reimbursement $item): array => [
                 'id' => $item->id,
                 'code' => $item->code,
-                'type' => $item->type instanceof \UnitEnum ? $item->type->value : $item->type,
+                'type' => $item->type instanceof UnitEnum ? $item->type->value : $item->type,
                 'eer_type' => $item->eer_type,
-                'status' => $item->status instanceof \UnitEnum ? $item->status->value : $item->status,
+                'status' => $item->status instanceof UnitEnum ? $item->status->value : $item->status,
                 'amount' => (float) $item->amount,
                 'usage_plan' => $item->usage_plan,
                 'urgency' => $item->urgency,
@@ -123,8 +123,8 @@ final class ReimbursementResource extends JsonResource
                 ],
                 'approvals' => $item->approvals->map(fn ($app): array => [
                     'id' => $app->id,
-                    'role' => $app->role instanceof \UnitEnum ? $app->role->value : $app->role,
-                    'status' => $app->status instanceof \UnitEnum ? $app->status->value : $app->status,
+                    'role' => $app->role instanceof UnitEnum ? $app->role->value : $app->role,
+                    'status' => $app->status instanceof UnitEnum ? $app->status->value : $app->status,
                     'approver' => [
                         'id' => $app->approver?->id,
                         'name' => $app->approver?->name,

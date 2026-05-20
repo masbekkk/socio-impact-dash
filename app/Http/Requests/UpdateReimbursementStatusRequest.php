@@ -31,16 +31,16 @@ final class UpdateReimbursementStatusRequest extends FormRequest
                     if ($this->input('action') !== 'transferred') {
                         return false;
                     }
-                    
+
                     $reimbursement = $this->route('reimbursement');
                     if (is_string($reimbursement) || is_numeric($reimbursement)) {
                         $reimbursement = \App\Models\Reimbursement::find($reimbursement);
                     }
-                    
+
                     if ($reimbursement && $reimbursement->type === \App\Enums\ReimbursementType::ALLOWANCE) {
                         return false;
                     }
-                    
+
                     return true;
                 }),
             ],
