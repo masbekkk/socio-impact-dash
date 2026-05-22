@@ -12,6 +12,9 @@ use Illuminate\Support\Collection;
 
 final readonly class GetCalendarEvents
 {
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
     public function handle(User $user): Collection
     {
         $projectsQuery = Project::query();
@@ -34,9 +37,11 @@ final readonly class GetCalendarEvents
             $visibleProjectIds = $projectsQuery->pluck('id');
             $eventsQuery->where(function ($q) use ($user, $visibleProjectIds): void {
                 $q->whereIn('project_id', $visibleProjectIds)
-                    ->orWhere('created_by', $user->id);
+                    ->orWhere('created_by', $user->id)
+                    ->orWhereHas('attendees', function ($query) use ($user): void {
+                        $query->where('users.id', $user->id);
+                    });
             });
-
         } else {
             // PEGAWAI
             $projectsQuery->where(function ($q) use ($user): void {
@@ -48,31 +53,35 @@ final readonly class GetCalendarEvents
             $visibleProjectIds = $projectsQuery->pluck('id');
             $eventsQuery->where(function ($q) use ($user, $visibleProjectIds): void {
                 $q->whereIn('project_id', $visibleProjectIds)
-                    ->orWhere('created_by', $user->id);
+                    ->orWhere('created_by', $user->id)
+                    ->orWhereHas('attendees', function ($query) use ($user): void {
+                        $query->where('users.id', $user->id);
+                    });
             });
         }
 
         // 2. Fetch Data
         // Only fetch events for the simplified view
-        $events = $eventsQuery->with('project:id,name')->get(['id', 'name', 'start_date', 'end_date', 'project_id', 'notes']);
+        $events = $eventsQuery->with(['project:id,name', 'attendees:id,name', 'creator:id,name'])->get();
 
+        /** @var \Illuminate\Support\Collection<int, array<string, mixed>> $calendarEvents */
         $calendarEvents = collect();
 
         // 3. Map to Standardized DTO array
         foreach ($events as $event) {
-            if ($event->start_date) {
-                $titlePrefix = $event->project_id ? "Event ({$event->project->name}): " : '';
-                $calendarEvents->push([
-                    'id' => 'event_'.$event->id,
-                    'title' => $titlePrefix.$event->name,
-                    'date' => $event->start_date->format('Y-m-d'),
-                    'endDate' => $event->end_date ? $event->end_date->format('Y-m-d') : null,
-                    'type' => 'event',
-                    'description' => $event->notes,
-                    'project_name' => $event->project->name ?? null,
-                    'allDay' => true,
-                ]);
-            }
+            $titlePrefix = ($event->project_id && $event->project) ? 'Event ('.(string) $event->project->name.'): ' : '';
+            $calendarEvents->push([
+                'id' => 'event_'.$event->id,
+                'title' => $titlePrefix.$event->name,
+                'date' => $event->start_date->format('Y-m-d'),
+                'endDate' => $event->end_date ? $event->end_date->format('Y-m-d') : null,
+                'type' => 'event',
+                'description' => $event->notes,
+                'project_name' => $event->project?->name,
+                'allDay' => true,
+                'attendees' => $event->attendees->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->toArray(),
+                'creator_name' => $event->creator->name ?? null,
+            ]);
         }
 
         return $calendarEvents;

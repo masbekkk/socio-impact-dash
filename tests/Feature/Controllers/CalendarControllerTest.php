@@ -62,6 +62,8 @@ it('fetches only own events for pegawai', function (): void {
 });
 
 it('allows creating calendar event', function (): void {
+    $this->pegawai->givePermissionTo('add_event_calendar');
+
     actingAs($this->pegawai)
         ->post(route('calendar.store'), [
             'name' => 'General Test Event',
@@ -95,6 +97,7 @@ it('forbids creating calendar event without permission', function (): void {
 
 it('allows creating calendar project event', function (): void {
     $ownProject = Project::factory()->create(['created_by' => $this->pegawai->id]);
+    $this->pegawai->givePermissionTo('add_event_calendar');
 
     actingAs($this->pegawai)
         ->post(route('calendar.store'), [
@@ -124,7 +127,7 @@ it('allows deleting own calendar event', function (): void {
         ->delete(route('calendar.destroy', $event->id))
         ->assertRedirect();
 
-    $this->assertDatabaseMissing('project_events', ['id' => $event->id]);
+    $this->assertSoftDeleted($event);
 });
 
 it('forbids deleting other users calendar event for non-admin', function (): void {
@@ -155,5 +158,71 @@ it('allows superadmin to delete any event', function (): void {
         ->delete(route('calendar.destroy', $event->id))
         ->assertRedirect();
 
-    $this->assertDatabaseMissing('project_events', ['id' => $event->id]);
+    $this->assertSoftDeleted($event);
+});
+
+it('saves event invitations and dispatches notification when creating event', function (): void {
+    $invitedUser = User::factory()->create();
+    $this->pegawai->givePermissionTo('add_event_calendar');
+
+    actingAs($this->pegawai)
+        ->post(route('calendar.store'), [
+            'name' => 'Invited Meeting',
+            'start_date' => now()->format('Y-m-d'),
+            'user_ids' => [$invitedUser->id],
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('project_events', [
+        'name' => 'Invited Meeting',
+        'created_by' => $this->pegawai->id,
+    ]);
+
+    $event = ProjectEvent::where('name', 'Invited Meeting')->firstOrFail();
+
+    $this->assertDatabaseHas('project_event_user', [
+        'project_event_id' => $event->id,
+        'user_id' => $invitedUser->id,
+    ]);
+
+    $this->assertDatabaseHas('notifications', [
+        'type' => 'calendar_event_invited',
+        'reference_type' => 'project_event',
+        'reference_id' => $event->id,
+    ]);
+});
+
+it('shows invited event on invited users calendar index and hides it from non-invited users', function (): void {
+    $invitedUser = User::factory()->withRole(UserRole::Pegawai)->create();
+    $otherUser = User::factory()->withRole(UserRole::Pegawai)->create();
+
+    $event = ProjectEvent::factory()->create([
+        'project_id' => null,
+        'created_by' => $this->superadmin->id,
+        'name' => 'Secret Board Meeting',
+    ]);
+
+    $event->attendees()->attach($invitedUser->id);
+
+    $this->assertDatabaseHas('project_event_user', [
+        'project_event_id' => $event->id,
+        'user_id' => $invitedUser->id,
+    ]);
+
+    // Check that the invited user can see it in their events
+    actingAs($invitedUser)
+        ->get(route('calendar.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('events', 1)
+            ->where('events.0.id', 'event_'.$event->id)
+        );
+
+    // Check that the non-invited user cannot see it
+    actingAs($otherUser)
+        ->get(route('calendar.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('events', 0)
+        );
 });

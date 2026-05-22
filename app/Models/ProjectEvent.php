@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 final class ProjectEvent extends Model
@@ -29,13 +30,27 @@ final class ProjectEvent extends Model
         'event_date' => 'date', // Keeping for backward compatibility
     ];
 
+    /**
+     * @return BelongsTo<Project, $this>
+     */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return BelongsToMany<User, $this>
+     */
+    public function attendees(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'project_event_user', 'project_event_id', 'user_id')->withTimestamps();
     }
 }

@@ -20,6 +20,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import DatePicker from '@/components/DatePicker';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { cn } from '@/lib/utils';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
@@ -52,6 +53,11 @@ import React, { useState } from 'react';
 
 type EventType = 'event';
 
+interface UserData {
+    id: number;
+    name: string;
+}
+
 interface CalendarEvent {
     id: string;
     title: string;
@@ -62,6 +68,8 @@ interface CalendarEvent {
     project_name?: string | null;
     allDay?: boolean;
     route?: string;
+    attendees?: UserData[];
+    creator_name?: string | null;
 }
 
 interface ProjectData {
@@ -72,6 +80,7 @@ interface ProjectData {
 interface PageProps {
     events: CalendarEvent[];
     projects: ProjectData[];
+    users?: UserData[];
     auth: {
         user: any;
         permissions: string[];
@@ -89,6 +98,7 @@ const EVENT_LABELS: Record<EventType, string> = {
 export default function CalendarIndex({
     events = [],
     projects = [],
+    users = [],
 }: PageProps) {
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -126,12 +136,19 @@ export default function CalendarIndex({
         end_date: '',
         project_id: 'none',
         notes: '',
+        user_ids: [] as number[],
     });
 
     const handleOpenDialog = (date: Date = new Date()) => {
         setSelectedDate(date);
-        setData('start_date', format(date, 'yyyy-MM-dd'));
-        setData('end_date', '');
+        setData({
+            name: '',
+            start_date: format(date, 'yyyy-MM-dd'),
+            end_date: '',
+            project_id: 'none',
+            notes: '',
+            user_ids: [],
+        });
         setIsDialogOpen(true);
     };
 
@@ -318,6 +335,32 @@ export default function CalendarIndex({
                                             {errors.project_id && (
                                                 <span className="text-xs text-red-500">
                                                     {errors.project_id}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="user_ids">
+                                                Undang Rekan Kerja (Opsional)
+                                            </Label>
+                                            <SearchableMultiSelect
+                                                options={(users || []).map((u) => ({
+                                                    value: u.id.toString(),
+                                                    label: u.name,
+                                                }))}
+                                                value={(data.user_ids || []).map((id) => id.toString())}
+                                                onValueChange={(vals) =>
+                                                    setData(
+                                                        'user_ids',
+                                                        vals.map((v) => parseInt(v)),
+                                                    )
+                                                }
+                                                placeholder="Pilih rekan kerja untuk diundang"
+                                                searchPlaceholder="Cari rekan kerja..."
+                                            />
+                                            {errors.user_ids && (
+                                                <span className="text-xs text-red-500">
+                                                    {errors.user_ids}
                                                 </span>
                                             )}
                                         </div>
@@ -605,6 +648,36 @@ export default function CalendarIndex({
                                     >
                                         {selectedEvent.project_name}
                                     </Badge>
+                                </div>
+                            )}
+
+                            {selectedEvent.creator_name && (
+                                <div className="flex flex-col gap-1">
+                                    <Label className="text-xs text-muted-foreground">
+                                        Dibuat Oleh
+                                    </Label>
+                                    <div className="text-sm font-medium">
+                                        {selectedEvent.creator_name}
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedEvent.attendees && selectedEvent.attendees.length > 0 && (
+                                <div className="flex flex-col gap-1.5">
+                                    <Label className="text-xs text-muted-foreground">
+                                        Undangan ({selectedEvent.attendees.length})
+                                    </Label>
+                                    <div className="flex flex-wrap gap-1">
+                                        {selectedEvent.attendees.map((attendee) => (
+                                            <Badge
+                                                key={attendee.id}
+                                                variant="outline"
+                                                className="bg-slate-50 text-slate-700 border-slate-200"
+                                            >
+                                                {attendee.name}
+                                            </Badge>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 

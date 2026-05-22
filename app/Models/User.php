@@ -10,6 +10,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -134,5 +135,13 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function teamMembers(): HasMany
     {
         return $this->hasMany(self::class, 'head_id');
+    }
+
+    /**
+     * @return BelongsToMany<ProjectEvent, $this>
+     */
+    public function invitedEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(ProjectEvent::class, 'project_event_user', 'user_id', 'project_event_id')->withTimestamps();
     }
 }
