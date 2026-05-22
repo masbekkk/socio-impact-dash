@@ -14,8 +14,8 @@ final readonly class BulkRejectReimbursements
     ) {}
 
     /**
-     * @param int[] $ids
-     * @param array<int, string> $notesMap
+     * @param  int[]  $ids
+     * @param  array<int, string>  $notesMap
      */
     public function handle(array $ids, array $notesMap, int $approverId, string $role): void
     {

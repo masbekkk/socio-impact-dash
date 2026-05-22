@@ -14,7 +14,7 @@ final readonly class BulkRequestFundReimbursements
     ) {}
 
     /**
-     * @param int[] $ids
+     * @param  int[]  $ids
      */
     public function handle(array $ids, int $approverId, string $role): void
     {

@@ -18,9 +18,8 @@ final readonly class ApproveLeaveAction
     {
         return DB::transaction(function () use ($leave, $notes, $role): Leave {
             $user = Auth::user();
-            throw_unless($user, \Exception::class, 'User not authenticated');
+            throw_unless($user, Exception::class, 'User not authenticated');
             /** @var \App\Models\User $user */
-            
             if ($role === null) {
                 $roles = $user->getRoleNames();
                 if ($roles->contains('head') && $roles->contains('finance')) {

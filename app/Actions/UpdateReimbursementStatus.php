@@ -178,7 +178,7 @@ final readonly class UpdateReimbursementStatus
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
                     $updateData['transfer_proof_path'] = $path;
                     $updateData['transferred_at'] = now();
-                    
+
                     $statusToSet = ReimbursementStatus::Transferred;
                     if ($reimbursement->type === \App\Enums\ReimbursementType::EER && in_array($reimbursement->eer_type, ['refund', 'reimbursement'], true)) {
                         $statusToSet = ReimbursementStatus::Closed;

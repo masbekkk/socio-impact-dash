@@ -82,7 +82,6 @@ final readonly class LeaveController
                 return response()->json(['message' => 'Anda tidak dapat menyetujui pengajuan milik sendiri.'], 403);
             }
 
-
             return DB::transaction(function () use ($leave, $actor, $validated, $isApprove): JsonResponse {
                 $userRoles = $actor->getRoleNames()->toArray();
                 $submitterRole = $leave->user->getRoleNames()->first();

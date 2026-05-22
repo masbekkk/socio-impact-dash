@@ -9,7 +9,6 @@ use App\Models\Division;
 use App\Models\DivisionCode;
 use App\Models\LetterCode;
 use App\Models\LetterDivision;
-use App\Models\LetterRequest;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,10 +19,15 @@ final class LetterRequestNumberingTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Project $project;
+
     private DivisionCode $divisionCode;
+
     private Division $division;
+
     private LetterCode $letterCode;
+
     private LetterDivision $letterDivision;
 
     protected function setUp(): void
@@ -40,7 +44,7 @@ final class LetterRequestNumberingTest extends TestCase
             'division_code_id' => $this->divisionCode->id,
             'name' => 'Socio Impact Division',
         ]);
-        
+
         // Ensure the ID of division matches divisionCode for the test to bypass the inconsistency
         $this->division->id = $this->divisionCode->id;
         $this->division->save();

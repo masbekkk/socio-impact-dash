@@ -45,7 +45,7 @@ final class PresenceController
 
         return \Maatwebsite\Excel\Facades\Excel::download(
             new \App\Exports\PresenceExport($user, $filters),
-            'presensi_' . now()->format('Ymd_His') . '.xlsx'
+            'presensi_'.now()->format('Ymd_His').'.xlsx'
         );
     }
 

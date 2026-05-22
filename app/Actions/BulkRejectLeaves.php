@@ -14,8 +14,8 @@ final readonly class BulkRejectLeaves
     ) {}
 
     /**
-     * @param int[] $ids
-     * @param array<int, string> $notes
+     * @param  int[]  $ids
+     * @param  array<int, string>  $notes
      */
     public function handle(array $ids, array $notes, string $role): void
     {

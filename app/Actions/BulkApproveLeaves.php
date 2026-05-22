@@ -14,7 +14,7 @@ final readonly class BulkApproveLeaves
     ) {}
 
     /**
-     * @param int[] $ids
+     * @param  int[]  $ids
      */
     public function handle(array $ids, string $role): void
     {

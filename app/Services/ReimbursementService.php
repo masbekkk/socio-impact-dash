@@ -14,7 +14,8 @@ final class ReimbursementService
     public function listReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $isAtrTab = ($filters['type'] ?? '') === 'atr';
-        $eerFilterClosure = $isAtrTab ? $this->buildEerFilterClosure($filters) : null;
+        $isEerTab = ($filters['type'] ?? '') === 'eer';
+        $eerFilterClosure = ($isAtrTab || $isEerTab) ? $this->buildEerFilterClosure($filters) : null;
 
         $eagerLoads = ['user', 'project', 'documents', 'approvals.approver', 'atrBudgetSelecteds'];
 
@@ -75,8 +76,49 @@ final class ReimbursementService
         }
 
         $isAtrTab = ($filters['type'] ?? '') === 'atr';
+        $isEerTab = ($filters['type'] ?? '') === 'eer';
 
-        if (! empty($filters['status'])) {
+        // EER Tab special query filtering
+        if ($isEerTab) {
+            $query->where('type', \App\Enums\ReimbursementType::ATR);
+            $query->whereHas('eers', function (\Illuminate\Database\Eloquent\Builder $eerQ) use ($filters): void {
+                if (! empty($filters['status'])) {
+                    $status = $filters['status'];
+                    if (is_string($status) && str_contains($status, ',')) {
+                        $status = explode(',', $status);
+                    }
+
+                    if (is_array($status)) {
+                        $eerQ->whereIn('status', $status);
+                    } elseif ($status === 'revision' || $status === 'revised') {
+                        $eerQ->whereIn('status', ['revision', 'revised']);
+                    } else {
+                        $eerQ->where('status', $status);
+                    }
+                }
+
+                if (! empty($filters['start_date'])) {
+                    $eerQ->whereDate('created_at', '>=', $filters['start_date']);
+                }
+
+                if (! empty($filters['end_date'])) {
+                    $eerQ->whereDate('created_at', '<=', $filters['end_date']);
+                }
+
+                if (! empty($filters['search'])) {
+                    $search = $filters['search'];
+                    $eerQ->where(function (\Illuminate\Database\Eloquent\Builder $sq) use ($search): void {
+                        $sq->where('code', 'like', "%{$search}%")
+                            ->orWhere('usage_plan', 'like', "%{$search}%")
+                            ->orWhere('amount', 'like', "%{$search}%")
+                            ->orWhereHas('user', fn (\Illuminate\Database\Eloquent\Builder $u) => $u->where('name', 'like', "%{$search}%"));
+                    });
+                }
+            });
+        }
+
+        // Status filter for ATR/Allowance/All tabs
+        if (! $isEerTab && ! empty($filters['status'])) {
             $status = $filters['status'];
             if (is_string($status) && str_contains($status, ',')) {
                 $status = explode(',', $status);
@@ -110,7 +152,10 @@ final class ReimbursementService
             }
         }
 
-        if (! empty($filters['type'])) {
+        // Type filter
+        if ($isEerTab) {
+            // Already handled above
+        } elseif (! empty($filters['type'])) {
             $query->where('type', $filters['type']);
         } else {
             $query->where('type', '!=', \App\Enums\ReimbursementType::EER);
@@ -125,7 +170,8 @@ final class ReimbursementService
             $query->whereHas('project', fn ($q) => $q->whereIn('division_id', $divisionIds));
         }
 
-        if (! empty($filters['start_date'])) {
+        // Date range filters for ATR/Allowance/All tabs
+        if (! $isEerTab && ! empty($filters['start_date'])) {
             if ($isAtrTab) {
                 $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($filters): void {
                     $q->whereDate('created_at', '>=', $filters['start_date'])
@@ -136,7 +182,7 @@ final class ReimbursementService
             }
         }
 
-        if (! empty($filters['end_date'])) {
+        if (! $isEerTab && ! empty($filters['end_date'])) {
             if ($isAtrTab) {
                 $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($filters): void {
                     $q->whereDate('created_at', '<=', $filters['end_date'])
@@ -147,7 +193,8 @@ final class ReimbursementService
             }
         }
 
-        if (! empty($filters['search'])) {
+        // Search filter for ATR/Allowance/All tabs
+        if (! $isEerTab && ! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search, $isAtrTab): void {
                 $q->where('code', 'like', "%{$search}%")

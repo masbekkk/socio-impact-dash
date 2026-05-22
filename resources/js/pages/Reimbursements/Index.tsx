@@ -475,6 +475,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                       <>
                         <TabsTrigger value="all">Semua</TabsTrigger>
                         <TabsTrigger value="atr">ATR</TabsTrigger>
+                        <TabsTrigger value="eer">EER</TabsTrigger>
                       </>
                     )}
                     {(isSuperadmin || isFinance || isDirektur || isHead || isHR) && (
