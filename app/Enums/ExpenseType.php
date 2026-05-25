@@ -12,4 +12,5 @@ enum ExpenseType: string
     case EquipmentItemNonAsset = 'EQUIPMENT ITEM NON ASSET';
     case Charity = 'CHARITY';
     case Entertainment = 'ENTERTAINMENT';
+    case Other = 'other';
 }
