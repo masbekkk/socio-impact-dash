@@ -20,7 +20,10 @@ final class ProjectTerminPaymentController extends Controller
 
         $validated = $request->validate([
             'is_verified' => ['nullable', 'boolean'],
-            'proof_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'], // 5MB
+            'proof_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:51200'], // 50MB
+            'billing_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:51200'], // 50MB
+            'nomor_surat' => ['nullable', 'string', 'max:255'],
+            'tertuju' => ['nullable', 'string', 'max:255'],
         ]);
 
         $termin = $updateTermin->handle($termin, $validated, $request->user()->id);

@@ -244,6 +244,23 @@ export default function ProjectTabs({
         }
     };
 
+    const handleTerminBillingUpload = async (termId: number, file: File) => {
+        const formData = new FormData();
+        formData.append('billing_file', file);
+        try {
+            const { data } = await axios.post(`/api/v1/projects/${project.uuid}/termins/${termId}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            setLocalPaymentTerms(prev =>
+                prev.map(t => t.id === termId ? { ...t, ...data.data } : t)
+            );
+            if (onShowToast) onShowToast('Dokumen penagihan berhasil diunggah', 'success');
+        } catch (error: any) {
+            console.error("Error uploading billing document:", error);
+            if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal mengunggah dokumen penagihan', 'error');
+        }
+    };
+
     const [savingClosing, setSavingClosing] = useState(false);
 
     const handleSaveClosingChanges = async () => {
@@ -1055,7 +1072,7 @@ export default function ProjectTabs({
                                                             )}
                                                         </div>
 
-                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
                                                             <div>
                                                                 <p className="text-xs text-muted-foreground">Nominal</p>
                                                                 <p className="font-bold text-gray-900 flex items-center gap-2">
@@ -1075,7 +1092,15 @@ export default function ProjectTabs({
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs text-muted-foreground">Deliverables</p>
-                                                                <p className="font-medium text-gray-900">{term.notes}</p>
+                                                                <p className="font-medium text-gray-900">{term.notes || '-'}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">Nomor Surat</p>
+                                                                <p className="font-medium text-gray-900">{term.nomor_surat || '-'}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">Tertuju</p>
+                                                                <p className="font-medium text-gray-900">{term.tertuju || '-'}</p>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1100,7 +1125,33 @@ export default function ProjectTabs({
                                                                     </label>
                                                                 </div>
 
-                                                                {/* File Upload */}
+                                                                {/* Dokumen Penagihan */}
+                                                                <div className="space-y-1.5">
+                                                                    <Label className="text-xs font-medium text-muted-foreground">Dokumen Penagihan</Label>
+                                                                    {term.billing_document ? (
+                                                                        <div className="flex items-center gap-2 p-2 bg-gray-50 border rounded-lg">
+                                                                            <FileText className="h-4 w-4 text-gray-500 animate-pulse" />
+                                                                            <span className="text-xs font-medium text-gray-700 flex-1 truncate">Dokumen Penagihan.pdf</span>
+                                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600 hover:text-blue-700" onClick={() => window.open(term.billing_document_url || term.billing_document, '_blank')}>
+                                                                                <Eye className="h-3.5 w-3.5" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <label className="block">
+                                                                            <Input
+                                                                                type="file"
+                                                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                                                className="text-xs h-9 cursor-pointer file:cursor-pointer file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 file:border-0 file:rounded-sm file:px-2 file:mr-2 hover:file:bg-gray-200"
+                                                                                onChange={(e) => {
+                                                                                    const file = e.target.files?.[0];
+                                                                                    if (file) handleTerminBillingUpload(term.id, file);
+                                                                                }}
+                                                                            />
+                                                                        </label>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Bukti Pembayaran */}
                                                                 <div className="space-y-1.5">
                                                                     <Label className="text-xs font-medium text-muted-foreground">Bukti Pembayaran</Label>
                                                                     {term.proof_payment ? (

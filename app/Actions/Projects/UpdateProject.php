@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 final class UpdateProject
 {
-    // Constructor removed as FileUploadService is unused
+    public function __construct(private FileUploadService $fileUploadService) {}
     /**
      * @param  array<string, mixed>  $data
      */
@@ -124,18 +124,55 @@ final class UpdateProject
     private function syncTerminPayments(Project $project, array $terminPayments): void
     {
         foreach ($terminPayments as $term) {
+            $data = [
+                'nominal' => $term['nominal'],
+                'due_date' => $term['due_date'],
+                'notes' => $term['notes'] ?? null,
+                'nomor_surat' => $term['nomor_surat'] ?? null,
+                'tertuju' => $term['tertuju'] ?? null,
+            ];
+
             if (isset($term['id'])) {
-                $project->terminPayments()->where('id', $term['id'])->update([
-                    'nominal' => $term['nominal'],
-                    'due_date' => $term['due_date'],
-                    'notes' => $term['notes'] ?? null,
-                ]);
+                $existing = $project->terminPayments()->find($term['id']);
+                if ($existing) {
+                    if (isset($term['billing_file']) && $term['billing_file'] instanceof \Illuminate\Http\UploadedFile) {
+                        $meta = $this->fileUploadService->replaceFile(
+                            $term['billing_file'],
+                            $existing->billing_document,
+                            "projects/{$project->id}/termins"
+                        );
+                        $data['billing_document'] = $meta['path'];
+                    }
+
+                    if (isset($term['proof_file']) && $term['proof_file'] instanceof \Illuminate\Http\UploadedFile) {
+                        $meta = $this->fileUploadService->replaceFile(
+                            $term['proof_file'],
+                            $existing->proof_payment,
+                            "projects/{$project->id}/termins"
+                        );
+                        $data['proof_payment'] = $meta['path'];
+                    }
+
+                    $existing->update($data);
+                }
             } else {
-                $project->terminPayments()->create([
-                    'nominal' => $term['nominal'],
-                    'due_date' => $term['due_date'],
-                    'notes' => $term['notes'] ?? null,
-                ]);
+                if (isset($term['billing_file']) && $term['billing_file'] instanceof \Illuminate\Http\UploadedFile) {
+                    $meta = $this->fileUploadService->uploadFile(
+                        $term['billing_file'],
+                        "projects/{$project->id}/termins"
+                    );
+                    $data['billing_document'] = $meta['path'];
+                }
+
+                if (isset($term['proof_file']) && $term['proof_file'] instanceof \Illuminate\Http\UploadedFile) {
+                    $meta = $this->fileUploadService->uploadFile(
+                        $term['proof_file'],
+                        "projects/{$project->id}/termins"
+                    );
+                    $data['proof_payment'] = $meta['path'];
+                }
+
+                $project->terminPayments()->create($data);
             }
         }
     }

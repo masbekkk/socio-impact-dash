@@ -19,6 +19,9 @@ final class ProjectTerminPayment extends Model
         'notes',
         'verified_by',
         'proof_payment',
+        'nomor_surat',
+        'tertuju',
+        'billing_document',
     ];
 
     protected $casts = [
@@ -26,7 +29,7 @@ final class ProjectTerminPayment extends Model
         'due_date' => 'date',
     ];
 
-    protected $appends = ['proof_payment_url'];
+    protected $appends = ['proof_payment_url', 'billing_document_url'];
 
     public function project(): BelongsTo
     {
@@ -41,5 +44,10 @@ final class ProjectTerminPayment extends Model
     protected function getProofPaymentUrlAttribute(): ?string
     {
         return $this->proof_payment ? \Illuminate\Support\Facades\Storage::url($this->proof_payment) : null;
+    }
+
+    protected function getBillingDocumentUrlAttribute(): ?string
+    {
+        return $this->billing_document ? \Illuminate\Support\Facades\Storage::url($this->billing_document) : null;
     }
 }

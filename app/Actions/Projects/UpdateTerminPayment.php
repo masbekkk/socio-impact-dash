@@ -18,16 +18,37 @@ final readonly class UpdateTerminPayment
         return DB::transaction(function () use ($termin, $data, $userId) {
             $updateData = [];
 
+            // Handle text fields
+            if (array_key_exists('nomor_surat', $data)) {
+                $updateData['nomor_surat'] = $data['nomor_surat'];
+            }
+            if (array_key_exists('tertuju', $data)) {
+                $updateData['tertuju'] = $data['tertuju'];
+            }
+
             // Handle Verification
             if (isset($data['is_verified'])) {
                 $updateData['verified_by'] = $data['is_verified'] ? $userId : null;
             }
 
+            // Handle Billing Document Upload
+            if (isset($data['billing_file']) && $data['billing_file'] instanceof UploadedFile) {
+                if ($termin->billing_document) {
+                    $this->fileUploadService->deleteFile($termin->billing_document);
+                }
+
+                $meta = $this->fileUploadService->uploadFile(
+                    $data['billing_file'],
+                    "projects/{$termin->project_id}/termins/{$termin->id}"
+                );
+
+                $updateData['billing_document'] = $meta['path'];
+            }
+
             // Handle Proof of Payment Upload
             if (isset($data['proof_file']) && $data['proof_file'] instanceof UploadedFile) {
-                // If replacing existing proof?
                 if ($termin->proof_payment) {
-                    // Optionally delete old file
+                    $this->fileUploadService->deleteFile($termin->proof_payment);
                 }
 
                 $meta = $this->fileUploadService->uploadFile(

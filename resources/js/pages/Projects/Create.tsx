@@ -67,8 +67,17 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
 
   // State Lokasi Multiple
   const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string }[]>([])
-  const [paymentTerms, setPaymentTerms] = useState<{ id: string, nominal: number, notes: string, date: string }[]>([
-    { id: crypto.randomUUID(), nominal: 0, notes: '', date: '' }
+  const [paymentTerms, setPaymentTerms] = useState<{ 
+    id: string, 
+    nominal: number, 
+    notes: string, 
+    date: string,
+    nomor_surat: string,
+    tertuju: string,
+    billing_file?: File | null,
+    proof_file?: File | null
+  }[]>([
+    { id: crypto.randomUUID(), nominal: 0, notes: '', date: '', nomor_surat: '', tertuju: '', billing_file: null, proof_file: null }
   ])
 
   // State Detail Budgets
@@ -196,6 +205,10 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
       submitData.append(`termin_payments[${index}][nominal]`, term.nominal.toString());
       submitData.append(`termin_payments[${index}][due_date]`, term.date);
       if (term.notes) submitData.append(`termin_payments[${index}][notes]`, term.notes);
+      if (term.nomor_surat) submitData.append(`termin_payments[${index}][nomor_surat]`, term.nomor_surat);
+      if (term.tertuju) submitData.append(`termin_payments[${index}][tertuju]`, term.tertuju);
+      if (term.billing_file) submitData.append(`termin_payments[${index}][billing_file]`, term.billing_file);
+      if (term.proof_file) submitData.append(`termin_payments[${index}][proof_file]`, term.proof_file);
     });
 
     detailBudgets.forEach((detail, index) => {
@@ -254,14 +267,14 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
 
   // Payment Terms Functions
   const addPaymentTerm = () => {
-    setPaymentTerms([...paymentTerms, { id: crypto.randomUUID(), nominal: 0, notes: '', date: '' }]);
+    setPaymentTerms([...paymentTerms, { id: crypto.randomUUID(), nominal: 0, notes: '', date: '', nomor_surat: '', tertuju: '', billing_file: null, proof_file: null }]);
   };
   const removePaymentTerm = (id: string) => {
     if (paymentTerms.length > 1) {
       setPaymentTerms(paymentTerms.filter(t => t.id !== id));
     }
   };
-  const updatePaymentTerm = (id: string, field: 'nominal' | 'notes' | 'date', value: any) => {
+  const updatePaymentTerm = (id: string, field: 'nominal' | 'notes' | 'date' | 'nomor_surat' | 'tertuju' | 'billing_file' | 'proof_file', value: any) => {
     setPaymentTerms(paymentTerms.map(t => t.id === id ? { ...t, [field]: value } : t));
   };
 
@@ -1080,6 +1093,64 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                               className={cn("bg-white h-10", errors[`termin_payments.${idx}.notes`] && "border-red-500")}
                             />
                             {errors[`termin_payments.${idx}.notes`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.notes`]}</p>}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Nomor Surat */}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground">Nomor Surat</Label>
+                            <Input
+                              type="text"
+                              value={term.nomor_surat}
+                              onChange={(e) => updatePaymentTerm(term.id, 'nomor_surat', e.target.value)}
+                              placeholder="Contoh: 001/INV/VI/2026"
+                              className={cn("bg-white h-10", errors[`termin_payments.${idx}.nomor_surat`] && "border-red-500")}
+                            />
+                            {errors[`termin_payments.${idx}.nomor_surat`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.nomor_surat`]}</p>}
+                          </div>
+
+                          {/* Tertuju */}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground">Tertuju</Label>
+                            <Input
+                              type="text"
+                              value={term.tertuju}
+                              onChange={(e) => updatePaymentTerm(term.id, 'tertuju', e.target.value)}
+                              placeholder="Contoh: PT. ABC Indonesia"
+                              className={cn("bg-white h-10", errors[`termin_payments.${idx}.tertuju`] && "border-red-500")}
+                            />
+                            {errors[`termin_payments.${idx}.tertuju`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.tertuju`]}</p>}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Dokumen Penagihan */}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground">Dokumen Penagihan</Label>
+                            <FileUploadDropzone 
+                              onFilesChange={(files) => updatePaymentTerm(term.id, 'billing_file', files[0] || null)}
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              helperText="PDF, JPG, JPEG, PNG (Maks. 50MB)"
+                              maxSize={50 * 1024 * 1024}
+                              multiple={false}
+                            />
+                            {term.billing_file && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {term.billing_file.name}</p>}
+                            {errors[`termin_payments.${idx}.billing_file`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.billing_file`]}</p>}
+                          </div>
+
+                          {/* Bukti Pembayaran */}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground">Bukti Pembayaran</Label>
+                            <FileUploadDropzone 
+                              onFilesChange={(files) => updatePaymentTerm(term.id, 'proof_file', files[0] || null)}
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              helperText="PDF, JPG, JPEG, PNG (Maks. 50MB)"
+                              maxSize={50 * 1024 * 1024}
+                              multiple={false}
+                            />
+                            {term.proof_file && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {term.proof_file.name}</p>}
+                            {errors[`termin_payments.${idx}.proof_file`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.proof_file`]}</p>}
                           </div>
                         </div>
                       </div>

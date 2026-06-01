@@ -62,7 +62,19 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
     const [locations, setLocations] = useState<{ id: string, name: string, lat: number, lng: number, address: string, isNew?: boolean }[]>([])
     const [deleteLocations, setDeleteLocations] = useState<string[]>([])
-    const [paymentTerms, setPaymentTerms] = useState<{ id: string, nominal: number, notes: string, date: string, isNew?: boolean }[]>([])
+    const [paymentTerms, setPaymentTerms] = useState<{ 
+        id: string, 
+        nominal: number, 
+        notes: string, 
+        date: string, 
+        nomor_surat: string,
+        tertuju: string,
+        billing_document_url?: string,
+        proof_payment_url?: string,
+        billing_file?: File | null,
+        proof_file?: File | null,
+        isNew?: boolean 
+    }[]>([])
     const [deletePaymentTerms, setDeletePaymentTerms] = useState<string[]>([])
 
     // State Detail Budgets
@@ -145,10 +157,16 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                         id: term.id.toString(),
                         nominal: parseFloat(term.nominal),
                         notes: term.notes || '',
-                        date: term.due_date ? term.due_date.substring(0, 10) : ''
+                        date: term.due_date ? term.due_date.substring(0, 10) : '',
+                        nomor_surat: term.nomor_surat || '',
+                        tertuju: term.tertuju || '',
+                        billing_document_url: term.billing_document_url || '',
+                        proof_payment_url: term.proof_payment_url || '',
+                        billing_file: null,
+                        proof_file: null
                     })));
                 } else {
-                    setPaymentTerms([{ id: crypto.randomUUID(), nominal: 0, notes: '', date: '', isNew: true }]);
+                    setPaymentTerms([{ id: crypto.randomUUID(), nominal: 0, notes: '', date: '', nomor_surat: '', tertuju: '', billing_document_url: '', proof_payment_url: '', billing_file: null, proof_file: null, isNew: true }]);
                 }
 
                 if (data.budget_details && data.budget_details.length > 0) {
@@ -203,7 +221,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
     // Payment Terms Functions
     const addPaymentTerm = () => {
-        setPaymentTerms([...paymentTerms, { id: crypto.randomUUID(), nominal: 0, notes: '', date: '', isNew: true }]);
+        setPaymentTerms([...paymentTerms, { id: crypto.randomUUID(), nominal: 0, notes: '', date: '', nomor_surat: '', tertuju: '', billing_document_url: '', proof_payment_url: '', billing_file: null, proof_file: null, isNew: true }]);
     };
     const removePaymentTerm = (id: string, isNew?: boolean) => {
         if (paymentTerms.length > 1) {
@@ -213,7 +231,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             }
         }
     };
-    const updatePaymentTerm = (id: string, field: 'nominal' | 'notes' | 'date', value: any) => {
+    const updatePaymentTerm = (id: string, field: 'nominal' | 'notes' | 'date' | 'nomor_surat' | 'tertuju' | 'billing_file' | 'proof_file', value: any) => {
         setPaymentTerms(paymentTerms.map(t => t.id === id ? { ...t, [field]: value } : t));
     };
 
@@ -320,6 +338,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
             submitData.append(`termin_payments[${index}][nominal]`, term.nominal.toString());
             submitData.append(`termin_payments[${index}][due_date]`, term.date);
             if (term.notes) submitData.append(`termin_payments[${index}][notes]`, term.notes);
+            if (term.nomor_surat) submitData.append(`termin_payments[${index}][nomor_surat]`, term.nomor_surat);
+            if (term.tertuju) submitData.append(`termin_payments[${index}][tertuju]`, term.tertuju);
+            if (term.billing_file) submitData.append(`termin_payments[${index}][billing_file]`, term.billing_file);
+            if (term.proof_file) submitData.append(`termin_payments[${index}][proof_file]`, term.proof_file);
         });
 
         deletePaymentTerms.forEach((id, index) => {
@@ -1184,6 +1206,92 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                             className={cn("bg-white h-10", errors[`termin_payments.${idx}.notes`] && "border-red-500")}
                                                         />
                                                         {errors[`termin_payments.${idx}.notes`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.notes`]}</p>}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {/* Nomor Surat */}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Nomor Surat</Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={term.nomor_surat}
+                                                            onChange={(e) => updatePaymentTerm(term.id, 'nomor_surat', e.target.value)}
+                                                            placeholder="Contoh: 001/INV/VI/2026"
+                                                            className={cn("bg-white h-10", errors[`termin_payments.${idx}.nomor_surat`] && "border-red-500")}
+                                                        />
+                                                        {errors[`termin_payments.${idx}.nomor_surat`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.nomor_surat`]}</p>}
+                                                    </div>
+
+                                                    {/* Tertuju */}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Tertuju</Label>
+                                                        <Input
+                                                            type="text"
+                                                            value={term.tertuju}
+                                                            onChange={(e) => updatePaymentTerm(term.id, 'tertuju', e.target.value)}
+                                                            placeholder="Contoh: PT. ABC Indonesia"
+                                                            className={cn("bg-white h-10", errors[`termin_payments.${idx}.tertuju`] && "border-red-500")}
+                                                        />
+                                                        {errors[`termin_payments.${idx}.tertuju`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.tertuju`]}</p>}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {/* Dokumen Penagihan */}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Dokumen Penagihan</Label>
+                                                        {term.billing_document_url && !term.billing_file && (
+                                                            <div className="flex items-center gap-2 p-2 bg-gray-50 border rounded-lg mb-2">
+                                                                <span className="text-xs font-medium text-gray-700 flex-1 truncate">File Tagihan Saat Ini</span>
+                                                                <Button 
+                                                                    type="button"
+                                                                    variant="ghost" 
+                                                                    size="sm" 
+                                                                    className="h-7 text-xs text-blue-600 hover:text-blue-700 p-1"
+                                                                    onClick={() => window.open(term.billing_document_url, '_blank')}
+                                                                >
+                                                                    Lihat File
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                        <FileUploadDropzone 
+                                                            onFilesChange={(files) => updatePaymentTerm(term.id, 'billing_file', files[0] || null)}
+                                                            accept=".pdf,.jpg,.jpeg,.png"
+                                                            helperText="PDF, JPG, JPEG, PNG (Maks. 50MB)"
+                                                            maxSize={50 * 1024 * 1024}
+                                                            multiple={false}
+                                                        />
+                                                        {term.billing_file && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {term.billing_file.name}</p>}
+                                                        {errors[`termin_payments.${idx}.billing_file`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.billing_file`]}</p>}
+                                                    </div>
+
+                                                    {/* Bukti Pembayaran */}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-medium text-muted-foreground">Bukti Pembayaran</Label>
+                                                        {term.proof_payment_url && !term.proof_file && (
+                                                            <div className="flex items-center gap-2 p-2 bg-gray-50 border rounded-lg mb-2">
+                                                                <span className="text-xs font-medium text-gray-700 flex-1 truncate">Bukti Pembayaran Saat Ini</span>
+                                                                <Button 
+                                                                    type="button"
+                                                                    variant="ghost" 
+                                                                    size="sm" 
+                                                                    className="h-7 text-xs text-blue-600 hover:text-blue-700 p-1"
+                                                                    onClick={() => window.open(term.proof_payment_url, '_blank')}
+                                                                >
+                                                                    Lihat File
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                        <FileUploadDropzone 
+                                                            onFilesChange={(files) => updatePaymentTerm(term.id, 'proof_file', files[0] || null)}
+                                                            accept=".pdf,.jpg,.jpeg,.png"
+                                                            helperText="PDF, JPG, JPEG, PNG (Maks. 50MB)"
+                                                            maxSize={50 * 1024 * 1024}
+                                                            multiple={false}
+                                                        />
+                                                        {term.proof_file && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {term.proof_file.name}</p>}
+                                                        {errors[`termin_payments.${idx}.proof_file`] && <p className="text-xs text-red-500 mt-1">{errors[`termin_payments.${idx}.proof_file`]}</p>}
                                                     </div>
                                                 </div>
                                             </div>

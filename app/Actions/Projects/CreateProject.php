@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 final class CreateProject
 {
-    // Constructor removed as FileUploadService is unused
+    public function __construct(private FileUploadService $fileUploadService) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -119,11 +119,31 @@ final class CreateProject
     private function syncTerminPayments(Project $project, array $terminPayments): void
     {
         foreach ($terminPayments as $term) {
-            $project->terminPayments()->create([
+            $data = [
                 'nominal' => $term['nominal'],
                 'due_date' => $term['due_date'],
                 'notes' => $term['notes'] ?? null,
-            ]);
+                'nomor_surat' => $term['nomor_surat'] ?? null,
+                'tertuju' => $term['tertuju'] ?? null,
+            ];
+
+            if (isset($term['billing_file']) && $term['billing_file'] instanceof \Illuminate\Http\UploadedFile) {
+                $meta = $this->fileUploadService->uploadFile(
+                    $term['billing_file'],
+                    "projects/{$project->id}/termins"
+                );
+                $data['billing_document'] = $meta['path'];
+            }
+
+            if (isset($term['proof_file']) && $term['proof_file'] instanceof \Illuminate\Http\UploadedFile) {
+                $meta = $this->fileUploadService->uploadFile(
+                    $term['proof_file'],
+                    "projects/{$project->id}/termins"
+                );
+                $data['proof_payment'] = $meta['path'];
+            }
+
+            $project->terminPayments()->create($data);
         }
     }
 
