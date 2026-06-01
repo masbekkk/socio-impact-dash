@@ -85,7 +85,27 @@ final class ProjectResource extends JsonResource
                 'upload_status' => $doc->upload_status ?? 'completed',
             ])),
             'termin_payments' => $this->whenLoaded('terminPayments'),
-            'budget_details' => $this->whenLoaded('budgetDetails'),
+            'budget_details' => $this->whenLoaded('budgetDetails', fn () => $this->budgetDetails->map(fn ($detail): array => [
+                'id' => $detail->id,
+                'item_name' => $detail->item_name,
+                'quantity' => $detail->quantity,
+                'item_price' => $detail->item_price,
+                'amount' => $detail->amount,
+                'amount_pelaksanaan' => $detail->amount_pelaksanaan,
+                'amount_proposal' => $detail->amount_proposal,
+                'notes' => $detail->notes,
+                'used_atr' => (float) $detail->reimbursementItems()
+                    ->whereHas('reimbursement', function ($q) {
+                        $q->where('type', 'atr')->whereNotIn('status', ['rejected', 'draft', 'submitted']);
+                    })
+                    ->whereNull('parent_item_id')
+                    ->sum('amount'),
+                'used_eer' => (float) $detail->reimbursementItems()
+                    ->whereHas('reimbursement', function ($q) {
+                        $q->where('type', 'eer')->whereNotIn('status', ['rejected', 'draft', 'submitted']);
+                    })
+                    ->sum('amount'),
+            ])),
             'monitorings' => ProjectMonitoringResource::collection($this->whenLoaded('monitorings')),
             'monitoring_history' => ProjectMonitoringResource::collection($this->whenLoaded('monitorings')),
             'approvals' => ProjectApprovalResource::collection($this->whenLoaded('approvals')),

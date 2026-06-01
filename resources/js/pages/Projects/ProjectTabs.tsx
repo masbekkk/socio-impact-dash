@@ -168,7 +168,7 @@ export default function ProjectTabs({
 
     const handleSaveDetailBudget = async () => {
         setSavingDetailBudget(true);
-        const currentTotalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
+        const currentTotalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.used_eer) > 0 ? Number(item.used_eer) : (Number(item.amount_pelaksanaan) || 0)), 0);
         if (currentTotalPelaksanaan > opsBudget) {
             setSavingDetailBudget(false);
             if (onShowToast) onShowToast('Gagal menyimpan: Total amount pelaksanaan melebihi budget operasional. Sesuaikan RAB atau ajukan tambahan operasional.', 'error');
@@ -333,8 +333,10 @@ export default function ProjectTabs({
     };
 
 
-    const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
+    const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.used_eer) > 0 ? Number(item.used_eer) : (Number(item.amount_pelaksanaan) || 0)), 0);
     const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
+    const totalUsedAtr = detailBudgets.reduce((sum, item) => sum + (Number(item.used_atr) || 0), 0);
+    const totalUsedEer = detailBudgets.reduce((sum, item) => sum + (Number(item.used_eer) || 0), 0);
     const estimasiProfit = (project.budget_total || 0) - totalPelaksanaan;
 
     return (
@@ -826,8 +828,10 @@ export default function ProjectTabs({
                                                 <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
                                                 <th className="px-4 py-3 font-medium text-gray-500">Nama Kegiatan</th>
                                                 <th className="px-4 py-3 font-medium text-gray-500 text-right">Amount Proposal</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Amount Pelaksanaan</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Selisih</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Terpakai ATR</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Terpakai EER</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Pelaksanaan</th>
+                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Status EER</th>
                                                 <th className="px-4 py-3 font-medium text-gray-500">Catatan</th>
                                             </tr>
                                         </thead>
@@ -835,8 +839,11 @@ export default function ProjectTabs({
                                             {detailBudgets.length > 0 ? (
                                                 detailBudgets.map((detail, idx) => {
                                                     const proposal = Number(detail.amount_proposal) || 0;
-                                                    const pelaksanaan = Number(detail.amount_pelaksanaan) || 0;
-                                                    const selisih = proposal - pelaksanaan;
+                                                    const usedAtr = Number(detail.used_atr) || 0;
+                                                    const usedEer = Number(detail.used_eer) || 0;
+                                                    const pelaksanaan = usedEer > 0 ? usedEer : (Number(detail.amount_pelaksanaan) || 0);
+                                                    const eerDiff = usedAtr - usedEer;
+                                                    
                                                     return (
                                                         <tr key={idx} className="hover:bg-gray-50/50">
                                                             <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
@@ -844,11 +851,22 @@ export default function ProjectTabs({
                                                             <td className="px-4 py-3 text-right font-mono">
                                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(proposal)}
                                                             </td>
-                                                            <td className="px-4 py-3 text-right font-mono">
+                                                            <td className="px-4 py-3 text-right font-mono text-orange-600">
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedAtr)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right font-mono text-blue-600">
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedEer)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right font-mono font-semibold">
                                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(pelaksanaan)}
                                                             </td>
-                                                            <td className={`px-4 py-3 text-right font-mono font-semibold ${selisih >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(selisih)}
+                                                            <td className="px-4 py-3 text-right">
+                                                                {usedAtr > 0 || usedEer > 0 ? (
+                                                                    <Badge variant="outline" className={`font-mono text-[10px] ${eerDiff > 0 ? 'text-green-600 border-green-200 bg-green-50' : (eerDiff < 0 ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-500 border-gray-200 bg-gray-50')}`}>
+                                                                        {eerDiff > 0 ? 'Refund: ' : (eerDiff < 0 ? 'Reimb: ' : 'Balance: ')}
+                                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs(eerDiff))}
+                                                                    </Badge>
+                                                                ) : '-'}
                                                             </td>
                                                             <td className="px-4 py-3 text-muted-foreground">{detail.notes || '-'}</td>
                                                         </tr>
@@ -856,7 +874,7 @@ export default function ProjectTabs({
                                                 })
                                             ) : (
                                                 <tr>
-                                                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground italic">
+                                                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground italic">
                                                         Belum ada rincian anggaran.
                                                     </td>
                                                 </tr>
@@ -868,17 +886,20 @@ export default function ProjectTabs({
                                                         <td className="px-4 py-3 text-right font-mono text-primary">
                                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
                                                         </td>
+                                                        <td className="px-4 py-3 text-right font-mono text-orange-600">
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalUsedAtr)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right font-mono text-blue-600">
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalUsedEer)}
+                                                        </td>
                                                         <td className="px-4 py-3 text-right font-mono text-primary">
                                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalPelaksanaan)}
                                                         </td>
-                                                        <td className={`px-4 py-3 text-right font-mono font-bold ${(totalProposal - totalPelaksanaan) >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal - totalPelaksanaan)}
-                                                        </td>
-                                                        <td></td>
+                                                        <td colSpan={2}></td>
                                                     </tr>
                                                     <tr className="bg-emerald-50/80 border-t">
                                                         <td colSpan={2} className="px-4 py-3 text-right text-emerald-800 font-bold">Estimasi Profit (Total Pagu - Pelaksanaan) ({project.budget_total > 0 ? ((estimasiProfit / project.budget_total) * 100).toFixed(1) : 0}%):</td>
-                                                        <td colSpan={4} className={`px-4 py-3 text-right font-mono text-lg font-bold ${estimasiProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                                                        <td colSpan={6} className={`px-4 py-3 text-right font-mono text-lg font-bold ${estimasiProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
                                                         </td>
                                                     </tr>
@@ -922,16 +943,21 @@ export default function ProjectTabs({
                                                         />
                                                     </div>
                                                     <div className="md:col-span-2 space-y-1">
-                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Pelaksanaan</Label>
+                                                        <Label className="text-[10px] font-bold text-muted-foreground flex justify-between uppercase">
+                                                            <span>Pelaksanaan</span>
+                                                            {Number(detail.used_eer) > 0 && <span className="text-blue-500 lowercase normal-case text-[9px]">(dari EER)</span>}
+                                                        </Label>
                                                         <MoneyInput
-                                                            value={detail.amount_pelaksanaan || 0}
+                                                            value={Number(detail.used_eer) > 0 ? Number(detail.used_eer) : (detail.amount_pelaksanaan || 0)}
                                                             onValueChange={(vals) => {
+                                                                if (Number(detail.used_eer) > 0) return; // Prevent change if EER exists
                                                                 const newDetails = [...detailBudgets];
                                                                 newDetails[idx].amount_pelaksanaan = vals.floatValue || 0;
                                                                 setDetailBudgets(newDetails);
                                                             }}
                                                             placeholder="0"
-                                                            className="h-8 text-xs"
+                                                            className={`h-8 text-xs ${Number(detail.used_eer) > 0 ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
+                                                            disabled={Number(detail.used_eer) > 0}
                                                         />
                                                     </div>
                                                     <div className="md:col-span-4 space-y-1">
