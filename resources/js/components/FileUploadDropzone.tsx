@@ -8,6 +8,7 @@ export default function FileUploadDropzone({
   onFilesChange,
   accept,
   multiple = true,
+  maxSize,
   labelText = "Klik untuk upload atau drag & drop",
   helperText = "PDF, DOCX, JPG, EXCEL (Max 10MB)"
 }: { 
@@ -15,6 +16,7 @@ export default function FileUploadDropzone({
   onFilesChange?: (files: File[]) => void,
   accept?: string,
   multiple?: boolean,
+  maxSize?: number,
   labelText?: string,
   helperText?: string
 }) {
@@ -32,6 +34,24 @@ export default function FileUploadDropzone({
     if (onFilesChangeRef.current) onFilesChangeRef.current(files);
   }, [files])
 
+  function validateFileAccept(file: File, acceptString?: string): boolean {
+    if (!acceptString) return true;
+    const rules = acceptString.split(',').map((r) => r.trim().toLowerCase());
+    const fileName = file.name.toLowerCase();
+    const fileType = file.type.toLowerCase();
+
+    return rules.some((rule) => {
+      if (rule.startsWith('.')) {
+        return fileName.endsWith(rule);
+      } else if (rule.endsWith('/*')) {
+        const prefix = rule.slice(0, -2);
+        return fileType.startsWith(prefix);
+      } else {
+        return fileType === rule;
+      }
+    });
+  }
+
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files) return
     const newFiles = Array.from(e.target.files);
@@ -40,10 +60,27 @@ export default function FileUploadDropzone({
   }
 
   function addFiles(newFiles: File[]) {
+    let filteredFiles = newFiles;
+    if (accept) {
+      const checkedFiles = newFiles.filter((file) => validateFileAccept(file, accept));
+      if (checkedFiles.length !== newFiles.length) {
+        alert("Format file tidak didukung. File yang diperbolehkan: " + accept);
+      }
+      filteredFiles = checkedFiles;
+    }
+
+    if (maxSize) {
+      const checkedFiles = filteredFiles.filter((file) => file.size <= maxSize);
+      if (checkedFiles.length !== filteredFiles.length) {
+        alert(`Ukuran file melebihi batas maksimal ${formatBytes(maxSize)}.`);
+      }
+      filteredFiles = checkedFiles;
+    }
+
     if (!multiple) {
-      setFiles(newFiles.slice(0, 1));
+      setFiles(filteredFiles.slice(0, 1));
     } else {
-      setFiles((prev) => [...prev, ...newFiles])
+      setFiles((prev) => [...prev, ...filteredFiles])
     }
   }
 

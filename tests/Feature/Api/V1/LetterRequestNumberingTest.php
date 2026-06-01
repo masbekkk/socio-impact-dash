@@ -164,4 +164,57 @@ final class LetterRequestNumberingTest extends TestCase
         ]);
         $this->assertEquals('248.A/SPeng.BOD/Socim.id/3-2026', $response2->json('data.letter_number'));
     }
+
+    public function test_create_letter_request_with_status(): void
+    {
+        $this->actingAs($this->user);
+
+        $response = $this->postJson('/api/v1/letter-requests', [
+            'project_id' => $this->project->id,
+            'letter_date' => '2026-03-31',
+            'recipient' => 'Test Recipient',
+            'subject' => 'Test Subject',
+            'division_id' => $this->divisionCode->id,
+            'letter_code_id' => $this->letterCode->id,
+            'letter_division_id' => $this->letterDivision->id,
+            'status' => 'used',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertEquals('used', $response->json('data.status'));
+    }
+
+    public function test_update_letter_request_status(): void
+    {
+        $this->actingAs($this->user);
+
+        $response = $this->postJson('/api/v1/letter-requests', [
+            'project_id' => $this->project->id,
+            'letter_date' => '2026-03-31',
+            'recipient' => 'Test Recipient',
+            'subject' => 'Test Subject',
+            'division_id' => $this->divisionCode->id,
+            'letter_code_id' => $this->letterCode->id,
+            'letter_division_id' => $this->letterDivision->id,
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertEquals('unused', $response->json('data.status'));
+
+        $id = $response->json('data.id');
+
+        $updateResponse = $this->putJson("/api/v1/letter-requests/{$id}", [
+            'project_id' => $this->project->id,
+            'letter_date' => '2026-03-31',
+            'recipient' => 'Updated Recipient',
+            'subject' => 'Updated Subject',
+            'division_id' => $this->divisionCode->id,
+            'letter_code_id' => $this->letterCode->id,
+            'letter_division_id' => $this->letterDivision->id,
+            'status' => 'used',
+        ]);
+
+        $updateResponse->assertStatus(200);
+        $this->assertEquals('used', $updateResponse->json('data.status'));
+    }
 }

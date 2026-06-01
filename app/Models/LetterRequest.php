@@ -26,6 +26,7 @@ final class LetterRequest extends Model
         'keterangan',
         'letter_number',
         'status',
+        'approval_status',
     ];
 
     protected $casts = [

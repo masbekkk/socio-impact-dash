@@ -582,7 +582,13 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                           {type === 'proposal' ? 'Upload dokumen Proposal lengkap.' : 'Upload dokumen Kontrak yang disepakati.'}
                         </p>
                       </div>
-                      <FileUploadDropzone onFilesChange={(files) => setSowFile(files[0])} />
+                      <FileUploadDropzone 
+                        onFilesChange={(files) => setSowFile(files[0])} 
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        helperText="PDF, JPG, JPEG, PNG (Maks. 50MB)"
+                        maxSize={50 * 1024 * 1024}
+                        multiple={false}
+                      />
                       {sowFile && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {sowFile.name}</p>}
                       {errors.sow && <p className="text-xs text-red-500">{errors.sow}</p>}
                     </div>
@@ -611,9 +617,15 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                               </Button>
                             )}
                           </div>
-                          <FileUploadDropzone onFilesChange={(files) => {
-                            setSupportingDocs(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] } : d));
-                          }} />
+                          <FileUploadDropzone 
+                            onFilesChange={(files) => {
+                              setSupportingDocs(prev => prev.map(d => d.id === doc.id ? { ...d, file: files[0] } : d));
+                            }} 
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            helperText="PDF, JPG, JPEG, PNG (Maks. 50MB)"
+                            maxSize={50 * 1024 * 1024}
+                            multiple={false}
+                          />
                           {doc.file && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {doc.file.name}</p>}
                         </div>
                       )
@@ -978,7 +990,13 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                           <p className="text-xs text-muted-foreground">Lampirkan detail Rencana Anggaran Biaya.</p>
                         </div>
                       </div>
-                      <FileUploadDropzone onFilesChange={(files) => setRabFile(files[0])} />
+                      <FileUploadDropzone 
+                        onFilesChange={(files) => setRabFile(files[0])} 
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        helperText="PDF, JPG, JPEG, PNG (Maks. 50MB)"
+                        maxSize={50 * 1024 * 1024}
+                        multiple={false}
+                      />
                       {rabFile && <p className="text-xs font-medium text-green-600 mt-2">✓ Terpilih: {rabFile.name}</p>}
                       {errors['documents.RAB.file'] && <p className="text-xs text-red-500">{errors['documents.RAB.file']}</p>}
                     </div>

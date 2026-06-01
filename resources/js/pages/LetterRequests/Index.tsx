@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
@@ -22,13 +22,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Search, CheckCircle, XCircle, Hash, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Trash2, CalendarRange } from 'lucide-react';
+import { Plus, Search, XCircle, Hash, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Trash2, CalendarRange } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import axios from 'axios';
-import {
-    SelectValue,
-} from "@/components/ui/select";
 import { SearchableSelect } from '@/components/SearchableSelect';
 import DatePicker from '@/components/DatePicker';
 
@@ -60,7 +57,7 @@ interface LetterRequest {
     } | null;
     keterangan: string | null;
     letter_number: string | null;
-    status: 'pending' | 'assigned' | 'rejected';
+    status: 'used' | 'unused';
 }
 
 interface Props {
@@ -68,16 +65,13 @@ interface Props {
     canDelete: boolean;
 }
 
-export default function LetterRequestsIndex({ canAssign, canDelete }: Props) {
+export default function LetterRequestsIndex({ canDelete }: Props) {
     const [requests, setRequests] = useState<LetterRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<LetterRequest | null>(null);
-    const [letterNumber, setLetterNumber] = useState('');
     const [processing, setProcessing] = useState(false);
-    const [errors, setErrors] = useState<Record<string, string[]>>({});
 
     // Date range filter
     const [dateFrom, setDateFrom] = useState('');
@@ -98,7 +92,7 @@ export default function LetterRequestsIndex({ canAssign, canDelete }: Props) {
         { title: 'Nomor Surat', href: '/letter-requests' },
     ];
 
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get('/api/v1/letter-requests', {
@@ -124,55 +118,14 @@ export default function LetterRequestsIndex({ canAssign, canDelete }: Props) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [searchQuery, pagination.current_page, pagination.per_page, dateFrom, dateTo]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchRequests();
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchQuery, pagination.current_page, pagination.per_page, dateFrom, dateTo]);
-
-    const handleAssign = (req: LetterRequest) => {
-        setSelectedRequest(req);
-        setLetterNumber('');
-        setErrors({});
-        setAssignDialogOpen(true);
-    };
-
-    const submitAssign = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedRequest) return;
-        setProcessing(true);
-        setErrors({});
-
-        try {
-            await axios.post(`/api/v1/letter-requests/${selectedRequest.id}/assign`, {
-                letter_number: letterNumber
-            });
-            setAssignDialogOpen(false);
-            fetchRequests();
-        } catch (error) {
-            if (axios.isAxiosError(error) && error.response && error.response.data.errors) {
-                setErrors(error.response.data.errors as Record<string, string[]>);
-            } else {
-                console.error("Error assigning number:", error);
-            }
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    const handleReject = async (req: LetterRequest) => {
-        if (confirm('Apakah Anda yakin ingin menolak pengajuan ini?')) {
-            try {
-                await axios.post(`/api/v1/letter-requests/${req.id}/reject`);
-                fetchRequests();
-            } catch (error) {
-                console.error("Error rejecting request:", error);
-            }
-        }
-    };
+    }, [fetchRequests]);
 
     const handleDeleteClick = (req: LetterRequest) => {
         setSelectedRequest(req);
@@ -288,7 +241,7 @@ export default function LetterRequestsIndex({ canAssign, canDelete }: Props) {
                                         <TableHead>PIC / Ket</TableHead>
                                         {/* <TableHead>Kode / Divisi</TableHead> */}
                                         <TableHead>Nomor Surat</TableHead>
-                                        {/* <TableHead>Status</TableHead> */}
+                                        <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -350,19 +303,18 @@ export default function LetterRequestsIndex({ canAssign, canDelete }: Props) {
                                                         <span className="text-muted-foreground text-xs italic">Belum diberikan</span>
                                                     )}
                                                 </TableCell>
-                                                {/* <TableCell>
+                                                <TableCell>
                                                     <Badge
-                                                        variant={
-                                                            req.status === 'assigned' ? 'default' :
-                                                                req.status === 'rejected' ? 'destructive' :
-                                                                    'secondary'
+                                                        variant="outline"
+                                                        className={
+                                                            req.status === 'used'
+                                                                ? 'bg-emerald-50/80 text-emerald-700 border-emerald-200/60 font-medium'
+                                                                : 'bg-amber-50/80 text-amber-700 border-amber-200/60 font-medium'
                                                         }
                                                     >
-                                                        {req.status === 'assigned' ? 'Selesai' :
-                                                            req.status === 'rejected' ? 'Ditolak' :
-                                                                'Menunggu'}
+                                                        {req.status === 'used' ? 'Terpakai' : 'Tidak Terpakai'}
                                                     </Badge>
-                                                </TableCell> */}
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
                                                         <Button variant="outline" size="sm" asChild>
@@ -453,39 +405,7 @@ export default function LetterRequestsIndex({ canAssign, canDelete }: Props) {
                 </Card>
             </div>
 
-            {/* Assign Number Dialog */}
-            <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-                <DialogContent>
-                    <form onSubmit={submitAssign}>
-                        <DialogHeader>
-                            <DialogTitle>Berikan Nomor Surat</DialogTitle>
-                            <DialogDescription>
-                                Masukkan nomor resmi untuk surat perihal: <strong>{selectedRequest?.subject}</strong>
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="letter_number">Nomor Surat</Label>
-                                <Input
-                                    id="letter_number"
-                                    placeholder="Contoh: 001/SSI/II/2026"
-                                    value={letterNumber}
-                                    onChange={(e) => setLetterNumber(e.target.value)}
-                                />
-                                {errors.letter_number && <p className="text-sm text-destructive">{errors.letter_number}</p>}
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" type="button" onClick={() => setAssignDialogOpen(false)}>
-                                Batal
-                            </Button>
-                            <Button type="submit" disabled={processing} className="bg-[var(--sidebar)] text-white">
-                                {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Simpan Nomor'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

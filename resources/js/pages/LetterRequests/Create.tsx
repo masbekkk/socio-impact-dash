@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, Briefcase, Calendar as CalendarIcon, User as UserIcon, FileText, Loader2, Tag, Layers } from 'lucide-react';
+import { ArrowLeft, Save, User as UserIcon, FileText, Loader2 } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -17,7 +17,7 @@ import {
 import { SearchableSelect } from '@/components/SearchableSelect';
 import DatePicker from '@/components/DatePicker';
 import { format } from "date-fns";
-import axios, { all } from 'axios';
+import axios from 'axios';
 import { SharedData } from '@/types';
 import { usePermission } from '@/hooks/use-permission';
 
@@ -32,8 +32,17 @@ interface MasterData {
     id: number;
     code: string;
     description?: string;
-    name?: string; // For users
-    names?: { id: number; name: string; description?: string }[]; // For divisions
+}
+
+interface DivisionCodeItem {
+    id: number;
+    code: string;
+    name: string;
+}
+
+interface DivisionItem {
+    id: number;
+    division_code?: DivisionCodeItem | null;
 }
 
 interface Props {
@@ -55,23 +64,22 @@ export default function Create({ projects }: Props) {
         letter_division_id: '',
         division_id: '',
         keterangan: '',
+        status: 'unused',
     });
 
     const [letterCodes, setLetterCodes] = useState<MasterData[]>([]);
     const [letterDivisions, setLetterDivisions] = useState<MasterData[]>([]);
-    const [users, setUsers] = useState<MasterData[]>([]);
-    const [divisions, setDivisions] = useState<MasterData[]>([]);
+    const [divisions, setDivisions] = useState<DivisionItem[]>([]);
     const [loadingData, setLoadingData] = useState(true);
     const [processing, setProcessing] = useState(false);
-    const [errors, setErrors] = useState<any>({});
+    const [errors, setErrors] = useState<Record<string, string[]>>({});
 
     useEffect(() => {
         const fetchMasterData = async () => {
             try {
-                const [codesRes, divisionsRes, usersRes, mainDivRes] = await Promise.all([
+                const [codesRes, divisionsRes, mainDivRes] = await Promise.all([
                     axios.get('/api/v1/letter-codes'),
                     axios.get('/api/v1/letter-divisions'),
-                    axios.get('/api/v1/users?per_page=1000'),
                     axios.get('/api/v1/divisions?per_page=1000')
                 ]);
                 setLetterCodes(codesRes.data.data);
@@ -87,11 +95,10 @@ export default function Create({ projects }: Props) {
                 } else {
                     // Default to PM or all roles if PM
                     // According to requirements: PM - all roles
-                    filteredLetterDivs = allLetterDivs.filter((d: any) => d.code === 'PM');
+                    filteredLetterDivs = allLetterDivs.filter((d: MasterData) => d.code === 'PM');
                 }
 
                 setLetterDivisions(filteredLetterDivs);
-                setUsers(usersRes.data.data.data);
                 setDivisions(mainDivRes.data.data.data);
             } catch (error) {
                 console.error("Error fetching master data:", error);
@@ -100,6 +107,7 @@ export default function Create({ projects }: Props) {
             }
         };
         fetchMasterData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userRole]);
 
     const breadcrumbs = [
@@ -116,9 +124,9 @@ export default function Create({ projects }: Props) {
         try {
             await axios.post('/api/v1/letter-requests', data);
             router.visit('/letter-requests');
-        } catch (error: any) {
-            if (error.response && error.response.data.errors) {
-                setErrors(error.response.data.errors);
+        } catch (error: unknown) {
+            if (axios.isAxiosError(error) && error.response && error.response.data.errors) {
+                setErrors(error.response.data.errors as Record<string, string[]>);
             } else {
                 console.error("Error creating letter request:", error);
             }
@@ -244,9 +252,9 @@ export default function Create({ projects }: Props) {
                                     <div className="space-y-2 md:col-span-2">
                                         <Label htmlFor="division_id">Divisi Perusahaan <span className="text-red-500">*</span></Label>
                                         <SearchableSelect
-                                            options={Array.from(new Map(divisions.map((d: any) => [d.division_code?.id, d.division_code])).values())
-                                                .filter(dc => dc !== undefined && dc !== null)
-                                                .map((dc: any) => ({
+                                            options={Array.from(new Map(divisions.map((d: DivisionItem) => [d.division_code?.id, d.division_code])).values())
+                                                .filter((dc): dc is DivisionCodeItem => dc !== undefined && dc !== null)
+                                                .map((dc: DivisionCodeItem) => ({
                                                     value: dc.id.toString(),
                                                     label: `${dc.code} - ${dc.name}`
                                                 }))
@@ -256,6 +264,23 @@ export default function Create({ projects }: Props) {
                                             placeholder="Pilih divisi perusahaan"
                                         />
                                         {errors.division_id && <p className="text-sm text-destructive font-medium">{errors.division_id}</p>}
+                                    </div>
+
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label htmlFor="status">Status Surat <span className="text-red-500">*</span></Label>
+                                        <Select
+                                            value={data.status}
+                                            onValueChange={(val) => setData({ ...data, status: val })}
+                                        >
+                                            <SelectTrigger id="status" className="h-10 w-full bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-ring">
+                                                <SelectValue placeholder="Pilih status" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="used">Terpakai</SelectItem>
+                                                <SelectItem value="unused">Tidak Terpakai</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.status && <p className="text-sm text-destructive font-medium">{errors.status}</p>}
                                     </div>
 
                                     <div className="space-y-2 md:col-span-2">

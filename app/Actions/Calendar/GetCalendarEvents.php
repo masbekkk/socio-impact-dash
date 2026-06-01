@@ -64,7 +64,7 @@ final readonly class GetCalendarEvents
         // Only fetch events for the simplified view
         $events = $eventsQuery->with(['project:id,name', 'attendees:id,name', 'creator:id,name'])->get();
 
-        /** @var \Illuminate\Support\Collection<int, array<string, mixed>> $calendarEvents */
+        /** @var Collection<int, array<string, mixed>> $calendarEvents */
         $calendarEvents = collect();
 
         // 3. Map to Standardized DTO array

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, Briefcase, Calendar as CalendarIcon, User as UserIcon, FileText, Loader2, Tag, Layers } from 'lucide-react';
+import { ArrowLeft, Save, User as UserIcon, FileText, Loader2 } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -32,8 +32,17 @@ interface MasterData {
     id: number;
     code: string;
     description?: string;
-    name?: string; // For users
-    names?: { id: number; name: string; description?: string }[]; // For divisions
+}
+
+interface DivisionCodeItem {
+    id: number;
+    code: string;
+    name: string;
+}
+
+interface DivisionItem {
+    id: number;
+    division_code?: DivisionCodeItem | null;
 }
 
 interface Props {
@@ -56,23 +65,22 @@ export default function Edit({ projects, letterRequestId }: Props) {
         letter_division_id: '',
         division_id: '',
         keterangan: '',
+        status: '',
     });
 
     const [letterCodes, setLetterCodes] = useState<MasterData[]>([]);
     const [letterDivisions, setLetterDivisions] = useState<MasterData[]>([]);
-    const [users, setUsers] = useState<MasterData[]>([]);
-    const [divisions, setDivisions] = useState<MasterData[]>([]);
+    const [divisions, setDivisions] = useState<DivisionItem[]>([]);
     const [loadingData, setLoadingData] = useState(true);
     const [processing, setProcessing] = useState(false);
-    const [errors, setErrors] = useState<any>({});
+    const [errors, setErrors] = useState<Record<string, string[]>>({});
 
     useEffect(() => {
         const fetchAllData = async () => {
             try {
-                const [codesRes, divisionsRes, usersRes, mainDivRes, requestRes] = await Promise.all([
+                const [codesRes, divisionsRes, mainDivRes, requestRes] = await Promise.all([
                     axios.get('/api/v1/letter-codes'),
                     axios.get('/api/v1/letter-divisions'),
-                    axios.get('/api/v1/users?per_page=1000'),
                     axios.get('/api/v1/divisions?per_page=1000'),
                     axios.get(`/api/v1/letter-requests/${letterRequestId}`)
                 ]);
@@ -102,12 +110,11 @@ export default function Edit({ projects, letterRequestId }: Props) {
                 // Deduplicate codes
                 const uniqueCodes = [...new Set(filteredDivCodes)];
 
-                const filteredLetterDivs = allLetterDivs.filter((d: any) =>
+                const filteredLetterDivs = allLetterDivs.filter((d: MasterData) =>
                     uniqueCodes.includes(d.code)
                 );
 
                 setLetterDivisions(filteredLetterDivs);
-                setUsers(usersRes.data.data.data);
                 setDivisions(mainDivRes.data.data.data);
 
                 const reqData = requestRes.data.data;
@@ -121,6 +128,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
                     letter_division_id: reqData.letter_division_id?.toString() || '',
                     division_id: reqData.division_id?.toString() || '',
                     keterangan: reqData.keterangan || '',
+                    status: reqData.status || 'unused',
                 });
 
             } catch (error) {
@@ -132,6 +140,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
             }
         };
         fetchAllData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [letterRequestId, userRole]);
 
     const breadcrumbs = [
@@ -148,9 +157,9 @@ export default function Edit({ projects, letterRequestId }: Props) {
         try {
             await axios.put(`/api/v1/letter-requests/${letterRequestId}`, data);
             router.visit('/letter-requests');
-        } catch (error: any) {
-            if (error.response && error.response.data.errors) {
-                setErrors(error.response.data.errors);
+        } catch (error: unknown) {
+            if (axios.isAxiosError(error) && error.response && error.response.data.errors) {
+                setErrors(error.response.data.errors as Record<string, string[]>);
             } else {
                 console.error("Error updating letter request:", error);
                 alert("Terjadi kesalahan saat memperbarui nomor surat.");
@@ -273,9 +282,9 @@ export default function Edit({ projects, letterRequestId }: Props) {
                                     <div className="space-y-2 md:col-span-2">
                                         <Label htmlFor="division_id">Divisi Perusahaan <span className="text-red-500">*</span></Label>
                                         <SearchableSelect
-                                            options={Array.from(new Map(divisions.map((d: any) => [d.division_code?.id, d.division_code])).values())
-                                                .filter(dc => dc !== undefined && dc !== null)
-                                                .map((dc: any) => ({
+                                            options={Array.from(new Map(divisions.map((d: DivisionItem) => [d.division_code?.id, d.division_code])).values())
+                                                .filter((dc): dc is DivisionCodeItem => dc !== undefined && dc !== null)
+                                                .map((dc: DivisionCodeItem) => ({
                                                     value: dc.id.toString(),
                                                     label: `${dc.code} - ${dc.name}`
                                                 }))
@@ -285,6 +294,23 @@ export default function Edit({ projects, letterRequestId }: Props) {
                                             placeholder="Pilih divisi perusahaan"
                                         />
                                         {errors.division_id && <p className="text-sm text-destructive font-medium">{errors.division_id}</p>}
+                                    </div>
+
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label htmlFor="status">Status Surat <span className="text-red-500">*</span></Label>
+                                        <Select
+                                            value={data.status}
+                                            onValueChange={(val) => setData({ ...data, status: val })}
+                                        >
+                                            <SelectTrigger id="status" className="h-10 w-full bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-ring">
+                                                <SelectValue placeholder="Pilih status" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="used">Terpakai</SelectItem>
+                                                <SelectItem value="unused">Tidak Terpakai</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.status && <p className="text-sm text-destructive font-medium">{errors.status}</p>}
                                     </div>
 
                                     <div className="space-y-2 md:col-span-2">

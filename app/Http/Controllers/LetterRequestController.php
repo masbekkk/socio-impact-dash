@@ -53,7 +53,7 @@ final class LetterRequestController extends Controller
         LetterRequest::query()->create([
             ...$validated,
             'requester_id' => auth()->id(),
-            'status' => 'pending',
+            'approval_status' => 'pending',
         ]);
 
         return to_route('letter-requests.index')->with('success', 'Pengajuan nomor surat berhasil dikirim.');
@@ -70,7 +70,7 @@ final class LetterRequestController extends Controller
 
         $letterRequest->update([
             'letter_number' => $validated['letter_number'],
-            'status' => 'assigned',
+            'approval_status' => 'assigned',
         ]);
 
         return back()->with('success', 'Nomor surat berhasil diberikan.');
@@ -82,7 +82,7 @@ final class LetterRequestController extends Controller
         abort_unless($user->hasRole([UserRole::Finance, UserRole::Superadmin]), 403);
 
         $letterRequest->update([
-            'status' => 'rejected',
+            'approval_status' => 'rejected',
         ]);
 
         return back()->with('success', 'Pengajuan nomor surat ditolak.');

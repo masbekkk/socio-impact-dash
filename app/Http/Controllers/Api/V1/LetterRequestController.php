@@ -90,6 +90,7 @@ final class LetterRequestController extends Controller
             'letter_code_id' => ['required', 'exists:letter_codes,id'],
             'letter_division_id' => ['required', 'exists:letter_divisions,id'],
             'keterangan' => ['nullable', 'string'],
+            'status' => ['sometimes', 'in:used,unused'],
         ]);
 
         $letterDate = \Illuminate\Support\Facades\Date::parse($validated['letter_date']);
@@ -104,8 +105,9 @@ final class LetterRequestController extends Controller
             ...$validated,
             'requester_id' => $request->user()->id,
             'pic_id' => $request->user()->id,
-            'status' => 'pending',
+            'approval_status' => 'pending',
             'letter_number' => $letterNumber,
+            'status' => $validated['status'] ?? 'unused',
         ]);
 
         return JsonResponseFormatter::created(
@@ -138,6 +140,7 @@ final class LetterRequestController extends Controller
             'letter_code_id' => ['required', 'exists:letter_codes,id'],
             'letter_division_id' => ['required', 'exists:letter_divisions,id'],
             'keterangan' => ['nullable', 'string'],
+            'status' => ['required', 'in:used,unused'],
         ]);
 
         // If letter date, code, or division changed, technically the letter number should change too.
@@ -224,7 +227,7 @@ final class LetterRequestController extends Controller
 
         $letterRequest->update([
             'letter_number' => $validated['letter_number'],
-            'status' => 'assigned',
+            'approval_status' => 'assigned',
         ]);
 
         return JsonResponseFormatter::success(
@@ -241,7 +244,7 @@ final class LetterRequestController extends Controller
         }
 
         $letterRequest->update([
-            'status' => 'rejected',
+            'approval_status' => 'rejected',
         ]);
 
         return JsonResponseFormatter::success(
