@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton'
 
 
-export default function ProjectsEdit({ project_slug, divisions, employees }: { project_slug: string | number, divisions: any[], employees: any[] }) {
+export default function ProjectsEdit({ project_slug, divisions, employees, available_management_budget = 0 }: { project_slug: string | number, divisions: any[], employees: any[], available_management_budget?: number }) {
     const { props } = usePage<any>();
     const permissions = props.auth?.permissions || [];
     const canUpdateCode = permissions.includes('create_code_project');
@@ -78,7 +78,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
     const [deletePaymentTerms, setDeletePaymentTerms] = useState<string[]>([])
 
     // State Detail Budgets
-    const [detailBudgets, setDetailBudgets] = useState<{ id: string, item_name: string, quantity: number | null, item_price: number, amount: number, amount_pelaksanaan: number, amount_proposal: number, notes: string, isNew?: boolean }[]>([])
+    const [detailBudgets, setDetailBudgets] = useState<{ id: string, item_name: string, quantity: number | null, item_price: number, amount: number, amount_pelaksanaan: number, amount_proposal: number, notes: string, isNew?: boolean, used_atr?: number, used_eer?: number }[]>([])
     const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([])
 
     // Dynamic Docs State
@@ -178,6 +178,8 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                         amount: parseFloat(detail.amount) || 0,
                         amount_pelaksanaan: parseFloat(detail.amount_pelaksanaan) || 0,
                         amount_proposal: parseFloat(detail.amount_proposal) || 0,
+                        used_atr: parseFloat(detail.used_atr) || 0,
+                        used_eer: parseFloat(detail.used_eer) || 0,
                         notes: detail.notes || ''
                     })));
                 } else {
@@ -270,7 +272,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
         }));
     };
     const totalDetailBudget = detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-    const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
+    const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + ((item.used_eer && item.used_eer > 0) ? item.used_eer : (Number(item.amount_pelaksanaan) || 0)), 0);
     const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
     const estimasiProfit = budget - totalPelaksanaan;
 
@@ -500,9 +502,15 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                 { value: 'pelatihan', label: 'Pelatihan' },
                                                 { value: 'dokumen', label: 'Dokumen' },
                                                 { value: 'event', label: 'Event' },
+                                                { value: 'non-project', label: 'Non-Project' },
                                             ]}
                                             value={formData.project_type}
-                                            onValueChange={(v) => handleInputChange('project_type', v)}
+                                            onValueChange={(v) => {
+                                                handleInputChange('project_type', v);
+                                                if (v === 'non-project') {
+                                                    setMgmtBudget(0);
+                                                }
+                                            }}
                                             placeholder="Pilih Jenis Project"
                                         />
                                         {errors.project_type && <p className="text-xs text-red-500">{errors.project_type}</p>}
@@ -840,8 +848,9 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                         const newTotal = vals.floatValue || 0;
                                                         setBudget(newTotal);
                                                         // Auto calculation
-                                                        const management = newTotal * 0.3;
-                                                        const operasional = newTotal * 0.7;
+                                                        const isNonProject = formData.project_type === 'non-project';
+                                                        const management = isNonProject ? 0 : newTotal * 0.3;
+                                                        const operasional = isNonProject ? newTotal : newTotal * 0.7;
                                                         setMgmtBudget(management);
                                                         setOpsBudget(operasional);
                                                         setAllowanceBudget(0);
@@ -850,12 +859,24 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                     className="pl-12 text-xl font-bold h-14 bg-white border-gray-200 shadow-sm"
                                                 />
                                             </div>
+                                            
+                                            {formData.project_type === 'non-project' && (
+                                                <p className={`text-xs mt-2 ${budget > (available_management_budget || 0) ? 'text-red-500 font-semibold' : 'text-muted-foreground'}`}>
+                                                    Available Management Budget: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(available_management_budget || 0).replace('Rp', 'Rp ')}
+                                                    <br />
+                                                    <span className="text-[10px] italic">Total nominal tidak boleh melebihi sisa management budget dari project lain.</span>
+                                                </p>
+                                            )}
                                         </div>
 
                                         {/* Right: Visualization Card */}
                                         <div className="w-full md:w-[320px] shrink-0">
                                             <div className="bg-white border rounded-xl p-6 shadow-sm text-center space-y-2">
-                                                <p className="text-sm text-gray-500 font-medium">Total Anggaran Project</p>
+                                                {(() => {
+                                                    const isNonProject = formData.project_type === 'non-project';
+                                                    return (
+                                                        <>
+                                                            <p className="text-sm text-gray-500 font-medium">Total Anggaran Project</p>
                                                 <div className="text-3xl font-bold text-red-600 tracking-tight">
                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(budget).replace('Rp', 'Rp ')}
                                                 </div>
@@ -877,19 +898,21 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                         <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((opsBudget / budget) * 100).toFixed(1) : 0}%</p>
                                                     </div>
 
-                                                    <div className="space-y-2">
-                                                        <Label className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Manajemen</Label>
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-xs z-10">Rp</span>
-                                                            <MoneyInput
-                                                                value={mgmtBudget}
-                                                                disabled
-                                                                placeholder="0"
-                                                                className="pl-8 bg-gray-50 h-8 text-xs border-purple-100 shadow-none"
-                                                            />
+                                                    {!isNonProject && (
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Manajemen</Label>
+                                                            <div className="relative">
+                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-xs z-10">Rp</span>
+                                                                <MoneyInput
+                                                                    value={mgmtBudget}
+                                                                    disabled
+                                                                    placeholder="0"
+                                                                    className="pl-8 bg-gray-50 h-8 text-xs border-purple-100 shadow-none"
+                                                                />
+                                                            </div>
+                                                            <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((mgmtBudget / budget) * 100).toFixed(1) : 0}%</p>
                                                         </div>
-                                                        <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((mgmtBudget / budget) * 100).toFixed(1) : 0}%</p>
-                                                    </div>
+                                                    )}
 
                                                     <div className="space-y-2">
                                                         <Label className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Allowance</Label>
@@ -905,12 +928,15 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
                                                         <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((allowanceBudget / budget) * 100).toFixed(1) : 0}%</p>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
+                            </div>
+                        </div>
 
-                                {/* Detail Budgets (Rincian Anggaran - RAB) Section */}
+                        {/* Detail Budgets (Rincian Anggaran - RAB) Section */}
                                 <div className="space-y-4 pt-4 border-t mt-6">
                                     <div className="flex items-center justify-between">
                                         <div>
@@ -959,13 +985,27 @@ export default function ProjectsEdit({ project_slug, divisions, employees }: { p
 
                                                     <div className="md:col-span-2 space-y-1">
                                                         <Label className="text-[10px] font-bold text-muted-foreground uppercase">Pelaksanaan</Label>
-                                                        <MoneyInput
-                                                            value={detail.amount_pelaksanaan}
-                                                            onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_pelaksanaan', vals.floatValue || 0)}
-                                                            placeholder="0"
-                                                            className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.amount_pelaksanaan`] && "border-red-500")}
-                                                        />
-                                                        {errors[`detail_budgets.${idx}.amount_pelaksanaan`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.amount_pelaksanaan`]}</p>}
+                                                        {((detail.used_eer || 0) > 0 || (detail.used_atr || 0) > 0) && !detail.isNew ? (
+                                                            <div className="bg-gray-50 border rounded-md p-1.5 h-8 flex flex-col justify-center">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="font-mono text-[10px] font-semibold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format((detail.used_eer || 0) > 0 ? (detail.used_eer || 0) : (detail.amount_pelaksanaan || 0))}</span>
+                                                                    <Badge variant="outline" className={`font-mono text-[8px] px-1 py-0 h-4 border-0 leading-tight ${((detail.used_atr || 0) - (detail.used_eer || 0)) > 0 ? 'text-green-600 bg-green-50' : (((detail.used_atr || 0) - (detail.used_eer || 0)) < 0 ? 'text-red-600 bg-red-50' : 'text-gray-500 bg-gray-50')}`}>
+                                                                        {((detail.used_atr || 0) - (detail.used_eer || 0)) > 0 ? 'Ref: ' : (((detail.used_atr || 0) - (detail.used_eer || 0)) < 0 ? 'Reimb: ' : 'Bal: ')}
+                                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs((detail.used_atr || 0) - (detail.used_eer || 0)))}
+                                                                    </Badge>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <MoneyInput
+                                                                    value={detail.amount_pelaksanaan}
+                                                                    onValueChange={(vals) => updateDetailBudget(detail.id, 'amount_pelaksanaan', vals.floatValue || 0)}
+                                                                    placeholder="0"
+                                                                    className={cn("bg-white h-8 text-xs", errors[`detail_budgets.${idx}.amount_pelaksanaan`] && "border-red-500")}
+                                                                />
+                                                                {errors[`detail_budgets.${idx}.amount_pelaksanaan`] && <p className="text-[10px] text-red-500 mt-0.5">{errors[`detail_budgets.${idx}.amount_pelaksanaan`]}</p>}
+                                                            </>
+                                                        )}
                                                     </div>
 
                                                     <div className="md:col-span-4 space-y-1">

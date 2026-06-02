@@ -82,7 +82,22 @@ final class StoreProjectRequest extends FormRequest
     {
         $validator->after(function (\Illuminate\Validation\Validator $validator): void {
             $budgetTotal = (float) $this->input('budget_total', 0);
+            $projectType = $this->input('project_type');
             $detailBudgets = $this->input('detail_budgets', []);
+
+            if ($projectType === 'non-project') {
+                $totalManagementBudget = \App\Models\Project::where('project_type', '!=', 'non-project')->sum('management_budget');
+                $usedNonProjectBudget = \App\Models\Project::where('project_type', 'non-project')->sum('budget_total');
+                $available = max(0, $totalManagementBudget - $usedNonProjectBudget);
+
+                if ($budgetTotal > $available) {
+                    $validator->errors()->add('budget_total', 'Total anggaran melebihi batas maksimal available management budget (' . number_format($available, 0, ',', '.') . ').');
+                }
+                
+                if ((float) $this->input('management_budget', 0) > 0) {
+                    $validator->errors()->add('management_budget', 'Non-Project tidak boleh memiliki management budget.');
+                }
+            }
 
             if (is_array($detailBudgets) && count($detailBudgets) > 0) {
                 // Ensure array_sum works on amount even if it is a string or not set

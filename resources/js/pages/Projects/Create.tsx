@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils'
 
 import axios from 'axios';
 
-export default function ProjectsCreate({ divisions, employees }: { divisions: any[], employees: any[] }) {
+export default function ProjectsCreate({ divisions, employees, available_management_budget = 0 }: { divisions: any[], employees: any[], available_management_budget?: number }) {
   const { url, props } = usePage<any>();
   const { hasRole, hasPermission } = usePermission();
   const userRole = props.auth?.user?.role_name ?? 'user';
@@ -391,9 +391,15 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                         { value: 'pelatihan', label: 'Pelatihan' },
                         { value: 'dokumen', label: 'Dokumen' },
                         { value: 'event', label: 'Event' },
+                        { value: 'non-project', label: 'Non-Project' },
                       ]}
                       value={formData.project_type}
-                      onValueChange={(v) => handleInputChange('project_type', v)}
+                      onValueChange={(v) => {
+                          handleInputChange('project_type', v);
+                          if (v === 'non-project') {
+                              setMgmtBudget(0);
+                          }
+                      }}
                       placeholder="Pilih Jenis Project"
                     />
                     {errors.project_type && <p className="text-xs text-red-500">{errors.project_type}</p>}
@@ -790,8 +796,9 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                             const newTotal = vals.floatValue || 0;
                             setBudget(newTotal);
                             // Auto calculation
-                            const management = newTotal * 0.3;
-                            const operasional = newTotal * 0.7;
+                            const isNonProject = formData.project_type === 'non-project';
+                            const management = isNonProject ? 0 : newTotal * 0.3;
+                            const operasional = isNonProject ? newTotal : newTotal * 0.7;
                             setMgmtBudget(management);
                             setOpsBudget(operasional);
                             setAllowanceBudget(0);
@@ -800,12 +807,24 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                           className="pl-12 text-xl font-bold h-14 bg-white border-gray-200 shadow-sm"
                         />
                       </div>
+                      
+                      {formData.project_type === 'non-project' && (
+                        <p className={`text-xs mt-2 ${budget > (available_management_budget || 0) ? 'text-red-500 font-semibold' : 'text-muted-foreground'}`}>
+                          Available Management Budget: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(available_management_budget || 0).replace('Rp', 'Rp ')}
+                          <br />
+                          <span className="text-[10px] italic">Total nominal tidak boleh melebihi sisa management budget dari project lain.</span>
+                        </p>
+                      )}
                     </div>
 
                     {/* Right: Visualization Card */}
                     <div className="w-full md:w-[320px] shrink-0">
                       <div className="bg-white border rounded-xl p-6 shadow-sm text-center space-y-2">
-                        <p className="text-sm text-gray-500 font-medium">Total Anggaran Project</p>
+                        {(() => {
+                           const isNonProject = formData.project_type === 'non-project';
+                           return (
+                             <>
+                               <p className="text-sm text-gray-500 font-medium">Total Anggaran Project</p>
                         <div className="text-3xl font-bold text-red-600 tracking-tight">
                           {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(budget).replace('Rp', 'Rp ')}
                         </div>
@@ -827,19 +846,21 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                             <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((opsBudget / budget) * 100).toFixed(1) : 0}%</p>
                           </div>
 
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Manajemen</Label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-xs z-10">Rp</span>
-                              <MoneyInput
-                                value={mgmtBudget}
-                                disabled
-                                placeholder="0"
-                                className="pl-8 bg-gray-50 h-8 text-xs border-purple-100 shadow-none"
-                              />
+                          {!isNonProject && (
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Manajemen</Label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-xs z-10">Rp</span>
+                                <MoneyInput
+                                  value={mgmtBudget}
+                                  disabled
+                                  placeholder="0"
+                                  className="pl-8 bg-gray-50 h-8 text-xs border-purple-100 shadow-none"
+                                />
+                              </div>
+                              <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((mgmtBudget / budget) * 100).toFixed(1) : 0}%</p>
                             </div>
-                            <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((mgmtBudget / budget) * 100).toFixed(1) : 0}%</p>
-                          </div>
+                          )}
 
                           <div className="space-y-2">
                             <Label className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Allowance</Label>
@@ -855,8 +876,11 @@ export default function ProjectsCreate({ divisions, employees }: { divisions: an
                             <p className="text-[9px] text-muted-foreground">Porsi: {budget > 0 ? ((allowanceBudget / budget) * 100).toFixed(1) : 0}%</p>
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
 
                   </div>
                 </div>

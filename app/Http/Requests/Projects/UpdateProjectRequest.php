@@ -113,6 +113,25 @@ final class UpdateProjectRequest extends FormRequest
                 }
             }
 
+            $project = $this->route('project');
+            $projectType = $this->input('project_type', $project->project_type);
+            $budgetTotal = (float) ($this->input('budget_total') ?? $project->budget_total);
+
+            if ($projectType === 'non-project') {
+                $totalManagementBudget = \App\Models\Project::where('project_type', '!=', 'non-project')->sum('management_budget');
+                $usedNonProjectBudget = \App\Models\Project::where('project_type', 'non-project')->where('id', '!=', $project->id)->sum('budget_total');
+                $available = max(0, $totalManagementBudget - $usedNonProjectBudget);
+
+                if ($budgetTotal > $available) {
+                    $validator->errors()->add('budget_total', 'Total anggaran melebihi batas maksimal available management budget (' . number_format($available, 0, ',', '.') . ').');
+                }
+                
+                $managementBudget = (float) ($this->input('management_budget') ?? $project->management_budget);
+                if ($managementBudget > 0) {
+                    $validator->errors()->add('management_budget', 'Non-Project tidak boleh memiliki management budget.');
+                }
+            }
+
             // Budget Sum Validation
             // if ($this->hasAny(['operational_budget', 'management_budget', 'allowance_budget', 'budget_total'])) {
             //     $project = $this->route('project');

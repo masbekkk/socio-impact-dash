@@ -25,6 +25,7 @@ final class DashboardController extends Controller
         $totalManagementBudget = Project::query()->sum('management_budget');
 
         $leaderboard = Project::query()->selectRaw('created_by, SUM(budget_total) as total_budget')
+            ->where('project_type', '!=', 'non-project')
             ->groupBy('created_by')
             ->orderByDesc('total_budget')
             ->with('creator:id,name')

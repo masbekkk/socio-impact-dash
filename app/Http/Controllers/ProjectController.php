@@ -23,9 +23,13 @@ final class ProjectController extends Controller
 
     public function create(): Response
     {
+        $totalManagementBudget = Project::where('project_type', '!=', 'non-project')->sum('management_budget');
+        $usedNonProjectBudget = Project::where('project_type', 'non-project')->sum('budget_total');
+        
         return Inertia::render('Projects/Create', [
             'divisions' => \App\Models\Division::with('divisionCode')->get(),
             'employees' => User::with('roles')->get(),
+            'available_management_budget' => max(0, $totalManagementBudget - $usedNonProjectBudget),
         ]);
     }
 
@@ -39,10 +43,14 @@ final class ProjectController extends Controller
 
     public function edit(Project $project): Response
     {
+        $totalManagementBudget = Project::where('project_type', '!=', 'non-project')->sum('management_budget');
+        $usedNonProjectBudget = Project::where('project_type', 'non-project')->where('id', '!=', $project->id)->sum('budget_total');
+        
         return Inertia::render('Projects/Edit', [
             'project_slug' => $project->uuid,
             'divisions' => \App\Models\Division::with('divisionCode')->get(),
             'employees' => User::with('roles')->get(),
+            'available_management_budget' => max(0, $totalManagementBudget - $usedNonProjectBudget),
         ]);
     }
 }
