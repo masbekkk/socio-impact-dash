@@ -661,6 +661,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
                         className="h-9 bg-white text-sm"
                         value={doc.type}
                         onChange={(e) => setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, type: e.target.value } : d))}
+                        maxLength={50}
                       />
                     </div>
 

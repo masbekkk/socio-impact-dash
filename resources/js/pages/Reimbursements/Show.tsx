@@ -558,7 +558,7 @@ export default function Show() {
       const formData = new FormData();
       formData.append('action', 'transferred');
       if (transferProof) formData.append('transfer_proof', transferProof);
-      
+
       const finalTransferredAmount = transferredAmount || (data?.amount ?? 0);
       if (finalTransferredAmount > 0) formData.append('transferred_amount', finalTransferredAmount.toString());
 
@@ -2140,10 +2140,10 @@ export default function Show() {
                                   documents: [...p.documents, { id: crypto.randomUUID(), type: 'other', file: null }]
                                 }))}
                               >
-                                <Plus className="h-3 w-3" /> Tambah 
+                                <Plus className="h-3 w-3" /> Tambah
                               </Button>
                             </div>
-                            
+
                             {revisionForm.documents.filter(d => d.type !== 'excel').length > 0 ? (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {revisionForm.documents.filter(d => d.type !== 'excel').map((doc) => (
