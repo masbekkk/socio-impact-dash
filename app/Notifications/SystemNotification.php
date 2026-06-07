@@ -25,6 +25,10 @@ final class SystemNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
+        if (isset($notifiable->email) && str_ends_with($notifiable->email, '.test')) {
+            return [];
+        }
+
         return ['mail'];
     }
 

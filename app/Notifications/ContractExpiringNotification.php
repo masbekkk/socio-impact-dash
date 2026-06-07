@@ -15,10 +15,9 @@ final class ContractExpiringNotification extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct()
-    {
-        //
-    }
+    public function __construct(
+        public readonly \App\Models\User $expiringUser
+    ) {}
 
     /**
      * Get the notification's delivery channels.
@@ -27,6 +26,10 @@ final class ContractExpiringNotification extends Notification
      */
     public function via(object $notifiable): array
     {
+        if (isset($notifiable->email) && str_ends_with($notifiable->email, '.test')) {
+            return [];
+        }
+
         return ['mail'];
     }
 
@@ -36,9 +39,10 @@ final class ContractExpiringNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->line('The introduction to the notification.')
-            ->action('Notification Action', url('/'))
-            ->line('Thank you for using our application!');
+            ->subject('Kontrak Karyawan Akan Berakhir: ' . $this->expiringUser->name)
+            ->line('Pemberitahuan: Kontrak kerja untuk ' . $this->expiringUser->name . ' akan berakhir pada ' . $this->expiringUser->contract_end . '.')
+            ->action('Lihat Dashboard', url('/'))
+            ->line('Mohon segera memproses pembaruan kontrak atau tindakan lainnya.');
     }
 
     /**
