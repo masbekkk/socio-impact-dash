@@ -253,6 +253,28 @@ final class LetterRequestController extends Controller
         );
     }
 
+    public function updateStatus(Request $request, LetterRequest $letterRequest): JsonResponse
+    {
+        $user = $request->user();
+        // Assuming those who can delete or admins can update status. 
+        // Based on frontend requirement, those with 'canDelete' permission will call this.
+        // We will allow requester or admins.
+        if ($letterRequest->requester_id !== $user->id && ! $user->hasRole([UserRole::Finance, UserRole::Superadmin, UserRole::Direktur])) {
+            return JsonResponseFormatter::error('Unauthorized', 403);
+        }
+
+        $validated = $request->validate([
+            'status' => ['required', 'in:used,unused'],
+        ]);
+
+        $letterRequest->update(['status' => $validated['status']]);
+
+        return JsonResponseFormatter::success(
+            $letterRequest,
+            'Status updated successfully'
+        );
+    }
+
     /**
      * Extract the base sequence number (without suffix) from a letter_number string.
      * e.g. "247/SPeng.BOD/Socim.id/3-2026" => 247

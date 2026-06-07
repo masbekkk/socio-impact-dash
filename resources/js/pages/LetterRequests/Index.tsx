@@ -22,7 +22,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Search, XCircle, Hash, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Trash2, CalendarRange } from 'lucide-react';
+import { Plus, Search, XCircle, Hash, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Trash2, CalendarRange, MoreHorizontal, RefreshCcw } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import axios from 'axios';
@@ -65,27 +73,42 @@ interface Props {
     canDelete: boolean;
 }
 
+const STORAGE_KEY = 'letter_requests_filters';
+
 export default function LetterRequestsIndex({ canDelete }: Props) {
+    const initialFilters = (() => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) { }
+        return {
+            searchQuery: '',
+            dateFrom: '',
+            dateTo: '',
+            pagination: {
+                current_page: 1,
+                last_page: 1,
+                per_page: 10,
+                total: 0,
+                from: 0,
+                to: 0
+            }
+        };
+    })();
+
     const [requests, setRequests] = useState<LetterRequest[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<LetterRequest | null>(null);
     const [processing, setProcessing] = useState(false);
 
     // Date range filter
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
+    const [dateFrom, setDateFrom] = useState(initialFilters.dateFrom);
+    const [dateTo, setDateTo] = useState(initialFilters.dateTo);
 
     // Pagination State
-    const [pagination, setPagination] = useState({
-        current_page: 1,
-        last_page: 1,
-        per_page: 10,
-        total: 0,
-        from: 0,
-        to: 0
-    });
+    const [pagination, setPagination] = useState(initialFilters.pagination);
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -121,11 +144,19 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
     }, [searchQuery, pagination.current_page, pagination.per_page, dateFrom, dateTo]);
 
     useEffect(() => {
+        const filtersToSave = {
+            searchQuery,
+            dateFrom,
+            dateTo,
+            pagination: { ...pagination, total: 0, from: 0, to: 0, last_page: 1 } // save layout only
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(filtersToSave));
+
         const timer = setTimeout(() => {
             fetchRequests();
         }, 500);
         return () => clearTimeout(timer);
-    }, [fetchRequests]);
+    }, [fetchRequests, searchQuery, dateFrom, dateTo, pagination.current_page, pagination.per_page]);
 
     const handleDeleteClick = (req: LetterRequest) => {
         setSelectedRequest(req);
@@ -145,6 +176,17 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
             alert("Gagal menghapus nomor surat.");
         } finally {
             setProcessing(false);
+        }
+    };
+
+    const handleStatusChange = async (req: LetterRequest) => {
+        const newStatus = req.status === 'used' ? 'unused' : 'used';
+        try {
+            await axios.patch(`/api/v1/letter-requests/${req.id}/status`, { status: newStatus });
+            fetchRequests();
+        } catch (error) {
+            console.error("Error updating status:", error);
+            alert("Gagal memperbarui status.");
         }
     };
 
@@ -316,23 +358,35 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <Button variant="outline" size="sm" asChild>
-                                                            <Link href={`/letter-requests/${req.id}/edit`}>
-                                                                Edit
-                                                            </Link>
-                                                        </Button>
-                                                        {canDelete && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                                                                onClick={() => handleDeleteClick(req)}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">Buka menu</span>
+                                                                <MoreHorizontal className="h-4 w-4" />
                                                             </Button>
-                                                        )}
-                                                    </div>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-[160px]">
+                                                            <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                                                            <DropdownMenuItem asChild>
+                                                                <Link href={`/letter-requests/${req.id}/edit`} className="cursor-pointer">
+                                                                    Edit
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                            {canDelete && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem onClick={() => handleStatusChange(req)}>
+                                                                        <RefreshCcw className="mr-2 h-4 w-4" />
+                                                                        Ubah Status
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleDeleteClick(req)} className="text-destructive focus:text-destructive">
+                                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                                        Hapus
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         ))

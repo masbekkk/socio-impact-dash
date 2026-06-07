@@ -266,22 +266,6 @@ export default function Create({ projects }: Props) {
                                         {errors.division_id && <p className="text-sm text-destructive font-medium">{errors.division_id}</p>}
                                     </div>
 
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label htmlFor="status">Status Surat <span className="text-red-500">*</span></Label>
-                                        <Select
-                                            value={data.status}
-                                            onValueChange={(val) => setData({ ...data, status: val })}
-                                        >
-                                            <SelectTrigger id="status" className="h-10 w-full bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-ring">
-                                                <SelectValue placeholder="Pilih status" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="used">Terpakai</SelectItem>
-                                                <SelectItem value="unused">Tidak Terpakai</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.status && <p className="text-sm text-destructive font-medium">{errors.status}</p>}
-                                    </div>
 
                                     <div className="space-y-2 md:col-span-2">
                                         <Label htmlFor="keterangan">Keterangan (Opsional)</Label>
