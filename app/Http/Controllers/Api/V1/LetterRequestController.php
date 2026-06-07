@@ -153,9 +153,9 @@ final class LetterRequestController extends Controller
 
         if ($oldDate->year !== $newDate->year ||
             $oldDate->month !== $newDate->month ||
-            $letterRequest->letter_code_id !== $validated['letter_code_id'] ||
-            $letterRequest->letter_division_id !== $validated['letter_division_id'] ||
-            $letterRequest->division_id !== $validated['division_id']) {
+            (int) $letterRequest->letter_code_id !== (int) $validated['letter_code_id'] ||
+            (int) $letterRequest->letter_division_id !== (int) $validated['letter_division_id'] ||
+            (int) $letterRequest->division_id !== (int) $validated['division_id']) {
             $needsNewNumber = true;
         }
 
