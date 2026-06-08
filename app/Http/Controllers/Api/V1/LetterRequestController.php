@@ -107,7 +107,7 @@ final class LetterRequestController extends Controller
             'pic_id' => $request->user()->id,
             'approval_status' => 'pending',
             'letter_number' => $letterNumber,
-            'status' => $validated['status'] ?? 'unused',
+            'status' => $validated['status'] ?? 'used',
         ]);
 
         return JsonResponseFormatter::created(
@@ -256,7 +256,7 @@ final class LetterRequestController extends Controller
     public function updateStatus(Request $request, LetterRequest $letterRequest): JsonResponse
     {
         $user = $request->user();
-        // Assuming those who can delete or admins can update status. 
+        // Assuming those who can delete or admins can update status.
         // Based on frontend requirement, those with 'canDelete' permission will call this.
         // We will allow requester or admins.
         if ($letterRequest->requester_id !== $user->id && ! $user->hasRole([UserRole::Finance, UserRole::Superadmin, UserRole::Direktur])) {
