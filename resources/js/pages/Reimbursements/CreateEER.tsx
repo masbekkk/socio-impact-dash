@@ -726,7 +726,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                         </div>
                       </div>
 
-                      {eerCalculation.type === 'refund' && eerCalculation.amount > 0 && hasRole(['finance', 'superadmin']) && (
+                      {/* {eerCalculation.type === 'refund' && eerCalculation.amount > 0 && hasRole(['finance', 'superadmin']) && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t">
                           <div className="space-y-4">
                             <Label className="text-sm font-bold flex items-center gap-2 text-rose-600">
@@ -774,7 +774,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
                             </p>
                           </div>
                         </div>
-                      )}
+                      )} */}
                     </div>
                   </div>
                   {errors._general && <p className="text-xs text-red-500 font-medium bg-red-50 p-2 rounded border border-red-100">{errors._general[0]}</p>}

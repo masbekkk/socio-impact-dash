@@ -552,7 +552,7 @@ export default function Show() {
   };
 
   const handleTransfer = async () => {
-    if (!data || (!transferProof && data?.type?.toLowerCase() !== 'allowance')) return;
+    if (!data || (!transferProof && !data?.transfer_proof_path && data?.type?.toLowerCase() !== 'allowance')) return;
     setActionLoading(true);
     try {
       const formData = new FormData();
@@ -3178,23 +3178,7 @@ export default function Show() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {!(data?.eer_type === 'refund' && data?.transfer_proof_path) ? (
-              <div className="space-y-2">
-                <Label>
-                  Bukti Transfer (Image/PDF) {data?.type?.toLowerCase() === 'allowance' || data?.transfer_proof_path ? <span className="text-muted-foreground italic font-normal">(Opsional)</span> : <span className="text-red-500">*</span>}
-                </Label>
-                <Input
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.pdf"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setTransferProof(e.target.files[0]);
-                    }
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">Maksimal 5MB.</p>
-              </div>
-            ) : (
+            {data?.eer_type === 'refund' && data?.transfer_proof_path && (
               <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200 space-y-3">
                 <div className="flex items-center gap-2 text-emerald-800 font-medium text-sm">
                   <CheckCircle className="h-4 w-4" /> Bukti Refund Tersedia
@@ -3203,12 +3187,28 @@ export default function Show() {
                   Pihak pengaju telah melampirkan bukti transfer refund. Silakan tekan tombol di bawah untuk memverifikasi dan menandai sebagai "Transferred".
                 </p>
                 <a href={`/storage/${data.transfer_proof_path}`} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="sm" className="w-full text-emerald-700 border-emerald-300 hover:bg-emerald-100">
+                  <Button type="button" variant="outline" size="sm" className="w-full text-emerald-700 border-emerald-300 hover:bg-emerald-100">
                     <Download className="h-3 w-3 mr-2" /> Lihat Bukti Terlampir
                   </Button>
                 </a>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label>
+                Bukti Transfer (Image/PDF) {data?.type?.toLowerCase() === 'allowance' || data?.transfer_proof_path ? <span className="text-muted-foreground italic font-normal">(Opsional)</span> : <span className="text-red-500">*</span>}
+              </Label>
+              <Input
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setTransferProof(e.target.files[0]);
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">Maksimal 5MB.</p>
+            </div>
 
             <div className="space-y-2">
               <Label className="text-xs font-bold text-slate-500 uppercase">

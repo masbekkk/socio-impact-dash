@@ -119,11 +119,15 @@ final readonly class ReimbursementController
 
     public function createEER(Request $request): \Inertia\Response
     {
-        $atrs = Reimbursement::with(['project.division', 'project.pic', 'project.head', 'approvals', 'items.budgetDetail'])
-            ->where('user_id', $request->user()->id)
+        $query = Reimbursement::with(['project.division', 'project.pic', 'project.head', 'approvals', 'items.budgetDetail'])
             ->where('type', 'atr')
-            ->where('status', 'transferred')
-            ->get()
+            ->where('status', 'transferred');
+
+        if (!$request->user()->hasRole(['finance', 'superadmin'])) {
+            $query->where('user_id', $request->user()->id);
+        }
+
+        $atrs = $query->get()
             ->map(fn (Reimbursement $atr): array => [
                 'id' => $atr->id,
                 'code' => $atr->code,
@@ -366,11 +370,15 @@ final readonly class ReimbursementController
         }
 
         if ($reimbursement->type->value === 'eer') {
-            $atrs = Reimbursement::with(['project.division', 'project.pic', 'project.head', 'approvals', 'items.budgetDetail'])
-                ->where('user_id', $user->id)
+            $query = Reimbursement::with(['project.division', 'project.pic', 'project.head', 'approvals', 'items.budgetDetail'])
                 ->where('type', 'atr')
-                ->where('status', 'transferred')
-                ->get()
+                ->where('status', 'transferred');
+
+            if (!$user->hasRole(['finance', 'superadmin'])) {
+                $query->where('user_id', $user->id);
+            }
+
+            $atrs = $query->get()
                 ->map(fn (Reimbursement $atr): array => [
                     'id' => $atr->id,
                     'code' => $atr->code,
