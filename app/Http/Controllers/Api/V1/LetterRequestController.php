@@ -107,7 +107,7 @@ final class LetterRequestController extends Controller
             'pic_id' => $request->user()->id,
             'approval_status' => 'pending',
             'letter_number' => $letterNumber,
-            'status' => $validated['status'] ?? 'used',
+            'status' => 'used',
         ]);
 
         return JsonResponseFormatter::created(
@@ -140,7 +140,7 @@ final class LetterRequestController extends Controller
             'letter_code_id' => ['required', 'exists:letter_codes,id'],
             'letter_division_id' => ['required', 'exists:letter_divisions,id'],
             'keterangan' => ['nullable', 'string'],
-            'status' => ['required', 'in:used,unused'],
+            // 'status' => ['required', 'in:used,unused'],
         ]);
 
         // If letter date, code, or division changed, technically the letter number should change too.
