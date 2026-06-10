@@ -362,10 +362,10 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
         return;
       }
 
-      if (eerCalculation.type === 'refund' && hasRole(['finance', 'superadmin']) && !transferProof) {
-        setErrors({ _general: ['Bukti transfer refund wajib diunggah.'] });
-        return;
-      }
+      // if (eerCalculation.type === 'refund' && hasRole(['finance', 'superadmin']) && !transferProof) {
+      //   setErrors({ _general: ['Bukti transfer refund wajib diunggah.'] });
+      //   return;
+      // }
 
       if (!formData.approver_head_id) {
         setErrors({ _general: ['Head Approver wajib dipilih.'] });
