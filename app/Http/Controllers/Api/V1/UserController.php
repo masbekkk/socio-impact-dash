@@ -76,15 +76,15 @@ final class UserController extends Controller
         $data = $request->validated();
 
         $data['password'] = Hash::make($data['password']);
-        $role = $data['role'];
+        $roles = $data['roles'];
         $headId = $data['head_id'] ?? null;
 
-        unset($data['role'], $data['head_id']);
+        unset($data['roles'], $data['head_id']);
         $data['email_verified_at'] = now();
         $data['head_id'] = $headId;
         $user = User::query()->create($data);
 
-        $user->assignRole($role);
+        $user->assignRole($roles);
 
         $user->load(['roles', 'head'])->loadCount('teamMembers');
 
@@ -120,16 +120,16 @@ final class UserController extends Controller
         } else {
             unset($data['password']);
         }
-        $role = $data['role'];
+        $roles = $data['roles'] ?? [];
         $headId = array_key_exists('head_id', $data) ? $data['head_id'] : $user->head_id;
 
-        unset($data['role'], $data['head_id']);
+        unset($data['roles'], $data['head_id']);
         $data['head_id'] = $headId;
         $data['email_verified_at'] = now();
         $user->update($data);
 
-        if (isset($role)) {
-            $user->syncRoles([$role]);
+        if (! empty($roles)) {
+            $user->syncRoles($roles);
         }
 
         $user->load(['roles', 'head'])->loadCount('teamMembers');

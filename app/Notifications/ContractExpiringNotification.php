@@ -39,8 +39,8 @@ final class ContractExpiringNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Kontrak Karyawan Akan Berakhir: ' . $this->expiringUser->name)
-            ->line('Pemberitahuan: Kontrak kerja untuk ' . $this->expiringUser->name . ' akan berakhir pada ' . $this->expiringUser->contract_end . '.')
+            ->subject('Kontrak Karyawan Akan Berakhir: '.$this->expiringUser->name)
+            ->line('Pemberitahuan: Kontrak kerja untuk '.$this->expiringUser->name.' akan berakhir pada '.$this->expiringUser->contract_end.'.')
             ->action('Lihat Dashboard', url('/'))
             ->line('Mohon segera memproses pembaruan kontrak atau tindakan lainnya.');
     }

@@ -123,7 +123,7 @@ final readonly class ReimbursementController
             ->where('type', 'atr')
             ->where('status', 'transferred');
 
-        if (!$request->user()->hasRole(['finance', 'superadmin'])) {
+        if (! $request->user()->hasRole(['finance', 'superadmin'])) {
             $query->where('user_id', $request->user()->id);
         }
 
@@ -374,7 +374,7 @@ final readonly class ReimbursementController
                 ->where('type', 'atr')
                 ->where('status', 'transferred');
 
-            if (!$user->hasRole(['finance', 'superadmin'])) {
+            if (! $user->hasRole(['finance', 'superadmin'])) {
                 $query->where('user_id', $user->id);
             }
 

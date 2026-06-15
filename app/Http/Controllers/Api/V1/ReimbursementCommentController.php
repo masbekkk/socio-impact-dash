@@ -44,14 +44,14 @@ final class ReimbursementCommentController extends Controller
             $involvedIds = array_unique(array_merge([$reimbursement->user_id], $approvers));
             $recipientIds = array_diff($involvedIds, [$request->user()->id]);
 
-            if (!empty($recipientIds)) {
+            if (! empty($recipientIds)) {
                 $notifier = new \App\Actions\CreateNotification();
                 $notifier->handle(
                     type: 'reimbursement_comment',
                     title: 'Komentar Baru',
-                    message: $request->user()->name . ' menambahkan pesan baru pada pengajuan ' . ($reimbursement->code ?? 'Reimbursement') . '.',
+                    message: $request->user()->name.' menambahkan pesan baru pada pengajuan '.($reimbursement->code ?? 'Reimbursement').'.',
                     recipientUserIds: array_values($recipientIds),
-                    referenceType: \App\Models\Reimbursement::class,
+                    referenceType: Reimbursement::class,
                     referenceId: $reimbursement->id,
                     createdBy: $request->user()->id,
                 );

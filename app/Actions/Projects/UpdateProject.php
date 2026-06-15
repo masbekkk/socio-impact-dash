@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 final class UpdateProject
 {
     public function __construct(private FileUploadService $fileUploadService) {}
+
     /**
      * @param  array<string, mixed>  $data
      */

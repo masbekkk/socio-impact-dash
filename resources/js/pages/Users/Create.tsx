@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
 import { ArrowLeft, Save } from 'lucide-react';
 import DatePicker from '@/components/DatePicker';
 import axios from 'axios';
@@ -28,7 +29,7 @@ export default function Create() {
         email: '',
         password: '',
         password_confirmation: '',
-        role: '',
+        roles: [] as string[],
         employee_type: 'pegawai_tetap',
         contract_start: '',
         contract_end: '',
@@ -164,16 +165,16 @@ export default function Create() {
                                     {errors.email && <p className="text-sm text-red-500">{errors.email[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="role">Role <span className="text-red-500">*</span></Label>
-                                    <SearchableSelect
+                                    <Label htmlFor="roles">Roles <span className="text-red-500">*</span></Label>
+                                    <SearchableMultiSelect
                                         options={roles.map(r => ({ value: r.name, label: r.name }))}
-                                        value={form.role}
-                                        onValueChange={(val) => setForm({ ...form, role: val })}
-                                        placeholder="Select a role"
+                                        value={form.roles}
+                                        onValueChange={(val) => setForm({ ...form, roles: val })}
+                                        placeholder="Select roles"
                                     />
-                                    {errors.role && <p className="text-sm text-red-500">{errors.role[0]}</p>}
+                                    {errors.roles && <p className="text-sm text-red-500">{errors.roles[0]}</p>}
                                 </div>
-                                {!['head', 'superadmin', 'direktur'].includes(form.role) && form.role && (
+                                {(!form.roles.some(r => ['head', 'superadmin', 'direktur'].includes(r))) && form.roles.length > 0 && (
                                     <div className="space-y-2">
                                         <Label htmlFor="head_id">Head (Atasan)</Label>
                                         <SearchableSelect

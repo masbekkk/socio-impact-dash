@@ -123,9 +123,9 @@ final class UpdateProjectRequest extends FormRequest
                 $available = max(0, $totalManagementBudget - $usedNonProjectBudget);
 
                 if ($budgetTotal > $available) {
-                    $validator->errors()->add('budget_total', 'Total anggaran melebihi batas maksimal available management budget (' . number_format($available, 0, ',', '.') . ').');
+                    $validator->errors()->add('budget_total', 'Total anggaran melebihi batas maksimal available management budget ('.number_format($available, 0, ',', '.').').');
                 }
-                
+
                 $managementBudget = (float) ($this->input('management_budget') ?? $project->management_budget);
                 if ($managementBudget > 0) {
                     $validator->errors()->add('management_budget', 'Non-Project tidak boleh memiliki management budget.');
