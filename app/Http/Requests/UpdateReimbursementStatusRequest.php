@@ -45,6 +45,7 @@ final class UpdateReimbursementStatusRequest extends FormRequest
                 }),
             ],
             'amount' => ['nullable', 'numeric', 'min:0'],
+            'transferred_amount' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 
