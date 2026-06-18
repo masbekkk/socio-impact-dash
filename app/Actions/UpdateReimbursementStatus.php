@@ -56,6 +56,10 @@ final readonly class UpdateReimbursementStatus
                 ];
                 if (isset($data['transferred_amount'])) {
                     $updateData['transferred_amount'] = (float) $data['transferred_amount'];
+
+                    if ($reimbursement->type === \App\Enums\ReimbursementType::ATR) {
+                        $updateData['amount'] = (float) $data['transferred_amount'];
+                    }
                 }
                 if ($transferProof instanceof UploadedFile) {
                     $path = $transferProof->store('reimbursements/transfer-proofs', 'public');
