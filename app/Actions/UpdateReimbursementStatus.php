@@ -59,6 +59,13 @@ final readonly class UpdateReimbursementStatus
 
                     if ($reimbursement->type === \App\Enums\ReimbursementType::ATR) {
                         $updateData['amount'] = (float) $data['transferred_amount'];
+                        
+                        // Update the nominal of the activity (AtrBudgetSelected and ReimbursementItem) since ATR currently only has 1 activity
+                        $reimbursement->atrBudgetSelecteds()->update(['amount' => (float) $data['transferred_amount']]);
+                        $reimbursement->items()->update([
+                            'unit_price' => (float) $data['transferred_amount'],
+                            'amount' => (float) $data['transferred_amount']
+                        ]);
                     }
                 }
                 if ($transferProof instanceof UploadedFile) {
