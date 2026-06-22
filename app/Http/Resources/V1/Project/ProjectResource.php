@@ -96,13 +96,13 @@ final class ProjectResource extends JsonResource
                 'notes' => $detail->notes,
                 'used_atr' => (float) $detail->reimbursementItems()
                     ->whereHas('reimbursement', function ($q) {
-                        $q->where('type', 'atr')->whereNotIn('status', ['rejected', 'draft', 'submitted']);
+                        $q->where('type', 'atr')->whereNotIn('status', ['rejected', 'draft']);
                     })
                     ->whereNull('parent_item_id')
                     ->sum('amount'),
                 'used_eer' => (float) $detail->reimbursementItems()
                     ->whereHas('reimbursement', function ($q) {
-                        $q->where('type', 'eer')->whereNotIn('status', ['rejected', 'draft', 'submitted']);
+                        $q->where('type', 'eer')->whereNotIn('status', ['rejected', 'draft']);
                     })
                     ->sum('amount'),
             ])),
@@ -112,27 +112,27 @@ final class ProjectResource extends JsonResource
             'events' => $this->whenLoaded('events'),
             'used_atr' => (float) $this->reimbursements()
                 ->where('type', 'atr')
-                ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                ->whereNotIn('status', ['rejected', 'draft'])
                 ->sum('amount'),
             'used_eer' => (float) $this->reimbursements()
                 ->where('type', 'eer')
-                ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                ->whereNotIn('status', ['rejected', 'draft'])
                 ->sum('amount'),
             'used_allowance' => (float) $this->reimbursements()
                 ->where('type', 'allowance')
-                ->whereNotIn('status', ['rejected', 'submitted', 'draft', 'revision'])
+                ->whereNotIn('status', ['rejected', 'draft', 'revision'])
                 ->sum('amount'),
             'total_used_operational' => (float) $this->reimbursements()
                 ->whereIn('type', ['atr', 'eer'])
-                ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                ->whereNotIn('status', ['rejected', 'draft'])
                 ->sum('amount'),
             'remaining_operational' => (float) $this->operational_budget - (float) $this->reimbursements()
                 ->whereIn('type', ['atr', 'eer'])
-                ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                ->whereNotIn('status', ['rejected', 'draft'])
                 ->sum('amount'),
             'remaining_allowance' => (float) $this->allowance_budget - (float) $this->reimbursements()
                 ->where('type', 'allowance')
-                ->whereNotIn('status', ['rejected', 'submitted', 'draft', 'revision'])
+                ->whereNotIn('status', ['rejected', 'draft', 'revision'])
                 ->sum('amount'),
             'created_at' => $this->created_at->toDateTimeString(),
             'updated_at' => $this->updated_at->toDateTimeString(),

@@ -68,7 +68,7 @@ final readonly class ReimbursementController
                 'operational_budget' => (float) $project->operational_budget,
                 'used_operational_budget' => (float) $project->reimbursements()
                     ->where('type', 'atr')
-                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->whereNotIn('status', ['rejected', 'draft'])
                     ->sum('amount'),
                 'division_name' => $project->division?->name ?? '-',
                 'pic_name' => $project->pic?->name ?? '-',
@@ -202,7 +202,7 @@ final readonly class ReimbursementController
                 'allowance_budget' => (float) $project->allowance_budget,
                 'used_allowance_budget' => (float) $project->reimbursements()
                     ->where('type', 'allowance')
-                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->whereNotIn('status', ['rejected', 'draft'])
                     ->sum('amount'),
                 'division_name' => $project->division?->name ?? '-',
                 'pic_name' => $project->pic?->name ?? '-',
@@ -336,7 +336,7 @@ final readonly class ReimbursementController
                     'operational_budget' => (float) $project->operational_budget,
                     'used_operational_budget' => (float) $project->reimbursements()
                         ->where('type', 'atr')
-                        ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                        ->whereNotIn('status', ['rejected', 'draft'])
                         ->sum('amount'),
                     'division_name' => $project->division?->name ?? '-',
                     'pic_name' => $project->pic?->name ?? '-',
@@ -436,7 +436,7 @@ final readonly class ReimbursementController
                     'allowance_budget' => (float) $project->allowance_budget,
                     'used_allowance_budget' => (float) $project->reimbursements()
                         ->where('type', 'allowance')
-                        ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                        ->whereNotIn('status', ['rejected', 'draft'])
                         ->sum('amount'),
                     'division_name' => $project->division?->name ?? '-',
                     'pic_name' => $project->pic?->name ?? '-',

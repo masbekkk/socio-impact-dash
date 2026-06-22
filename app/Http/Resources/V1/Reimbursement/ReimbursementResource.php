@@ -38,25 +38,25 @@ final class ReimbursementResource extends JsonResource
                 'allowance_budget' => $this->project?->allowance_budget ? (float) $this->project->allowance_budget : null,
                 'used_operational_budget' => $this->project ? (float) $this->project->reimbursements()
                     ->where('type', 'atr')
-                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->whereNotIn('status', ['rejected', 'draft'])
                     ->sum('amount') : null,
                 'used_eer_budget' => $this->project ? (float) $this->project->reimbursements()
                     ->where('type', 'eer')
-                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->whereNotIn('status', ['rejected', 'draft'])
                     ->sum('amount') : null,
                 'used_eer_refund_budget' => $this->project ? (float) $this->project->reimbursements()
                     ->where('type', 'eer')
                     ->where('eer_type', 'refund')
-                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->whereNotIn('status', ['rejected', 'draft'])
                     ->sum('amount') : null,
                 'used_eer_reimbursement_budget' => $this->project ? (float) $this->project->reimbursements()
                     ->where('type', 'eer')
                     ->where('eer_type', 'reimbursement')
-                    ->whereNotIn('status', ['rejected', 'submitted', 'draft'])
+                    ->whereNotIn('status', ['rejected', 'draft'])
                     ->sum('amount') : null,
                 'used_allowance_budget' => $this->project ? (float) $this->project->reimbursements()
                     ->where('type', 'allowance')
-                    ->whereNotIn('status', ['rejected', 'submitted', 'draft', 'revision'])
+                    ->whereNotIn('status', ['rejected', 'draft', 'revision'])
                     ->sum('amount') : null,
                 'budget_details' => $this->project?->budgetDetails->map(fn ($bd): array => [
                     'id' => $bd->id,
