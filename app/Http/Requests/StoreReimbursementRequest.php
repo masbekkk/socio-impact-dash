@@ -25,7 +25,7 @@ final class StoreReimbursementRequest extends FormRequest
             'type' => ['required', 'string', new Enum(ReimbursementType::class)],
             'status' => ['nullable', 'string', new Enum(\App\Enums\ReimbursementStatus::class)],
             'eer_type' => ['nullable', 'string', 'in:refund,reimbursement,balance'],
-            'amount' => ['nullable', 'numeric'],
+            'amount' => ['required_unless:status,draft', 'numeric', 'min:1'],
             'approver_head_id' => ['required', 'integer', 'exists:users,id'],
             'approver_finance_id' => ['nullable', 'integer', 'exists:users,id'],
             'approver_direktur_id' => ['nullable', 'integer', 'exists:users,id'],
@@ -79,5 +79,28 @@ final class StoreReimbursementRequest extends FormRequest
             'documents.*.file.max' => 'Ukuran file dokumen maksimal 10MB.',
             'project_id.exists' => 'Project tidak ditemukan.',
         ];
+    }
+
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function ($validator) {
+            $type = $this->input('type');
+            $status = $this->input('status');
+            $amount = (float) $this->input('amount', 0);
+            $projectId = $this->input('project_id');
+
+            if ($status !== \App\Enums\ReimbursementStatus::Draft->value && $type === 'allowance' && $projectId) {
+                $project = \App\Models\Project::find($projectId);
+                if ($project) {
+                    $remainingBudget = ($project->allowance_budget ?? 0) - ($project->used_allowance_budget ?? 0);
+                    if ($amount > $remainingBudget) {
+                        $validator->errors()->add('amount', 'Nominal pengajuan melebihi sisa pagu allowance proyek.');
+                    }
+                    if ($amount <= 0) {
+                        $validator->errors()->add('amount', 'Nominal pengajuan tidak boleh 0.');
+                    }
+                }
+            }
+        });
     }
 }

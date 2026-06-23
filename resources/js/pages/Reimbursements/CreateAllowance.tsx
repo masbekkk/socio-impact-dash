@@ -259,7 +259,7 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
         return (selectedProject.allowance_budget ?? 0) - (selectedProject.used_allowance_budget ?? 0);
     }, [selectedProject]);
 
-    const budgetExceeded = remainingBudget !== null && formData.amount > remainingBudget;
+    const isBudgetInvalid = selectedProject && remainingBudget !== null && remainingBudget <= 0;
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -371,57 +371,90 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
-                                    <div className="space-y-2 lg:col-span-1 border-r pr-4">
-                                        <Label>Tanggal Berangkat <span className="text-red-500">*</span></Label>
-                                        <DatePicker
-                                            value={formData.start_date}
-                                            onChange={(v) => handleValueChange('start_date', v)}
-                                            error={!!errors.start_date}
-                                        />
-                                        {errors.start_date && <p className="text-xs text-red-500">{errors.start_date[0]}</p>}
+                                {isBudgetInvalid && (
+                                    <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3 items-start text-red-700">
+                                        <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-semibold">Budget Allowance Tidak Tersedia</p>
+                                            <p className="text-sm mt-1">Proyek ini tidak memiliki sisa pagu allowance (sisa Rp 0) atau belum diset oleh Finance. Silakan pilih proyek lain.</p>
+                                        </div>
                                     </div>
-                                    <div className="space-y-2 lg:col-span-1">
-                                        <Label htmlFor="start_time">Jam <span className="text-red-500">*</span></Label>
-                                        <Input
-                                            type="time"
-                                            id="start_time"
-                                            name="start_time"
-                                            value={formData.start_time}
-                                            onChange={handleChange}
-                                            className="h-10"
-                                        />
-                                    </div>
-                                    <div className="space-y-2 lg:col-span-1 border-r pr-4">
-                                        <Label>Tanggal Kembali <span className="text-red-500">*</span></Label>
-                                        <DatePicker
-                                            value={formData.end_date}
-                                            onChange={(v) => handleValueChange('end_date', v)}
-                                            error={!!errors.end_date}
-                                        />
-                                        {errors.end_date && <p className="text-xs text-red-500">{errors.end_date[0]}</p>}
-                                    </div>
-                                    <div className="space-y-2 lg:col-span-1">
-                                        <Label htmlFor="end_time">Jam <span className="text-red-500">*</span></Label>
-                                        <Input
-                                            type="time"
-                                            id="end_time"
-                                            name="end_time"
-                                            value={formData.end_time}
-                                            onChange={handleChange}
-                                            className="h-10"
-                                        />
-                                    </div>
-                                    <div className="bg-blue-50 text-blue-700 px-4 py-2.5 rounded-md flex items-center justify-between border border-blue-100 h-10 lg:col-span-1">
-                                        <span className="text-sm font-medium">Durasi:</span>
-                                        <span className="font-bold">{totalDays} Hari</span>
-                                    </div>
-                                </div>
+                                )}
 
+                                {!isBudgetInvalid && (
+                                    <>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end mt-6">
+                                            <div className="space-y-2 lg:col-span-1 border-r pr-4">
+                                                <Label>Tanggal Berangkat <span className="text-red-500">*</span></Label>
+                                                <DatePicker
+                                                    value={formData.start_date}
+                                                    onChange={(v) => handleValueChange('start_date', v)}
+                                                    error={!!errors.start_date}
+                                                />
+                                                {errors.start_date && <p className="text-xs text-red-500">{errors.start_date[0]}</p>}
+                                            </div>
+                                            <div className="space-y-2 lg:col-span-1">
+                                                <Label htmlFor="start_time">Jam <span className="text-red-500">*</span></Label>
+                                                <Input
+                                                    type="time"
+                                                    id="start_time"
+                                                    name="start_time"
+                                                    value={formData.start_time}
+                                                    onChange={handleChange}
+                                                    className="h-10"
+                                                />
+                                            </div>
+                                            <div className="space-y-2 lg:col-span-1 border-r pr-4">
+                                                <Label>Tanggal Kembali <span className="text-red-500">*</span></Label>
+                                                <DatePicker
+                                                    value={formData.end_date}
+                                                    onChange={(v) => handleValueChange('end_date', v)}
+                                                    error={!!errors.end_date}
+                                                />
+                                                {errors.end_date && <p className="text-xs text-red-500">{errors.end_date[0]}</p>}
+                                            </div>
+                                            <div className="space-y-2 lg:col-span-1">
+                                                <Label htmlFor="end_time">Jam <span className="text-red-500">*</span></Label>
+                                                <Input
+                                                    type="time"
+                                                    id="end_time"
+                                                    name="end_time"
+                                                    value={formData.end_time}
+                                                    onChange={handleChange}
+                                                    className="h-10"
+                                                />
+                                            </div>
+                                            <div className="bg-blue-50 text-blue-700 px-4 py-2.5 rounded-md flex items-center justify-between border border-blue-100 h-10 lg:col-span-1">
+                                                <span className="text-sm font-medium">Durasi:</span>
+                                                <span className="font-bold">{totalDays} Hari</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                            <div className="space-y-2">
+                                                <Label>Nominal Pengajuan <span className="text-red-500">*</span></Label>
+                                                <MoneyInput
+                                                    value={formData.amount}
+                                                    onValueChange={handleAmountChange}
+                                                    placeholder="0"
+                                                    className={errors.amount ? "border-red-500" : ""}
+                                                />
+                                                {errors.amount && <p className="text-xs text-red-500">{errors.amount[0]}</p>}
+                                                {remainingBudget !== null && (
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        Sisa Pagu Allowance: <span className="font-medium text-emerald-600">Rp {remainingBudget.toLocaleString('id-ID')}</span>
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
 
-                        <Separator />
+                        {!isBudgetInvalid && (
+                            <>
+                                <Separator />
 
                         {/* Rencana Penggunaan */}
                         <div className="p-6 md:p-8 bg-white">
@@ -497,16 +530,18 @@ export default function CreateAllowance({ projects, approvers, authUser, users, 
                                 </p>
                             </div>
                         </div>
+                            </>
+                        )}
 
                         <CardFooter className="p-6 md:p-8 bg-gray-50 flex justify-between items-center border-t">
                             <div className="text-sm text-muted-foreground">
                                 {loading && <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</span>}
                             </div>
                             <div className="flex gap-3">
-                                <Button type="button" variant="outline" disabled={loading} onClick={() => handleSubmit('draft')}>
+                                <Button type="button" variant="outline" disabled={loading || !!isBudgetInvalid} onClick={() => handleSubmit('draft')}>
                                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update Draft' : 'Simpan Draft'}</>}
                                 </Button>
-                                <Button type="button" disabled={loading} className="bg-sidebar hover:bg-sidebar/90 min-w-[180px]" onClick={() => handleSubmit('submitted')}>
+                                <Button type="button" disabled={loading || !!isBudgetInvalid} className="bg-sidebar hover:bg-sidebar/90 min-w-[180px]" onClick={() => handleSubmit('submitted')}>
                                     {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update & Ajukan Allowance' : 'Ajukan Allowance'}</>}
                                 </Button>
                             </div>
