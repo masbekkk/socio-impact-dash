@@ -945,19 +945,32 @@ export default function ProjectTabs({
                                                     <div className="md:col-span-2 space-y-1">
                                                         <Label className="text-[10px] font-bold text-muted-foreground flex justify-between uppercase">
                                                             <span>Pelaksanaan</span>
-                                                            {Number(detail.used_eer) > 0 && <span className="text-blue-500 lowercase normal-case text-[9px]">(dari EER)</span>}
+                                                            </Label>
+                                                            <Label className="text-[8px] font-bold text-muted-foreground flex justify-between uppercase">
+                                                            {Number(detail.used_eer) > 0 && (
+                                                                <span className="text-blue-500 normal-case text-[9px]">
+                                                                    {new Intl.NumberFormat('id-ID', {
+                                                                        style: 'currency',
+                                                                        currency: 'IDR',
+                                                                        minimumFractionDigits: 0,
+                                                                    }).format(detail.used_eer)}{' '}
+                                                                    (terpakai EER)
+                                                                </span>
+                                                            )}
                                                         </Label>
                                                         <MoneyInput
-                                                            value={Number(detail.used_eer) > 0 ? Number(detail.used_eer) : (detail.amount_pelaksanaan || 0)}
+                                                            // value={Number(detail.used_eer) > 0 ? Number(detail.used_eer) : (detail.amount_pelaksanaan || 0)}
+                                                            value={detail.amount_pelaksanaan}
                                                             onValueChange={(vals) => {
-                                                                if (Number(detail.used_eer) > 0) return; // Prevent change if EER exists
+                                                                // if (Number(detail.used_eer) > 0) return; // Prevent change if EER exists
                                                                 const newDetails = [...detailBudgets];
                                                                 newDetails[idx].amount_pelaksanaan = vals.floatValue || 0;
                                                                 setDetailBudgets(newDetails);
                                                             }}
                                                             placeholder="0"
-                                                            className={`h-8 text-xs ${Number(detail.used_eer) > 0 ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
-                                                            disabled={Number(detail.used_eer) > 0}
+                                                            className="h-8 text-xs"
+                                                            // className={`h-8 text-xs ${Number(detail.used_eer) > 0 ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
+                                                            // disabled={Number(detail.used_eer) > 0}
                                                         />
                                                     </div>
                                                     <div className="md:col-span-4 space-y-1">
