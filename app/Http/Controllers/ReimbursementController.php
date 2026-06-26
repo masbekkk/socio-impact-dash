@@ -66,8 +66,19 @@ final readonly class ReimbursementController
                 'initial_project' => $project->initial_project,
                 'code' => $project->code,
                 'operational_budget' => (float) $project->operational_budget,
-                'used_operational_budget' => (float) $project->reimbursements()
+                'used_operational_budget' => (float) $project->operational_budget
+                - (float) $project->reimbursements()
                     ->where('type', 'atr')
+                    ->whereNotIn('status', ['rejected', 'draft'])
+                    ->sum('amount')
+                - (float) $project->reimbursements()
+                    ->where('type', 'eer')
+                    ->where('eer_type', 'reimbursement')
+                    ->whereNotIn('status', ['rejected', 'draft'])
+                    ->sum('amount')
+                + (float) $project->reimbursements()
+                    ->where('type', 'eer')
+                    ->where('eer_type', 'refund')
                     ->whereNotIn('status', ['rejected', 'draft'])
                     ->sum('amount'),
                 'division_name' => $project->division?->name ?? '-',
