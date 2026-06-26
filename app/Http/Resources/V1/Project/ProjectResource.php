@@ -114,6 +114,16 @@ final class ProjectResource extends JsonResource
                 ->where('type', 'atr')
                 ->whereNotIn('status', ['rejected', 'draft'])
                 ->sum('amount'),
+            'used_eer_refund' => (float) $this->reimbursements()
+                ->where('type', 'eer')
+                ->where('eer_type', 'refund')
+                ->whereNotIn('status', ['rejected', 'draft'])
+                ->sum('amount'),
+            'used_eer_reimbursement' => (float) $this->reimbursements()
+                ->where('type', 'eer')
+                ->where('eer_type', 'reimbursement')
+                ->whereNotIn('status', ['rejected', 'draft'])
+                ->sum('amount'),
             'used_eer' => (float) $this->reimbursements()
                 ->where('type', 'eer')
                 ->whereNotIn('status', ['rejected', 'draft'])

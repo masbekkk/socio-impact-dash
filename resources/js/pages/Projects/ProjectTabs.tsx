@@ -142,6 +142,7 @@ export default function ProjectTabs({
             });
             setEditPartitions(false);
             if (onShowToast) onShowToast('Pembagian anggaran berhasil disimpan', 'success');
+            if (refetchProject) refetchProject();
         } catch (error: any) {
             console.error(error);
             if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal menyimpan anggaran', 'error');
@@ -158,6 +159,7 @@ export default function ProjectTabs({
             });
             setLocalBudgetStatus('approved');
             if (onShowToast) onShowToast('Pembagian anggaran berhasil disetujui', 'success');
+            if (refetchProject) refetchProject();
         } catch (error: any) {
             console.error(error);
             if (onShowToast) onShowToast(error?.response?.data?.message || 'Gagal menyetujui anggaran', 'error');
@@ -337,6 +339,10 @@ export default function ProjectTabs({
     const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
     const totalUsedAtr = detailBudgets.reduce((sum, item) => sum + (Number(item.used_atr) || 0), 0);
     const totalUsedEer = detailBudgets.reduce((sum, item) => sum + (Number(item.used_eer) || 0), 0);
+    const computedRemainingOperational = opsBudget
+        - (project.used_atr || 0)
+        - (project.used_eer_reimbursement || 0)
+        + (project.used_eer_refund || 0);
     const estimasiProfit = (project.budget_total || 0) - totalPelaksanaan;
 
     return (
@@ -744,7 +750,7 @@ export default function ProjectTabs({
                                         </div>
                                         <div className="flex justify-between items-center bg-blue-50/50 p-1.5 rounded-md">
                                             <span className="text-[10px] font-bold text-blue-700">Sisa Anggaran</span>
-                                            <span className="text-[10px] font-bold text-blue-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.remaining_operational || 0)}</span>
+                                            <span className="text-[10px] font-bold text-blue-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(computedRemainingOperational)}</span>
                                         </div>
                                     </div>
                                 </div>
