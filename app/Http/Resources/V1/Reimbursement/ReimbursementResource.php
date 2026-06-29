@@ -102,35 +102,38 @@ final class ReimbursementResource extends JsonResource
                 'image_path' => $item->image_path,
                 'created_at' => $item->created_at?->toISOString(),
             ])),
-            'eers' => $this->whenLoaded('eers', fn (): \Illuminate\Support\Collection => $this->eers->map(fn (\App\Models\Reimbursement $item): array => [
-                'id' => $item->id,
-                'code' => $item->code,
-                'type' => $item->type instanceof UnitEnum ? $item->type->value : $item->type,
-                'eer_type' => $item->eer_type,
-                'status' => $item->status instanceof UnitEnum ? $item->status->value : $item->status,
-                'amount' => (float) $item->amount,
-                'usage_plan' => $item->usage_plan,
-                'urgency' => $item->urgency,
-                'created_at' => $item->created_at?->toISOString(),
-                'user' => [
-                    'id' => $item->user?->id,
-                    'name' => $item->user?->name,
-                ],
-                'project' => [
-                    'id' => $item->project?->id,
-                    'name' => $item->project?->name,
-                    'code' => $item->project?->code,
-                ],
-                'approvals' => $item->approvals->map(fn ($app): array => [
-                    'id' => $app->id,
-                    'role' => $app->role instanceof UnitEnum ? $app->role->value : $app->role,
-                    'status' => $app->status instanceof UnitEnum ? $app->status->value : $app->status,
-                    'approver' => [
-                        'id' => $app->approver?->id,
-                        'name' => $app->approver?->name,
+            'eers' => $this->whenLoaded('eers', fn (): \Illuminate\Support\Collection => $this->eers
+                ->filter(fn (\App\Models\Reimbursement $item): bool => $item->deleted_at === null)
+                ->values()
+                ->map(fn (\App\Models\Reimbursement $item): array => [
+                    'id' => $item->id,
+                    'code' => $item->code,
+                    'type' => $item->type instanceof UnitEnum ? $item->type->value : $item->type,
+                    'eer_type' => $item->eer_type,
+                    'status' => $item->status instanceof UnitEnum ? $item->status->value : $item->status,
+                    'amount' => (float) $item->amount,
+                    'usage_plan' => $item->usage_plan,
+                    'urgency' => $item->urgency,
+                    'created_at' => $item->created_at?->toISOString(),
+                    'user' => [
+                        'id' => $item->user?->id,
+                        'name' => $item->user?->name,
                     ],
-                ]),
-            ])),
+                    'project' => [
+                        'id' => $item->project?->id,
+                        'name' => $item->project?->name,
+                        'code' => $item->project?->code,
+                    ],
+                    'approvals' => $item->approvals->map(fn ($app): array => [
+                        'id' => $app->id,
+                        'role' => $app->role instanceof UnitEnum ? $app->role->value : $app->role,
+                        'status' => $app->status instanceof UnitEnum ? $app->status->value : $app->status,
+                        'approver' => [
+                            'id' => $app->approver?->id,
+                            'name' => $app->approver?->name,
+                        ],
+                    ]),
+                ])),
             'approvals' => $this->whenLoaded('approvals', function (): \Illuminate\Support\Collection {
                 $priority = [
                     'head' => 1,

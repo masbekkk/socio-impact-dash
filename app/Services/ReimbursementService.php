@@ -82,6 +82,8 @@ final class ReimbursementService
         if ($isEerTab) {
             $query->where('type', \App\Enums\ReimbursementType::ATR);
             $query->whereHas('eers', function (\Illuminate\Database\Eloquent\Builder $eerQ) use ($filters): void {
+                $eerQ->whereNull('deleted_at');
+
                 if (! empty($filters['status'])) {
                     $status = $filters['status'];
                     if (is_string($status) && str_contains($status, ',')) {
@@ -240,6 +242,8 @@ final class ReimbursementService
     private function buildEerFilterClosure(array $filters): Closure
     {
         return function (\Illuminate\Database\Eloquent\Relations\HasMany $q) use ($filters): void {
+            $q->whereNull('deleted_at');
+
             if (! empty($filters['status'])) {
                 $status = $filters['status'];
                 if (is_string($status) && str_contains($status, ',')) {
