@@ -284,7 +284,7 @@ export default function CreateATR({ projects, approvers, users = [], expenseType
 
   const remainingBudget = useMemo(() => {
     if (!selectedProject) return null;
-    return (selectedProject.operational_budget ?? 0) - (selectedProject.used_operational_budget ?? 0);
+      return (selectedProject.operational_budget ?? 0) + (selectedProject.used_operational_budget ?? 0);
   }, [selectedProject]);
 
   const budgetExceeded = remainingBudget !== null && totalAmount > remainingBudget;
