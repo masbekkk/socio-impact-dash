@@ -245,7 +245,7 @@ final class UpdateProject
                     'item_name' => $detail['item_name'] ?? null,
                     'quantity' => $detail['quantity'] ?? 1,
                     'item_price' => $detail['item_price'] ?? 0,
-                    'amount' => $detail['amount_pelaksanaan'] ?? $detail['amount'],
+                    'amount' => isset($detail['amount_pelaksanaan']) && (float)$detail['amount_pelaksanaan'] > 0 ? $detail['amount_pelaksanaan'] : ($detail['amount'] ?? 0),
                     'amount_pelaksanaan' => $detail['amount_pelaksanaan'] ?? null,
                     'amount_proposal' => $detail['amount_proposal'] ?? null,
                     'notes' => $detail['notes'] ?? null,

@@ -49,6 +49,7 @@ final class UpdateProjectRequest extends FormRequest
             'status' => ['sometimes', 'required', Rule::enum(ProjectStatus::class)],
             'budget_total' => ['sometimes', 'required', 'numeric', 'min:0'],
             'operational_budget' => ['sometimes', 'numeric', 'min:0'],
+            'management_budget' => ['sometimes', 'numeric', 'min:0'],
             'allowance_budget' => ['sometimes', 'numeric', 'min:0'],
             'budget_partition_status' => ['sometimes', 'string', 'in:draft,pending,approved,rejected'],
             'start_date' => ['sometimes', 'required', 'date'],
@@ -99,7 +100,7 @@ final class UpdateProjectRequest extends FormRequest
         $validator->after(function (\Illuminate\Validation\Validator $validator): void {
             $user = $this->user();
 
-            if ($this->has('operational_budget') || $this->has('allowance_budget')) {
+            if ($this->hasAny(['operational_budget', 'management_budget', 'allowance_budget'])) {
                 $project = $this->route('project');
                 if (! $user->can('input_budget_partition') && $user->id !== $project->created_by) {
                     $validator->errors()->add('operational_budget', 'You do not have permission to modify budget partitions.');

@@ -59,6 +59,31 @@ final class ProjectTest extends TestCase
         $response->assertCreated();
     }
 
+    public function test_management_budget_can_be_updated(): void
+    {
+        $user = User::create([
+            'name' => 'Test User',
+            'email' => 'test-user@example.com',
+            'password' => bcrypt('password'),
+        ]);
+        $project = Project::create([
+            'name' => 'Test Project',
+            'code' => 'TEST-MGMT-001',
+            'created_by' => $user->id,
+            'project_type' => 'consultation',
+            'management_budget' => 100000,
+            'budget_total' => 500000,
+            'status' => ProjectStatus::Draft,
+        ]);
+
+        $response = $this->actingAs($user)->putJson(route('api.projects.update', $project), [
+            'management_budget' => 250000,
+        ]);
+
+        $response->assertOk();
+        $this->assertSame(250000.0, (float) $project->fresh()->management_budget);
+    }
+
     public function test_head_can_close_project(): void
     {
         $head = User::factory()->withRole(UserRole::Head)->create();
