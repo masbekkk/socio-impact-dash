@@ -11,7 +11,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 final class ReimbursementService
 {
-    public function listReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public function llistReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $isAtrTab = ($filters['type'] ?? '') === 'atr';
         $isEerTab = ($filters['type'] ?? '') === 'eer';
@@ -55,7 +55,7 @@ final class ReimbursementService
         } elseif ($user->hasRole('finance')) {
             // Finance with division restriction
             if ($user->division_id) {
-                $query->whereHas('project', fn ($q) => $q->where('division_id', $user->division_id));
+                $query->whereHas('project', fn ($q) => $q->where('division_id', $user->division_id)->orWhere('user_id', $user->id));
             }
         } elseif ($user->hasRole('hr')) {
             // HR can see allowances OR their own/team/approvals

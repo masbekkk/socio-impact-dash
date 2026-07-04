@@ -59,7 +59,6 @@ final readonly class ReimbursementController
     {
         $projects = Project::with(['division', 'pic', 'head', 'budgetDetails'])
             ->where('status', 'active')
-            // ->where('code', 'PE26004')
             ->get()
             ->map(fn (Project $project): array => [
                 'id' => $project->id,
@@ -67,8 +66,7 @@ final readonly class ReimbursementController
                 'initial_project' => $project->initial_project,
                 'code' => $project->code,
                 'operational_budget' => (float) $project->operational_budget,
-                'used_operational_budget' => 
-                - (float) $project->reimbursements()
+                'used_operational_budget' => -(float) $project->reimbursements()
                     ->where('type', 'atr')
                     ->whereNotIn('status', ['rejected', 'draft'])
                     ->sum('amount')
@@ -109,6 +107,7 @@ final readonly class ReimbursementController
 
         $user = $request->user();
         $user->load('division');
+
         // dd($projects);
         return Inertia::render('Reimbursements/CreateATR', [
             'authUser' => [
@@ -346,10 +345,10 @@ final readonly class ReimbursementController
                     'name' => $project->name,
                     'code' => $project->code,
                     'operational_budget' => (float) $project->operational_budget,
-                    'used_operational_budget' => - (float) $project->reimbursements()
-                    ->where('type', 'atr')
-                    ->whereNotIn('status', ['rejected', 'draft'])
-                    ->sum('amount')
+                    'used_operational_budget' => -(float) $project->reimbursements()
+                        ->where('type', 'atr')
+                        ->whereNotIn('status', ['rejected', 'draft'])
+                        ->sum('amount')
                 - (float) $project->reimbursements()
                     ->where('type', 'eer')
                     ->where('eer_type', 'reimbursement')
@@ -384,6 +383,7 @@ final readonly class ReimbursementController
                     'name' => $u->name,
                     'email' => $u->email,
                 ])->values()->all());
+
             // dd($projects);
             return Inertia::render('Reimbursements/CreateATR', array_merge($commonData, [
                 'projects' => $projects,
