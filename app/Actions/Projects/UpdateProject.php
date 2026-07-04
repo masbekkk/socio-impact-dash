@@ -45,6 +45,12 @@ final class UpdateProject
                 $this->syncDetailBudgets($project, $detailBudgets, $userId);
             }
 
+            if (isset($data['year_claims'])) {
+                /** @var array<int, array<string, mixed>> $claims */
+                $claims = $data['year_claims'];
+                $this->syncYearClaims($project, $claims);
+            }
+
             $this->syncApprovals($project);
 
             // Handle deletions
@@ -61,8 +67,11 @@ final class UpdateProject
             if (isset($data['delete_detail_budgets'])) {
                 $project->budgetDetails()->whereIn('id', $data['delete_detail_budgets'])->delete();
             }
+            if (isset($data['delete_year_claims'])) {
+                $project->yearClaims()->whereIn('id', $data['delete_year_claims'])->delete();
+            }
 
-            return $project->fresh(['locations', 'terminPayments', 'documents', 'budgetDetails']);
+            return $project->fresh(['locations', 'terminPayments', 'documents', 'budgetDetails', 'yearClaims']);
         });
 
         return $updatedProject;
@@ -245,7 +254,7 @@ final class UpdateProject
                     'item_name' => $detail['item_name'] ?? null,
                     'quantity' => $detail['quantity'] ?? 1,
                     'item_price' => $detail['item_price'] ?? 0,
-                    'amount' => isset($detail['amount_pelaksanaan']) && (float)$detail['amount_pelaksanaan'] > 0 ? $detail['amount_pelaksanaan'] : ($detail['amount'] ?? 0),
+                    'amount' => isset($detail['amount_pelaksanaan']) && (float) $detail['amount_pelaksanaan'] > 0 ? $detail['amount_pelaksanaan'] : ($detail['amount'] ?? 0),
                     'amount_pelaksanaan' => $detail['amount_pelaksanaan'] ?? null,
                     'amount_proposal' => $detail['amount_proposal'] ?? null,
                     'notes' => $detail['notes'] ?? null,
@@ -281,5 +290,32 @@ final class UpdateProject
         $updateOrCreate('finance', $project->account_manager_id !== null ? (int) $project->account_manager_id : null);
         $updateOrCreate('hr', $project->head_id !== null ? (int) $project->head_id : null);
         $updateOrCreate('direktur', $project->pic_id !== null ? (int) $project->pic_id : null);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $claims
+     */
+    private function syncYearClaims(Project $project, array $claims): void
+    {
+        foreach ($claims as $claim) {
+            if (isset($claim['id'])) {
+                $existing = $project->yearClaims()->find($claim['id']);
+                if ($existing) {
+                    $existing->update([
+                        'year' => $claim['year'],
+                        'operational_budget' => $claim['operational_budget'] ?? 0,
+                        'management_budget' => $claim['management_budget'] ?? 0,
+                        'allowance_budget' => $claim['allowance_budget'] ?? 0,
+                    ]);
+                }
+            } else {
+                $project->yearClaims()->create([
+                    'year' => $claim['year'],
+                    'operational_budget' => $claim['operational_budget'] ?? 0,
+                    'management_budget' => $claim['management_budget'] ?? 0,
+                    'allowance_budget' => $claim['allowance_budget'] ?? 0,
+                ]);
+            }
+        }
     }
 }

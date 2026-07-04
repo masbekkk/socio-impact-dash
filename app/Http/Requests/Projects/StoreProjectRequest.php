@@ -67,6 +67,11 @@ final class StoreProjectRequest extends FormRequest
             'documents' => ['nullable', 'array'],
             'documents.*.type' => ['required', 'string'],
             'documents.*.file' => ['required', 'file', 'max:51200', 'mimes:pdf,jpg,jpeg,png'], // 50MB limit
+            'year_claims' => ['nullable', 'array'],
+            'year_claims.*.year' => ['required', 'integer', 'min:2000', 'max:2100'],
+            'year_claims.*.operational_budget' => ['nullable', 'numeric', 'min:0'],
+            'year_claims.*.management_budget' => ['nullable', 'numeric', 'min:0'],
+            'year_claims.*.allowance_budget' => ['nullable', 'numeric', 'min:0'],
             'detail_budgets' => ['nullable', 'array'],
             'detail_budgets.*.item_name' => ['required_with:detail_budgets', 'string', 'max:255'],
             'detail_budgets.*.quantity' => ['nullable', 'numeric', 'min:1'],

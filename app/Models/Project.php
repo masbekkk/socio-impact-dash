@@ -137,6 +137,11 @@ final class Project extends Model
         return $this->hasMany(ProjectBudgetDetail::class);
     }
 
+    public function yearClaims(): HasMany
+    {
+        return $this->hasMany(ProjectYearClaim::class)->orderBy('year');
+    }
+
     protected static function boot(): void
     {
         parent::boot();
@@ -155,6 +160,7 @@ final class Project extends Model
                 $model->events()->delete();
                 $model->locations()->delete();
                 $model->budgetDetails()->delete();
+                $model->yearClaims()->delete();
                 // Reimbursements cascade to their own children via Reimbursement::boot()
                 $model->reimbursements->each->delete();
             } else {
@@ -165,6 +171,7 @@ final class Project extends Model
                 $model->events()->forceDelete();
                 $model->locations()->forceDelete();
                 $model->budgetDetails()->forceDelete();
+                $model->yearClaims()->forceDelete();
                 $model->reimbursements->each->forceDelete();
             }
         });

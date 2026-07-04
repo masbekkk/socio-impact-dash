@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Search, Plus, Filter, MoreHorizontal, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, CheckCircle2, X, FileText, Cpu, BarChart3, Users, Globe, HeartHandshake, Layers, Building, Wallet, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Calendar, Search, Plus, Filter, MoreHorizontal, Eye, Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, CheckCircle2, X, FileText, Cpu, BarChart3, Users, Globe, HeartHandshake, Layers, Building, Wallet, ArrowUpDown, ArrowUp, ArrowDown, Loader } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +39,7 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateFilterPresets } from '@/components/DateFilterPresets';
+import MoneyInput from '@/components/MoneyInput';
 import axios from 'axios';
 import { usePermission } from '@/hooks/use-permission';
 
@@ -160,6 +161,12 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [toast, setToast] = React.useState({ show: false, message: '', type: 'success' });
 
+  // Year Claims Dialog State
+  const [yearClaimProject, setYearClaimProject] = React.useState<any>(null);
+  const [isYearClaimDialogOpen, setIsYearClaimDialogOpen] = React.useState(false);
+  const [yearClaims, setYearClaims] = React.useState<any[]>([]);
+  const [savingYearClaims, setSavingYearClaims] = React.useState(false);
+
   // -------------------------------------------------------------------------
   // Persist filters to localStorage whenever they change
   // -------------------------------------------------------------------------
@@ -238,6 +245,56 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
     } finally {
       setIsDeleteDialogOpen(false);
       setProjectToDelete(null);
+    }
+  };
+
+  const canManageYearClaims = (project: any): boolean => {
+    const isFinance = hasRole(['finance']);
+    const isSuperadmin = hasRole(['superadmin']);
+    const isHeadCreator = hasRole(['head']) && auth?.user?.id === project.created_by;
+    return isFinance || isSuperadmin || isHeadCreator;
+  };
+
+  const openYearClaimDialog = (project: any) => {
+    setYearClaimProject(project);
+    setYearClaims((project.year_claims || []).map((c: any) => ({ ...c })));
+    setIsYearClaimDialogOpen(true);
+  };
+
+  const addYearClaimRow = () => {
+    const nextYear = new Date().getFullYear();
+    setYearClaims(prev => [...prev, { year: nextYear + prev.length, operational_budget: 0, management_budget: 0, allowance_budget: 0 }]);
+  };
+
+  const removeYearClaimRow = (index: number) => {
+    setYearClaims(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateYearClaim = (index: number, field: string, value: any) => {
+    setYearClaims(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c));
+  };
+
+  const saveYearClaims = async () => {
+    if (!yearClaimProject) return;
+    setSavingYearClaims(true);
+    try {
+      const existingIds = (yearClaimProject.year_claims || []).map((c: any) => c.id);
+      const submittedIds = yearClaims.filter(c => c.id).map((c: any) => c.id);
+      const deleteYearClaims = existingIds.filter((id: number) => !submittedIds.includes(id));
+
+      await axios.put(`/api/v1/projects/${yearClaimProject.uuid}`, {
+        year_claims: yearClaims,
+        delete_year_claims: deleteYearClaims,
+      });
+      setToast({ show: true, message: 'Tahun anggaran berhasil disimpan.', type: 'success' });
+      setIsYearClaimDialogOpen(false);
+      setYearClaimProject(null);
+      fetchProjects();
+    } catch (error: any) {
+      console.error("Error saving year claims:", error);
+      setToast({ show: true, message: error?.response?.data?.message || 'Gagal menyimpan tahun anggaran.', type: 'error' });
+    } finally {
+      setSavingYearClaims(false);
     }
   };
 
@@ -650,6 +707,14 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                                 <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Proyek
                               </Link>
                             </DropdownMenuItem>
+                            {canManageYearClaims(p) && (
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={() => openYearClaimDialog(p)}
+                              >
+                                <Wallet className="mr-2 h-4 w-4 text-muted-foreground" /> Atur Tahun Anggaran
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
@@ -787,6 +852,84 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               </div>
             </Link>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* YEAR CLAIMS DIALOG */}
+      <Dialog open={isYearClaimDialogOpen} onOpenChange={setIsYearClaimDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Atur Tahun Anggaran</DialogTitle>
+            <DialogDescription>
+              Kelola alokasi anggaran per tahun untuk proyek <strong>{yearClaimProject?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-4 max-h-[60vh] overflow-y-auto">
+            {yearClaims.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground border rounded-md">
+                Belum ada tahun anggaran. Klik "Tambah Tahun" untuk menambahkan.
+              </div>
+            )}
+
+            {yearClaims.map((claim, index) => (
+              <div key={index} className="flex items-start gap-3 p-4 border rounded-lg bg-white">
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-600 w-20">Tahun</label>
+                    <Input
+                      type="number"
+                      min={2000}
+                      max={2100}
+                      value={claim.year}
+                      onChange={(e) => updateYearClaim(index, 'year', parseInt(e.target.value) || 0)}
+                      className="h-8 w-28 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-600 w-20">Operasional</label>
+                    <MoneyInput
+                      value={claim.operational_budget}
+                      onValueChange={(values) => updateYearClaim(index, 'operational_budget', values.floatValue || 0)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-600 w-20">Manajemen</label>
+                    <MoneyInput
+                      value={claim.management_budget}
+                      onValueChange={(values) => updateYearClaim(index, 'management_budget', values.floatValue || 0)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-600 w-20">Allowance</label>
+                    <MoneyInput
+                      value={claim.allowance_budget}
+                      onValueChange={(values) => updateYearClaim(index, 'allowance_budget', values.floatValue || 0)}
+                    />
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 mt-1 text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
+                  onClick={() => removeYearClaimRow(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+
+            <Button variant="outline" size="sm" onClick={addYearClaimRow} className="w-full gap-2">
+              <Plus className="h-4 w-4" /> Tambah Tahun
+            </Button>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsYearClaimDialogOpen(false); setYearClaimProject(null); }}>Batal</Button>
+            <Button onClick={saveYearClaims} disabled={savingYearClaims}>
+              {savingYearClaims ? <Loader className="h-4 w-4 animate-spin" /> : 'Simpan'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

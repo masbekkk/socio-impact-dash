@@ -72,6 +72,12 @@ final class UpdateProjectRequest extends FormRequest
             'documents.*.id' => ['nullable', 'integer'],
             'documents.*.type' => ['required', 'string'],
             'documents.*.file' => ['sometimes', 'file', 'max:51200', 'mimes:pdf,jpg,jpeg,png'], // 50MB limit
+            'year_claims' => ['nullable', 'array'],
+            'year_claims.*.id' => ['nullable', 'integer'],
+            'year_claims.*.year' => ['required', 'integer', 'min:2000', 'max:2100'],
+            'year_claims.*.operational_budget' => ['nullable', 'numeric', 'min:0'],
+            'year_claims.*.management_budget' => ['nullable', 'numeric', 'min:0'],
+            'year_claims.*.allowance_budget' => ['nullable', 'numeric', 'min:0'],
             'detail_budgets' => ['nullable', 'array'],
             'detail_budgets.*.id' => ['nullable', 'integer'],
             'detail_budgets.*.item_name' => ['required_with:detail_budgets', 'string', 'max:255'],
@@ -89,6 +95,8 @@ final class UpdateProjectRequest extends FormRequest
             'delete_documents.*' => ['integer'],
             'delete_detail_budgets' => ['nullable', 'array'],
             'delete_detail_budgets.*' => ['integer'],
+            'delete_year_claims' => ['nullable', 'array'],
+            'delete_year_claims.*' => ['integer'],
         ];
     }
 

@@ -45,10 +45,16 @@ final class CreateProject
                 $this->syncDetailBudgets($project, $detailBudgets, $userId);
             }
 
+            if (isset($data['year_claims'])) {
+                /** @var array<int, array<string, mixed>> $claims */
+                $claims = $data['year_claims'];
+                $this->syncYearClaims($project, $claims);
+            }
+
             $this->createApprovals($project);
 
             // Re-fetch project to load all newly created relations properly
-            return $project->fresh(['locations', 'terminPayments', 'documents', 'budgetDetails']);
+            return $project->fresh(['locations', 'terminPayments', 'documents', 'budgetDetails', 'yearClaims']);
         });
 
         // Notify Finance + Direktur about new project
@@ -175,6 +181,21 @@ final class CreateProject
                 // Dispatch background job to move file to final storage
                 dispatch(new \App\Jobs\ProcessProjectDocumentUpload((int) $document->id, "projects/{$project->id}/documents"));
             }
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $claims
+     */
+    private function syncYearClaims(Project $project, array $claims): void
+    {
+        foreach ($claims as $claim) {
+            $project->yearClaims()->create([
+                'year' => $claim['year'],
+                'operational_budget' => $claim['operational_budget'] ?? 0,
+                'management_budget' => $claim['management_budget'] ?? 0,
+                'allowance_budget' => $claim['allowance_budget'] ?? 0,
+            ]);
         }
     }
 
