@@ -11,7 +11,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 final class ReimbursementService
 {
-    public function llistReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public function listReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $isAtrTab = ($filters['type'] ?? '') === 'atr';
         $isEerTab = ($filters['type'] ?? '') === 'eer';
