@@ -6,10 +6,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Division;
 use App\Models\LetterRequest;
-use App\Models\Project;
 use App\Models\ProjectLocation;
 use App\Models\ProjectYearClaim;
 use App\Models\User;
+use App\Models\Project;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -31,41 +32,9 @@ final class DashboardController extends Controller
         $totalDivisions = Division::query()->count();
         $totalLetterRequests = LetterRequest::query()->count();
 
+        $leaderboardData = $this->getLeaderboardData($year);
         $totalBudget = Project::query()->sum('budget_total');
         $totalManagementBudget = Project::query()->sum('management_budget');
-
-        $accountManagerLeaderboard = DB::table('project_year_claims as pyc')
-            ->join('projects', 'pyc.project_id', '=', 'projects.id')
-            ->selectRaw('projects.account_manager_id, SUM(pyc.amount) as total_budget')
-            ->where('projects.project_type', '!=', 'non-project')
-            ->when($year, fn ($q) => $q->where('pyc.year', $year))
-            ->groupBy('projects.account_manager_id')
-            ->orderByDesc('total_budget')
-            ->take(10)
-            ->get();
-
-        $amIds = $accountManagerLeaderboard->pluck('account_manager_id');
-        $amNames = User::whereIn('id', $amIds)->get()->keyBy('id');
-
-        $accountManagerLeaderboard = $accountManagerLeaderboard->map(fn ($item) => [
-            'name' => $amNames[$item->account_manager_id]?->name ?? 'Unknown',
-            'total_budget' => (float) $item->total_budget,
-        ]);
-
-        $divisionLeaderboard = DB::table('project_year_claims as pyc')
-            ->join('projects', 'pyc.project_id', '=', 'projects.id')
-            ->join('divisions', 'projects.division_id', '=', 'divisions.id')
-            ->selectRaw('divisions.name as division, SUM(pyc.amount) as total_budget')
-            ->where('projects.project_type', '!=', 'non-project')
-            ->when($year, fn ($q) => $q->where('pyc.year', $year))
-            ->groupBy('projects.division_id', 'divisions.name')
-            ->orderByDesc('total_budget')
-            ->take(10)
-            ->get()
-            ->map(fn ($item) => [
-                'division' => $item->division,
-                'total_budget' => (float) $item->total_budget,
-            ]);
 
         $locations = ProjectLocation::with('project:id,name')->get();
 
@@ -170,15 +139,71 @@ final class DashboardController extends Controller
             'totalUsers' => $totalUsers,
             'totalDivisions' => $totalDivisions,
             'totalLetterRequests' => $totalLetterRequests,
-            'totalBudget' => (float) $totalBudget,
-            'totalManagementBudget' => (float) $totalManagementBudget,
-            'accountManagerLeaderboard' => $accountManagerLeaderboard,
-            'divisionLeaderboard' => $divisionLeaderboard,
+            'totalYearClaims' => $leaderboardData['totalYearClaims'],
+            'accountManagerLeaderboard' => $leaderboardData['accountManagerLeaderboard'],
+            'divisionLeaderboard' => $leaderboardData['divisionLeaderboard'],
             'locations' => $locations,
             'projectsByDivision' => $projectsByDivision,
             'approvalItems' => $approvalItems,
             'availableYears' => $availableYears,
             'selectedYear' => $year ?: null,
+            'totalBudget' => $totalBudget,
+            'totalManagementBudget' => $totalManagementBudget,
         ]);
+    }
+
+    public function leaderboard(Request $request): JsonResponse
+    {
+        $year = $request->integer('year');
+
+        $data = $this->getLeaderboardData($year);
+
+        return response()->json($data);
+    }
+
+    private function getLeaderboardData(?int $year): array
+    {
+        $totalYearClaims = ProjectYearClaim::query()
+            ->when($year, fn ($q) => $q->where('year', $year))
+            ->sum('amount');
+
+        $accountManagerLeaderboard = DB::table('project_year_claims as pyc')
+            ->join('projects', 'pyc.project_id', '=', 'projects.id')
+            ->selectRaw('projects.account_manager_id, SUM(pyc.amount) as total_budget')
+            ->where('projects.project_type', '!=', 'non-project')
+            ->when($year, fn ($q) => $q->where('pyc.year', $year))
+            ->groupBy('projects.account_manager_id')
+            ->orderByDesc('total_budget')
+            ->take(10)
+            ->get();
+
+        $amIds = $accountManagerLeaderboard->pluck('account_manager_id');
+        $amNames = User::whereIn('id', $amIds)->get()->keyBy('id');
+
+        $accountManagerLeaderboard = $accountManagerLeaderboard->map(fn ($item) => [
+            'name' => $amNames[$item->account_manager_id]?->name ?? 'Unknown',
+            'total_budget' => (float) $item->total_budget,
+        ]);
+
+        $divisionLeaderboard = DB::table('project_year_claims as pyc')
+            ->join('projects', 'pyc.project_id', '=', 'projects.id')
+            ->join('divisions', 'projects.division_id', '=', 'divisions.id')
+            ->selectRaw('divisions.name as division, SUM(pyc.amount) as total_budget')
+            ->where('projects.project_type', '!=', 'non-project')
+            ->when($year, fn ($q) => $q->where('pyc.year', $year))
+            ->groupBy('projects.division_id', 'divisions.name')
+            ->orderByDesc('total_budget')
+            ->take(10)
+            ->get()
+            ->map(fn ($item) => [
+                'division' => $item->division,
+                'total_budget' => (float) $item->total_budget,
+            ]);
+
+        return [
+            'totalYearClaims' => (float) $totalYearClaims,
+            'accountManagerLeaderboard' => $accountManagerLeaderboard,
+            'divisionLeaderboard' => $divisionLeaderboard,
+        ];
     }
 }

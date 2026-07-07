@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, CardAction } from '@/components/ui/card';
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -81,8 +82,7 @@ interface DashboardProps extends SharedData {
   totalUsers: number;
   totalDivisions: number;
   totalLetterRequests: number;
-  totalBudget: number;
-  totalManagementBudget: number;
+  totalYearClaims: number;
   accountManagerLeaderboard: AccountManagerLeaderboardEntry[];
   divisionLeaderboard: DivisionLeaderboardEntry[];
   locations: ProjectLocation[];
@@ -105,18 +105,40 @@ export default function Dashboard({
   totalUsers,
   totalDivisions,
   totalLetterRequests,
-  totalBudget,
-  totalManagementBudget,
-  accountManagerLeaderboard,
-  divisionLeaderboard,
+  totalYearClaims: initialTotalYearClaims,
+  accountManagerLeaderboard: initialAccountManagerLeaderboard,
+  divisionLeaderboard: initialDivisionLeaderboard,
   locations,
   projectsByDivision,
   approvalItems,
   availableYears,
-  selectedYear,
+  selectedYear: initialSelectedYear,
+  totalBudget,
+  totalManagementBudget,
 }: DashboardProps) {
   const { hasRole } = usePermission();
   const isPegawai = hasRole('pegawai') && !hasRole('superadmin');
+
+  const [localYear, setLocalYear] = useState<string>(String(initialSelectedYear ?? 'all'));
+  const [totalYearClaims, setTotalYearClaims] = useState(initialTotalYearClaims);
+  const [accountManagerLeaderboard, setAccountManagerLeaderboard] = useState(initialAccountManagerLeaderboard);
+  const [divisionLeaderboard, setDivisionLeaderboard] = useState(initialDivisionLeaderboard);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+
+  const fetchLeaderboard = useCallback(async (year: string) => {
+    setLeaderboardLoading(true);
+    try {
+      const params = year === 'all' ? {} : { year };
+      const res = await axios.get('/api/v1/dashboard/leaderboard', { params });
+      setTotalYearClaims(res.data.totalYearClaims);
+      setAccountManagerLeaderboard(res.data.accountManagerLeaderboard);
+      setDivisionLeaderboard(res.data.divisionLeaderboard);
+    } catch {
+      // silently fail, keep current data
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, []);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -365,52 +387,37 @@ export default function Dashboard({
 
         {!isPegawai && (
           <>
-            {/* Budget Highlight Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 shadow-sm border-0">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div className="space-y-1"><CardTitle className="text-sm font-medium text-emerald-800">Total Keseluruhan Budget Projek</CardTitle></div>
-                  <div className="bg-emerald-200 p-2 rounded-full"><Banknote className="h-5 w-5 text-emerald-700" /></div>
-                </CardHeader>
-                <CardContent><div className="text-2xl sm:text-3xl font-bold text-emerald-900">{formatIDR(totalBudget || 0)}</div></CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 shadow-sm border-0">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div className="space-y-1"><CardTitle className="text-sm font-medium text-blue-800">Total Management Budget</CardTitle></div>
-                  <div className="bg-blue-200 p-2 rounded-full"><TrendingUp className="h-5 w-5 text-blue-700" /></div>
-                </CardHeader>
-                <CardContent><div className="text-2xl sm:text-3xl font-bold text-blue-900">{formatIDR(totalManagementBudget || 0)}</div></CardContent>
-              </Card>
-            </div>
-
-            {/* Charts Area - Rearranged to Full Width */}
-            <div className="space-y-8">
-              {/* Top Budget Contributors - Split View */}
-              <div className="flex items-center justify-end gap-3 mb-2">
-                <span className="text-sm text-muted-foreground">Tahun Anggaran:</span>
-                <Select
-                  value={String(selectedYear ?? 'all')}
-                  onValueChange={(val) => {
-                    router.get(
-                      '/dashboard',
-                      val === 'all' ? {} : { year: val },
-                      { preserveState: true, replace: true }
-                    );
-                  }}
-                >
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue placeholder="Semua Tahun" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Tahun</SelectItem>
-                    {availableYears.map((y) => (
-                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Top Budget Contributors - Split View */}
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Total Tahun Anggaran</span>
+                  <span className="text-sm font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                    {formatIDR(totalYearClaims || 0)}
+                    {localYear !== 'all' && <span className="font-normal text-purple-500 ml-1">({localYear})</span>}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">Filter Tahun:</span>
+                  <Select
+                    value={localYear}
+                    onValueChange={(val) => {
+                      setLocalYear(val);
+                      fetchLeaderboard(val);
+                    }}
+                  >
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue placeholder="Semua Tahun" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Tahun</SelectItem>
+                      {availableYears.map((y) => (
+                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 transition-opacity duration-300 ${leaderboardLoading ? 'opacity-60' : ''}`}>
                 {/* By Account Manager */}
                 <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white">
                   <CardHeader className="p-5 pb-3 border-b border-gray-50">
@@ -479,6 +486,26 @@ export default function Dashboard({
                   </CardContent>
                 </Card>
               </div>
+      {/* Budget Highlight Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 shadow-sm border-0">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div className="space-y-1"><CardTitle className="text-sm font-medium text-emerald-800">Total Keseluruhan Budget Projek</CardTitle></div>
+                  <div className="bg-emerald-200 p-2 rounded-full"><Banknote className="h-5 w-5 text-emerald-700" /></div>
+                </CardHeader>
+                <CardContent><div className="text-2xl sm:text-3xl font-bold text-emerald-900">{formatIDR(totalBudget || 0)}</div></CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 shadow-sm border-0">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div className="space-y-1"><CardTitle className="text-sm font-medium text-blue-800">Total Management Budget</CardTitle></div>
+                  <div className="bg-blue-200 p-2 rounded-full"><TrendingUp className="h-5 w-5 text-blue-700" /></div>
+                </CardHeader>
+                <CardContent><div className="text-2xl sm:text-3xl font-bold text-blue-900">{formatIDR(totalManagementBudget || 0)}</div></CardContent>
+              </Card>
+            </div>
+            {/* Charts Area - Rearranged to Full Width */}
+            <div className="space-y-8">
               {/* Map - Full Width */}
               <div className="relative rounded-3xl overflow-hidden shadow-sm border border-gray-100 h-[450px] z-0">
                 <div className="absolute inset-0 z-0">

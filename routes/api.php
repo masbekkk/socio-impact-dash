@@ -52,6 +52,8 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function (): void {
     Route::patch('letter-requests/{letter_request}/status', [App\Http\Controllers\Api\V1\LetterRequestController::class, 'updateStatus']);
 
     // Users
+    Route::get('dashboard/leaderboard', [App\Http\Controllers\DashboardController::class, 'leaderboard']);
+
     Route::apiResource('users', App\Http\Controllers\Api\V1\UserController::class)->names('api.users');
 
     // Divisions
