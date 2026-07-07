@@ -109,9 +109,7 @@ final class ProjectResource extends JsonResource
             'year_claims' => $this->whenLoaded('yearClaims', fn () => $this->yearClaims->map(fn ($claim): array => [
                 'id' => $claim->id,
                 'year' => $claim->year,
-                'operational_budget' => (float) $claim->operational_budget,
-                'management_budget' => (float) $claim->management_budget,
-                'allowance_budget' => (float) $claim->allowance_budget,
+                'amount' => (float) $claim->amount,
             ])),
             'monitorings' => ProjectMonitoringResource::collection($this->whenLoaded('monitorings')),
             'monitoring_history' => ProjectMonitoringResource::collection($this->whenLoaded('monitorings')),

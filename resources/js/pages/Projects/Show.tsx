@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import LocationPicker from '@/components/LocationPicker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Pencil, Plus, Calendar, User, Handshake, Loader2, ShieldCheck, Hash, BarChart3, Layers, Users, Trash2 } from 'lucide-react'
+import { CheckCircle2, Pencil, Plus, Calendar, User, Handshake, Loader2, ShieldCheck, Hash, BarChart3, Layers, Users, Trash2, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils';
 import MoneyInput from '@/components/MoneyInput'
 import { Input } from '@/components/ui/input'
@@ -577,6 +577,57 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
                 </div>
               </CardContent>
             </Card>
+
+            {/* Year Claims Card */}
+            {project.year_claims && project.year_claims.length > 0 && (
+              <Card className="border-none shadow-sm overflow-hidden">
+                <CardHeader className="pb-3 bg-slate-50/50 border-b">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-emerald-600" />
+                    <CardTitle className="text-base font-bold text-slate-800">Tahun Anggaran</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4 px-6">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left text-xs text-muted-foreground">
+                          <th className="pb-2 font-semibold">Tahun</th>
+                          <th className="pb-2 font-semibold text-right">Jumlah</th>
+                          <th className="pb-2 font-semibold text-right">% Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {project.year_claims.map((claim: any) => (
+                          <tr key={claim.id} className="border-b last:border-0">
+                            <td className="py-2.5 font-medium">{claim.year}</td>
+                            <td className="py-2.5 text-right font-mono">
+                              {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(claim.amount)}
+                            </td>
+                            <td className="py-2.5 text-right text-muted-foreground">
+                              {project.budget_total > 0 ? `${((claim.amount / project.budget_total) * 100).toFixed(1)}%` : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 font-semibold">
+                          <td className="pt-2.5">Total</td>
+                          <td className="pt-2.5 text-right font-mono">
+                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
+                              project.year_claims.reduce((s: number, c: any) => s + (c.amount || 0), 0)
+                            )}
+                          </td>
+                          <td className="pt-2.5 text-right">
+                            {project.budget_total > 0 ? '100%' : '-'}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Quick Summary / Status Card */}
             <Card className="border-none shadow-sm bg-slate-900 text-white overflow-hidden relative group">

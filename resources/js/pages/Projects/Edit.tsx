@@ -78,6 +78,10 @@ export default function ProjectsEdit({ project_slug, divisions, employees, avail
     }[]>([])
     const [deletePaymentTerms, setDeletePaymentTerms] = useState<string[]>([])
 
+    // State Year Claims
+    const [yearClaims, setYearClaims] = useState<{ id?: string, year: number, amount: number, isNew?: boolean }[]>([])
+    const [deleteYearClaims, setDeleteYearClaims] = useState<string[]>([])
+
     // State Detail Budgets
     const [detailBudgets, setDetailBudgets] = useState<{ id: string, item_name: string, quantity: number | null, item_price: number, amount: number, amount_pelaksanaan: number, amount_proposal: number, notes: string, isNew?: boolean, used_atr?: number, used_eer?: number }[]>([])
     const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([])
@@ -168,6 +172,14 @@ export default function ProjectsEdit({ project_slug, divisions, employees, avail
                     })));
                 } else {
                     setPaymentTerms([{ id: crypto.randomUUID(), nominal: 0, notes: '', date: '', nomor_surat: '', tertuju: '', billing_document_url: '', proof_payment_url: '', billing_file: null, proof_file: null, isNew: true }]);
+                }
+
+                if (data.year_claims && data.year_claims.length > 0) {
+                    setYearClaims(data.year_claims.map((c: any) => ({
+                        id: c.id.toString(),
+                        year: c.year,
+                        amount: c.amount || 0,
+                    })));
                 }
 
                 if (data.budget_details && data.budget_details.length > 0) {
@@ -272,6 +284,22 @@ export default function ProjectsEdit({ project_slug, divisions, employees, avail
             return d;
         }));
     };
+    // Year Claims Functions
+    const addYearClaim = () => {
+        const nextYear = new Date().getFullYear();
+        setYearClaims([...yearClaims, { year: nextYear + yearClaims.length, amount: 0, isNew: true }]);
+    };
+    const removeYearClaim = (id: string, isNew?: boolean) => {
+        setYearClaims(yearClaims.filter(c => c.id !== id));
+        if (!isNew && id) {
+            setDeleteYearClaims([...deleteYearClaims, id]);
+        }
+    };
+    const updateYearClaim = (id: string, field: 'year' | 'amount', value: any) => {
+        setYearClaims(yearClaims.map(c => c.id === id ? { ...c, [field]: value } : c));
+    };
+    const totalYearClaims = yearClaims.reduce((sum, c) => sum + (c.amount || 0), 0);
+
     const totalDetailBudget = detailBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + ((item.used_eer && item.used_eer > 0) ? item.used_eer : (Number(item.amount_pelaksanaan) || 0)), 0);
     const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
@@ -366,6 +394,18 @@ export default function ProjectsEdit({ project_slug, divisions, employees, avail
 
         deleteDetailBudgets.forEach((id, index) => {
             submitData.append(`delete_detail_budgets[${index}]`, id);
+        });
+
+        yearClaims.forEach((claim, index) => {
+            if (!claim.isNew && claim.id) {
+                submitData.append(`year_claims[${index}][id]`, claim.id);
+            }
+            submitData.append(`year_claims[${index}][year]`, claim.year.toString());
+            submitData.append(`year_claims[${index}][amount]`, (claim.amount || 0).toString());
+        });
+
+        deleteYearClaims.forEach((id, index) => {
+            submitData.append(`delete_year_claims[${index}]`, id);
         });
 
         try {
@@ -1169,6 +1209,98 @@ export default function ProjectsEdit({ project_slug, divisions, employees, avail
                                                 )}
                                             </div>
                                         ))}
+                                    </div>
+                                </div>
+
+                                {/* Year Claims Section */}
+                                <div className="space-y-4 pt-4 border-t mt-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Label className="text-base font-semibold">Tahun Anggaran</Label>
+                                            <p className="text-xs text-muted-foreground mt-1">Alokasi anggaran per tahun. Total tidak boleh melebihi Rp {budget.toLocaleString('id-ID')}.</p>
+                                            {totalYearClaims > budget && (
+                                                <p className="text-xs text-red-500 mt-1 font-medium">
+                                                    Total tahun anggaran (Rp {totalYearClaims.toLocaleString('id-ID')}) melebihi total anggaran proyek!
+                                                </p>
+                                            )}
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={addYearClaim}
+                                            className="gap-2 border-dashed hover:border-solid"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Tambah Tahun
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {yearClaims.length === 0 && (
+                                            <div className="text-center py-6 text-muted-foreground border rounded-md text-sm">
+                                                Belum ada tahun anggaran. Klik "Tambah Tahun" untuk menambahkan.
+                                            </div>
+                                        )}
+                                        {yearClaims.map((claim) => {
+                                            const otherTotal = yearClaims.reduce((s, c) => c.id !== claim.id ? s + (c.amount || 0) : s, 0);
+                                            const maxAllowed = Math.max(0, budget - otherTotal);
+                                            const isOver = claim.amount > maxAllowed;
+
+                                            return (
+                                                <div key={claim.id || claim.year} className="border rounded-xl p-4 bg-white shadow-sm flex items-center gap-3 group hover:border-gray-300 transition-colors">
+                                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[10px] font-bold text-muted-foreground uppercase">Tahun</Label>
+                                                            <Input
+                                                                type="number"
+                                                                min={2000}
+                                                                max={2100}
+                                                                value={claim.year}
+                                                                onChange={(e) => updateYearClaim(claim.id!, 'year', parseInt(e.target.value) || 0)}
+                                                                className="h-9 text-sm bg-white"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[10px] font-bold text-muted-foreground uppercase">Jumlah</Label>
+                                                            <MoneyInput
+                                                                value={claim.amount}
+                                                                onValueChange={(vals) => updateYearClaim(claim.id!, 'amount', vals.floatValue || 0)}
+                                                                className={isOver ? 'border-red-500' : ''}
+                                                            />
+                                                            {isOver && (
+                                                                <p className="text-[10px] text-red-500">Maks: Rp {maxAllowed.toLocaleString('id-ID')}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => removeYearClaim(claim.id!, claim.isNew)}
+                                                        className="h-8 w-8 text-muted-foreground hover:text-red-500 mt-5 shrink-0"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className={cn("border rounded-lg p-4 flex items-center justify-between", totalYearClaims > budget ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200")}>
+                                        <div>
+                                            <p className={cn("text-sm font-medium", totalYearClaims > budget ? "text-red-900" : "text-blue-900")}>Total Tahun Anggaran</p>
+                                            <p className={cn("text-xs mt-0.5", totalYearClaims > budget ? "text-red-700" : "text-blue-700")}>{yearClaims.length} tahun</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className={cn("text-lg font-bold", totalYearClaims > budget ? "text-red-900" : "text-blue-900")}>
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalYearClaims)}
+                                            </p>
+                                            <p className={cn("text-xs", totalYearClaims > budget ? "text-red-700 font-bold" : "text-blue-700")}>
+                                                {budget > 0 ? `${((totalYearClaims / budget) * 100).toFixed(1)}% dari total` : '0%'}
+                                                {totalYearClaims > budget && " (Melebihi Total Anggaran!)"}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 

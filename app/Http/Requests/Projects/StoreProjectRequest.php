@@ -69,9 +69,7 @@ final class StoreProjectRequest extends FormRequest
             'documents.*.file' => ['required', 'file', 'max:51200', 'mimes:pdf,jpg,jpeg,png'], // 50MB limit
             'year_claims' => ['nullable', 'array'],
             'year_claims.*.year' => ['required', 'integer', 'min:2000', 'max:2100'],
-            'year_claims.*.operational_budget' => ['nullable', 'numeric', 'min:0'],
-            'year_claims.*.management_budget' => ['nullable', 'numeric', 'min:0'],
-            'year_claims.*.allowance_budget' => ['nullable', 'numeric', 'min:0'],
+            'year_claims.*.amount' => ['nullable', 'numeric', 'min:0'],
             'detail_budgets' => ['nullable', 'array'],
             'detail_budgets.*.item_name' => ['required_with:detail_budgets', 'string', 'max:255'],
             'detail_budgets.*.quantity' => ['nullable', 'numeric', 'min:1'],
@@ -115,6 +113,14 @@ final class StoreProjectRequest extends FormRequest
 
                 if ($detailSum > ($budgetTotal + 0.01)) {
                     $validator->errors()->add('detail_budgets', 'Total rincian anggaran tidak boleh melebihi total anggaran proyek.');
+                }
+            }
+
+            $yearClaims = $this->input('year_claims', []);
+            if (is_array($yearClaims) && count($yearClaims) > 0) {
+                $claimsSum = array_reduce($yearClaims, fn (float $carry, array $item): float => $carry + (float) ($item['amount'] ?? 0), 0);
+                if ($claimsSum > ($budgetTotal + 0.01)) {
+                    $validator->errors()->add('year_claims', 'Total klaim tahunan tidak boleh melebihi total anggaran proyek.');
                 }
             }
 

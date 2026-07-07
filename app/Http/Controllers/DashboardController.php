@@ -8,6 +8,7 @@ use App\Models\Division;
 use App\Models\LetterRequest;
 use App\Models\Project;
 use App\Models\ProjectLocation;
+use App\Models\ProjectYearClaim;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -18,23 +19,59 @@ final class DashboardController extends Controller
 {
     public function __invoke(Request $request): Response
     {
+        $year = $request->integer('year');
+
+        $availableYears = ProjectYearClaim::query()
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+
         $totalUsers = User::query()->count();
         $totalDivisions = Division::query()->count();
         $totalLetterRequests = LetterRequest::query()->count();
-        $totalBudget = Project::query()->sum('budget_total');
-        $totalManagementBudget = Project::query()->sum('management_budget');
 
-        $leaderboard = Project::query()->selectRaw('created_by, SUM(budget_total) as total_budget')
-            ->where('project_type', '!=', 'non-project')
+        if ($year) {
+            $totalBudget = ProjectYearClaim::query()
+                ->where('year', $year)
+                ->sum('amount');
+            $totalManagementBudget = Project::query()->sum('management_budget');
+        } else {
+            $totalBudget = Project::query()->sum('budget_total');
+            $totalManagementBudget = Project::query()->sum('management_budget');
+        }
+
+        $leaderboardQuery = Project::query()
+            ->selectRaw('created_by, SUM(budget_total) as total_budget')
+            ->where('project_type', '!=', 'non-project');
+
+        if ($year) {
+            $leaderboardQuery->whereHas('yearClaims', fn ($q) => $q->where('year', $year));
+        }
+
+        $leaderboard = $leaderboardQuery
             ->groupBy('created_by')
             ->orderByDesc('total_budget')
             ->with('creator:id,name')
             ->take(10)
             ->get();
 
-        $locations = ProjectLocation::with('project:id,name')->get();
+        $locationsQuery = ProjectLocation::with('project:id,name');
 
-        $projectsByDivision = Division::query()->withCount('projects')->get()->map(fn (Division $d): array => [
+        if ($year) {
+            $locationsQuery->whereHas('project.yearClaims', fn ($q) => $q->where('year', $year));
+        }
+
+        $locations = $locationsQuery->get();
+
+        $divisionQuery = Division::query();
+
+        if ($year) {
+            $divisionQuery->withCount(['projects' => fn ($q) => $q->whereHas('yearClaims', fn ($q2) => $q2->where('year', $year))]);
+        } else {
+            $divisionQuery->withCount('projects');
+        }
+
+        $projectsByDivision = $divisionQuery->get()->map(fn (Division $d): array => [
             'division' => $d->name,
             'count' => $d->projects_count,
         ]);
@@ -141,6 +178,8 @@ final class DashboardController extends Controller
             'locations' => $locations,
             'projectsByDivision' => $projectsByDivision,
             'approvalItems' => $approvalItems,
+            'availableYears' => $availableYears,
+            'selectedYear' => $year ?: null,
         ]);
     }
 }

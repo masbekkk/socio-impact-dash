@@ -15,18 +15,14 @@ final class ProjectYearClaim extends Model
     protected $fillable = [
         'project_id',
         'year',
-        'operational_budget',
-        'management_budget',
-        'allowance_budget',
+        'amount',
     ];
 
     public function casts(): array
     {
         return [
             'year' => 'integer',
-            'operational_budget' => 'decimal:2',
-            'management_budget' => 'decimal:2',
-            'allowance_budget' => 'decimal:2',
+            'amount' => 'decimal:2',
         ];
     }
 

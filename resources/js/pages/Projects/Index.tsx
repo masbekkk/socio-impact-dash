@@ -263,7 +263,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
 
   const addYearClaimRow = () => {
     const nextYear = new Date().getFullYear();
-    setYearClaims(prev => [...prev, { year: nextYear + prev.length, operational_budget: 0, management_budget: 0, allowance_budget: 0 }]);
+    setYearClaims(prev => [...prev, { year: nextYear + prev.length, amount: 0 }]);
   };
 
   const removeYearClaimRow = (index: number) => {
@@ -872,52 +872,54 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               </div>
             )}
 
-            {yearClaims.map((claim, index) => (
-              <div key={index} className="flex items-start gap-3 p-4 border rounded-lg bg-white">
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-slate-600 w-20">Tahun</label>
-                    <Input
-                      type="number"
-                      min={2000}
-                      max={2100}
-                      value={claim.year}
-                      onChange={(e) => updateYearClaim(index, 'year', parseInt(e.target.value) || 0)}
-                      className="h-8 w-28 text-sm"
-                    />
+            {yearClaims.map((claim, index) => {
+              const otherTotal = yearClaims.reduce((sum, c, i) => i !== index ? sum + (c.amount || 0) : sum, 0);
+              const remaining = Math.max(0, (yearClaimProject?.budget_total || 0) - otherTotal);
+              const isOverBudget = claim.amount > remaining;
+
+              return (
+                <div key={index} className="flex items-start gap-3 p-4 border rounded-lg bg-white">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-slate-600 w-20">Tahun</label>
+                      <Input
+                        type="number"
+                        min={2000}
+                        max={2100}
+                        value={claim.year}
+                        onChange={(e) => updateYearClaim(index, 'year', parseInt(e.target.value) || 0)}
+                        className="h-8 w-28 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-slate-600 w-20">Jumlah</label>
+                      <div className="flex-1">
+                        <MoneyInput
+                          value={claim.amount}
+                          onValueChange={(values) => updateYearClaim(index, 'amount', values.floatValue || 0)}
+                        />
+                        {isOverBudget && (
+                          <p className="text-xs text-red-500 mt-1">
+                            Melebihi sisa anggaran (Rp {remaining.toLocaleString('id-ID')})
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Sisa anggaran tersedia: Rp {remaining.toLocaleString('id-ID')}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-slate-600 w-20">Operasional</label>
-                    <MoneyInput
-                      value={claim.operational_budget}
-                      onValueChange={(values) => updateYearClaim(index, 'operational_budget', values.floatValue || 0)}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-slate-600 w-20">Manajemen</label>
-                    <MoneyInput
-                      value={claim.management_budget}
-                      onValueChange={(values) => updateYearClaim(index, 'management_budget', values.floatValue || 0)}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-slate-600 w-20">Allowance</label>
-                    <MoneyInput
-                      value={claim.allowance_budget}
-                      onValueChange={(values) => updateYearClaim(index, 'allowance_budget', values.floatValue || 0)}
-                    />
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 mt-1 text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
+                    onClick={() => removeYearClaimRow(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 mt-1 text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
-                  onClick={() => removeYearClaimRow(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
 
             <Button variant="outline" size="sm" onClick={addYearClaimRow} className="w-full gap-2">
               <Plus className="h-4 w-4" /> Tambah Tahun

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, CardAction } from '@/components/ui/card';
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, LabelList, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -127,6 +128,8 @@ interface DashboardProps extends SharedData {
     hr_allowances: ApprovalItem[];
     finance_request_funds: ApprovalItem[];
   };
+  availableYears: number[];
+  selectedYear: number | null;
 }
 
 export default function Dashboard({
@@ -139,6 +142,8 @@ export default function Dashboard({
   locations,
   projectsByDivision,
   approvalItems,
+  availableYears,
+  selectedYear,
 }: DashboardProps) {
   const { hasRole } = usePermission();
   const isPegawai = hasRole('pegawai') && !hasRole('superadmin');
@@ -196,6 +201,32 @@ export default function Dashboard({
       <Head title="Dashboard" />
 
       <div className="p-6 md:p-8 space-y-6">
+
+        {!isPegawai && (
+          <div className="flex items-center justify-end gap-3">
+            <span className="text-sm text-muted-foreground">Tahun Anggaran:</span>
+            <Select
+              value={String(selectedYear ?? 'all')}
+              onValueChange={(val) => {
+                router.get(
+                  '/dashboard',
+                  val === 'all' ? {} : { year: val },
+                  { preserveState: true, replace: true }
+                );
+              }}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Semua Tahun" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Tahun</SelectItem>
+                {availableYears.map((y) => (
+                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">

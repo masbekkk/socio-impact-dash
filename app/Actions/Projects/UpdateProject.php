@@ -303,17 +303,13 @@ final class UpdateProject
                 if ($existing) {
                     $existing->update([
                         'year' => $claim['year'],
-                        'operational_budget' => $claim['operational_budget'] ?? 0,
-                        'management_budget' => $claim['management_budget'] ?? 0,
-                        'allowance_budget' => $claim['allowance_budget'] ?? 0,
+                        'amount' => $claim['amount'] ?? 0,
                     ]);
                 }
             } else {
                 $project->yearClaims()->create([
                     'year' => $claim['year'],
-                    'operational_budget' => $claim['operational_budget'] ?? 0,
-                    'management_budget' => $claim['management_budget'] ?? 0,
-                    'allowance_budget' => $claim['allowance_budget'] ?? 0,
+                    'amount' => $claim['amount'] ?? 0,
                 ]);
             }
         }

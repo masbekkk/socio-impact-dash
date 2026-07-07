@@ -80,6 +80,9 @@ export default function ProjectsCreate({ divisions, employees, available_managem
     { id: crypto.randomUUID(), nominal: 0, notes: '', date: '', nomor_surat: '', tertuju: '', billing_file: null, proof_file: null }
   ])
 
+  // State Year Claims
+  const [yearClaims, setYearClaims] = useState<{ id: string, year: number, amount: number }[]>([])
+
   // State Detail Budgets
   const [detailBudgets, setDetailBudgets] = useState<{ id: string, item_name: string, quantity: number | null, item_price: number, amount: number, amount_pelaksanaan: number, amount_proposal: number, notes: string }[]>([
     { id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, amount_pelaksanaan: 0, amount_proposal: 0, notes: '' }
@@ -221,7 +224,10 @@ export default function ProjectsCreate({ divisions, employees, available_managem
       if (detail.notes) submitData.append(`detail_budgets[${index}][notes]`, detail.notes);
     });
 
-    // try block follows...
+    yearClaims.forEach((claim, index) => {
+      submitData.append(`year_claims[${index}][year]`, claim.year.toString());
+      submitData.append(`year_claims[${index}][amount]`, (claim.amount || 0).toString());
+    });
 
     try {
       if (isPelaksanaanOverOperational) {
@@ -287,6 +293,19 @@ export default function ProjectsCreate({ divisions, employees, available_managem
     if (!term.date || !paymentTerms[idx - 1].date) return true;
     return new Date(term.date) >= new Date(paymentTerms[idx - 1].date);
   });
+
+  // Year Claims Functions
+  const addYearClaim = () => {
+    const nextYear = new Date().getFullYear();
+    setYearClaims([...yearClaims, { id: crypto.randomUUID(), year: nextYear + yearClaims.length, amount: 0 }]);
+  };
+  const removeYearClaim = (id: string) => {
+    setYearClaims(yearClaims.filter(c => c.id !== id));
+  };
+  const updateYearClaim = (id: string, field: 'year' | 'amount', value: any) => {
+    setYearClaims(yearClaims.map(c => c.id === id ? { ...c, [field]: value } : c));
+  };
+  const totalYearClaims = yearClaims.reduce((sum, c) => sum + (c.amount || 0), 0);
 
   const tabsListRef = useRef<HTMLDivElement>(null)
 
@@ -1041,6 +1060,100 @@ export default function ProjectsCreate({ divisions, employees, available_managem
 
                 </div>
 
+
+                {/* Year Claims Section */}
+                <div className="space-y-4 pt-4 border-t mt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-semibold">Tahun Anggaran</Label>
+                      <p className="text-xs text-muted-foreground mt-1">Alokasi anggaran per tahun. Total tidak boleh melebihi Rp {budget.toLocaleString('id-ID')}.</p>
+                      {totalYearClaims > budget && (
+                        <p className="text-xs text-red-500 mt-1 font-medium">
+                          Total tahun anggaran (Rp {totalYearClaims.toLocaleString('id-ID')}) melebihi total anggaran proyek!
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addYearClaim}
+                      className="gap-2 border-dashed hover:border-solid"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Tambah Tahun
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {yearClaims.length === 0 && (
+                      <div className="text-center py-6 text-muted-foreground border rounded-md text-sm">
+                        Belum ada tahun anggaran. Klik "Tambah Tahun" untuk menambahkan.
+                      </div>
+                    )}
+                    {yearClaims.map((claim) => {
+                      const otherTotal = yearClaims.reduce((s, c) => c.id !== claim.id ? s + (c.amount || 0) : s, 0);
+                      const maxAllowed = Math.max(0, budget - otherTotal);
+                      const isOver = claim.amount > maxAllowed;
+
+                      return (
+                        <div key={claim.id} className="border rounded-xl p-4 bg-white shadow-sm flex items-center gap-3 group hover:border-gray-300 transition-colors">
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold text-muted-foreground uppercase">Tahun</Label>
+                              <Input
+                                type="number"
+                                min={2000}
+                                max={2100}
+                                value={claim.year}
+                                onChange={(e) => updateYearClaim(claim.id, 'year', parseInt(e.target.value) || 0)}
+                                className="h-9 text-sm bg-white"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold text-muted-foreground uppercase">Jumlah</Label>
+                              <MoneyInput
+                                value={claim.amount}
+                                onValueChange={(vals) => updateYearClaim(claim.id, 'amount', vals.floatValue || 0)}
+                                className={isOver ? 'border-red-500' : ''}
+                              />
+                              {isOver && (
+                                <p className="text-[10px] text-red-500">Maks: Rp {maxAllowed.toLocaleString('id-ID')}</p>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeYearClaim(claim.id)}
+                            className="h-8 w-8 text-muted-foreground hover:text-red-500 mt-5 shrink-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {yearClaims.length > 0 && (
+                    <div className={cn("border rounded-lg p-4 flex items-center justify-between", totalYearClaims > budget ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200")}>
+                      <div>
+                        <p className={cn("text-sm font-medium", totalYearClaims > budget ? "text-red-900" : "text-blue-900")}>Total Tahun Anggaran</p>
+                        <p className={cn("text-xs mt-0.5", totalYearClaims > budget ? "text-red-700" : "text-blue-700")}>{yearClaims.length} tahun</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={cn("text-lg font-bold", totalYearClaims > budget ? "text-red-900" : "text-blue-900")}>
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalYearClaims)}
+                        </p>
+                        <p className={cn("text-xs", totalYearClaims > budget ? "text-red-700 font-bold" : "text-blue-700")}>
+                          {budget > 0 ? `${((totalYearClaims / budget) * 100).toFixed(1)}% dari total` : '0%'}
+                          {totalYearClaims > budget && " (Melebihi Total Anggaran!)"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Termin Pembayaran Section */}
                 <div className="space-y-4 pt-4 border-t mt-6">
