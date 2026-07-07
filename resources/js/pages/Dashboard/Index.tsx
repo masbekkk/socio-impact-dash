@@ -4,7 +4,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, CardAction } from '@/components/ui/card';
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, LabelList, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, LabelList } from "recharts";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -36,49 +36,17 @@ const RealTimeClockSimple = () => {
   );
 };
 
-// Embedded dashboard data
-const DASHBOARD_DATA = {
-  executive_summary: {
-    total_projects: 25,
-    projects_by_division: [
-      { division: "Task Force", count: 9, percentage: 36, fill: "#1b4841" },
-      { division: "Research", count: 3, percentage: 14, fill: "#00733c" },
-      { division: "Learning", count: 2, percentage: 9, fill: "#00a549" },
-      { division: "Lestari", count: 5, percentage: 23, fill: "#8cbe3b" },
-      { division: "Marketing", count: 4, percentage: 18, fill: "#cee5ad" }
-    ],
-    projects_by_status: [
-      { status: "Not Started", count: 2 },
-      { status: "On Track", count: 15 },
-      { status: "At Risk", count: 1 },
-      { status: "Delayed", count: 3 },
-      { status: "Completed", count: 4 }
-    ],
-    projects_by_type: [
-      { type: "Pendampingan", count: 10 },
-      { type: "Event", count: 1 },
-      { type: "Dokumen", count: 5 },
-      { type: "Pelatihan", count: 4 }
-    ],
-    project_health: [
-      { status: "Sehat", count: 15, fill: "#16a34a" },
-      { status: "Waspada", count: 5, fill: "#f59e0b" },
-      { status: "Kritikal", count: 3, fill: "#f87171" },
-      { status: "Sangat Kritikal", count: 2, fill: "#991b1b" }
-    ]
-  }
-};
-
 import { ApprovalStatisticCard } from '@/components/dashboard/ApprovalStatisticCard';
 import { BulkApprovalModal } from '@/components/dashboard/BulkApprovalModal';
 
-interface LeaderboardEntry {
-  created_by: number;
-  total_budget: string;
-  creator: {
-    id: number;
-    name: string;
-  };
+interface AccountManagerLeaderboardEntry {
+  name: string;
+  total_budget: number;
+}
+
+interface DivisionLeaderboardEntry {
+  division: string;
+  total_budget: number;
 }
 
 interface ProjectLocation {
@@ -115,7 +83,8 @@ interface DashboardProps extends SharedData {
   totalLetterRequests: number;
   totalBudget: number;
   totalManagementBudget: number;
-  leaderboard: LeaderboardEntry[];
+  accountManagerLeaderboard: AccountManagerLeaderboardEntry[];
+  divisionLeaderboard: DivisionLeaderboardEntry[];
   locations: ProjectLocation[];
   projectsByDivision: DivisionEntry[];
   approvalItems: {
@@ -138,7 +107,8 @@ export default function Dashboard({
   totalLetterRequests,
   totalBudget,
   totalManagementBudget,
-  leaderboard,
+  accountManagerLeaderboard,
+  divisionLeaderboard,
   locations,
   projectsByDivision,
   approvalItems,
@@ -180,13 +150,6 @@ export default function Dashboard({
     })) ?? [];
   }, [projectsByDivision, totalProjectsCount]);
 
-  const chartData = useMemo(() => {
-    return leaderboard?.map((entry) => ({
-      name: entry.creator.name,
-      total: parseFloat(entry.total_budget || '0'),
-    })) ?? [];
-  }, [leaderboard]);
-
   const formatIDR = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -201,32 +164,6 @@ export default function Dashboard({
       <Head title="Dashboard" />
 
       <div className="p-6 md:p-8 space-y-6">
-
-        {!isPegawai && (
-          <div className="flex items-center justify-end gap-3">
-            <span className="text-sm text-muted-foreground">Tahun Anggaran:</span>
-            <Select
-              value={String(selectedYear ?? 'all')}
-              onValueChange={(val) => {
-                router.get(
-                  '/dashboard',
-                  val === 'all' ? {} : { year: val },
-                  { preserveState: true, replace: true }
-                );
-              }}
-            >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Semua Tahun" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Tahun</SelectItem>
-                {availableYears.map((y) => (
-                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
 
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
@@ -449,23 +386,96 @@ export default function Dashboard({
 
             {/* Charts Area - Rearranged to Full Width */}
             <div className="space-y-8">
-              {/* Leaderboard - Full Width */}
-              <div className="grid grid-cols-1 gap-8">
-                <Card className="border shadow-sm p-0 h-[400px] flex flex-col rounded-3xl overflow-hidden bg-white">
-                  <CardHeader className="p-6 pb-2 shrink-0 border-b border-gray-50">
-                    <CardTitle className="text-lg font-bold text-gray-800">Top Budget Contributors</CardTitle>
-                    <CardDescription>Pengguna dengan akuisisi budget tertinggi</CardDescription>
+              {/* Top Budget Contributors - Split View */}
+              <div className="flex items-center justify-end gap-3 mb-2">
+                <span className="text-sm text-muted-foreground">Tahun Anggaran:</span>
+                <Select
+                  value={String(selectedYear ?? 'all')}
+                  onValueChange={(val) => {
+                    router.get(
+                      '/dashboard',
+                      val === 'all' ? {} : { year: val },
+                      { preserveState: true, replace: true }
+                    );
+                  }}
+                >
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Semua Tahun" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Tahun</SelectItem>
+                    {availableYears.map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* By Account Manager */}
+                <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white">
+                  <CardHeader className="p-5 pb-3 border-b border-gray-50">
+                    <CardTitle className="text-sm font-bold text-gray-800">Top Account Manager</CardTitle>
+                    <CardDescription className="text-xs">Berdasarkan alokasi tahun anggaran</CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 flex-1 h-full min-h-0 bg-white">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} margin={{ top: 10, right: 40, left: 10, bottom: 20 }} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                        <XAxis type="number" tickFormatter={(value) => `Rp ${value / 1000000}jt`} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
-                        <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={100} tick={{ fontSize: 12, fontWeight: 500 }} />
-                        <RechartsTooltip formatter={(value: any) => formatIDR(Number(value || 0))} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-                        <Bar dataKey="total" fill="#1a5f4a" radius={[0, 4, 4, 0]} barSize={24} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <CardContent className="p-0">
+                    {accountManagerLeaderboard.length === 0 ? (
+                      <div className="text-center py-8 text-sm text-muted-foreground">Belum ada data</div>
+                    ) : (
+                      <div className="divide-y divide-gray-50">
+                        {accountManagerLeaderboard.map((entry, idx) => {
+                          const totalAll = accountManagerLeaderboard.reduce((s, e) => s + e.total_budget, 0);
+                          const pct = totalAll > 0 ? (entry.total_budget / totalAll) * 100 : 0;
+                          return (
+                            <div key={entry.name} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors">
+                              <span className="w-6 text-center text-xs font-bold text-muted-foreground/60 shrink-0">#{idx + 1}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm font-semibold text-gray-800 truncate">{entry.name}</span>
+                                  <span className="text-sm font-bold text-emerald-700 shrink-0">{formatIDR(entry.total_budget)}</span>
+                                </div>
+                                <div className="mt-1.5 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                  <div className="h-full rounded-full bg-[var(--sidebar)] transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* By Division */}
+                <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white">
+                  <CardHeader className="p-5 pb-3 border-b border-gray-50">
+                    <CardTitle className="text-sm font-bold text-gray-800">Top Division</CardTitle>
+                    <CardDescription className="text-xs">Berdasarkan alokasi tahun anggaran</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {divisionLeaderboard.length === 0 ? (
+                      <div className="text-center py-8 text-sm text-muted-foreground">Belum ada data</div>
+                    ) : (
+                      <div className="divide-y divide-gray-50">
+                        {divisionLeaderboard.map((entry, idx) => {
+                          const totalAll = divisionLeaderboard.reduce((s, e) => s + e.total_budget, 0);
+                          const pct = totalAll > 0 ? (entry.total_budget / totalAll) * 100 : 0;
+                          return (
+                            <div key={entry.division} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors">
+                              <span className="w-6 text-center text-xs font-bold text-muted-foreground/60 shrink-0">#{idx + 1}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm font-semibold text-gray-800 truncate">{entry.division}</span>
+                                  <span className="text-sm font-bold text-blue-700 shrink-0">{formatIDR(entry.total_budget)}</span>
+                                </div>
+                                <div className="mt-1.5 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                  <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

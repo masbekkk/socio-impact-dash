@@ -12,6 +12,7 @@ use App\Models\ProjectYearClaim;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,48 +31,45 @@ final class DashboardController extends Controller
         $totalDivisions = Division::query()->count();
         $totalLetterRequests = LetterRequest::query()->count();
 
-        if ($year) {
-            $totalBudget = ProjectYearClaim::query()
-                ->where('year', $year)
-                ->sum('amount');
-            $totalManagementBudget = Project::query()->sum('management_budget');
-        } else {
-            $totalBudget = Project::query()->sum('budget_total');
-            $totalManagementBudget = Project::query()->sum('management_budget');
-        }
+        $totalBudget = Project::query()->sum('budget_total');
+        $totalManagementBudget = Project::query()->sum('management_budget');
 
-        $leaderboardQuery = Project::query()
-            ->selectRaw('created_by, SUM(budget_total) as total_budget')
-            ->where('project_type', '!=', 'non-project');
-
-        if ($year) {
-            $leaderboardQuery->whereHas('yearClaims', fn ($q) => $q->where('year', $year));
-        }
-
-        $leaderboard = $leaderboardQuery
-            ->groupBy('created_by')
+        $accountManagerLeaderboard = DB::table('project_year_claims as pyc')
+            ->join('projects', 'pyc.project_id', '=', 'projects.id')
+            ->selectRaw('projects.account_manager_id, SUM(pyc.amount) as total_budget')
+            ->where('projects.project_type', '!=', 'non-project')
+            ->when($year, fn ($q) => $q->where('pyc.year', $year))
+            ->groupBy('projects.account_manager_id')
             ->orderByDesc('total_budget')
-            ->with('creator:id,name')
             ->take(10)
             ->get();
 
-        $locationsQuery = ProjectLocation::with('project:id,name');
+        $amIds = $accountManagerLeaderboard->pluck('account_manager_id');
+        $amNames = User::whereIn('id', $amIds)->get()->keyBy('id');
 
-        if ($year) {
-            $locationsQuery->whereHas('project.yearClaims', fn ($q) => $q->where('year', $year));
-        }
+        $accountManagerLeaderboard = $accountManagerLeaderboard->map(fn ($item) => [
+            'name' => $amNames[$item->account_manager_id]?->name ?? 'Unknown',
+            'total_budget' => (float) $item->total_budget,
+        ]);
 
-        $locations = $locationsQuery->get();
+        $divisionLeaderboard = DB::table('project_year_claims as pyc')
+            ->join('projects', 'pyc.project_id', '=', 'projects.id')
+            ->join('divisions', 'projects.division_id', '=', 'divisions.id')
+            ->selectRaw('divisions.name as division, SUM(pyc.amount) as total_budget')
+            ->where('projects.project_type', '!=', 'non-project')
+            ->when($year, fn ($q) => $q->where('pyc.year', $year))
+            ->groupBy('projects.division_id', 'divisions.name')
+            ->orderByDesc('total_budget')
+            ->take(10)
+            ->get()
+            ->map(fn ($item) => [
+                'division' => $item->division,
+                'total_budget' => (float) $item->total_budget,
+            ]);
 
-        $divisionQuery = Division::query();
+        $locations = ProjectLocation::with('project:id,name')->get();
 
-        if ($year) {
-            $divisionQuery->withCount(['projects' => fn ($q) => $q->whereHas('yearClaims', fn ($q2) => $q2->where('year', $year))]);
-        } else {
-            $divisionQuery->withCount('projects');
-        }
-
-        $projectsByDivision = $divisionQuery->get()->map(fn (Division $d): array => [
+        $projectsByDivision = Division::withCount('projects')->get()->map(fn (Division $d): array => [
             'division' => $d->name,
             'count' => $d->projects_count,
         ]);
@@ -174,7 +172,8 @@ final class DashboardController extends Controller
             'totalLetterRequests' => $totalLetterRequests,
             'totalBudget' => (float) $totalBudget,
             'totalManagementBudget' => (float) $totalManagementBudget,
-            'leaderboard' => $leaderboard,
+            'accountManagerLeaderboard' => $accountManagerLeaderboard,
+            'divisionLeaderboard' => $divisionLeaderboard,
             'locations' => $locations,
             'projectsByDivision' => $projectsByDivision,
             'approvalItems' => $approvalItems,
