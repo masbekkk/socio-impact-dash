@@ -569,13 +569,11 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                       Kode <SortIcon column="code" />
                     </button>
                   </TableHead>
-                  {canUpdateCode && (
                     <TableHead>
                       <button className="flex items-center font-medium" onClick={() => handleSort('initial_project')}>
                         Initial Project <SortIcon column="initial_project" />
                       </button>
                     </TableHead>
-                  )}
                   <TableHead className="min-w-[250px]">
                     <button className="flex items-center font-medium" onClick={() => handleSort('name')}>
                       Nama Proyek <SortIcon column="name" />
@@ -624,13 +622,11 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   projects.map((p: any) => (
                     <TableRow key={p.id} className="group">
                       <TableCell className="font-medium">{p.code}</TableCell>
-                      {canUpdateCode && (
                         <TableCell>
                           <div className="text-xs font-mono bg-emerald-50 text-emerald-700 px-2 py-1 rounded inline-block">
                             {p.initial_project || '-'}
                           </div>
                         </TableCell>
-                      )}
                       <TableCell>
                         <div className="font-medium">{p.name}</div>
                       </TableCell>
