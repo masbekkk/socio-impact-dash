@@ -536,6 +536,15 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                             ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.budget_total)
                             : '-'}
                         </p>
+                        {p.year_claims?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {p.year_claims.map((yc: any) => (
+                              <span key={yc.id} className="text-[10px] font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                                {yc.year}: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(yc.amount)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -682,10 +691,21 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {p.budget_total
-                          ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(p.budget_total)
-                          : '-'}
+                      <TableCell className="text-right">
+                        <div className="font-mono text-sm font-semibold">
+                          {p.budget_total
+                            ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(p.budget_total)
+                            : '-'}
+                        </div>
+                        {p.year_claims?.length > 0 && (
+                          <div className="flex flex-col gap-0.5 mt-1">
+                            {p.year_claims.map((yc: any) => (
+                              <div key={yc.id} className="text-[10px] font-mono text-muted-foreground">
+                                {yc.year}: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(yc.amount)}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
