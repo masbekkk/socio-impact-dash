@@ -93,7 +93,7 @@ function hasActiveFilters(f: FilterState): boolean {
 export default function ProjectsIndex({ filters, divisions }: { filters?: any, divisions?: any[] }) {
   const { auth } = usePage().props as any;
   const { hasRole, hasPermission } = usePermission();
-  const isHead = hasRole(['head']);
+  const hideCreatedBy = hasRole(['head']) && !hasRole(['finance']);
   const permissions = auth.permissions || [];
   const canUpdateCode = hasPermission('create_code_project');
   // Per-user storage key so filters don't bleed across accounts.
@@ -589,7 +589,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                       Divisi <SortIcon column="division_id" />
                     </button>
                   </TableHead>
-                  {!isHead && (
+                  {!hideCreatedBy && (
                     <TableHead>Created By</TableHead>
                   )}
                   <TableHead>
@@ -613,7 +613,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               <TableBody>
                 {projects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isHead ? 9 : 10} className="h-24 text-center">
+                    <TableCell colSpan={hideCreatedBy ? 9 : 10} className="h-24 text-center">
                       Belum ada proyek yang sesuai filter.{' '}
                       {hasActiveFilters({ search, startDate, endDate, status, division, perPage, sortBy, sortDir }) && (
                         <button onClick={handleReset} className="text-sidebar underline ml-1">Reset Filter</button>
@@ -670,7 +670,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                           );
                         })()}
                       </TableCell>
-                      {!isHead && (
+                      {!hideCreatedBy && (
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <span className="text-xs font-medium">{p.creator ? p.creator.name : '-'}</span>
