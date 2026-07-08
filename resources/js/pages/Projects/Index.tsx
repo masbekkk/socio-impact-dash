@@ -96,7 +96,6 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
   const isHead = hasRole(['head']);
   const permissions = auth.permissions || [];
   const canUpdateCode = hasPermission('create_code_project');
-
   // Per-user storage key so filters don't bleed across accounts.
   const STORAGE_KEY = `project_filters_${auth?.user?.id ?? 'guest'}`;
 
