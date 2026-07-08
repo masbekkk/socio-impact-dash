@@ -93,6 +93,7 @@ function hasActiveFilters(f: FilterState): boolean {
 export default function ProjectsIndex({ filters, divisions }: { filters?: any, divisions?: any[] }) {
   const { auth } = usePage().props as any;
   const { hasRole, hasPermission } = usePermission();
+  const isHead = hasRole(['head']);
   const permissions = auth.permissions || [];
   const canUpdateCode = hasPermission('create_code_project');
 
@@ -589,7 +590,9 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                       Divisi <SortIcon column="division_id" />
                     </button>
                   </TableHead>
-                  <TableHead>Created By</TableHead>
+                  {!isHead && (
+                    <TableHead>Created By</TableHead>
+                  )}
                   <TableHead>
                     <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
                       Status <SortIcon column="status" />
@@ -611,7 +614,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               <TableBody>
                 {projects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={canUpdateCode ? 10 : 9} className="h-24 text-center">
+                    <TableCell colSpan={isHead ? 9 : 10} className="h-24 text-center">
                       Belum ada proyek yang sesuai filter.{' '}
                       {hasActiveFilters({ search, startDate, endDate, status, division, perPage, sortBy, sortDir }) && (
                         <button onClick={handleReset} className="text-sidebar underline ml-1">Reset Filter</button>
@@ -661,18 +664,20 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                           }
 
                           return (
-                            <Badge variant="outline" className={`gap-1.5 py-1 px-2.5 font-medium ${badgeStyle}`}>
+                            <Badge variant="outline" className={`gap-1.5 py-1 px-2.5 font-medium whitespace-normal text-wrap break-words ${badgeStyle}`}>
                               <Icon className="h-3.5 w-3.5" />
                               {p.division_name || (p.division ? p.division.name : '-')}
                             </Badge>
                           );
                         })()}
                       </TableCell>
+                      {!isHead && (
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <span className="text-xs font-medium">{p.creator ? p.creator.name : '-'}</span>
                         </div>
                       </TableCell>
+                      )}
                       <TableCell>
                         <StatusBadge status={p.status} />
                       </TableCell>
