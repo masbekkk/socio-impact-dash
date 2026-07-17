@@ -6,10 +6,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Division;
 use App\Models\LetterRequest;
+use App\Models\Project;
 use App\Models\ProjectLocation;
 use App\Models\ProjectYearClaim;
 use App\Models\User;
-use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -33,8 +33,8 @@ final class DashboardController extends Controller
         $totalLetterRequests = LetterRequest::query()->count();
 
         $leaderboardData = $this->getLeaderboardData($year);
-        $totalBudget = Project::query()->sum('budget_total');
-        $totalManagementBudget = Project::query()->sum('management_budget');
+        // $totalBudget = Project::query()->sum('budget_total');
+        // $totalManagementBudget = Project::query()->sum('management_budget');
 
         $locations = ProjectLocation::with('project:id,name')->get();
 
@@ -147,8 +147,8 @@ final class DashboardController extends Controller
             'approvalItems' => $approvalItems,
             'availableYears' => $availableYears,
             'selectedYear' => $year ?: null,
-            'totalBudget' => $totalBudget,
-            'totalManagementBudget' => $totalManagementBudget,
+            // 'totalBudget' => $totalBudget,
+            // 'totalManagementBudget' => $totalManagementBudget,
         ]);
     }
 
@@ -174,16 +174,77 @@ final class DashboardController extends Controller
             ->when($year, fn ($q) => $q->where('pyc.year', $year))
             ->groupBy('projects.account_manager_id')
             ->orderByDesc('total_budget')
-            ->take(10)
             ->get();
 
-        $amIds = $accountManagerLeaderboard->pluck('account_manager_id');
+        $amIds = $accountManagerLeaderboard->pluck('account_manager_id')->filter()->toArray();
+
+        $eerExpenses = DB::table('reimbursements as r')
+            ->join('projects as p', 'r.project_id', '=', 'p.id')
+            ->selectRaw('p.account_manager_id, SUM(r.amount) as total')
+            ->where('r.type', 'eer')
+            ->whereNull('r.deleted_at')
+            ->whereNotIn('r.status', ['draft', 'rejected'])
+            ->whereIn('p.account_manager_id', $amIds)
+            ->groupBy('p.account_manager_id')
+            ->pluck('total', 'account_manager_id');
+
+        $allowanceExpenses = DB::table('reimbursements as r')
+            ->join('projects as p', 'r.project_id', '=', 'p.id')
+            ->selectRaw('p.account_manager_id, SUM(r.amount) as total')
+            ->where('r.type', 'allowance')
+            ->whereNull('r.deleted_at')
+            ->whereNotIn('r.status', ['draft', 'rejected'])
+            ->whereIn('p.account_manager_id', $amIds)
+            ->groupBy('p.account_manager_id')
+            ->pluck('total', 'account_manager_id');
+
+        $atrExpenses = DB::table('reimbursements as r')
+            ->join('projects as p', 'r.project_id', '=', 'p.id')
+            ->selectRaw('p.account_manager_id, SUM(r.amount) as total')
+            ->where('r.type', 'atr')
+            ->whereNull('r.deleted_at')
+            ->whereNotIn('r.status', ['draft', 'rejected'])
+            ->whereIn('p.account_manager_id', $amIds)
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('reimbursements as eer')
+                    ->whereColumn('eer.atr_id', 'r.id')
+                    ->where('eer.type', 'eer')
+                    ->whereNull('eer.deleted_at')
+                    ->whereNotIn('eer.status', ['draft', 'rejected']);
+            })
+            ->groupBy('p.account_manager_id')
+            ->pluck('total', 'account_manager_id');
+
         $amNames = User::whereIn('id', $amIds)->get()->keyBy('id');
 
-        $accountManagerLeaderboard = $accountManagerLeaderboard->map(fn ($item) => [
-            'name' => $amNames[$item->account_manager_id]?->name ?? 'Unknown',
-            'total_budget' => (float) $item->total_budget,
-        ]);
+        $accountManagerLeaderboard = $accountManagerLeaderboard->map(function ($item) use ($amNames, $eerExpenses, $allowanceExpenses, $atrExpenses) {
+            $amId = $item->account_manager_id;
+            $budget = (float) $item->total_budget;
+            $eer = (float) ($eerExpenses[$amId] ?? 0);
+            $allowance = (float) ($allowanceExpenses[$amId] ?? 0);
+            $atr = (float) ($atrExpenses[$amId] ?? 0);
+            $totalExpenses = $eer + $allowance + $atr;
+            $profit = $budget - $totalExpenses;
+            
+            $utilization = 0;
+            if ($budget > 0) {
+                $utilization = ($totalExpenses / $budget) * 100;
+                $utilization = max(0, min(100, $utilization));
+            }
+
+            return [
+                'id' => $amId,
+                'name' => $amNames[$amId]?->name ?? 'Unknown',
+                'total_budget' => $budget,
+                'atr_expenses' => $atr,
+                'eer_expenses' => $eer,
+                'allowance_expenses' => $allowance,
+                'total_expenses' => $totalExpenses,
+                'profit' => $profit,
+                'utilization_percentage' => $utilization,
+            ];
+        });
 
         $divisionLeaderboard = DB::table('project_year_claims as pyc')
             ->join('projects', 'pyc.project_id', '=', 'projects.id')

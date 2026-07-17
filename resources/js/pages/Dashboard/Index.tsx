@@ -41,8 +41,15 @@ import { ApprovalStatisticCard } from '@/components/dashboard/ApprovalStatisticC
 import { BulkApprovalModal } from '@/components/dashboard/BulkApprovalModal';
 
 interface AccountManagerLeaderboardEntry {
+  id: number;
   name: string;
   total_budget: number;
+  atr_expenses: number;
+  eer_expenses: number;
+  allowance_expenses: number;
+  total_expenses: number;
+  profit: number;
+  utilization_percentage: number;
 }
 
 interface DivisionLeaderboardEntry {
@@ -388,105 +395,128 @@ export default function Dashboard({
         {!isPegawai && (
           <>
             {/* Top Budget Contributors - Split View */}
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Total Tahun Anggaran</span>
-                  <span className="text-sm font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
-                    {formatIDR(totalYearClaims || 0)}
-                    {localYear !== 'all' && <span className="font-normal text-purple-500 ml-1">({localYear})</span>}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground">Filter Tahun:</span>
-                  <Select
-                    value={localYear}
-                    onValueChange={(val) => {
-                      setLocalYear(val);
-                      fetchLeaderboard(val);
-                    }}
-                  >
-                    <SelectTrigger className="w-[160px]">
-                      <SelectValue placeholder="Semua Tahun" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Tahun</SelectItem>
-                      {availableYears.map((y) => (
-                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Total Tahun Anggaran</span>
+                <span className="text-sm font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                  {formatIDR(totalYearClaims || 0)}
+                  {localYear !== 'all' && <span className="font-normal text-purple-500 ml-1">({localYear})</span>}
+                </span>
               </div>
-              <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 transition-opacity duration-300 ${leaderboardLoading ? 'opacity-60' : ''}`}>
-                {/* By Account Manager */}
-                <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white">
-                  <CardHeader className="p-5 pb-3 border-b border-gray-50">
-                    <CardTitle className="text-sm font-bold text-gray-800">Top Account Manager</CardTitle>
-                    <CardDescription className="text-xs">Berdasarkan alokasi tahun anggaran</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {accountManagerLeaderboard.length === 0 ? (
-                      <div className="text-center py-8 text-sm text-muted-foreground">Belum ada data</div>
-                    ) : (
-                      <div className="divide-y divide-gray-50">
-                        {accountManagerLeaderboard.map((entry, idx) => {
-                          const totalAll = accountManagerLeaderboard.reduce((s, e) => s + e.total_budget, 0);
-                          const pct = totalAll > 0 ? (entry.total_budget / totalAll) * 100 : 0;
-                          return (
-                            <div key={entry.name} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors">
-                              <span className="w-6 text-center text-xs font-bold text-muted-foreground/60 shrink-0">#{idx + 1}</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-sm font-semibold text-gray-800 truncate">{entry.name}</span>
-                                  <span className="text-sm font-bold text-emerald-700 shrink-0">{formatIDR(entry.total_budget)}</span>
-                                </div>
-                                <div className="mt-1.5 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                                  <div className="h-full rounded-full bg-[var(--sidebar)] transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">Filter Tahun:</span>
+                <Select
+                  value={localYear}
+                  onValueChange={(val) => {
+                    setLocalYear(val);
+                    fetchLeaderboard(val);
+                  }}
+                >
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Semua Tahun" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Tahun</SelectItem>
+                    {availableYears.map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className={`grid grid-cols-1 lg:grid-cols-1 gap-6 transition-opacity duration-300 ${leaderboardLoading ? 'opacity-60' : ''}`}>
+              {/* By Account Manager */}
+              <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white">
+                <CardHeader className="p-5 pb-3 border-b border-gray-50">
+                  <CardTitle className="text-sm font-bold text-gray-800">Top Account Manager</CardTitle>
+                  <CardDescription className="text-xs">Berdasarkan alokasi tahun anggaran</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {accountManagerLeaderboard.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-muted-foreground">Belum ada data</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-muted-foreground bg-gray-50 uppercase border-b">
+                          <tr>
+                            <th className="px-5 py-3 font-semibold w-12 text-center">Rank</th>
+                            <th className="px-5 py-3 font-semibold">Account Manager</th>
+                            <th className="px-5 py-3 font-semibold text-right">Budget</th>
+                            <th className="px-5 py-3 font-semibold text-right">Expenses</th>
+                            <th className="px-5 py-3 font-semibold text-right">ATR</th>
+                            <th className="px-5 py-3 font-semibold text-right">EER</th>
+                            <th className="px-5 py-3 font-semibold text-right">Allowance</th>
+                            <th className="px-5 py-3 font-semibold text-right">Profit</th>
+                            <th className="px-5 py-3 font-semibold">Utilization</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {accountManagerLeaderboard.map((entry, idx) => {
+                            const pct = entry.utilization_percentage;
+                            const barColor = pct > 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-emerald-500';
+                            return (
+                              <tr key={entry.id || entry.name} className="hover:bg-gray-50/50 transition-colors">
+                                <td className="px-5 py-4 text-center font-bold text-muted-foreground/60">#{idx + 1}</td>
+                                <td className="px-5 py-4 font-semibold text-gray-800 whitespace-nowrap">{entry.name}</td>
+                                <td className="px-5 py-4 font-bold text-emerald-700 text-right whitespace-nowrap">{formatIDR(entry.total_budget)}</td>
+                                <td className="px-5 py-4 font-medium text-orange-600 text-right whitespace-nowrap">{formatIDR(entry.total_expenses)}</td>
+                                <td className="px-5 py-4 text-blue-600 text-right whitespace-nowrap">{formatIDR(entry.atr_expenses)}</td>
+                                <td className="px-5 py-4 text-indigo-600 text-right whitespace-nowrap">{formatIDR(entry.eer_expenses)}</td>
+                                <td className="px-5 py-4 text-purple-600 text-right whitespace-nowrap">{formatIDR(entry.allowance_expenses)}</td>
+                                <td className={`px-5 py-4 font-bold text-right whitespace-nowrap ${entry.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatIDR(entry.profit)}</td>
+                                <td className="px-5 py-4 min-w-[120px]">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                      <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                                    </div>
+                                    <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">{pct.toFixed(0)}%</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-                {/* By Division */}
-                <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white">
-                  <CardHeader className="p-5 pb-3 border-b border-gray-50">
-                    <CardTitle className="text-sm font-bold text-gray-800">Top Division</CardTitle>
-                    <CardDescription className="text-xs">Berdasarkan alokasi tahun anggaran</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {divisionLeaderboard.length === 0 ? (
-                      <div className="text-center py-8 text-sm text-muted-foreground">Belum ada data</div>
-                    ) : (
-                      <div className="divide-y divide-gray-50">
-                        {divisionLeaderboard.map((entry, idx) => {
-                          const totalAll = divisionLeaderboard.reduce((s, e) => s + e.total_budget, 0);
-                          const pct = totalAll > 0 ? (entry.total_budget / totalAll) * 100 : 0;
-                          return (
-                            <div key={entry.division} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors">
-                              <span className="w-6 text-center text-xs font-bold text-muted-foreground/60 shrink-0">#{idx + 1}</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-sm font-semibold text-gray-800 truncate">{entry.division}</span>
-                                  <span className="text-sm font-bold text-blue-700 shrink-0">{formatIDR(entry.total_budget)}</span>
-                                </div>
-                                <div className="mt-1.5 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                                  <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
-                                </div>
+              {/* By Division */}
+              {/* <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white">
+                <CardHeader className="p-5 pb-3 border-b border-gray-50">
+                  <CardTitle className="text-sm font-bold text-gray-800">Top Division</CardTitle>
+                  <CardDescription className="text-xs">Berdasarkan alokasi tahun anggaran</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {divisionLeaderboard.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-muted-foreground">Belum ada data</div>
+                  ) : (
+                    <div className="divide-y divide-gray-50">
+                      {divisionLeaderboard.map((entry, idx) => {
+                        const totalAll = divisionLeaderboard.reduce((s, e) => s + e.total_budget, 0);
+                        const pct = totalAll > 0 ? (entry.total_budget / totalAll) * 100 : 0;
+                        return (
+                          <div key={entry.division} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors">
+                            <span className="w-6 text-center text-xs font-bold text-muted-foreground/60 shrink-0">#{idx + 1}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-semibold text-gray-800 truncate">{entry.division}</span>
+                                <span className="text-sm font-bold text-blue-700 shrink-0">{formatIDR(entry.total_budget)}</span>
+                              </div>
+                              <div className="mt-1.5 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-      {/* Budget Highlight Cards */}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card> */}
+            </div>
+            {/* Budget Highlight Cards 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 shadow-sm border-0">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -504,6 +534,7 @@ export default function Dashboard({
                 <CardContent><div className="text-2xl sm:text-3xl font-bold text-blue-900">{formatIDR(totalManagementBudget || 0)}</div></CardContent>
               </Card>
             </div>
+            */}
             {/* Charts Area - Rearranged to Full Width */}
             <div className="space-y-8">
               {/* Map - Full Width */}
