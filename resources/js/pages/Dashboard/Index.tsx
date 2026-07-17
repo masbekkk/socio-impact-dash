@@ -10,7 +10,7 @@ import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { MapPin, TrendingUp, Clock, Users, Building2, FileText, Banknote, CheckCircle2 } from 'lucide-react';
+import { MapPin, TrendingUp, TrendingDown, Clock, Users, Building2, FileText, Banknote, CheckCircle2, Wallet, Receipt, PieChart } from 'lucide-react';
 import { type SharedData } from '@/types';
 import { usePermission } from '@/hooks/use-permission';
 
@@ -85,11 +85,24 @@ interface ApprovalItem {
   end_date?: string;
 }
 
+interface YearlySummary {
+  year: number | string;
+  total_budget: number;
+  atr_expenses: number;
+  eer_expenses: number;
+  allowance_expenses: number;
+  total_expenses: number;
+  remaining_profit: number;
+  utilization_percentage: number;
+  remaining_percentage: number;
+}
+
 interface DashboardProps extends SharedData {
   totalUsers: number;
   totalDivisions: number;
   totalLetterRequests: number;
   totalYearClaims: number;
+  yearlySummary?: YearlySummary;
   accountManagerLeaderboard: AccountManagerLeaderboardEntry[];
   divisionLeaderboard: DivisionLeaderboardEntry[];
   locations: ProjectLocation[];
@@ -106,6 +119,8 @@ interface DashboardProps extends SharedData {
   };
   availableYears: number[];
   selectedYear: number | null;
+  totalBudget?: number;
+  totalManagementBudget?: number;
 }
 
 export default function Dashboard({
@@ -113,6 +128,7 @@ export default function Dashboard({
   totalDivisions,
   totalLetterRequests,
   totalYearClaims: initialTotalYearClaims,
+  yearlySummary: initialYearlySummary,
   accountManagerLeaderboard: initialAccountManagerLeaderboard,
   divisionLeaderboard: initialDivisionLeaderboard,
   locations,
@@ -128,6 +144,7 @@ export default function Dashboard({
 
   const [localYear, setLocalYear] = useState<string>(String(initialSelectedYear ?? 'all'));
   const [totalYearClaims, setTotalYearClaims] = useState(initialTotalYearClaims);
+  const [yearlySummary, setYearlySummary] = useState<YearlySummary | undefined>(initialYearlySummary);
   const [accountManagerLeaderboard, setAccountManagerLeaderboard] = useState(initialAccountManagerLeaderboard);
   const [divisionLeaderboard, setDivisionLeaderboard] = useState(initialDivisionLeaderboard);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
@@ -138,6 +155,7 @@ export default function Dashboard({
       const params = year === 'all' ? {} : { year };
       const res = await axios.get('/api/v1/dashboard/leaderboard', { params });
       setTotalYearClaims(res.data.totalYearClaims);
+      if (res.data.yearlySummary) setYearlySummary(res.data.yearlySummary);
       setAccountManagerLeaderboard(res.data.accountManagerLeaderboard);
       setDivisionLeaderboard(res.data.divisionLeaderboard);
     } catch {
@@ -424,7 +442,144 @@ export default function Dashboard({
                 </Select>
               </div>
             </div>
-            <div className={`grid grid-cols-1 lg:grid-cols-1 gap-6 transition-opacity duration-300 ${leaderboardLoading ? 'opacity-60' : ''}`}>
+
+            {yearlySummary && (
+              <div className={`space-y-4 mb-6 transition-opacity duration-300 ${leaderboardLoading ? 'opacity-60' : ''}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Card 1: Total Budget */}
+                  <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white">
+                    <CardHeader className="p-5 pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold text-emerald-800">Total Budget</CardTitle>
+                        <div className="bg-emerald-100 p-2 rounded-full">
+                          <Wallet className="h-4 w-4 text-emerald-700" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-5 pb-5">
+                      <div className="text-2xl font-bold text-emerald-900 truncate">
+                        {formatIDR(yearlySummary.total_budget)}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Total allocated budget for {yearlySummary.year === 'all' ? 'semua tahun' : yearlySummary.year}</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card 2: Total Expenses */}
+                  <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white flex flex-col">
+                    <CardHeader className="p-5 pb-2 shrink-0">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold text-orange-800">Total Expenses</CardTitle>
+                        <div className="bg-orange-100 p-2 rounded-full">
+                          <Receipt className="h-4 w-4 text-orange-600" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-5 pb-5 flex-1 flex flex-col">
+                      <div className="text-2xl font-bold text-orange-700 truncate mb-2">
+                        {formatIDR(yearlySummary.total_expenses)}
+                      </div>
+                      <div className="flex flex-col gap-1 text-xs text-muted-foreground border-t border-gray-100 pt-2 mt-auto">
+                        <div className="flex justify-between">
+                          <span className="flex items-center before:content-['•'] before:mr-1">ATR</span>
+                          <span className="text-blue-600 font-medium">{formatIDR(yearlySummary.atr_expenses)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="flex items-center before:content-['•'] before:mr-1">EER</span>
+                          <span className="text-indigo-600 font-medium">{formatIDR(yearlySummary.eer_expenses)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="flex items-center before:content-['•'] before:mr-1">Allowance</span>
+                          <span className="text-purple-600 font-medium">{formatIDR(yearlySummary.allowance_expenses)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card 3: Remaining Profit */}
+                  <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white flex flex-col">
+                    <CardHeader className="p-5 pb-2 shrink-0">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className={`text-sm font-semibold ${yearlySummary.remaining_profit >= 0 ? 'text-emerald-800' : 'text-red-800'}`}>Remaining Profit</CardTitle>
+                        <div className={`${yearlySummary.remaining_profit >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'} p-2 rounded-full`}>
+                          {yearlySummary.remaining_profit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-5 pb-5 flex-1 flex flex-col justify-end">
+                      <div className={`text-2xl font-bold truncate mb-1 ${yearlySummary.remaining_profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                        {formatIDR(yearlySummary.remaining_profit)}
+                      </div>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {yearlySummary.remaining_percentage.toFixed(0)}% Remaining Budget
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card 4: Budget Utilization */}
+                  <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white flex flex-col">
+                    <CardHeader className="p-5 pb-2 shrink-0">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold text-gray-800">Budget Utilization</CardTitle>
+                        <div className="bg-gray-100 p-2 rounded-full">
+                          <PieChart className="h-4 w-4 text-gray-600" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-5 pb-5 flex-1 flex flex-col justify-end">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="text-3xl font-bold tracking-tighter">
+                          {yearlySummary.utilization_percentage > 100 ? 100 : yearlySummary.utilization_percentage.toFixed(0)}%
+                        </div>
+                        {yearlySummary.utilization_percentage > 100 && (
+                          <Badge variant="destructive" className="text-[10px] h-5 px-1.5">Over Budget</Badge>
+                        )}
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2.5 mb-2 overflow-hidden shrink-0">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-1000 ${yearlySummary.utilization_percentage > 100 ? 'bg-red-500' : yearlySummary.utilization_percentage >= 90 ? 'bg-orange-500' : yearlySummary.utilization_percentage >= 70 ? 'bg-yellow-500' : 'bg-emerald-500'}`} 
+                          style={{ width: `${Math.min(100, yearlySummary.utilization_percentage)}%` }} 
+                        />
+                      </div>
+                      <div className="flex justify-between items-end text-[10px] text-muted-foreground mt-1">
+                        <div>
+                          <div className="font-semibold text-orange-600">{formatIDR(yearlySummary.total_expenses)}</div>
+                          <div className="text-gray-400">Expenses</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-emerald-700">{formatIDR(yearlySummary.total_budget)}</div>
+                          <div className="text-gray-400">of Budget</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Optional Stacked Bar */}
+                {yearlySummary.total_budget > 0 && (
+                  <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white p-5">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-sm font-bold text-gray-800">Budget Allocation Breakdown</h4>
+                    </div>
+                    <div className="w-full h-4 bg-gray-100 rounded-full flex overflow-hidden group">
+                      <div className="h-full bg-blue-500 transition-all duration-700 border-r border-white/20 last:border-0 hover:opacity-90" style={{ width: `${(yearlySummary.atr_expenses / yearlySummary.total_budget) * 100}%` }} title={`ATR: ${formatIDR(yearlySummary.atr_expenses)}`} />
+                      <div className="h-full bg-indigo-500 transition-all duration-700 border-r border-white/20 last:border-0 hover:opacity-90" style={{ width: `${(yearlySummary.eer_expenses / yearlySummary.total_budget) * 100}%` }} title={`EER: ${formatIDR(yearlySummary.eer_expenses)}`} />
+                      <div className="h-full bg-purple-500 transition-all duration-700 border-r border-white/20 last:border-0 hover:opacity-90" style={{ width: `${(yearlySummary.allowance_expenses / yearlySummary.total_budget) * 100}%` }} title={`Allowance: ${formatIDR(yearlySummary.allowance_expenses)}`} />
+                      {yearlySummary.remaining_profit > 0 && (
+                        <div className="h-full bg-emerald-400 transition-all duration-700 hover:opacity-90" style={{ width: `${(yearlySummary.remaining_profit / yearlySummary.total_budget) * 100}%` }} title={`Remaining: ${formatIDR(yearlySummary.remaining_profit)}`} />
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 mt-4 text-[11px] font-medium text-gray-600">
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm" /> ATR</div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-indigo-500 shadow-sm" /> EER</div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-purple-500 shadow-sm" /> Allowance</div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm" /> Remaining Profit</div>
+                    </div>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            <div className={`grid grid-cols-1 gap-6 transition-opacity duration-300 ${leaderboardLoading ? 'opacity-60' : ''}`}>
               {/* By Account Manager */}
               <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white">
                 <CardHeader className="p-5 pb-3 border-b border-gray-50">

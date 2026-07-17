@@ -261,8 +261,28 @@ final class DashboardController extends Controller
                 'total_budget' => (float) $item->total_budget,
             ]);
 
+        $globalBudget = (float) $totalYearClaims;
+        $globalEer = $eerExpenses->sum();
+        $globalAllowance = $allowanceExpenses->sum();
+        $globalAtr = $atrExpenses->sum();
+        $globalTotalExpenses = $globalEer + $globalAllowance + $globalAtr;
+        $globalProfit = $globalBudget - $globalTotalExpenses;
+
+        $yearlySummary = [
+            'year' => $year ?? 'all',
+            'total_budget' => $globalBudget,
+            'atr_expenses' => (float) $globalAtr,
+            'eer_expenses' => (float) $globalEer,
+            'allowance_expenses' => (float) $globalAllowance,
+            'total_expenses' => (float) $globalTotalExpenses,
+            'remaining_profit' => (float) $globalProfit,
+            'utilization_percentage' => $globalBudget > 0 ? min(100, ($globalTotalExpenses / $globalBudget) * 100) : 0,
+            'remaining_percentage' => $globalBudget > 0 ? ($globalProfit / $globalBudget) * 100 : 0,
+        ];
+
         return [
             'totalYearClaims' => (float) $totalYearClaims,
+            'yearlySummary' => $yearlySummary,
             'accountManagerLeaderboard' => $accountManagerLeaderboard,
             'divisionLeaderboard' => $divisionLeaderboard,
         ];
