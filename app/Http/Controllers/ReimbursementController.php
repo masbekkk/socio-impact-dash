@@ -209,6 +209,7 @@ final readonly class ReimbursementController
             ->map(fn (Project $project): array => [
                 'id' => $project->id,
                 'name' => $project->name,
+                'initial_project' => $project->initial_project,
                 'code' => $project->code,
                 'allowance_budget' => (float) $project->allowance_budget,
                 'used_allowance_budget' => (float) $project->reimbursements()
@@ -454,6 +455,7 @@ final readonly class ReimbursementController
                 ->map(fn (Project $project): array => [
                     'id' => $project->id,
                     'name' => $project->name,
+                    'initial_project' => $project->initial_project,
                     'code' => $project->code,
                     'allowance_budget' => (float) $project->allowance_budget,
                     'used_allowance_budget' => (float) $project->reimbursements()
