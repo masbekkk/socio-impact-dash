@@ -476,8 +476,15 @@ export default function Dashboard({
                       </div>
                     </CardHeader>
                     <CardContent className="px-5 pb-5 flex-1 flex flex-col">
-                      <div className="text-2xl font-bold text-orange-700 truncate mb-2">
-                        {formatIDR(yearlySummary.total_expenses)}
+                      <div className="flex items-end gap-2 mb-2">
+                        <div className="text-2xl font-bold text-orange-700 truncate">
+                          {formatIDR(yearlySummary.total_expenses)}
+                        </div>
+                        {yearlySummary.total_budget > 0 && (
+                          <div className="text-sm font-semibold text-orange-600 mb-0.5" title="% of Total Budget">
+                            ({((yearlySummary.total_expenses / yearlySummary.total_budget) * 100).toFixed(0)}%)
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col gap-1 text-xs text-muted-foreground border-t border-gray-100 pt-2 mt-auto">
                         <div className="flex justify-between">
@@ -500,7 +507,7 @@ export default function Dashboard({
                   <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white flex flex-col">
                     <CardHeader className="p-5 pb-2 shrink-0">
                       <div className="flex items-center justify-between">
-                        <CardTitle className={`text-sm font-semibold ${yearlySummary.remaining_profit >= 0 ? 'text-emerald-800' : 'text-red-800'}`}>Remaining Profit</CardTitle>
+                        <CardTitle className={`text-sm font-semibold ${yearlySummary.remaining_profit >= 0 ? 'text-emerald-800' : 'text-red-800'}`}>Remaining Budget</CardTitle>
                         <div className={`${yearlySummary.remaining_profit >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'} p-2 rounded-full`}>
                           {yearlySummary.remaining_profit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                         </div>
@@ -527,8 +534,15 @@ export default function Dashboard({
                       </div>
                     </CardHeader>
                     <CardContent className="px-5 pb-5 flex-1 flex flex-col justify-end">
-                      <div className="text-2xl font-bold text-pink-600 truncate mb-1">
-                        {formatIDR(yearlySummary.total_management_budget)}
+                      <div className="flex items-end gap-2 mb-1">
+                        <div className="text-2xl font-bold text-pink-600 truncate">
+                          {formatIDR(yearlySummary.total_management_budget)}
+                        </div>
+                        {yearlySummary.total_budget > 0 && (
+                          <div className="text-sm font-semibold text-pink-500 mb-0.5" title="% of Total Budget">
+                            ({((yearlySummary.total_management_budget / yearlySummary.total_budget) * 100).toFixed(0)}%)
+                          </div>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground font-medium">
                         Portioned from year claims
