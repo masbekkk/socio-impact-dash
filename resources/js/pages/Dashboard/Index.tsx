@@ -91,6 +91,7 @@ interface YearlySummary {
   atr_expenses: number;
   eer_expenses: number;
   allowance_expenses: number;
+  total_management_budget: number;
   total_expenses: number;
   remaining_profit: number;
   utilization_percentage: number;
@@ -515,46 +516,28 @@ export default function Dashboard({
                     </CardContent>
                   </Card>
 
-                  {/* Card 4: Budget Utilization */}
+                  {/* Card 4: Management Budget */}
                   <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white flex flex-col">
                     <CardHeader className="p-5 pb-2 shrink-0">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-semibold text-gray-800">Budget Utilization</CardTitle>
-                        <div className="bg-gray-100 p-2 rounded-full">
-                          <PieChart className="h-4 w-4 text-gray-600" />
+                        <CardTitle className="text-sm font-semibold text-gray-800">Management Budget</CardTitle>
+                        <div className="bg-pink-50 p-2 rounded-full">
+                          <Building2 className="h-4 w-4 text-pink-600" />
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="px-5 pb-5 flex-1 flex flex-col justify-end">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="text-3xl font-bold tracking-tighter">
-                          {yearlySummary.utilization_percentage > 100 ? 100 : yearlySummary.utilization_percentage.toFixed(0)}%
-                        </div>
-                        {yearlySummary.utilization_percentage > 100 && (
-                          <Badge variant="destructive" className="text-[10px] h-5 px-1.5">Over Budget</Badge>
-                        )}
+                      <div className="text-2xl font-bold text-pink-600 truncate mb-1">
+                        {formatIDR(yearlySummary.total_management_budget)}
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2.5 mb-2 overflow-hidden shrink-0">
-                        <div
-                          className={`h-full rounded-full transition-all duration-1000 ${yearlySummary.utilization_percentage > 100 ? 'bg-red-500' : yearlySummary.utilization_percentage >= 90 ? 'bg-orange-500' : yearlySummary.utilization_percentage >= 70 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
-                          style={{ width: `${Math.min(100, yearlySummary.utilization_percentage)}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between items-end text-[10px] text-muted-foreground mt-1">
-                        <div>
-                          <div className="font-semibold text-orange-600">{formatIDR(yearlySummary.total_expenses)}</div>
-                          <div className="text-gray-400">Expenses</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold text-emerald-700">{formatIDR(yearlySummary.total_budget)}</div>
-                          <div className="text-gray-400">of Budget</div>
-                        </div>
-                      </div>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        Portioned from year claims
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Optional Stacked Bar */}
+                {/* Stacked Bar */}
                 {/* {yearlySummary.total_budget > 0 && (
                   <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white p-5">
                     <div className="flex justify-between items-center mb-3">
@@ -564,6 +547,7 @@ export default function Dashboard({
                       <div className="h-full bg-blue-500 transition-all duration-700 border-r border-white/20 last:border-0 hover:opacity-90" style={{ width: `${(yearlySummary.atr_expenses / yearlySummary.total_budget) * 100}%` }} title={`ATR: ${formatIDR(yearlySummary.atr_expenses)}`} />
                       <div className="h-full bg-indigo-500 transition-all duration-700 border-r border-white/20 last:border-0 hover:opacity-90" style={{ width: `${(yearlySummary.eer_expenses / yearlySummary.total_budget) * 100}%` }} title={`EER: ${formatIDR(yearlySummary.eer_expenses)}`} />
                       <div className="h-full bg-purple-500 transition-all duration-700 border-r border-white/20 last:border-0 hover:opacity-90" style={{ width: `${(yearlySummary.allowance_expenses / yearlySummary.total_budget) * 100}%` }} title={`Allowance: ${formatIDR(yearlySummary.allowance_expenses)}`} />
+                      <div className="h-full bg-pink-500 transition-all duration-700 border-r border-white/20 last:border-0 hover:opacity-90" style={{ width: `${(yearlySummary.total_management_budget / yearlySummary.total_budget) * 100}%` }} title={`Management: ${formatIDR(yearlySummary.total_management_budget)}`} />
                       {yearlySummary.remaining_profit > 0 && (
                         <div className="h-full bg-emerald-400 transition-all duration-700 hover:opacity-90" style={{ width: `${(yearlySummary.remaining_profit / yearlySummary.total_budget) * 100}%` }} title={`Remaining: ${formatIDR(yearlySummary.remaining_profit)}`} />
                       )}
@@ -572,6 +556,7 @@ export default function Dashboard({
                       <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm" /> ATR</div>
                       <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-indigo-500 shadow-sm" /> EER</div>
                       <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-purple-500 shadow-sm" /> Allowance</div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-pink-500 shadow-sm" /> Management</div>
                       <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm" /> Remaining Profit</div>
                     </div>
                   </Card>
@@ -613,7 +598,7 @@ export default function Dashboard({
                               <tr key={entry.id || entry.name} className="hover:bg-gray-50/50 transition-colors">
                                 <td className="px-5 py-4 text-center font-bold text-muted-foreground/60">#{idx + 1}</td>
                                 <td className="px-5 py-4 font-semibold text-gray-800 whitespace-nowrap">
-                                  <Link 
+                                  <Link
                                     href={`/projects?account_manager_id=${entry.id}${localYear !== 'all' ? `&year=${localYear}` : ''}`}
                                     className="hover:text-[var(--sidebar)] hover:underline transition-colors"
                                   >

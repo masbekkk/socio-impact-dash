@@ -178,28 +178,37 @@ final class DashboardController extends Controller
 
         $amIds = $accountManagerLeaderboard->pluck('account_manager_id')->filter()->toArray();
 
-        $eerExpenses = DB::table('reimbursements as r')
+        $eerExpensesQuery = DB::table('reimbursements as r')
             ->join('projects as p', 'r.project_id', '=', 'p.id')
+            ->join('project_year_claims as pyc', 'p.id', '=', 'pyc.project_id')
             ->selectRaw('p.account_manager_id, SUM(r.amount) as total')
             ->where('r.type', 'eer')
             ->whereNull('r.deleted_at')
             ->whereNotIn('r.status', ['draft', 'rejected'])
-            ->whereIn('p.account_manager_id', $amIds)
-            ->groupBy('p.account_manager_id')
+            ->whereIn('p.account_manager_id', $amIds);
+        if ($year) {
+            $eerExpensesQuery->where('pyc.year', $year);
+        }
+        $eerExpenses = $eerExpensesQuery->groupBy('p.account_manager_id')
             ->pluck('total', 'account_manager_id');
 
-        $allowanceExpenses = DB::table('reimbursements as r')
+        $allowanceExpensesQuery = DB::table('reimbursements as r')
             ->join('projects as p', 'r.project_id', '=', 'p.id')
+            ->join('project_year_claims as pyc', 'p.id', '=', 'pyc.project_id')
             ->selectRaw('p.account_manager_id, SUM(r.amount) as total')
             ->where('r.type', 'allowance')
             ->whereNull('r.deleted_at')
             ->whereNotIn('r.status', ['draft', 'rejected'])
-            ->whereIn('p.account_manager_id', $amIds)
-            ->groupBy('p.account_manager_id')
+            ->whereIn('p.account_manager_id', $amIds);
+        if ($year) {
+            $allowanceExpensesQuery->where('pyc.year', $year);
+        }
+        $allowanceExpenses = $allowanceExpensesQuery->groupBy('p.account_manager_id')
             ->pluck('total', 'account_manager_id');
 
-        $atrExpenses = DB::table('reimbursements as r')
+        $atrExpensesQuery = DB::table('reimbursements as r')
             ->join('projects as p', 'r.project_id', '=', 'p.id')
+            ->join('project_year_claims as pyc', 'p.id', '=', 'pyc.project_id')
             ->selectRaw('p.account_manager_id, SUM(r.amount) as total')
             ->where('r.type', 'atr')
             ->whereNull('r.deleted_at')
@@ -212,8 +221,11 @@ final class DashboardController extends Controller
                     ->where('eer.type', 'eer')
                     ->whereNull('eer.deleted_at')
                     ->whereNotIn('eer.status', ['draft', 'rejected']);
-            })
-            ->groupBy('p.account_manager_id')
+            });
+        if ($year) {
+            $atrExpensesQuery->where('pyc.year', $year);
+        }
+        $atrExpenses = $atrExpensesQuery->groupBy('p.account_manager_id')
             ->pluck('total', 'account_manager_id');
 
         $amNames = User::whereIn('id', $amIds)->get()->keyBy('id');
@@ -261,12 +273,24 @@ final class DashboardController extends Controller
                 'total_budget' => (float) $item->total_budget,
             ]);
 
+        $globalManagementBudgetQuery = DB::table('project_year_claims as pyc')
+            ->join('projects as p', 'pyc.project_id', '=', 'p.id')
+            ->selectRaw('SUM((pyc.amount / p.budget_total) * p.management_budget) as total_management_budget')
+            ->where('p.project_type', '!=', 'non-project')
+            ->where('p.budget_total', '>', 0);
+            
+        if ($year) {
+            $globalManagementBudgetQuery->where('pyc.year', $year);
+        }
+
+        $globalManagementBudget = (float) $globalManagementBudgetQuery->value('total_management_budget');
+
         $globalBudget = (float) $totalYearClaims;
         $globalEer = $eerExpenses->sum();
         $globalAllowance = $allowanceExpenses->sum();
         $globalAtr = $atrExpenses->sum();
         $globalTotalExpenses = $globalEer + $globalAllowance + $globalAtr;
-        $globalProfit = $globalBudget - $globalTotalExpenses;
+        $globalProfit = $globalBudget - $globalTotalExpenses - $globalManagementBudget;
 
         $yearlySummary = [
             'year' => $year ?? 'all',
@@ -274,9 +298,10 @@ final class DashboardController extends Controller
             'atr_expenses' => (float) $globalAtr,
             'eer_expenses' => (float) $globalEer,
             'allowance_expenses' => (float) $globalAllowance,
+            'total_management_budget' => $globalManagementBudget,
             'total_expenses' => (float) $globalTotalExpenses,
             'remaining_profit' => (float) $globalProfit,
-            'utilization_percentage' => $globalBudget > 0 ? min(100, ($globalTotalExpenses / $globalBudget) * 100) : 0,
+            'utilization_percentage' => $globalBudget > 0 ? min(100, (($globalTotalExpenses + $globalManagementBudget) / $globalBudget) * 100) : 0,
             'remaining_percentage' => $globalBudget > 0 ? ($globalProfit / $globalBudget) * 100 : 0,
         ];
 
