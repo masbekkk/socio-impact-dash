@@ -80,6 +80,17 @@ final class ProjectController extends Controller
             $query->whereDate('end_date', '<=', (string) $request->get('end_date'));
         }
 
+        if ($request->filled('account_manager_id') && $request->account_manager_id !== 'all') {
+            $query->where('account_manager_id', $request->account_manager_id);
+        }
+
+        if ($request->filled('year') && $request->year !== 'all') {
+            $year = $request->year;
+            $query->whereHas('yearClaims', function ($q) use ($year) {
+                $q->where('year', $year);
+            });
+        }
+
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDir = $request->get('sort_dir', 'desc');
         $allowedSorts = [

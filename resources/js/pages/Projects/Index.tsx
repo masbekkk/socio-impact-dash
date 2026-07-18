@@ -53,6 +53,8 @@ interface FilterState {
   endDate: string;
   status: string;
   division: string;
+  accountManagerId: string;
+  year: string;
   perPage: number;
   sortBy: string;
   sortDir: string;
@@ -68,6 +70,8 @@ const DEFAULT_FILTER_STATE: FilterState = {
   endDate: '',
   status: 'all',
   division: 'all',
+  accountManagerId: 'all',
+  year: 'all',
   perPage: 10,
   sortBy: 'created_at',
   sortDir: 'desc',
@@ -80,6 +84,8 @@ function hasActiveFilters(f: FilterState): boolean {
     !!f.endDate ||
     (!!f.status && f.status !== 'all') ||
     (!!f.division && f.division !== 'all') ||
+    (!!f.accountManagerId && f.accountManagerId !== 'all') ||
+    (!!f.year && f.year !== 'all') ||
     f.perPage !== DEFAULT_FILTER_STATE.perPage ||
     f.sortBy !== DEFAULT_FILTER_STATE.sortBy ||
     f.sortDir !== DEFAULT_FILTER_STATE.sortDir
@@ -105,31 +111,43 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
   ];
 
   // -------------------------------------------------------------------------
-  // Initialise filter state — prefer localStorage over server-side `filters`
-  // prop so the user's last session is restored immediately on mount.
+  // Initialise filter state — prefer URL query params, then localStorage, then defaults
   // -------------------------------------------------------------------------
 
   const getInitialFilters = (): FilterState => {
+    // Parse URL params first
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlAmId = searchParams.get('account_manager_id');
+    const urlYear = searchParams.get('year');
+
+    let saved: FilterState | null = null;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const saved: FilterState = JSON.parse(raw);
-        if (hasActiveFilters(saved)) return saved;
+        saved = JSON.parse(raw);
       }
     } catch {
       // ignore parse errors
     }
-    // Fall back to server-supplied filters (e.g. from a direct URL) or defaults.
-    return {
+
+    // Determine values, prioritizing URL params if they exist
+    const baseFilters = saved && hasActiveFilters(saved) ? saved : {
       search: filters?.search ?? DEFAULT_FILTER_STATE.search,
       startDate: filters?.start_date ?? DEFAULT_FILTER_STATE.startDate,
       endDate: filters?.end_date ?? DEFAULT_FILTER_STATE.endDate,
       status: filters?.status ?? DEFAULT_FILTER_STATE.status,
       division: filters?.division ?? DEFAULT_FILTER_STATE.division,
+      accountManagerId: DEFAULT_FILTER_STATE.accountManagerId,
+      year: DEFAULT_FILTER_STATE.year,
       perPage: filters?.per_page ?? DEFAULT_FILTER_STATE.perPage,
       sortBy: filters?.sort_by ?? DEFAULT_FILTER_STATE.sortBy,
       sortDir: filters?.sort_dir ?? DEFAULT_FILTER_STATE.sortDir,
     };
+
+    if (urlAmId !== null) baseFilters.accountManagerId = urlAmId;
+    if (urlYear !== null) baseFilters.year = urlYear;
+
+    return baseFilters;
   };
 
   const initial = getInitialFilters();
@@ -150,6 +168,8 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
   const [endDate, setEndDate] = React.useState(initial.endDate);
   const [status, setStatus] = React.useState(initial.status);
   const [division, setDivision] = React.useState(initial.division);
+  const [accountManagerId, setAccountManagerId] = React.useState(initial.accountManagerId);
+  const [year, setYear] = React.useState(initial.year);
   const [perPage, setPerPage] = React.useState(initial.perPage);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [sortBy, setSortBy] = React.useState(initial.sortBy);
@@ -172,13 +192,13 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
   // -------------------------------------------------------------------------
 
   React.useEffect(() => {
-    const current: FilterState = { search, startDate, endDate, status, division, perPage, sortBy, sortDir };
+    const current: FilterState = { search, startDate, endDate, status, division, accountManagerId, year, perPage, sortBy, sortDir };
     if (hasActiveFilters(current)) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
-  }, [search, startDate, endDate, status, division, perPage, sortBy, sortDir, STORAGE_KEY]);
+  }, [search, startDate, endDate, status, division, accountManagerId, year, perPage, sortBy, sortDir, STORAGE_KEY]);
 
   // -------------------------------------------------------------------------
   // Data fetching
@@ -192,6 +212,8 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
           search,
           status,
           division,
+          account_manager_id: accountManagerId,
+          year,
           start_date: startDate,
           end_date: endDate,
           per_page: perPage,
@@ -304,7 +326,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
       fetchProjects();
     }, 500);
     return () => clearTimeout(delay);
-  }, [search, startDate, endDate, status, division, perPage, currentPage, sortBy, sortDir]);
+  }, [search, startDate, endDate, status, division, accountManagerId, year, perPage, currentPage, sortBy, sortDir]);
 
   // -------------------------------------------------------------------------
   // Reset — clear storage and revert everything to defaults
@@ -312,11 +334,15 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
 
   const handleReset = () => {
     localStorage.removeItem(STORAGE_KEY);
+    // Also remove URL params
+    window.history.replaceState({}, '', window.location.pathname);
     setSearch(DEFAULT_FILTER_STATE.search);
     setStartDate(DEFAULT_FILTER_STATE.startDate);
     setEndDate(DEFAULT_FILTER_STATE.endDate);
     setStatus(DEFAULT_FILTER_STATE.status);
     setDivision(DEFAULT_FILTER_STATE.division);
+    setAccountManagerId(DEFAULT_FILTER_STATE.accountManagerId);
+    setYear(DEFAULT_FILTER_STATE.year);
     setPerPage(DEFAULT_FILTER_STATE.perPage);
     setSortBy(DEFAULT_FILTER_STATE.sortBy);
     setSortDir(DEFAULT_FILTER_STATE.sortDir);
@@ -496,14 +522,32 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
         </CardHeader>
 
         <CardContent className="px-4 md:px-8">
+          
+          {/* ACTIVE EXTRA FILTERS BADGES */}
+          {(accountManagerId !== 'all' || year !== 'all') && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {accountManagerId !== 'all' && (
+                <Badge variant="secondary" className="px-3 py-1 flex items-center gap-1 bg-emerald-50 text-emerald-700 border-emerald-200">
+                  <span className="text-xs">Filtered by Account Manager</span>
+                  <X className="h-3 w-3 ml-1 cursor-pointer hover:text-emerald-900" onClick={() => setAccountManagerId('all')} />
+                </Badge>
+              )}
+              {year !== 'all' && (
+                <Badge variant="secondary" className="px-3 py-1 flex items-center gap-1 bg-emerald-50 text-emerald-700 border-emerald-200">
+                  <span className="text-xs">Year: {year}</span>
+                  <X className="h-3 w-3 ml-1 cursor-pointer hover:text-emerald-900" onClick={() => setYear('all')} />
+                </Badge>
+              )}
+            </div>
+          )}
 
           {/* MOBILE VIEW (CARDS) */}
           <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
             {projects.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground border rounded-md">
                 Belum ada proyek.{' '}
-                {hasActiveFilters({ search, startDate, endDate, status, division, perPage, sortBy, sortDir }) && (
-                  <button onClick={handleReset} className="text-sidebar underline ml-1">Reset Filter</button>
+                {hasActiveFilters({ search, startDate, endDate, status, division, accountManagerId, year, perPage, sortBy, sortDir }) && (
+                  <button onClick={handleReset} className="text-[var(--sidebar)] hover:underline ml-1">Reset Filter</button>
                 )}
               </div>
             ) : (
@@ -615,8 +659,8 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   <TableRow>
                     <TableCell colSpan={hideCreatedBy ? 9 : 10} className="h-24 text-center">
                       Belum ada proyek yang sesuai filter.{' '}
-                      {hasActiveFilters({ search, startDate, endDate, status, division, perPage, sortBy, sortDir }) && (
-                        <button onClick={handleReset} className="text-sidebar underline ml-1">Reset Filter</button>
+                      {hasActiveFilters({ search, startDate, endDate, status, division, accountManagerId, year, perPage, sortBy, sortDir }) && (
+                        <button onClick={handleReset} className="text-[var(--sidebar)] hover:underline ml-1">Reset Filter</button>
                       )}
                     </TableCell>
                   </TableRow>
