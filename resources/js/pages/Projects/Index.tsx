@@ -349,6 +349,24 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
     setCurrentPage(1);
   };
 
+  const handleRemoveAccountManagerFilter = () => {
+    setAccountManagerId('all');
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('account_manager_id')) {
+      url.searchParams.delete('account_manager_id');
+      window.history.replaceState({}, '', url);
+    }
+  };
+
+  const handleRemoveYearFilter = () => {
+    setYear('all');
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('year')) {
+      url.searchParams.delete('year');
+      window.history.replaceState({}, '', url);
+    }
+  };
+
   // -------------------------------------------------------------------------
   // Other handlers
   // -------------------------------------------------------------------------
@@ -529,13 +547,13 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               {accountManagerId !== 'all' && (
                 <Badge variant="secondary" className="px-3 py-1 flex items-center gap-1 bg-emerald-50 text-emerald-700 border-emerald-200">
                   <span className="text-xs">Filtered by Account Manager</span>
-                  <X className="h-3 w-3 ml-1 cursor-pointer hover:text-emerald-900" onClick={() => setAccountManagerId('all')} />
+                  <X className="h-3 w-3 ml-1 cursor-pointer hover:text-emerald-900" onClick={handleRemoveAccountManagerFilter} />
                 </Badge>
               )}
               {year !== 'all' && (
                 <Badge variant="secondary" className="px-3 py-1 flex items-center gap-1 bg-emerald-50 text-emerald-700 border-emerald-200">
                   <span className="text-xs">Year: {year}</span>
-                  <X className="h-3 w-3 ml-1 cursor-pointer hover:text-emerald-900" onClick={() => setYear('all')} />
+                  <X className="h-3 w-3 ml-1 cursor-pointer hover:text-emerald-900" onClick={handleRemoveYearFilter} />
                 </Badge>
               )}
             </div>
