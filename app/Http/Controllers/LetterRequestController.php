@@ -20,8 +20,8 @@ final class LetterRequestController extends Controller
         $user = auth()->user();
 
         return Inertia::render('LetterRequests/Index', [
-            'canAssign' => $user->hasRole([UserRole::Finance, UserRole::Superadmin]),
-            'canDelete' => $user->hasRole([UserRole::Finance, UserRole::Superadmin]),
+            'canAssign' => $user->hasAnyRole([UserRole::Finance->value, UserRole::Superadmin->value]),
+            'canDelete' => $user->hasAnyRole([UserRole::Finance->value, UserRole::Superadmin->value]),
         ]);
     }
 
@@ -62,7 +62,7 @@ final class LetterRequestController extends Controller
     public function assignNumber(Request $request, LetterRequest $letterRequest): RedirectResponse
     {
         $user = auth()->user();
-        abort_unless($user->hasRole([UserRole::Finance, UserRole::Superadmin]), 403);
+        abort_unless($user->hasAnyRole([UserRole::Finance->value, UserRole::Superadmin->value]), 403);
 
         $validated = $request->validate([
             'letter_number' => ['required', 'string', 'max:255'],
@@ -79,7 +79,7 @@ final class LetterRequestController extends Controller
     public function reject(LetterRequest $letterRequest): RedirectResponse
     {
         $user = auth()->user();
-        abort_unless($user->hasRole([UserRole::Finance, UserRole::Superadmin]), 403);
+        abort_unless($user->hasAnyRole([UserRole::Finance->value, UserRole::Superadmin->value]), 403);
 
         $letterRequest->update([
             'approval_status' => 'rejected',

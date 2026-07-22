@@ -22,8 +22,8 @@ final class LetterRequestController extends Controller
         $query = LetterRequest::with(['project', 'requester', 'pic', 'letterCode', 'letterDivision', 'division']);
 
         // Finance, Superadmin and Direktur can see all
-        if (! $user->hasAnyRole([UserRole::Finance, UserRole::Superadmin, UserRole::Direktur])) {
-            if ($user->hasRole(UserRole::Head)) {
+        if (! $user->hasAnyRole([UserRole::Finance->value, UserRole::Superadmin->value, UserRole::Direktur->value])) {
+            if ($user->hasRole(UserRole::Head->value)) {
                 // Head can see:
                 // 1. Their own letter requests
                 // 2. Their team members' letter requests
