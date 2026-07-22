@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, CardAction } from '@/components/ui/card';
 import { Badge } from "@/components/ui/badge";
@@ -140,8 +140,11 @@ export default function Dashboard({
   totalBudget,
   totalManagementBudget,
 }: DashboardProps) {
+  const { auth } = usePage<SharedData>().props;
   const { hasRole } = usePermission();
   const isPegawai = hasRole('pegawai') && !hasRole('superadmin');
+  const isHead = hasRole('head');
+  const isSuperadminFinanceDirektur = hasRole('superadmin') || hasRole('finance') || hasRole('direktur');
 
   const [localYear, setLocalYear] = useState<string>(String(initialSelectedYear ?? 'all'));
   const [totalYearClaims, setTotalYearClaims] = useState(initialTotalYearClaims);
@@ -416,11 +419,15 @@ export default function Dashboard({
             {/* Top Budget Contributors - Split View */}
             <div className="flex items-center justify-between gap-3 mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Total Tahun Anggaran</span>
-                <span className="text-sm font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
-                  {formatIDR(totalYearClaims || 0)}
-                  {localYear !== 'all' && <span className="font-normal text-purple-500 ml-1">({localYear})</span>}
-                </span>
+                {isSuperadminFinanceDirektur && (
+                  <>
+                    <span className="text-xs text-muted-foreground">Total Tahun Anggaran</span>
+                    <span className="text-sm font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                      {formatIDR(totalYearClaims || 0)}
+                      {localYear !== 'all' && <span className="font-normal text-purple-500 ml-1">({localYear})</span>}
+                    </span>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground">Filter Tahun:</span>
@@ -444,7 +451,7 @@ export default function Dashboard({
               </div>
             </div>
 
-            {yearlySummary && (
+            {isSuperadminFinanceDirektur && yearlySummary && (
               <div className={`space-y-4 mb-6 transition-opacity duration-300 ${leaderboardLoading ? 'opacity-60' : ''}`}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Card 1: Total Budget */}
@@ -605,7 +612,10 @@ export default function Dashboard({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                          {accountManagerLeaderboard.map((entry, idx) => {
+                          {((isHead && !isSuperadminFinanceDirektur) 
+                            ? accountManagerLeaderboard.filter(entry => entry.id === auth.user.id) 
+                            : accountManagerLeaderboard
+                          ).map((entry, idx) => {
                             const pct = entry.utilization_percentage;
                             const barColor = pct > 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-emerald-500';
                             return (
