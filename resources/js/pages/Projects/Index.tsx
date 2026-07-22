@@ -354,7 +354,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
     const url = new URL(window.location.href);
     if (url.searchParams.has('account_manager_id')) {
       url.searchParams.delete('account_manager_id');
-      window.history.replaceState({}, '', url);
+      window.history.replaceState({}, '', url.toString());
     }
   };
 
@@ -363,7 +363,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
     const url = new URL(window.location.href);
     if (url.searchParams.has('year')) {
       url.searchParams.delete('year');
-      window.history.replaceState({}, '', url);
+      window.history.replaceState({}, '', url.toString());
     }
   };
 
@@ -547,13 +547,17 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               {accountManagerId !== 'all' && (
                 <Badge variant="secondary" className="px-3 py-1 flex items-center gap-1 bg-emerald-50 text-emerald-700 border-emerald-200">
                   <span className="text-xs">Filtered by Account Manager</span>
-                  <X className="h-3 w-3 ml-1 cursor-pointer hover:text-emerald-900" onClick={handleRemoveAccountManagerFilter} />
+                  <button type="button" onClick={handleRemoveAccountManagerFilter} className="ml-1 rounded-full p-0.5 hover:bg-emerald-200/50 outline-none focus:ring-2 focus:ring-emerald-400">
+                    <X className="h-3 w-3 cursor-pointer text-emerald-700 hover:text-emerald-900" />
+                  </button>
                 </Badge>
               )}
               {year !== 'all' && (
                 <Badge variant="secondary" className="px-3 py-1 flex items-center gap-1 bg-emerald-50 text-emerald-700 border-emerald-200">
                   <span className="text-xs">Year: {year}</span>
-                  <X className="h-3 w-3 ml-1 cursor-pointer hover:text-emerald-900" onClick={handleRemoveYearFilter} />
+                  <button type="button" onClick={handleRemoveYearFilter} className="ml-1 rounded-full p-0.5 hover:bg-emerald-200/50 outline-none focus:ring-2 focus:ring-emerald-400">
+                    <X className="h-3 w-3 cursor-pointer text-emerald-700 hover:text-emerald-900" />
+                  </button>
                 </Badge>
               )}
             </div>
