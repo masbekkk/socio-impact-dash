@@ -574,11 +574,15 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
               </div>
             ) : (
               projects.map((p: any) => (
-                <Card key={p.id} className="overflow-hidden">
+                <Card
+                  key={p.id}
+                  className="overflow-hidden cursor-pointer hover:border-emerald-500/50 hover:shadow-md transition-all active:scale-[0.99]"
+                  onClick={() => router.visit(`/projects/${p.uuid}`)}
+                >
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-semibold text-gray-900">{p.name}</h3>
+                        <h3 className="font-semibold text-gray-900 group-hover:text-emerald-700">{p.name}</h3>
                         {p.client_name && (
                           <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">
                             <Building className="h-3 w-3" />
@@ -614,10 +618,13 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t flex justify-end gap-2">
-                      <Link href={`/projects/${p.uuid}`} className="w-full">
-                        <Button variant="outline" size="sm" className="w-full">Lihat Detail</Button>
-                      </Link>
+                    <div className="pt-2 border-t flex justify-between items-center gap-2">
+                      <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                        <Eye className="h-3.5 w-3.5" /> Tap untuk detail
+                      </span>
+                      <Button variant="outline" size="sm" className="gap-1 text-xs">
+                        Lihat Detail
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -688,7 +695,11 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                   </TableRow>
                 ) : (
                   projects.map((p: any) => (
-                    <TableRow key={p.id} className="group">
+                    <TableRow
+                      key={p.id}
+                      className="group cursor-pointer hover:bg-emerald-50/40 transition-colors"
+                      onClick={() => router.visit(`/projects/${p.uuid}`)}
+                    >
                       <TableCell className="font-medium">{p.code}</TableCell>
                         <TableCell>
                           <div className="text-xs font-mono bg-emerald-50 text-emerald-700 px-2 py-1 rounded inline-block">
@@ -696,7 +707,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                           </div>
                         </TableCell>
                       <TableCell>
-                        <div className="font-medium">{p.name}</div>
+                        <div className="font-medium group-hover:text-emerald-700 transition-colors">{p.name}</div>
                       </TableCell>
                       <TableCell>
                         <div className="text-xs text-muted-foreground italic">{p.client_name || '-'}</div>
@@ -773,7 +784,7 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">

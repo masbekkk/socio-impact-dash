@@ -496,98 +496,143 @@ export default function ProjectTabs({
                                 const endDate = project.end_date ? new Date(project.end_date) : new Date(startDate.getFullYear(), 11, 31);
 
                                 return (
-                                    <div className="relative w-full overflow-x-auto pb-32 pt-32 px-4">
-                                        <div className="min-w-[900px] px-32">
-                                            {/* Main Line */}
-                                            <div className="relative h-1.5 bg-slate-200 w-full rounded-full mt-12 mb-12">
-
-                                                {/* Start Point Label */}
-                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-                                                    <div className="h-5 w-5 bg-[var(--sidebar)] rounded-full border-4 border-white shadow-md z-10"></div>
-                                                    <div className="text-center w-32 absolute top-8">
-                                                        <p className="text-sm font-bold text-slate-800">{startDate.getFullYear()}</p>
-                                                        <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">START</p>
-                                                        <p className="text-[10px] text-slate-500 mt-0.5 font-medium bg-slate-100 px-2 py-0.5 rounded-full inline-block">
-                                                            {startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                                                        </p>
-                                                    </div>
+                                    <>
+                                        {/* Mobile Vertical Timeline */}
+                                        <div className="md:hidden space-y-6 relative pl-6 border-l-2 border-emerald-500/40 ml-4 py-2">
+                                            {/* Start Point */}
+                                            <div className="relative">
+                                                <div className="absolute -left-[31px] top-0 h-4 w-4 rounded-full bg-[var(--sidebar)] border-2 border-white shadow-sm" />
+                                                <div className="bg-emerald-50/80 p-3 rounded-lg border border-emerald-100">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Mulai Proyek ({startDate.getFullYear()})</span>
+                                                    <p className="text-xs font-bold text-slate-800">
+                                                        {startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                    </p>
                                                 </div>
+                                            </div>
 
-                                                {/* End Point Label */}
-                                                <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 flex flex-col items-center gap-2">
-                                                    <div className="h-5 w-5 bg-slate-600 rounded-full border-4 border-white shadow-md z-10"></div>
-                                                    <div className="text-center w-32 absolute top-8">
-                                                        <p className="text-sm font-bold text-slate-800">{endDate.getFullYear()}</p>
-                                                        <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">FINISH</p>
-                                                        <p className="text-[10px] text-slate-500 mt-0.5 font-medium bg-slate-100 px-2 py-0.5 rounded-full inline-block">
-                                                            {endDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                {/* Data Points */}
-                                                {data.map((item: any, index: number) => {
-                                                    const start = startDate.getTime();
-                                                    const end = endDate.getTime();
-                                                    const current = new Date(item.report_date || item.date).getTime();
-
-                                                    // Calculate position (0-100%)
-                                                    let percentage = ((current - start) / (end - start)) * 100;
-                                                    percentage = Math.max(2, Math.min(98, percentage)); // Clamp to keep inside line
-
-                                                    const isTop = index % 2 === 0;
-
-                                                    return (
-                                                        <div
-                                                            key={index}
-                                                            className="absolute top-1/2 -translate-y-1/2"
-                                                            style={{ left: `${percentage}%` }}
-                                                        >
-                                                            {/* Dot on Line */}
-                                                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 bg-white rounded-full border-[3px] border-[var(--sidebar)] shadow-md z-10 group-hover:scale-125 transition-transform duration-300"></div>
-
-                                                            {/* Content Card Wrapper */}
-                                                            <div className={`absolute flex flex-col items-center w-52 transition-all duration-300 hover:z-30 cursor-pointer group
-                                                                ${isTop ? 'bottom-8 left-1/2 -translate-x-1/2 hover:-translate-y-2' : 'top-8 left-1/2 -translate-x-1/2 hover:translate-y-2'}
-                                                            `}>
-                                                                {/* Dashed Connector Line */}
-                                                                <div className={`absolute left-1/2 -translate-x-1/2 w-0 border-l border-dashed border-slate-300 h-8 
-                                                                    ${isTop ? 'top-full' : 'bottom-full'}
-                                                                `}></div>
-
-                                                                {/* Card Bubble */}
-                                                                <div className={`bg-white p-4 rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 text-center w-full relative
-                                                                    ${isTop ? 'mb-2' : 'mt-2'}
-                                                                `}>
-                                                                    {/* Little Triangle/Arrow */}
-                                                                    <div className={`absolute left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-r border-b border-slate-100
-                                                                         ${isTop ? '-bottom-1.5 border-t-0 border-l-0 shadow-[2px_2px_2px_-1px_rgba(0,0,0,0.05)]' : '-top-1.5 border-b-0 border-r-0 border-t border-l shadow-[-1px_-1px_2px_-1px_rgba(0,0,0,0.05)]'}
-                                                                    `}></div>
-
-                                                                    <div className="mb-2 pb-2 border-b border-slate-50">
-                                                                        <p className="text-[var(--sidebar)] font-bold text-xl leading-none">
-                                                                            {(item.report_date || item.date) ? new Date(item.report_date || item.date).getDate() : '-'}
-                                                                        </p>
-                                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                                                            {(item.report_date || item.date) ? new Date(item.report_date || item.date).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'}
-                                                                        </p>
-                                                                    </div>
-
-                                                                    <h4 className="font-semibold text-xs text-slate-800 line-clamp-1 mb-1">
-                                                                        {item.title || "Laporan Monitoring"}
-                                                                    </h4>
-                                                                    <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">
-                                                                        {item.notes || "Tidak ada catatan."}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
+                                            {/* Data Points */}
+                                            {data.map((item: any, index: number) => (
+                                                <div key={index} className="relative">
+                                                    <div className="absolute -left-[31px] top-1.5 h-4 w-4 rounded-full bg-white border-2 border-[var(--sidebar)] shadow-sm" />
+                                                    <div className="bg-white p-3.5 rounded-lg border shadow-sm space-y-1">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs font-bold text-emerald-700">
+                                                                {(item.report_date || item.date) ? new Date(item.report_date || item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                                            </span>
+                                                            <Badge variant="outline" className="text-[10px]">Laporan #{index + 1}</Badge>
                                                         </div>
-                                                    );
-                                                })}
+                                                        <h4 className="font-semibold text-xs text-slate-800">{item.title || "Laporan Monitoring"}</h4>
+                                                        <p className="text-xs text-muted-foreground leading-relaxed">{item.notes || "Tidak ada catatan."}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
 
+                                            {/* End Point */}
+                                            <div className="relative">
+                                                <div className="absolute -left-[31px] top-0 h-4 w-4 rounded-full bg-slate-700 border-2 border-white shadow-sm" />
+                                                <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Target Selesai ({endDate.getFullYear()})</span>
+                                                    <p className="text-xs font-bold text-slate-800">
+                                                        {endDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+
+                                        {/* Desktop Horizontal Timeline */}
+                                        <div className="hidden md:block relative w-full overflow-x-auto pb-32 pt-32 px-4">
+                                            <div className="min-w-[900px] px-32">
+                                                {/* Main Line */}
+                                                <div className="relative h-1.5 bg-slate-200 w-full rounded-full mt-12 mb-12">
+
+                                                    {/* Start Point Label */}
+                                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+                                                        <div className="h-5 w-5 bg-[var(--sidebar)] rounded-full border-4 border-white shadow-md z-10"></div>
+                                                        <div className="text-center w-32 absolute top-8">
+                                                            <p className="text-sm font-bold text-slate-800">{startDate.getFullYear()}</p>
+                                                            <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">START</p>
+                                                            <p className="text-[10px] text-slate-500 mt-0.5 font-medium bg-slate-100 px-2 py-0.5 rounded-full inline-block">
+                                                                {startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* End Point Label */}
+                                                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 flex flex-col items-center gap-2">
+                                                        <div className="h-5 w-5 bg-slate-600 rounded-full border-4 border-white shadow-md z-10"></div>
+                                                        <div className="text-center w-32 absolute top-8">
+                                                            <p className="text-sm font-bold text-slate-800">{endDate.getFullYear()}</p>
+                                                            <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">FINISH</p>
+                                                            <p className="text-[10px] text-slate-500 mt-0.5 font-medium bg-slate-100 px-2 py-0.5 rounded-full inline-block">
+                                                                {endDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Data Points */}
+                                                    {data.map((item: any, index: number) => {
+                                                        const start = startDate.getTime();
+                                                        const end = endDate.getTime();
+                                                        const current = new Date(item.report_date || item.date).getTime();
+
+                                                        // Calculate position (0-100%)
+                                                        let percentage = ((current - start) / (end - start)) * 100;
+                                                        percentage = Math.max(2, Math.min(98, percentage)); // Clamp to keep inside line
+
+                                                        const isTop = index % 2 === 0;
+
+                                                        return (
+                                                            <div
+                                                                key={index}
+                                                                className="absolute top-1/2 -translate-y-1/2"
+                                                                style={{ left: `${percentage}%` }}
+                                                            >
+                                                                {/* Dot on Line */}
+                                                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 bg-white rounded-full border-[3px] border-[var(--sidebar)] shadow-md z-10 group-hover:scale-125 transition-transform duration-300"></div>
+
+                                                                {/* Content Card Wrapper */}
+                                                                <div className={`absolute flex flex-col items-center w-52 transition-all duration-300 hover:z-30 cursor-pointer group
+                                                                    ${isTop ? 'bottom-8 left-1/2 -translate-x-1/2 hover:-translate-y-2' : 'top-8 left-1/2 -translate-x-1/2 hover:translate-y-2'}
+                                                                `}>
+                                                                    {/* Dashed Connector Line */}
+                                                                    <div className={`absolute left-1/2 -translate-x-1/2 w-0 border-l border-dashed border-slate-300 h-8 
+                                                                        ${isTop ? 'top-full' : 'bottom-full'}
+                                                                    `}></div>
+
+                                                                    {/* Card Bubble */}
+                                                                    <div className={`bg-white p-4 rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 text-center w-full relative
+                                                                        ${isTop ? 'mb-2' : 'mt-2'}
+                                                                    `}>
+                                                                        {/* Little Triangle/Arrow */}
+                                                                        <div className={`absolute left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-r border-b border-slate-100
+                                                                             ${isTop ? '-bottom-1.5 border-t-0 border-l-0 shadow-[2px_2px_2px_-1px_rgba(0,0,0,0.05)]' : '-top-1.5 border-b-0 border-r-0 border-t border-l shadow-[-1px_-1px_2px_-1px_rgba(0,0,0,0.05)]'}
+                                                                        `}></div>
+
+                                                                        <div className="mb-2 pb-2 border-b border-slate-50">
+                                                                            <p className="text-[var(--sidebar)] font-bold text-xl leading-none">
+                                                                                {(item.report_date || item.date) ? new Date(item.report_date || item.date).getDate() : '-'}
+                                                                            </p>
+                                                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                                                                {(item.report_date || item.date) ? new Date(item.report_date || item.date).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'}
+                                                                            </p>
+                                                                        </div>
+
+                                                                        <h4 className="font-semibold text-xs text-slate-800 line-clamp-1 mb-1">
+                                                                            {item.title || "Laporan Monitoring"}
+                                                                        </h4>
+                                                                        <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">
+                                                                            {item.notes || "Tidak ada catatan."}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
                                 );
                             })()}
                         </div>
@@ -669,28 +714,28 @@ export default function ProjectTabs({
 
                         {/* Budget Partitions */}
                         <div className="md:col-span-2">
-                            <div className="flex justify-between items-center mb-4">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                                 <div>
                                     <h4 className="text-sm font-semibold text-slate-900">Pembagian Anggaran</h4>
                                     <p className="text-xs text-muted-foreground">Rincian alokasi anggaran operasional, manajemen, dan allowance.</p>
                                 </div>
-                                <div className="flex gap-2 items-center">
+                                <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
 
                                     {canInputBudget && !editPartitions && (
-                                        <Button variant="outline" size="sm" onClick={() => setEditPartitions(true)}>
-                                            <Pencil className="w-4 h-4 mr-2" /> Atur Anggaran
+                                        <Button variant="outline" size="sm" onClick={() => setEditPartitions(true)} className="flex-1 sm:flex-initial text-xs h-9 sm:h-8">
+                                            <Pencil className="w-4 h-4 mr-1.5" /> Atur Anggaran
                                         </Button>
                                     )}
                                     {editPartitions && (
                                         <>
-                                            <Button variant="outline" size="sm" onClick={() => setEditPartitions(false)} disabled={savingBudget}>Batal</Button>
-                                            <Button size="sm" onClick={handleSaveBudget} disabled={savingBudget}>
+                                            <Button variant="outline" size="sm" onClick={() => setEditPartitions(false)} disabled={savingBudget} className="flex-1 sm:flex-initial text-xs h-9 sm:h-8">Batal</Button>
+                                            <Button size="sm" onClick={handleSaveBudget} disabled={savingBudget} className="flex-1 sm:flex-initial text-xs h-9 sm:h-8">
                                                 {savingBudget ? <Loader className="w-4 h-4 animate-spin" /> : 'Simpan'}
                                             </Button>
                                         </>
                                     )}
                                     {localBudgetStatus !== 'approved' && canApproveBudget && (
-                                        <Button size="sm" onClick={handleApproveBudget} disabled={savingBudget} className="bg-green-600 hover:bg-green-700 text-white">
+                                        <Button size="sm" onClick={handleApproveBudget} disabled={savingBudget} className="flex-1 sm:flex-initial text-xs h-9 sm:h-8 bg-green-600 hover:bg-green-700 text-white">
                                             {savingBudget ? <Loader className="w-4 h-4 animate-spin" /> : 'Setujui Pembagian'}
                                         </Button>
                                     )}
@@ -720,7 +765,7 @@ export default function ProjectTabs({
                             )}
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-blue-200 transition-colors">
+                                <div className="p-4 sm:p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-blue-200 transition-colors">
                                     <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">Operasional</p>
                                     {editPartitions ? (
                                         <MoneyInput
@@ -740,21 +785,21 @@ export default function ProjectTabs({
                                     <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu operasional {(project.budget_total > 0 ? ((opsBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
 
                                     <div className="mt-4 pt-4 border-t border-slate-50 space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[10px] text-muted-foreground">Terpakai ATR</span>
-                                            <span className="text-[10px] font-semibold text-slate-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.used_atr || 0)}</span>
+                                        <div className="flex justify-between items-center gap-2">
+                                            <span className="text-[10px] text-muted-foreground shrink-0">Terpakai ATR</span>
+                                            <span className="text-[10px] font-semibold text-slate-700 truncate">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.used_atr || 0)}</span>
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[10px] text-muted-foreground">Terpakai EER</span>
-                                            <span className="text-[10px] font-semibold text-slate-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.used_eer || 0)}</span>
+                                        <div className="flex justify-between items-center gap-2">
+                                            <span className="text-[10px] text-muted-foreground shrink-0">Terpakai EER</span>
+                                            <span className="text-[10px] font-semibold text-slate-700 truncate">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.used_eer || 0)}</span>
                                         </div>
-                                        <div className="flex justify-between items-center bg-blue-50/50 p-1.5 rounded-md">
-                                            <span className="text-[10px] font-bold text-blue-700">Sisa Anggaran</span>
-                                            <span className="text-[10px] font-bold text-blue-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(computedRemainingOperational)}</span>
+                                        <div className="flex justify-between items-center bg-blue-50/50 p-1.5 rounded-md gap-2">
+                                            <span className="text-[10px] font-bold text-blue-700 shrink-0">Sisa Anggaran</span>
+                                            <span className="text-[10px] font-bold text-blue-700 truncate">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(computedRemainingOperational)}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-purple-200 transition-colors">
+                                <div className="p-4 sm:p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-purple-200 transition-colors">
                                     <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-2">Manajemen</p>
                                     {editPartitions ? (
                                         <MoneyInput
@@ -773,7 +818,7 @@ export default function ProjectTabs({
                                     )}
                                     <p className="text-[10px] text-muted-foreground pt-1">Pagu manajemen {(project.budget_total > 0 ? ((mgmtBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
                                 </div>
-                                <div className="p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-amber-200 transition-colors">
+                                <div className="p-4 sm:p-5 border rounded-xl bg-white shadow-sm space-y-1 hover:border-amber-200 transition-colors">
                                     <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">Allowance</p>
                                     {editPartitions ? (
                                         <MoneyInput
@@ -793,13 +838,13 @@ export default function ProjectTabs({
                                     <p className="text-[10px] text-muted-foreground pt-1">Maksimum pagu allowance {(project.budget_total > 0 ? ((allowanceBudget / project.budget_total) * 100).toFixed(1) : 0)}%</p>
 
                                     <div className="mt-4 pt-4 border-t border-slate-50 space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[10px] text-muted-foreground">Usage Allowance</span>
-                                            <span className="text-[10px] font-semibold text-slate-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.used_allowance || 0)}</span>
+                                        <div className="flex justify-between items-center gap-2">
+                                            <span className="text-[10px] text-muted-foreground shrink-0">Usage Allowance</span>
+                                            <span className="text-[10px] font-semibold text-slate-700 truncate">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.used_allowance || 0)}</span>
                                         </div>
-                                        <div className="flex justify-between items-center bg-amber-50/50 p-1.5 rounded-md">
-                                            <span className="text-[10px] font-bold text-amber-700">Sisa Allowance</span>
-                                            <span className="text-[10px] font-bold text-amber-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.remaining_allowance || 0)}</span>
+                                        <div className="flex justify-between items-center bg-amber-50/50 p-1.5 rounded-md gap-2">
+                                            <span className="text-[10px] font-bold text-amber-700 shrink-0">Sisa Allowance</span>
+                                            <span className="text-[10px] font-bold text-amber-700 truncate">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.remaining_allowance || 0)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -808,7 +853,7 @@ export default function ProjectTabs({
 
                         {/* Budget Details (Rincian Anggaran - RAB) */}
                         <div className="md:col-span-2 pt-6 border-t mt-4">
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                                 <div>
                                     <h4 className="text-sm font-semibold text-slate-900">Kegiatan Anggaran Proyek</h4>
                                     <p className="text-xs text-muted-foreground">Detail pengelokasian kegiatan anggaran.</p>
@@ -818,7 +863,7 @@ export default function ProjectTabs({
                                         variant="outline"
                                         size="sm"
                                         onClick={() => setEditDetailBudget(true)}
-                                        className="h-8 gap-1.5"
+                                        className="h-8 gap-1.5 text-xs w-full sm:w-auto"
                                     >
                                         <Pencil className="h-3.5 w-3.5" />
                                         Edit Rincian
@@ -827,92 +872,186 @@ export default function ProjectTabs({
                             </div>
 
                             {!editDetailBudget ? (
-                                <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-gray-50 border-b">
-                                            <tr>
-                                                <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500">Nama Kegiatan</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Amount Proposal</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Terpakai ATR</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Terpakai EER</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Pelaksanaan</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500 text-right">Status EER</th>
-                                                <th className="px-4 py-3 font-medium text-gray-500">Catatan</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                            {detailBudgets.length > 0 ? (
-                                                detailBudgets.map((detail, idx) => {
-                                                    const proposal = Number(detail.amount_proposal) || 0;
-                                                    const usedAtr = Number(detail.used_atr) || 0;
-                                                    const usedEer = Number(detail.used_eer) || 0;
-                                                    const pelaksanaan = usedEer > 0 ? usedEer : (Number(detail.amount_pelaksanaan) || 0);
-                                                    const eerDiff = usedAtr - usedEer;
-                                                    
-                                                    return (
-                                                        <tr key={idx} className="hover:bg-gray-50/50">
-                                                            <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
-                                                            <td className="px-4 py-3 font-medium text-gray-900">{detail.item_name || '-'}</td>
-                                                            <td className="px-4 py-3 text-right font-mono">
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(proposal)}
+                                <div className="space-y-4">
+                                    {/* Mobile Cards View */}
+                                    <div className="md:hidden space-y-3">
+                                        {detailBudgets.length > 0 ? (
+                                            detailBudgets.map((detail, idx) => {
+                                                const proposal = Number(detail.amount_proposal) || 0;
+                                                const usedAtr = Number(detail.used_atr) || 0;
+                                                const usedEer = Number(detail.used_eer) || 0;
+                                                const pelaksanaan = usedEer > 0 ? usedEer : (Number(detail.amount_pelaksanaan) || 0);
+                                                const eerDiff = usedAtr - usedEer;
+
+                                                return (
+                                                    <Card key={idx} className="p-4 space-y-3 border border-slate-200">
+                                                        <div className="flex items-start justify-between gap-2 border-b pb-2">
+                                                            <div>
+                                                                <span className="text-[10px] font-bold text-muted-foreground uppercase">Kegiatan #{idx + 1}</span>
+                                                                <h5 className="font-semibold text-sm text-slate-900">{detail.item_name || '-'}</h5>
+                                                            </div>
+                                                            {usedAtr > 0 || usedEer > 0 ? (
+                                                                <Badge variant="outline" className={`font-mono text-[10px] shrink-0 ${eerDiff > 0 ? 'text-green-600 border-green-200 bg-green-50' : (eerDiff < 0 ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-500 border-gray-200 bg-gray-50')}`}>
+                                                                    {eerDiff > 0 ? 'Refund: ' : (eerDiff < 0 ? 'Reimb: ' : 'Balance: ')}
+                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs(eerDiff))}
+                                                                </Badge>
+                                                            ) : null}
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                                            <div>
+                                                                <p className="text-[10px] text-muted-foreground">Proposal</p>
+                                                                <p className="font-mono font-medium text-slate-700">
+                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(proposal)}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] text-muted-foreground">Pelaksanaan</p>
+                                                                <p className="font-mono font-bold text-emerald-700">
+                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(pelaksanaan)}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] text-muted-foreground">Terpakai ATR</p>
+                                                                <p className="font-mono font-medium text-orange-600">
+                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedAtr)}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] text-muted-foreground">Terpakai EER</p>
+                                                                <p className="font-mono font-medium text-blue-600">
+                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedEer)}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {detail.notes && (
+                                                            <div className="pt-2 border-t text-[11px] text-muted-foreground">
+                                                                <span className="font-semibold text-slate-600">Catatan: </span>
+                                                                {detail.notes}
+                                                            </div>
+                                                        )}
+                                                    </Card>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="p-6 text-center text-muted-foreground italic bg-white border rounded-xl">
+                                                Belum ada rincian anggaran.
+                                            </div>
+                                        )}
+
+                                        {detailBudgets.length > 0 && (
+                                            <Card className="p-4 bg-slate-50 border border-slate-200 space-y-2">
+                                                <div className="flex justify-between items-center text-xs font-semibold">
+                                                    <span>Total Proposal ({project.budget_total > 0 ? ((totalProposal / project.budget_total) * 100).toFixed(1) : 0}%):</span>
+                                                    <span className="font-mono text-primary">
+                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs font-semibold">
+                                                    <span>Total Pelaksanaan:</span>
+                                                    <span className="font-mono text-emerald-700">
+                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalPelaksanaan)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs font-bold pt-2 border-t">
+                                                    <span>Estimasi Profit:</span>
+                                                    <span className={`font-mono text-sm ${estimasiProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
+                                                    </span>
+                                                </div>
+                                            </Card>
+                                        )}
+                                    </div>
+
+                                    {/* Desktop Table View */}
+                                    <div className="hidden md:block bg-white border rounded-xl shadow-sm overflow-hidden">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="bg-gray-50 border-b">
+                                                <tr>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500">Nama Kegiatan</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Amount Proposal</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Terpakai ATR</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Terpakai EER</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Pelaksanaan</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Status EER</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500">Catatan</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {detailBudgets.length > 0 ? (
+                                                    detailBudgets.map((detail, idx) => {
+                                                        const proposal = Number(detail.amount_proposal) || 0;
+                                                        const usedAtr = Number(detail.used_atr) || 0;
+                                                        const usedEer = Number(detail.used_eer) || 0;
+                                                        const pelaksanaan = usedEer > 0 ? usedEer : (Number(detail.amount_pelaksanaan) || 0);
+                                                        const eerDiff = usedAtr - usedEer;
+                                                        
+                                                        return (
+                                                            <tr key={idx} className="hover:bg-gray-50/50">
+                                                                <td className="px-4 py-3 text-center text-muted-foreground">{idx + 1}</td>
+                                                                <td className="px-4 py-3 font-medium text-gray-900">{detail.item_name || '-'}</td>
+                                                                <td className="px-4 py-3 text-right font-mono">
+                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(proposal)}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-right font-mono text-orange-600">
+                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedAtr)}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-right font-mono text-blue-600">
+                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedEer)}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-right font-mono font-semibold">
+                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(pelaksanaan)}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-right">
+                                                                    {usedAtr > 0 || usedEer > 0 ? (
+                                                                        <Badge variant="outline" className={`font-mono text-[10px] ${eerDiff > 0 ? 'text-green-600 border-green-200 bg-green-50' : (eerDiff < 0 ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-500 border-gray-200 bg-gray-50')}`}>
+                                                                            {eerDiff > 0 ? 'Refund: ' : (eerDiff < 0 ? 'Reimb: ' : 'Balance: ')}
+                                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs(eerDiff))}
+                                                                        </Badge>
+                                                                    ) : '-'}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-muted-foreground">{detail.notes || '-'}</td>
+                                                            </tr>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground italic">
+                                                            Belum ada rincian anggaran.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                {detailBudgets.length > 0 && (
+                                                    <>
+                                                        <tr className="bg-gray-50/80 font-semibold border-t-2">
+                                                            <td colSpan={2} className="px-4 py-3 text-right text-gray-700">Total ({project.budget_total > 0 ? ((totalProposal / project.budget_total) * 100).toFixed(1) : 0}%):</td>
+                                                            <td className="px-4 py-3 text-right font-mono text-primary">
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
                                                             </td>
                                                             <td className="px-4 py-3 text-right font-mono text-orange-600">
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedAtr)}
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalUsedAtr)}
                                                             </td>
                                                             <td className="px-4 py-3 text-right font-mono text-blue-600">
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedEer)}
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalUsedEer)}
                                                             </td>
-                                                            <td className="px-4 py-3 text-right font-mono font-semibold">
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(pelaksanaan)}
+                                                            <td className="px-4 py-3 text-right font-mono text-primary">
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalPelaksanaan)}
                                                             </td>
-                                                            <td className="px-4 py-3 text-right">
-                                                                {usedAtr > 0 || usedEer > 0 ? (
-                                                                    <Badge variant="outline" className={`font-mono text-[10px] ${eerDiff > 0 ? 'text-green-600 border-green-200 bg-green-50' : (eerDiff < 0 ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-500 border-gray-200 bg-gray-50')}`}>
-                                                                        {eerDiff > 0 ? 'Refund: ' : (eerDiff < 0 ? 'Reimb: ' : 'Balance: ')}
-                                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs(eerDiff))}
-                                                                    </Badge>
-                                                                ) : '-'}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-muted-foreground">{detail.notes || '-'}</td>
+                                                            <td colSpan={2}></td>
                                                         </tr>
-                                                    );
-                                                })
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground italic">
-                                                        Belum ada rincian anggaran.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                            {detailBudgets.length > 0 && (
-                                                <>
-                                                    <tr className="bg-gray-50/80 font-semibold border-t-2">
-                                                        <td colSpan={2} className="px-4 py-3 text-right text-gray-700">Total ({project.budget_total > 0 ? ((totalProposal / project.budget_total) * 100).toFixed(1) : 0}%):</td>
-                                                        <td className="px-4 py-3 text-right font-mono text-primary">
-                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right font-mono text-orange-600">
-                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalUsedAtr)}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right font-mono text-blue-600">
-                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalUsedEer)}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right font-mono text-primary">
-                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalPelaksanaan)}
-                                                        </td>
-                                                        <td colSpan={2}></td>
-                                                    </tr>
-                                                    <tr className="bg-emerald-50/80 border-t">
-                                                        <td colSpan={2} className="px-4 py-3 text-right text-emerald-800 font-bold">Estimasi Profit (Total Pagu - Pelaksanaan) ({project.budget_total > 0 ? ((estimasiProfit / project.budget_total) * 100).toFixed(1) : 0}%):</td>
-                                                        <td colSpan={6} className={`px-4 py-3 text-right font-mono text-lg font-bold ${estimasiProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
-                                                        </td>
-                                                    </tr>
-                                                </>
-                                            )}
-                                        </tbody>
-                                    </table>
+                                                        <tr className="bg-emerald-50/80 border-t">
+                                                            <td colSpan={2} className="px-4 py-3 text-right text-emerald-800 font-bold">Estimasi Profit (Total Pagu - Pelaksanaan) ({project.budget_total > 0 ? ((estimasiProfit / project.budget_total) * 100).toFixed(1) : 0}%):</td>
+                                                            <td colSpan={6} className={`px-4 py-3 text-right font-mono text-lg font-bold ${estimasiProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(estimasiProfit)}
+                                                            </td>
+                                                        </tr>
+                                                    </>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="border rounded-xl p-5 bg-gray-50/50 space-y-4">
@@ -1117,11 +1256,11 @@ export default function ProjectTabs({
                                                             )}
                                                         </div>
 
-                                                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
+                                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
                                                             <div>
                                                                 <p className="text-xs text-muted-foreground">Nominal</p>
-                                                                <p className="font-bold text-gray-900 flex items-center gap-2">
-                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(term.nominal)}
+                                                                <p className="font-bold text-gray-900 flex flex-wrap items-center gap-1.5">
+                                                                    <span>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(term.nominal)}</span>
                                                                     {project.budget_total > 0 && (
                                                                         <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0 border-gray-200">
                                                                             {((parseFloat(term.nominal) / project.budget_total) * 100).toFixed(1)}%
@@ -1137,15 +1276,15 @@ export default function ProjectTabs({
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs text-muted-foreground">Deliverables</p>
-                                                                <p className="font-medium text-gray-900">{term.notes || '-'}</p>
+                                                                <p className="font-medium text-gray-900 line-clamp-2">{term.notes || '-'}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs text-muted-foreground">Nomor Surat</p>
-                                                                <p className="font-medium text-gray-900">{term.nomor_surat || '-'}</p>
+                                                                <p className="font-medium text-gray-900 truncate">{term.nomor_surat || '-'}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs text-muted-foreground">Tertuju</p>
-                                                                <p className="font-medium text-gray-900">{term.tertuju || '-'}</p>
+                                                                <p className="font-medium text-gray-900 truncate">{term.tertuju || '-'}</p>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1230,21 +1369,21 @@ export default function ProjectTabs({
                                     })}
 
                                     {/* Summary Card */}
-                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 mt-4">
-                                        <div className="flex items-center justify-between">
+                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 sm:p-5 mt-4">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-sm font-medium text-blue-900">Total Termin Pembayaran</p>
-                                                <p className="text-xs text-blue-700 mt-1">
+                                                <p className="text-xs text-blue-700 mt-0.5">
                                                     {terms.filter((t: any) => t.verified_by).length} dari {terms.length} termin terverifikasi
                                                 </p>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-2xl font-bold text-blue-900">
+                                            <div className="text-left sm:text-right">
+                                                <p className="text-xl sm:text-2xl font-bold text-blue-900">
                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
                                                         terms.reduce((sum: number, term: any) => sum + parseFloat(term.nominal), 0)
                                                     )}
                                                 </p>
-                                                <p className="text-xs text-blue-700 mt-1">
+                                                <p className="text-xs text-blue-700 mt-0.5">
                                                     {terms.length} termin terjadwal
                                                 </p>
                                             </div>

@@ -388,17 +388,17 @@ export default function ProjectsShow({ project_slug }: { project_slug: string | 
           </div>
           <p className="text-muted-foreground">{project.division?.name || '-'}</p>
         </div>
-        <div className="flex flex-col md:flex-row items-end md:items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
           <StatusBadge status={currentStatus} />
 
-          <div className="flex gap-2 w-full md:w-auto">
-            <Link href={`/projects/${project.uuid}/edit`} className="flex-1 md:flex-none">
-              <Button variant="outline" className="w-full gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Link href={`/projects/${project.uuid}/edit`} className="flex-1 sm:flex-none">
+              <Button variant="outline" className="w-full gap-2 text-xs sm:text-sm h-9 sm:h-10">
                 <Pencil className="h-4 w-4" />
                 Edit Project
               </Button>
             </Link>
-            <Button variant="destructive" size="icon" onClick={() => setIsDeleteAlertOpen(true)} title="Hapus Proyek">
+            <Button variant="destructive" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 shrink-0" onClick={() => setIsDeleteAlertOpen(true)} title="Hapus Proyek">
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
