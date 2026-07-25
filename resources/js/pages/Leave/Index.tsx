@@ -343,136 +343,246 @@ function LeaveTable({ title, description, hook }: LeaveTableProps) {
           )}
 
           {!loading && (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <SortHeader col="code">Kode & Tanggal</SortHeader>
-                    <TableHead>Karyawan</TableHead>
-                    <SortHeader col="type">Jenis Cuti</SortHeader>
-                    <SortHeader col="start_date">Durasi</SortHeader>
-                    <TableHead>Keterangan</TableHead>
-                    <TableHead>Status Approval</TableHead>
-                    <SortHeader col="status">Status</SortHeader>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.length > 0 ? data.map((item) => (
-                    <TableRow key={item.id} className="group">
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium text-sm">{item.code}</span>
-                          <span className="text-xs text-muted-foreground">{item.created_at ? format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId }) : '-'}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">{item.user?.name ?? '-'}</span>
-                          <span className="text-xs text-muted-foreground">{item.user?.email ?? '-'}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="font-normal border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100">
-                          {LEAVE_TYPE_LABELS[item.type] ?? item.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5 text-sm">
-                          <span className="font-medium">{durationDays(item.start_date, item.end_date)} Hari</span>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(item.start_date), 'dd MMM', { locale: localeId })} - {format(new Date(item.end_date), 'dd MMM yyyy', { locale: localeId })}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <div className="truncate text-sm text-muted-foreground" title={item.reason ?? ''}>{item.reason ?? '-'}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1.5 min-w-[150px] py-1">
-                          {item.approvals?.map((a) => (
-                            <div key={a.id} className="flex items-center gap-2">
-                              {a.status === 'approved' ? (
-                                <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
-                              ) : a.status === 'rejected' ? (
-                                <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
-                              ) : a.status === 'revision' ? (
-                                <FileText className="h-4 w-4 text-amber-500 shrink-0" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
-                              )}
-                              <div className="flex items-center gap-1 text-[11px] leading-tight">
-                                <span className={cn(
-                                  "font-bold",
-                                  a.status === 'approved' ? 'text-emerald-600' :
-                                    a.status === 'rejected' ? 'text-rose-600' :
-                                      a.status === 'revision' ? 'text-amber-600' :
-                                        'text-rose-600'
-                                )}>
-                                  {a.status === 'approved' ? 'Disetujui' :
-                                    a.status === 'rejected' ? 'Ditolak' :
-                                      a.status === 'revision' ? 'Revisi' :
-                                        'Menunggu'}
-                                </span>
-                                <span className="text-muted-foreground truncate max-w-[80px]" title={a.approver?.name ?? a.role}>
-                                  {a.approver?.name ?? a.role}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={['head_approved', 'hr_approved', 'superadmin_approved'].includes(item.status) ? 'approved' : item.status} />
-                        {item.approvals?.length > 0 && (() => {
-                          const last = item.approvals[item.approvals.length - 1];
-                          return last.approver ? (
-                            <div className="text-[10px] text-muted-foreground mt-1">
-                              by {last.approver.name} - {last.role}
-                            </div>
-                          ) : null;
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/leaves/${item.code}`} className="cursor-pointer flex items-center">
-                                <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Lihat Detail
-                              </Link>
-                            </DropdownMenuItem>
-                            {canDelete && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer"
-                                  onClick={() => setDeleteTarget({ code: item.code, name: item.user?.name ?? item.code })}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" /> Hapus Cuti
+            <>
+              {/* ── MOBILE VIEW: Card List ────────────────── */}
+              <div className="space-y-3 md:hidden">
+                {data.length > 0 ? (
+                  data.map((item) => (
+                    <Card
+                      key={item.id}
+                      className="cursor-pointer hover:border-emerald-500/50 hover:shadow-md transition-all active:scale-[0.99] border rounded-xl overflow-hidden bg-white"
+                      onClick={() => router.visit(`/leaves/${item.code}`)}
+                    >
+                      <CardContent className="p-4 space-y-3">
+                        {/* Header Row */}
+                        <div className="flex items-center justify-between gap-2 border-b pb-2.5">
+                          <div className="min-w-0">
+                            <span className="font-mono font-bold text-sm text-gray-900">{item.code}</span>
+                            <p className="text-[11px] text-muted-foreground">
+                              {item.created_at ? format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId }) : '-'}
+                            </p>
+                          </div>
+                          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/leaves/${item.code}`} className="cursor-pointer flex items-center">
+                                    <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Lihat Detail
+                                  </Link>
                                 </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                                {canDelete && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer"
+                                      onClick={() => setDeleteTarget({ code: item.code, name: item.user?.name ?? item.code })}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" /> Hapus Cuti
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+
+                        {/* Employee & Type */}
+                        <div className="flex justify-between items-start gap-2">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{item.user?.name ?? '-'}</p>
+                            <p className="text-xs text-muted-foreground">{item.user?.email ?? '-'}</p>
+                          </div>
+                          <Badge variant="outline" className="font-normal border-blue-200 bg-blue-50 text-blue-700 text-xs shrink-0">
+                            {LEAVE_TYPE_LABELS[item.type] ?? item.type}
+                          </Badge>
+                        </div>
+
+                        {/* Duration & Reason */}
+                        <div className="bg-gray-50/70 p-2.5 rounded-lg space-y-1 text-xs">
+                          <div className="flex justify-between font-medium text-gray-700">
+                            <span>Durasi: {durationDays(item.start_date, item.end_date)} Hari</span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {format(new Date(item.start_date), 'dd MMM', { locale: localeId })} - {format(new Date(item.end_date), 'dd MMM yyyy', { locale: localeId })}
+                            </span>
+                          </div>
+                          {item.reason && (
+                            <p className="text-muted-foreground text-xs line-clamp-2 italic">{item.reason}</p>
+                          )}
+                        </div>
+
+                        {/* Status Footer */}
+                        <div className="flex items-center justify-between border-t pt-2.5">
+                          <StatusBadge status={['head_approved', 'hr_approved', 'superadmin_approved'].includes(item.status) ? 'approved' : item.status} />
+                          {item.approvals?.length > 0 && (
+                            <div className="flex items-center gap-1.5 text-[10px]">
+                              {item.approvals.map((a) => (
+                                <span
+                                  key={a.id}
+                                  className={cn(
+                                    'px-1.5 py-0.5 rounded font-medium border',
+                                    a.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                      a.status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                        'bg-gray-50 text-gray-600 border-gray-200'
+                                  )}
+                                >
+                                  {a.role.toUpperCase()}: {a.status === 'approved' ? '✓' : '...'}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground border rounded-xl bg-gray-50">
+                    Tidak ada data cuti.
+                  </div>
+                )}
+              </div>
+
+              {/* ── DESKTOP VIEW: Data Table ────────────────── */}
+              <div className="hidden md:block rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <SortHeader col="code">Kode & Tanggal</SortHeader>
+                      <TableHead>Karyawan</TableHead>
+                      <SortHeader col="type">Jenis Cuti</SortHeader>
+                      <SortHeader col="start_date">Durasi</SortHeader>
+                      <TableHead>Keterangan</TableHead>
+                      <TableHead>Status Approval</TableHead>
+                      <SortHeader col="status">Status</SortHeader>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
-                  )) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                        Belum ada data yang ditemukan.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {data.length > 0 ? data.map((item) => (
+                      <TableRow
+                        key={item.id}
+                        className="cursor-pointer hover:bg-emerald-50/40 transition-colors group"
+                        onClick={() => router.visit(`/leaves/${item.code}`)}
+                      >
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium text-sm">{item.code}</span>
+                            <span className="text-xs text-muted-foreground">{item.created_at ? format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId }) : '-'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{item.user?.name ?? '-'}</span>
+                            <span className="text-xs text-muted-foreground">{item.user?.email ?? '-'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-normal border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100">
+                            {LEAVE_TYPE_LABELS[item.type] ?? item.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5 text-sm">
+                            <span className="font-medium">{durationDays(item.start_date, item.end_date)} Hari</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(item.start_date), 'dd MMM', { locale: localeId })} - {format(new Date(item.end_date), 'dd MMM yyyy', { locale: localeId })}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          <div className="truncate text-sm text-muted-foreground" title={item.reason ?? ''}>{item.reason ?? '-'}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1.5 min-w-[150px] py-1">
+                            {item.approvals?.map((a) => (
+                              <div key={a.id} className="flex items-center gap-2">
+                                {a.status === 'approved' ? (
+                                  <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+                                ) : a.status === 'rejected' ? (
+                                  <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                                ) : a.status === 'revision' ? (
+                                  <FileText className="h-4 w-4 text-amber-500 shrink-0" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                                )}
+                                <div className="flex items-center gap-1 text-[11px] leading-tight">
+                                  <span className={cn(
+                                    "font-bold",
+                                    a.status === 'approved' ? 'text-emerald-600' :
+                                      a.status === 'rejected' ? 'text-rose-600' :
+                                        a.status === 'revision' ? 'text-amber-600' :
+                                          'text-rose-600'
+                                  )}>
+                                    {a.status === 'approved' ? 'Disetujui' :
+                                      a.status === 'rejected' ? 'Ditolak' :
+                                        a.status === 'revision' ? 'Revisi' :
+                                          'Menunggu'}
+                                  </span>
+                                  <span className="text-muted-foreground truncate max-w-[80px]" title={a.approver?.name ?? a.role}>
+                                    {a.approver?.name ?? a.role}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={['head_approved', 'hr_approved', 'superadmin_approved'].includes(item.status) ? 'approved' : item.status} />
+                          {item.approvals?.length > 0 && (() => {
+                            const last = item.approvals[item.approvals.length - 1];
+                            return last.approver ? (
+                              <div className="text-[10px] text-muted-foreground mt-1">
+                                by {last.approver.name} - {last.role}
+                              </div>
+                            ) : null;
+                          })()}
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Open menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/leaves/${item.code}`} className="cursor-pointer flex items-center">
+                                  <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Lihat Detail
+                                </Link>
+                              </DropdownMenuItem>
+                              {canDelete && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer"
+                                    onClick={() => setDeleteTarget({ code: item.code, name: item.user?.name ?? item.code })}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" /> Hapus Cuti
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          Tidak ada data cuti.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
 
           {/* Pagination */}

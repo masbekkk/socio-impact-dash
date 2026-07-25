@@ -1054,13 +1054,37 @@ export default function ProjectTabs({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="border rounded-xl p-5 bg-gray-50/50 space-y-4">
+                                <div className="border rounded-xl p-3 sm:p-5 bg-gray-50/50 space-y-4">
                                     <div className="space-y-3">
                                         {detailBudgets.map((detail, idx) => (
-                                            <div key={detail.id} className="bg-white p-3 rounded-lg border shadow-sm flex items-center gap-3 group hover:border-blue-200 transition-colors">
-                                                <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                                                    <div className="md:col-span-4 space-y-1">
-                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Kegiatan #{idx + 1}</Label>
+                                            <div key={detail.id} className="bg-white p-3.5 sm:p-4 rounded-xl border shadow-xs space-y-3 hover:border-blue-200 transition-colors">
+                                                {/* Card Item Header */}
+                                                <div className="flex items-center justify-between border-b pb-2">
+                                                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                                                        Kegiatan #{idx + 1}
+                                                    </span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 px-2 text-xs text-red-500 hover:bg-red-50 hover:text-red-600 gap-1"
+                                                        onClick={() => {
+                                                            const toDelete = detailBudgets[idx];
+                                                            const newDetails = detailBudgets.filter((_, i) => i !== idx);
+                                                            setDetailBudgets(newDetails);
+                                                            if (!toDelete.isNew && toDelete.id) {
+                                                                setDeleteDetailBudgets([...deleteDetailBudgets, toDelete.id]);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        <span className="text-[11px]">Hapus</span>
+                                                    </Button>
+                                                </div>
+
+                                                {/* Card Form Inputs */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3">
+                                                    <div className="sm:col-span-2 md:col-span-4 space-y-1">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nama Kegiatan</Label>
                                                         <Input
                                                             type="text"
                                                             value={detail.item_name || ''}
@@ -1070,10 +1094,10 @@ export default function ProjectTabs({
                                                                 setDetailBudgets(newDetails);
                                                             }}
                                                             placeholder="Nama Kegiatan..."
-                                                            className="h-8 text-xs"
+                                                            className="h-9 text-xs bg-white"
                                                         />
                                                     </div>
-                                                    <div className="md:col-span-2 space-y-1">
+                                                    <div className="sm:col-span-1 md:col-span-2 space-y-1">
                                                         <Label className="text-[10px] font-bold text-muted-foreground uppercase">Proposal</Label>
                                                         <MoneyInput
                                                             value={detail.amount_proposal || 0}
@@ -1084,41 +1108,30 @@ export default function ProjectTabs({
                                                                 setDetailBudgets(newDetails);
                                                             }}
                                                             placeholder="0"
-                                                            className="h-8 text-xs"
+                                                            className="h-9 text-xs bg-white"
                                                         />
                                                     </div>
-                                                    <div className="md:col-span-2 space-y-1">
-                                                        <Label className="text-[10px] font-bold text-muted-foreground flex justify-between uppercase">
-                                                            <span>Pelaksanaan</span>
-                                                            </Label>
-                                                            <Label className="text-[8px] font-bold text-muted-foreground flex justify-between uppercase">
+                                                    <div className="sm:col-span-1 md:col-span-2 space-y-1">
+                                                        <div className="flex items-center justify-between gap-1">
+                                                            <Label className="text-[10px] font-bold text-muted-foreground uppercase">Pelaksanaan</Label>
                                                             {Number(detail.used_eer) > 0 && (
-                                                                <span className="text-blue-500 normal-case text-[9px]">
-                                                                    {new Intl.NumberFormat('id-ID', {
-                                                                        style: 'currency',
-                                                                        currency: 'IDR',
-                                                                        minimumFractionDigits: 0,
-                                                                    }).format(detail.used_eer)}{' '}
-                                                                    (terpakai EER)
+                                                                <span className="text-blue-500 normal-case text-[9px] truncate">
+                                                                    ({new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detail.used_eer)} EER)
                                                                 </span>
                                                             )}
-                                                        </Label>
+                                                        </div>
                                                         <MoneyInput
-                                                            // value={Number(detail.used_eer) > 0 ? Number(detail.used_eer) : (detail.amount_pelaksanaan || 0)}
                                                             value={detail.amount_pelaksanaan}
                                                             onValueChange={(vals) => {
-                                                                // if (Number(detail.used_eer) > 0) return; // Prevent change if EER exists
                                                                 const newDetails = [...detailBudgets];
                                                                 newDetails[idx].amount_pelaksanaan = vals.floatValue || 0;
                                                                 setDetailBudgets(newDetails);
                                                             }}
                                                             placeholder="0"
-                                                            className="h-8 text-xs"
-                                                            // className={`h-8 text-xs ${Number(detail.used_eer) > 0 ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
-                                                            // disabled={Number(detail.used_eer) > 0}
+                                                            className="h-9 text-xs bg-white"
                                                         />
                                                     </div>
-                                                    <div className="md:col-span-4 space-y-1">
+                                                    <div className="sm:col-span-2 md:col-span-4 space-y-1">
                                                         <Label className="text-[10px] font-bold text-muted-foreground uppercase">Catatan</Label>
                                                         <Input
                                                             type="text"
@@ -1129,72 +1142,58 @@ export default function ProjectTabs({
                                                                 setDetailBudgets(newDetails);
                                                             }}
                                                             placeholder="Keterangan..."
-                                                            className="h-8 text-xs"
+                                                            className="h-9 text-xs bg-white"
                                                         />
                                                     </div>
                                                 </div>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600 mt-5 shrink-0"
-                                                    onClick={() => {
-                                                        const toDelete = detailBudgets[idx];
-                                                        const newDetails = detailBudgets.filter((_, i) => i !== idx);
-                                                        setDetailBudgets(newDetails);
-                                                        if (!toDelete.isNew && toDelete.id) {
-                                                            setDeleteDetailBudgets([...deleteDetailBudgets, toDelete.id]);
-                                                        }
-                                                    }}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
                                             </div>
                                         ))}
                                     </div>
 
                                     {/* Real-time Summary during editing */}
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-white border rounded-lg shadow-sm">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3.5 sm:p-4 bg-white border rounded-xl shadow-xs">
                                         <div className="space-y-1">
                                             <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Proposal</p>
-                                            <p className="text-sm font-bold text-blue-600">
+                                            <p className="text-xs sm:text-sm font-bold text-blue-600 truncate">
                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0))}
                                             </p>
                                         </div>
-                                        <div className="space-y-1 border-l pl-4">
+                                        <div className="space-y-1 pl-3 border-l">
                                             <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Pelaksanaan</p>
-                                            <p className="text-sm font-bold text-indigo-600">
+                                            <p className="text-xs sm:text-sm font-bold text-indigo-600 truncate">
                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0))}
                                             </p>
                                         </div>
-                                        <div className="space-y-1 border-l pl-4">
+                                        <div className="space-y-1 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:pl-3">
                                             <p className="text-[10px] font-bold text-muted-foreground uppercase">Operational Budget</p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-xs sm:text-sm font-bold text-gray-900 truncate">
                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(opsBudget)}
                                             </p>
                                         </div>
-                                        <div className="space-y-1 border-l pl-4">
+                                        <div className="space-y-1 pt-2 sm:pt-0 pl-3 border-t sm:border-t-0 border-l">
                                             <p className="text-[10px] font-bold text-muted-foreground uppercase">Estimasi Profit</p>
-                                            <p className={`text-sm font-bold ${project.budget_total - detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                            <p className={`text-xs sm:text-sm font-bold truncate ${project.budget_total - detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(project.budget_total - detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0))}
                                             </p>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-2">
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
                                         <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={() => setDetailBudgets([...detailBudgets, { id: crypto.randomUUID(), item_name: '', quantity: null, item_price: 0, amount: 0, amount_pelaksanaan: 0, amount_proposal: 0, notes: '', isNew: true }])}
-                                            className="gap-1.5 border-dashed"
+                                            className="gap-1.5 border-dashed w-full sm:w-auto h-9 text-xs"
                                         >
                                             <Plus className="h-3.5 w-3.5" />
                                             Tambah Kegiatan
                                         </Button>
 
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
+                                                className="flex-1 sm:flex-initial h-9 text-xs"
                                                 onClick={() => {
                                                     setEditDetailBudget(false);
                                                     // Revert changes from project props
@@ -1208,7 +1207,7 @@ export default function ProjectTabs({
                                                 size="sm"
                                                 onClick={handleSaveDetailBudget}
                                                 disabled={savingDetailBudget}
-                                                className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+                                                className="flex-1 sm:flex-initial h-9 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700"
                                             >
                                                 {savingDetailBudget ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                                                 Simpan Rincian

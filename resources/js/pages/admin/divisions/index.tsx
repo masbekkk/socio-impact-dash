@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -113,77 +113,150 @@ export default function Index() {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                    <TableHead className="w-[120px]">Parent Code</TableHead>
-                                    <TableHead className="w-[150px]">Parent Name</TableHead>
-                                    <TableHead className="w-[200px]">Division Name</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead className="w-[150px]">Created At</TableHead>
-                                    <TableHead className="text-right w-[100px]">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                            Loading divisions...
-                                        </TableCell>
+                    <CardContent className="p-4 sm:p-6">
+                        {/* ── MOBILE VIEW: Card List ────────────────── */}
+                        <div className="space-y-3 md:hidden">
+                            {loading ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    Loading divisions...
+                                </div>
+                            ) : divisions.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground border rounded-xl bg-gray-50">
+                                    No divisions found.
+                                </div>
+                            ) : (
+                                divisions.map((division) => (
+                                    <Card
+                                        key={division.id}
+                                        className="cursor-pointer hover:border-emerald-500/50 hover:shadow-md transition-all active:scale-[0.99] border rounded-xl overflow-hidden bg-white"
+                                        onClick={() => router.visit(`/admin/divisions/${division.division_code?.id}/edit`)}
+                                    >
+                                        <CardContent className="p-4 space-y-3">
+                                            <div className="flex items-center justify-between gap-2 border-b pb-2.5">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="font-mono font-bold text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100 uppercase">
+                                                        {division.division_code?.code}
+                                                    </span>
+                                                    <span className="font-semibold text-sm text-gray-900 truncate">
+                                                        {division.division_code?.name}
+                                                    </span>
+                                                </div>
+                                                <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem asChild>
+                                                                <Link href={`/admin/divisions/${division.division_code?.id}/edit`}>Edit</Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                className="text-destructive focus:text-destructive cursor-pointer"
+                                                                onClick={() => handleDelete(division.division_code?.id)}
+                                                            >
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs font-semibold text-gray-700">Nama Divisi: {division.name}</p>
+                                                {division.description && (
+                                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{division.description}</p>
+                                                )}
+                                            </div>
+
+                                            <div className="border-t pt-2.5 flex items-center justify-between text-[11px] text-muted-foreground">
+                                                <span>Dibuat pada:</span>
+                                                <span>{new Date(division.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))
+                            )}
+                        </div>
+
+                        {/* ── DESKTOP VIEW: Data Table ────────────────── */}
+                        <div className="hidden md:block rounded-md border overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                        <TableHead className="w-[120px]">Parent Code</TableHead>
+                                        <TableHead className="w-[150px]">Parent Name</TableHead>
+                                        <TableHead className="w-[200px]">Division Name</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead className="w-[150px]">Created At</TableHead>
+                                        <TableHead className="text-right w-[100px]">Actions</TableHead>
                                     </TableRow>
-                                ) : divisions.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                            No divisions found.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    divisions.map((division) => (
-                                        <TableRow key={division.id} className="hover:bg-muted/50">
-                                            <TableCell className="font-medium uppercase align-top pt-4">
-                                                {division.division_code?.code}
-                                            </TableCell>
-                                            <TableCell className="font-medium align-top pt-4">
-                                                {division.division_code?.name}
-                                            </TableCell>
-                                            <TableCell className="font-medium align-top pt-4">
-                                                {division.name}
-                                            </TableCell>
-                                            <TableCell className="py-4 align-top">
-                                                <span className="text-muted-foreground text-sm">
-                                                    {division.description || '-'}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-sm align-top pt-4">
-                                                {new Date(division.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                            </TableCell>
-                                            <TableCell className="text-right align-top pt-4">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
-                                                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                                                            <span className="sr-only">Open menu</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem asChild>
-                                                            <Link href={`/admin/divisions/${division.division_code?.id}/edit`}>Edit</Link>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            className="text-destructive focus:text-destructive cursor-pointer"
-                                                            onClick={() => handleDelete(division.division_code?.id)}
-                                                        >
-                                                            Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                </TableHeader>
+                                <TableBody>
+                                    {loading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                                Loading divisions...
                                             </TableCell>
                                         </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
+                                    ) : divisions.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                                No divisions found.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        divisions.map((division) => (
+                                            <TableRow
+                                                key={division.id}
+                                                className="cursor-pointer hover:bg-emerald-50/40 transition-colors"
+                                                onClick={() => router.visit(`/admin/divisions/${division.division_code?.id}/edit`)}
+                                            >
+                                                <TableCell className="font-medium uppercase align-top pt-4">
+                                                    {division.division_code?.code}
+                                                </TableCell>
+                                                <TableCell className="font-medium align-top pt-4">
+                                                    {division.division_code?.name}
+                                                </TableCell>
+                                                <TableCell className="font-medium align-top pt-4">
+                                                    {division.name}
+                                                </TableCell>
+                                                <TableCell className="py-4 align-top">
+                                                    <span className="text-muted-foreground text-sm">
+                                                        {division.description || '-'}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground text-sm align-top pt-4">
+                                                    {new Date(division.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                </TableCell>
+                                                <TableCell className="text-right align-top pt-4" onClick={(e) => e.stopPropagation()}>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
+                                                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                                                <span className="sr-only">Open menu</span>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem asChild>
+                                                                <Link href={`/admin/divisions/${division.division_code?.id}/edit`}>Edit</Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                className="text-destructive focus:text-destructive cursor-pointer"
+                                                                onClick={() => handleDelete(division.division_code?.id)}
+                                                            >
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

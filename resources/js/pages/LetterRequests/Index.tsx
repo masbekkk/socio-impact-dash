@@ -273,7 +273,109 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="rounded-md border overflow-hidden">
+                        {/* ── MOBILE VIEW: Card List ────────────────── */}
+                        <div className="space-y-3 md:hidden">
+                            {loading ? (
+                                <div className="flex justify-center items-center py-8 text-muted-foreground gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Loading...
+                                </div>
+                            ) : requests.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground border rounded-xl bg-gray-50">
+                                    Tidak ada data pengajuan.
+                                </div>
+                            ) : (
+                                requests.map((req) => (
+                                    <Card
+                                        key={req.id}
+                                        className="cursor-pointer hover:border-emerald-500/50 hover:shadow-md transition-all active:scale-[0.99] border rounded-xl overflow-hidden bg-white"
+                                        onClick={() => router.visit(`/letter-requests/${req.id}/edit`)}
+                                    >
+                                        <CardContent className="p-4 space-y-3">
+                                            {/* Header Row */}
+                                            <div className="flex items-center justify-between gap-2 border-b pb-2.5">
+                                                <div className="min-w-0">
+                                                    <span className="font-semibold text-xs text-blue-600 uppercase tracking-wider block">
+                                                        {req.project?.code || '-'}
+                                                    </span>
+                                                    <p className="text-xs text-muted-foreground truncate">{req.project?.name || '-'}</p>
+                                                </div>
+                                                <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-[160px]">
+                                                            <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                                                            <DropdownMenuItem asChild>
+                                                                <Link href={`/letter-requests/${req.id}/edit`} className="cursor-pointer">
+                                                                    Edit
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                            {canDelete && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem onClick={() => handleStatusChange(req)}>
+                                                                        <RefreshCcw className="mr-2 h-4 w-4" />
+                                                                        Ubah Status
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleDeleteClick(req)} className="text-destructive focus:text-destructive">
+                                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                                        Hapus
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </div>
+
+                                            {/* Subject & Recipient */}
+                                            <div className="space-y-1">
+                                                <p className="font-medium text-sm text-gray-900 line-clamp-2">{req.subject}</p>
+                                                <p className="text-xs text-muted-foreground">Ke: {req.recipient}</p>
+                                            </div>
+
+                                            {/* Letter Number & Date */}
+                                            <div className="bg-gray-50/70 p-2.5 rounded-lg flex items-center justify-between text-xs">
+                                                <div className="flex items-center gap-1 font-mono">
+                                                    {req.letter_number ? (
+                                                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100 font-bold flex items-center gap-1">
+                                                            <Hash className="h-3 w-3" /> {req.letter_number}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground italic">Belum ada nomor</span>
+                                                    )}
+                                                </div>
+                                                <span className="text-muted-foreground">
+                                                    {format(new Date(req.letter_date), 'dd MMM yyyy', { locale: id })}
+                                                </span>
+                                            </div>
+
+                                            {/* Footer Badges */}
+                                            <div className="flex items-center justify-between border-t pt-2.5 text-xs">
+                                                <span className="text-muted-foreground truncate">PIC: {req.pic?.name || '-'}</span>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={
+                                                        req.status === 'used'
+                                                            ? 'bg-emerald-50/80 text-emerald-700 border-emerald-200/60 font-medium'
+                                                            : 'bg-amber-50/80 text-amber-700 border-amber-200/60 font-medium'
+                                                    }
+                                                >
+                                                    {req.status === 'used' ? 'Terpakai' : 'Tidak Terpakai'}
+                                                </Badge>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))
+                            )}
+                        </div>
+
+                        {/* ── DESKTOP VIEW: Data Table ────────────────── */}
+                        <div className="hidden md:block rounded-md border overflow-hidden">
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/50">
@@ -281,7 +383,6 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
                                         <TableHead>Proyek</TableHead>
                                         <TableHead>Perihal & Tujuan</TableHead>
                                         <TableHead>PIC / Ket</TableHead>
-                                        {/* <TableHead>Kode / Divisi</TableHead> */}
                                         <TableHead>Nomor Surat</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Aksi</TableHead>
@@ -305,7 +406,11 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
                                         </TableRow>
                                     ) : (
                                         requests.map((req) => (
-                                            <TableRow key={req.id}>
+                                            <TableRow
+                                                key={req.id}
+                                                className="cursor-pointer hover:bg-emerald-50/40 transition-colors"
+                                                onClick={() => router.visit(`/letter-requests/${req.id}/edit`)}
+                                            >
                                                 <TableCell className="font-medium whitespace-nowrap">
                                                     {format(new Date(req.letter_date), 'dd MMM yyyy', { locale: id })}
                                                 </TableCell>
@@ -329,12 +434,6 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
                                                         )}
                                                     </div>
                                                 </TableCell>
-                                                {/* <TableCell>
-                                                    <div className="flex flex-col gap-1">
-                                                        {req.letterCode && <Badge variant="outline" className="w-fit text-xs px-1.5 py-0 bg-slate-50">{req.letterCode.code}</Badge>}
-                                                        {req.letterDivision && <Badge variant="outline" className="w-fit text-xs px-1.5 py-0 bg-slate-50">{req.letterDivision.code}</Badge>}
-                                                    </div>
-                                                </TableCell> */}
                                                 <TableCell>
                                                     {req.letter_number ? (
                                                         <div className="flex items-center gap-1.5 font-mono text-sm bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 w-fit whitespace-nowrap">
@@ -357,7 +456,7 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
                                                         {req.status === 'used' ? 'Terpakai' : 'Tidak Terpakai'}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" className="h-8 w-8 p-0">

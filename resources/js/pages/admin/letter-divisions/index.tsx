@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -109,71 +109,141 @@ export default function Index() {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                    <TableHead className="w-[150px]">Code</TableHead>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Created At</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                            Loading letter-divisi suratons...
-                                        </TableCell>
+                    <CardContent className="p-4 sm:p-6">
+                        {/* ── MOBILE VIEW: Card List ────────────────── */}
+                        <div className="space-y-3 md:hidden">
+                            {loading ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    Loading letter-divisions...
+                                </div>
+                            ) : letterDivisiSurats.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground border rounded-xl bg-gray-50">
+                                    No letter-divisions found.
+                                </div>
+                            ) : (
+                                letterDivisiSurats.map((divisiSurat) => (
+                                    <Card
+                                        key={divisiSurat.id}
+                                        className="cursor-pointer hover:border-emerald-500/50 hover:shadow-md transition-all active:scale-[0.99] border rounded-xl overflow-hidden bg-white"
+                                        onClick={() => router.visit(`/admin/letter-divisions/${divisiSurat.id}/edit`)}
+                                    >
+                                        <CardContent className="p-4 space-y-3">
+                                            <div className="flex items-center justify-between gap-2 border-b pb-2.5">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="font-mono font-bold text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100 uppercase">
+                                                        {divisiSurat.code}
+                                                    </span>
+                                                    <span className="font-semibold text-sm text-gray-900 truncate">
+                                                        {divisiSurat.name}
+                                                    </span>
+                                                </div>
+                                                <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem asChild>
+                                                                <Link href={`/admin/letter-divisions/${divisiSurat.id}/edit`}>Edit</Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                className="text-destructive focus:text-destructive cursor-pointer"
+                                                                onClick={() => handleDelete(divisiSurat.id)}
+                                                            >
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </div>
+
+                                            {divisiSurat.description && (
+                                                <p className="text-xs text-muted-foreground line-clamp-2">{divisiSurat.description}</p>
+                                            )}
+
+                                            <div className="border-t pt-2.5 flex items-center justify-between text-[11px] text-muted-foreground">
+                                                <span>Dibuat pada:</span>
+                                                <span>{new Date(divisiSurat.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))
+                            )}
+                        </div>
+
+                        {/* ── DESKTOP VIEW: Data Table ────────────────── */}
+                        <div className="hidden md:block rounded-md border overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                        <TableHead className="w-[150px]">Code</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead>Created At</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
-                                ) : letterDivisiSurats.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                            No letter-divisi suratons found.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    letterDivisiSurats.map((divisiSurat) => (
-                                        <TableRow key={divisiSurat.id} className="hover:bg-muted/5">
-                                            <TableCell className="font-medium uppercase">
-                                                {divisiSurat.code}
-                                            </TableCell>
-                                            <TableCell>
-                                                {divisiSurat.name}
-                                            </TableCell>
-                                            <TableCell className="max-w-xs truncate text-muted-foreground">
-                                                {divisiSurat.description || '-'}
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-sm">
-                                                {new Date(divisiSurat.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
-                                                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                                                            <span className="sr-only">Open menu</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem asChild>
-                                                            <Link href={`/admin/letter-divisions/${divisiSurat.id}/edit`}>Edit</Link>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            className="text-destructive focus:text-destructive cursor-pointer"
-                                                            onClick={() => handleDelete(divisiSurat.id)}
-                                                        >
-                                                            Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                </TableHeader>
+                                <TableBody>
+                                    {loading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                                Loading letter-divisions...
                                             </TableCell>
                                         </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
+                                    ) : letterDivisiSurats.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                                No letter-divisions found.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        letterDivisiSurats.map((divisiSurat) => (
+                                            <TableRow
+                                                key={divisiSurat.id}
+                                                className="cursor-pointer hover:bg-emerald-50/40 transition-colors"
+                                                onClick={() => router.visit(`/admin/letter-divisions/${divisiSurat.id}/edit`)}
+                                            >
+                                                <TableCell className="font-medium uppercase">
+                                                    {divisiSurat.code}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {divisiSurat.name}
+                                                </TableCell>
+                                                <TableCell className="max-w-xs truncate text-muted-foreground">
+                                                    {divisiSurat.description || '-'}
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground text-sm">
+                                                    {new Date(divisiSurat.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                </TableCell>
+                                                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
+                                                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                                                <span className="sr-only">Open menu</span>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem asChild>
+                                                                <Link href={`/admin/letter-divisions/${divisiSurat.id}/edit`}>Edit</Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                className="text-destructive focus:text-destructive cursor-pointer"
+                                                                onClick={() => handleDelete(divisiSurat.id)}
+                                                            >
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

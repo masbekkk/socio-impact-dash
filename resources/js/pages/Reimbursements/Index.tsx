@@ -641,154 +641,34 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
 
           <CardContent>
             {data.length > 0 ? (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Tipe</TableHead>
-                      <TableHead>
-                        <button className="flex items-center font-medium" onClick={() => handleSort('code')}>
-                          Kode <SortIcon column="code" />
-                        </button>
-                      </TableHead>
-                      <TableHead>
-                        <button className="flex items-center font-medium" onClick={() => handleSort('created_at')}>
-                          Tgl <SortIcon column="created_at" />
-                        </button>
-                      </TableHead>
-                      <TableHead>Pemohon</TableHead>
-                      <TableHead>Kode Project</TableHead>
-                      <TableHead>Initial Project</TableHead>
-                      <TableHead className="min-w-[150px]">Detail Kegiatan</TableHead>
-                      <TableHead>
-                        <button className="flex items-center font-medium" onClick={() => handleSort('amount')}>
-                          Nominal <SortIcon column="amount" />
-                        </button>
-                      </TableHead>
-                      <TableHead>
-                        <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
-                          Status Approval <SortIcon column="status" />
-                        </button>
-                      </TableHead>
-                      <TableHead>
-                        <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
-                          Status <SortIcon column="status" />
-                        </button>
-                      </TableHead>
-                      <TableHead className="text-right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.map((item) => {
-                      const statusCfg = STATUS_CONFIG[item.status] ?? {
-                        label: item.status, className: 'bg-gray-100 text-gray-600', icon: Clock,
-                      };
-                      const StatusIcon = statusCfg.icon;
+              <>
+                {/* ── MOBILE VIEW: Card List ────────────────── */}
+                <div className="space-y-3 md:hidden">
+                  {data.map((item) => {
+                    const statusCfg = STATUS_CONFIG[item.status] ?? {
+                      label: item.status, className: 'bg-gray-100 text-gray-600', icon: Clock,
+                    };
+                    const StatusIcon = statusCfg.icon;
 
-                      return (
-                        <React.Fragment key={item.id}>
-                          <TableRow>
-                            {/* Type */}
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Badge variant="outline" className={cn('uppercase w-fit', TYPE_COLORS[item.type] || '')}>
-                                  {item.type}
-                                </Badge>
-                                {item.type === 'eer' && item.eer_type && (
-                                  <span className={cn(
-                                    'text-[10px] font-medium px-1.5 py-0.5 rounded-full border w-fit text-center',
-                                    item.eer_type === 'refund' ? 'bg-orange-50 text-orange-600 border-orange-200' :
-                                      item.eer_type === 'reimbursement' ? 'bg-blue-50 text-blue-600 border-blue-200' :
-                                        'bg-purple-50 text-purple-600 border-purple-200',
-                                  )}>
-                                    {item.eer_type === 'refund' ? 'Refund' :
-                                      item.eer_type === 'reimbursement' ? 'Reimbursement' :
-                                        'Balance'}
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-
-                            {/* Code */}
-                            <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
-
-                            {/* Date */}
-                            <TableCell className="text-sm">
-                              {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}
-                            </TableCell>
-
-                            {/* Applicant */}
-                            <TableCell className="text-sm">{item.user?.name ?? '-'}</TableCell>
-
-                            {/* Project code */}
-                            <TableCell className="text-sm font-mono">{item.project?.code ?? '-'}</TableCell>
-
-                            {/* Initial project */}
-                            <TableCell className="text-sm">{item.project?.initial_project ?? '-'}</TableCell>
-
-                            {/* Usage plan */}
-                            <TableCell className="min-w-[150px] max-w-[250px] leading-relaxed">
-                              <span className="whitespace-normal break-words text-sm">{item.usage_plan ?? '-'}</span>
-                            </TableCell>
-
-                            {/* Amount */}
-                            <TableCell className="font-medium">
-                              Rp {parseFloat(item.amount).toLocaleString('id-ID')}
-                            </TableCell>
-
-                            {/* Approval status */}
-                            <TableCell>
-                              <div className="flex flex-col gap-1.5">
-                                {item.approvals?.length > 0 && (
-                                  <div className="mt-1 flex flex-col gap-1 inline-flex">
-                                    {[...item.approvals]
-                                      .sort((a, b) => {
-                                        const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
-                                        return (p[a.role] ?? 99) - (p[b.role] ?? 99);
-                                      })
-                                      .map((approval) => (
-                                        <div key={approval.id} className="text-xs flex items-center gap-1.5">
-                                          {approval.status === 'approved' ? (
-                                            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                                          ) : approval.status === 'revised' ? (
-                                            <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
-                                          ) : (
-                                            <XCircle className="h-3.5 w-3.5 text-red-500" />
-                                          )}
-                                          <span className={cn(
-                                            'whitespace-nowrap',
-                                            approval.status === 'approved' ? 'text-green-700 font-medium' :
-                                              approval.status === 'revised' ? 'text-blue-700 font-medium' :
-                                                'text-red-700 font-medium',
-                                          )}>
-                                            {approval.status === 'approved' ? 'Disetujui' :
-                                              approval.status === 'revised' ? 'Sudah Direvisi' :
-                                                'Menunggu'}{' '}
-                                            <span className="font-normal text-muted-foreground">
-                                              {approval.approver?.name}
-                                            </span>
-                                          </span>
-                                        </div>
-                                      ))}
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-
-                            {/* Overall status badge */}
-                            <TableCell className="font-medium">
-                              <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
-                                <StatusIcon className="h-3 w-3" />
-                                {statusCfg.label}
+                    return (
+                      <Card
+                        key={item.id}
+                        className="cursor-pointer hover:border-emerald-500/50 hover:shadow-md transition-all active:scale-[0.99] border rounded-xl overflow-hidden bg-white"
+                        onClick={() => router.visit(`/reimbursements/${item.id}`)}
+                      >
+                        <CardContent className="p-4 space-y-3">
+                          {/* Top Header Row */}
+                          <div className="flex items-center justify-between gap-2 border-b pb-2.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Badge variant="outline" className={cn('uppercase text-[10px] shrink-0', TYPE_COLORS[item.type] || '')}>
+                                {item.type}
                               </Badge>
-                            </TableCell>
-
-                            {/* Actions */}
-                            <TableCell className="text-right">
+                              <span className="font-mono font-bold text-sm text-gray-900 truncate">{item.code}</span>
+                            </div>
+                            <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -825,8 +705,249 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
+                            </div>
+                          </div>
+
+                          {/* Info Body */}
+                          <div className="space-y-1.5 text-xs">
+                            <div className="flex justify-between items-center text-muted-foreground">
+                              <span>{format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}</span>
+                              <span className="font-medium text-gray-700">{item.user?.name ?? '-'}</span>
+                            </div>
+                            {item.project && (
+                              <p className="font-mono text-[11px] text-blue-600 font-semibold truncate">
+                                Proyek: {item.project.code} {item.project.initial_project ? `(${item.project.initial_project})` : ''}
+                              </p>
+                            )}
+                            <p className="text-gray-700 text-sm line-clamp-2">{item.usage_plan ?? '-'}</p>
+                          </div>
+
+                          {/* Footer Info & Badges */}
+                          <div className="flex items-center justify-between border-t pt-2.5">
+                            <div>
+                              <p className="text-[10px] text-muted-foreground uppercase font-semibold">Nominal</p>
+                              <p className="font-bold text-sm text-gray-900">Rp {parseFloat(item.amount).toLocaleString('id-ID')}</p>
+                            </div>
+                            <Badge className={cn('gap-1 text-xs', statusCfg.className)}>
+                              <StatusIcon className="h-3 w-3" />
+                              {statusCfg.label}
+                            </Badge>
+                          </div>
+
+                          {/* Approval Progress summary on Mobile Card */}
+                          {item.approvals?.length > 0 && (
+                            <div className="pt-2 border-t flex flex-wrap gap-2 text-[10px]">
+                              {[...item.approvals].map((approval) => (
+                                <span
+                                  key={approval.id}
+                                  className={cn(
+                                    'px-2 py-0.5 rounded-md font-medium border flex items-center gap-1',
+                                    approval.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                                      approval.status === 'revised' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                        'bg-gray-50 text-gray-600 border-gray-200'
+                                  )}
+                                >
+                                  {approval.role.toUpperCase()}: {approval.status === 'approved' ? '✓' : '...'}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* ── DESKTOP VIEW: Data Table ────────────────── */}
+                <div className="hidden md:block rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tipe</TableHead>
+                        <TableHead>
+                          <button className="flex items-center font-medium" onClick={() => handleSort('code')}>
+                            Kode <SortIcon column="code" />
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button className="flex items-center font-medium" onClick={() => handleSort('created_at')}>
+                            Tgl <SortIcon column="created_at" />
+                          </button>
+                        </TableHead>
+                        <TableHead>Pemohon</TableHead>
+                        <TableHead>Kode Project</TableHead>
+                        <TableHead>Initial Project</TableHead>
+                        <TableHead className="min-w-[150px]">Detail Kegiatan</TableHead>
+                        <TableHead>
+                          <button className="flex items-center font-medium" onClick={() => handleSort('amount')}>
+                            Nominal <SortIcon column="amount" />
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
+                            Status Approval <SortIcon column="status" />
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button className="flex items-center font-medium" onClick={() => handleSort('status')}>
+                            Status <SortIcon column="status" />
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.map((item) => {
+                        const statusCfg = STATUS_CONFIG[item.status] ?? {
+                          label: item.status, className: 'bg-gray-100 text-gray-600', icon: Clock,
+                        };
+                        const StatusIcon = statusCfg.icon;
+
+                        return (
+                          <React.Fragment key={item.id}>
+                            <TableRow
+                              className="cursor-pointer hover:bg-emerald-50/40 transition-colors"
+                              onClick={() => router.visit(`/reimbursements/${item.id}`)}
+                            >
+                              {/* Type */}
+                              <TableCell>
+                                <div className="flex flex-col gap-1">
+                                  <Badge variant="outline" className={cn('uppercase w-fit', TYPE_COLORS[item.type] || '')}>
+                                    {item.type}
+                                  </Badge>
+                                  {item.type === 'eer' && item.eer_type && (
+                                    <span className={cn(
+                                      'text-[10px] font-medium px-1.5 py-0.5 rounded-full border w-fit text-center',
+                                      item.eer_type === 'refund' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                                        item.eer_type === 'reimbursement' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                          'bg-purple-50 text-purple-600 border-purple-200',
+                                    )}>
+                                      {item.eer_type === 'refund' ? 'Refund' :
+                                        item.eer_type === 'reimbursement' ? 'Reimbursement' :
+                                          'Balance'}
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
+
+                              {/* Code */}
+                              <TableCell className="font-medium font-mono text-sm">{item.code}</TableCell>
+
+                              {/* Date */}
+                              <TableCell className="text-sm">
+                                {format(new Date(item.created_at), 'dd MMM yyyy', { locale: localeId })}
+                              </TableCell>
+
+                              {/* Applicant */}
+                              <TableCell className="text-sm">{item.user?.name ?? '-'}</TableCell>
+
+                              {/* Project code */}
+                              <TableCell className="text-sm font-mono">{item.project?.code ?? '-'}</TableCell>
+
+                              {/* Initial project */}
+                              <TableCell className="text-sm">{item.project?.initial_project ?? '-'}</TableCell>
+
+                              {/* Usage plan */}
+                              <TableCell className="min-w-[150px] max-w-[250px] leading-relaxed">
+                                <span className="whitespace-normal break-words text-sm">{item.usage_plan ?? '-'}</span>
+                              </TableCell>
+
+                              {/* Amount */}
+                              <TableCell className="font-medium">
+                                Rp {parseFloat(item.amount).toLocaleString('id-ID')}
+                              </TableCell>
+
+                              {/* Approval status */}
+                              <TableCell>
+                                <div className="flex flex-col gap-1.5">
+                                  {item.approvals?.length > 0 && (
+                                    <div className="mt-1 flex flex-col gap-1 inline-flex">
+                                      {[...item.approvals]
+                                        .sort((a, b) => {
+                                          const p: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
+                                          return (p[a.role] ?? 99) - (p[b.role] ?? 99);
+                                        })
+                                        .map((approval) => (
+                                          <div key={approval.id} className="text-xs flex items-center gap-1.5">
+                                            {approval.status === 'approved' ? (
+                                              <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                            ) : approval.status === 'revised' ? (
+                                              <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
+                                            ) : (
+                                              <XCircle className="h-3.5 w-3.5 text-red-500" />
+                                            )}
+                                            <span className={cn(
+                                              'whitespace-nowrap',
+                                              approval.status === 'approved' ? 'text-green-700 font-medium' :
+                                                approval.status === 'revised' ? 'text-blue-700 font-medium' :
+                                                  'text-red-700 font-medium',
+                                            )}>
+                                              {approval.status === 'approved' ? 'Disetujui' :
+                                                approval.status === 'revised' ? 'Sudah Direvisi' :
+                                                  'Menunggu'}{' '}
+                                              <span className="font-normal text-muted-foreground">
+                                                {approval.approver?.name}
+                                              </span>
+                                            </span>
+                                          </div>
+                                        ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+
+                              {/* Overall status badge */}
+                              <TableCell className="font-medium">
+                                <Badge className={cn('gap-1 w-fit', statusCfg.className)}>
+                                  <StatusIcon className="h-3 w-3" />
+                                  {statusCfg.label}
+                                </Badge>
+                              </TableCell>
+
+                              {/* Actions */}
+                              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                      <span className="sr-only">Open menu</span>
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/reimbursements/${item.id}`} className="cursor-pointer">
+                                        <Eye className="mr-2 h-4 w-4" /> Lihat Detail
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    {item.status === 'draft' && item.user?.id === auth.user.id && (
+                                      <DropdownMenuItem asChild>
+                                        <Link href={`/reimbursements/${item.id}/edit`} className="cursor-pointer">
+                                          <FileText className="mr-2 h-4 w-4" /> Edit Draft
+                                        </Link>
+                                      </DropdownMenuItem>
+                                    )}
+                                    {item.type === 'atr' && item.status === 'transferred' && (!item.eers || item.eers.length === 0) && (
+                                      <DropdownMenuItem asChild>
+                                        <Link href={`/reimbursements/create/eer?atr_code=${item.code}`} className="cursor-pointer">
+                                          <Receipt className="mr-2 h-4 w-4" /> Buat EER
+                                        </Link>
+                                      </DropdownMenuItem>
+                                    )}
+                                    {(isSuperadmin || isFinance || (item.type === 'allowance' && isHR)) && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                                          onClick={() => handleDelete(item.id)}
+                                        >
+                                          <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
 
                           {item.type === 'atr' && (
                             <TableRow className="bg-muted/5 hover:bg-muted/10 border-t-0">
@@ -984,7 +1105,8 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                   </TableBody>
                 </Table>
               </div>
-            ) : (
+            </>
+          ) : (
               <div className="p-8 text-center text-muted-foreground bg-muted/20 rounded-md border border-dashed flex flex-col items-center gap-2">
                 <div className="bg-gray-100 p-3 rounded-full">
                   <Search className="h-6 w-6 text-gray-400" />
