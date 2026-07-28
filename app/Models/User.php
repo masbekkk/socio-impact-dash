@@ -92,6 +92,11 @@ final class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
+    public function kpis(): HasMany
+    {
+        return $this->hasMany(UserKpi::class, 'user_id');
+    }
+
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class, 'user_id');

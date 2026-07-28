@@ -8,7 +8,7 @@ use App\Models\Reimbursement;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
-class FixBuggyAtrs extends Command
+final class FixBuggyAtrs extends Command
 {
     /**
      * The name and signature of the console command.
@@ -49,10 +49,11 @@ class FixBuggyAtrs extends Command
 
         if (count($buggyReimbs) === 0) {
             $this->info('No buggy ATRs found. Database is clean.');
+
             return;
         }
 
-        $this->warn('Found ' . count($buggyReimbs) . ' buggy ATRs to fix.');
+        $this->warn('Found '.count($buggyReimbs).' buggy ATRs to fix.');
 
         DB::transaction(function () use ($buggyReimbs): void {
             foreach ($buggyReimbs as $r) {

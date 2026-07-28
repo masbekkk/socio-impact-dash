@@ -43,6 +43,7 @@ import { BulkApprovalModal } from '@/components/dashboard/BulkApprovalModal';
 interface AccountManagerLeaderboardEntry {
   id: number;
   name: string;
+  kpi_nominal?: number;
   total_budget: number;
   atr_expenses: number;
   eer_expenses: number;
@@ -602,22 +603,22 @@ export default function Dashboard({
                           <tr>
                             <th className="px-5 py-3 font-semibold w-12 text-center">Rank</th>
                             <th className="px-5 py-3 font-semibold">Account Manager</th>
+                            <th className="px-5 py-3 font-semibold">KPI</th>
                             <th className="px-5 py-3 font-semibold text-right">Budget</th>
                             <th className="px-5 py-3 font-semibold text-right">Expenses</th>
                             <th className="px-5 py-3 font-semibold text-right">ATR</th>
                             <th className="px-5 py-3 font-semibold text-right">EER</th>
                             <th className="px-5 py-3 font-semibold text-right">Allowance</th>
                             <th className="px-5 py-3 font-semibold text-right">Profit</th>
-                            <th className="px-5 py-3 font-semibold">Utilization</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                          {((isHead && !isSuperadminFinanceDirektur) 
-                            ? accountManagerLeaderboard.filter(entry => entry.id === auth.user.id) 
+                          {((isHead && !isSuperadminFinanceDirektur)
+                            ? accountManagerLeaderboard.filter(entry => entry.id === auth.user.id)
                             : accountManagerLeaderboard
                           ).map((entry, idx) => {
                             const pct = entry.utilization_percentage;
-                            const barColor = pct > 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-emerald-500';
+                            const barColor = pct > 90 ? 'bg-emerald-500' : pct >= 50 ? 'bg-blue-500' : 'bg-yellow-500';
                             return (
                               <tr key={entry.id || entry.name} className="hover:bg-gray-50/50 transition-colors">
                                 <td className="px-5 py-4 text-center font-bold text-muted-foreground/60">#{idx + 1}</td>
@@ -629,20 +630,25 @@ export default function Dashboard({
                                     {entry.name}
                                   </Link>
                                 </td>
+                                <td className="px-5 py-4 min-w-[150px]">
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-xs font-semibold text-gray-800">
+                                        {entry.kpi_nominal && entry.kpi_nominal > 0 ? formatIDR(entry.kpi_nominal) : '-'}
+                                      </span>
+                                      {/* <span className="text-[11px] text-muted-foreground font-medium whitespace-nowrap">{pct.toFixed(0)}%</span> */}
+                                    </div>
+                                    {/* <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                      <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                                    </div> */}
+                                  </div>
+                                </td>
                                 <td className="px-5 py-4 font-bold text-emerald-700 text-right whitespace-nowrap">{formatIDR(entry.total_budget)}</td>
                                 <td className="px-5 py-4 font-medium text-orange-600 text-right whitespace-nowrap">{formatIDR(entry.total_expenses)}</td>
                                 <td className="px-5 py-4 text-blue-600 text-right whitespace-nowrap">{formatIDR(entry.atr_expenses)}</td>
                                 <td className="px-5 py-4 text-indigo-600 text-right whitespace-nowrap">{formatIDR(entry.eer_expenses)}</td>
                                 <td className="px-5 py-4 text-purple-600 text-right whitespace-nowrap">{formatIDR(entry.allowance_expenses)}</td>
                                 <td className={`px-5 py-4 font-bold text-right whitespace-nowrap ${entry.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatIDR(entry.profit)}</td>
-                                <td className="px-5 py-4 min-w-[120px]">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                                      <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
-                                    </div>
-                                    <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">{pct.toFixed(0)}%</span>
-                                  </div>
-                                </td>
                               </tr>
                             );
                           })}

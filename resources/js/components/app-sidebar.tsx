@@ -13,7 +13,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users, Settings, DollarSign, Calendar, CheckSquare, FileText } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Users, Settings, DollarSign, Calendar, CheckSquare, FileText, Target } from 'lucide-react';
 import AppLogo from './app-logo';
 import { usePermission } from '@/hooks/use-permission';
 
@@ -73,6 +73,12 @@ const NAV_ITEMS: NavItem[] = [
         title: 'Divisi',
         href: '/admin/divisions',
         icon: FileText,
+        roles: ['superadmin'],
+    },
+    {
+        title: 'Manajemen KPI',
+        href: '/admin/kpis',
+        icon: Target,
         roles: ['superadmin'],
     },
     {

@@ -228,9 +228,17 @@ final class DashboardController extends Controller
         $atrExpenses = $atrExpensesQuery->groupBy('p.account_manager_id')
             ->pluck('total', 'account_manager_id');
 
+        $userKpisQuery = DB::table('user_kpis')
+            ->selectRaw('user_id, SUM(nominal) as total_kpi')
+            ->whereIn('user_id', $amIds);
+        if ($year) {
+            $userKpisQuery->where('year', $year);
+        }
+        $userKpis = $userKpisQuery->groupBy('user_id')->pluck('total_kpi', 'user_id');
+
         $amNames = User::whereIn('id', $amIds)->get()->keyBy('id');
 
-        $accountManagerLeaderboard = $accountManagerLeaderboard->map(function ($item) use ($amNames, $eerExpenses, $allowanceExpenses, $atrExpenses) {
+        $accountManagerLeaderboard = $accountManagerLeaderboard->map(function ($item) use ($amNames, $eerExpenses, $allowanceExpenses, $atrExpenses, $userKpis) {
             $amId = $item->account_manager_id;
             $budget = (float) $item->total_budget;
             $eer = (float) ($eerExpenses[$amId] ?? 0);
@@ -238,9 +246,13 @@ final class DashboardController extends Controller
             $atr = (float) ($atrExpenses[$amId] ?? 0);
             $totalExpenses = $eer + $allowance + $atr;
             $profit = $budget - $totalExpenses;
-            
+            $kpiNominal = (float) ($userKpis[$amId] ?? 0);
+
             $utilization = 0;
-            if ($budget > 0) {
+            if ($kpiNominal > 0) {
+                $utilization = ($budget / $kpiNominal) * 100;
+                $utilization = max(0, min(100, $utilization));
+            } elseif ($budget > 0) {
                 $utilization = ($totalExpenses / $budget) * 100;
                 $utilization = max(0, min(100, $utilization));
             }
@@ -248,6 +260,7 @@ final class DashboardController extends Controller
             return [
                 'id' => $amId,
                 'name' => $amNames[$amId]?->name ?? 'Unknown',
+                'kpi_nominal' => $kpiNominal,
                 'total_budget' => $budget,
                 'atr_expenses' => $atr,
                 'eer_expenses' => $eer,
@@ -278,7 +291,7 @@ final class DashboardController extends Controller
             ->selectRaw('SUM((pyc.amount / p.budget_total) * p.management_budget) as total_management_budget')
             ->where('p.project_type', '!=', 'non-project')
             ->where('p.budget_total', '>', 0);
-            
+
         if ($year) {
             $globalManagementBudgetQuery->where('pyc.year', $year);
         }

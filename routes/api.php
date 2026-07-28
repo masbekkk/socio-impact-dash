@@ -24,7 +24,7 @@ Route::middleware(['auth:sanctum', 'can:view-admin'])->prefix('rbac')->group(fun
     Route::delete('permissions/{permission}', [PermissionController::class, 'destroy']);
 });
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function (): void {
+Route::middleware(['auth:web,sanctum'])->prefix('v1')->group(function (): void {
     Route::post('projects/{project}/deal', [App\Http\Controllers\Api\V1\ProjectController::class, 'deal']);
     Route::post('projects/{project}/approve', [App\Http\Controllers\Api\V1\ProjectApprovalController::class, 'approve']);
     Route::post('projects/{project}/reject', [App\Http\Controllers\Api\V1\ProjectApprovalController::class, 'reject']);
@@ -55,6 +55,10 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function (): void {
     Route::get('dashboard/leaderboard', [App\Http\Controllers\DashboardController::class, 'leaderboard']);
 
     Route::apiResource('users', App\Http\Controllers\Api\V1\UserController::class)->names('api.users');
+
+    // KPIs
+    Route::get('user-kpis/heads', [App\Http\Controllers\Api\V1\UserKpiController::class, 'heads'])->name('api.user-kpis.heads');
+    Route::apiResource('user-kpis', App\Http\Controllers\Api\V1\UserKpiController::class)->names('api.user-kpis');
 
     // Divisions
     Route::apiResource('divisions', App\Http\Controllers\Api\V1\DivisionController::class)->names('api.divisions');

@@ -36,7 +36,7 @@ final class ReimbursementResource extends JsonResource
                 'operational_budget' => $this->project?->operational_budget ? (float) $this->project->operational_budget : null,
                 'management_budget' => $this->project?->management_budget ? (float) $this->project->management_budget : null,
                 'allowance_budget' => $this->project?->allowance_budget ? (float) $this->project->allowance_budget : null,
-                'used_operational_budget' => $this->project ? - (float) $this->project->reimbursements()
+                'used_operational_budget' => $this->project ? -(float) $this->project->reimbursements()
                     ->where('type', 'atr')
                     ->whereNotIn('status', ['rejected', 'draft'])
                     ->sum('amount')
