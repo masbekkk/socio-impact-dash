@@ -630,17 +630,36 @@ export default function Dashboard({
                                     {entry.name}
                                   </Link>
                                 </td>
-                                <td className="px-5 py-4 min-w-[150px]">
-                                  <div className="flex flex-col gap-1">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="text-xs font-semibold text-gray-800">
-                                        {entry.kpi_nominal && entry.kpi_nominal > 0 ? formatIDR(entry.kpi_nominal) : '-'}
-                                      </span>
-                                      {/* <span className="text-[11px] text-muted-foreground font-medium whitespace-nowrap">{pct.toFixed(0)}%</span> */}
-                                    </div>
-                                    {/* <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                                      <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
-                                    </div> */}
+                                <td className="px-5 py-4 min-w-[180px]">
+                                  <div className="flex flex-col gap-1.5">
+                                    <span className="text-xs font-semibold text-gray-800">
+                                      {entry.kpi_nominal && entry.kpi_nominal > 0 ? formatIDR(entry.kpi_nominal) : '-'}
+                                    </span>
+                                    {entry.kpi_nominal && entry.kpi_nominal > 0 && (() => {
+                                      const kpiPct = (entry.total_budget / entry.kpi_nominal) * 100;
+                                      const kpiColor =
+                                        kpiPct >= 100
+                                          ? { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', bar: 'bg-emerald-500' }
+                                          : kpiPct >= 50
+                                          ? { badge: 'bg-blue-50 text-blue-700 border-blue-200', bar: 'bg-blue-500' }
+                                          : { badge: 'bg-amber-50 text-amber-700 border-amber-200', bar: 'bg-amber-400' };
+                                      return (
+                                        <>
+                                          <span
+                                            className={`inline-flex items-center self-start px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${kpiColor.badge}`}
+                                            title={`Budget Claim / KPI: ${formatIDR(entry.total_budget)} / ${formatIDR(entry.kpi_nominal)}`}
+                                          >
+                                            {kpiPct.toFixed(1)}% of KPI
+                                          </span>
+                                          <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+                                            <div
+                                              className={`h-full rounded-full transition-all duration-500 ${kpiColor.bar}`}
+                                              style={{ width: `${Math.min(100, kpiPct)}%` }}
+                                            />
+                                          </div>
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                 </td>
                                 <td className="px-5 py-4 font-bold text-emerald-700 text-right whitespace-nowrap">{formatIDR(entry.total_budget)}</td>
