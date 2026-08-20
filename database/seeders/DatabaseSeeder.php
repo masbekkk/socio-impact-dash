@@ -11,12 +11,7 @@ final class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            RoleAndPermissionSeeder::class,
-            CompanyUserSeeder::class,
-            DivisionSeeder::class,
-            LeaveSeeder::class,
-            LetterCodeSeeder::class,
-            LetterDivisionSeeder::class,
+            DemoDataSeeder::class,
         ]);
     }
 }
