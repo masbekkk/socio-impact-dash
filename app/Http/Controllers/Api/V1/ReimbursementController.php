@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\CreateReimbursement;
 use App\Actions\UpdateReimbursementStatus;
+use App\Enums\UserRole;
 use App\Formatters\JsonResponseFormatter;
 use App\Http\Requests\StoreReimbursementRequest;
 use App\Http\Requests\UpdateReimbursementStatusRequest;
@@ -109,7 +110,7 @@ final class ReimbursementController extends Controller
 
             $user = $request->user();
 
-            if (! $user->hasAnyPermission(['approve_reimbursements', 'reject_reimbursements']) && $data->user_id !== $user->id) {
+            if (! $user->hasRole(UserRole::Superadmin->value) && ! $user->hasAnyPermission(['approve_reimbursements', 'reject_reimbursements']) && $data->user_id !== $user->id) {
                 return JsonResponseFormatter::error('Anda tidak memiliki akses ke data ini', 403);
             }
 
@@ -160,9 +161,10 @@ final class ReimbursementController extends Controller
 
             // Authorization: owner, approver, or privileged role
             if (
-                $reimbursement->user_id !== $user->id
+                ! $user->hasRole(UserRole::Superadmin->value)
+                && $reimbursement->user_id !== $user->id
                 && ! $user->hasAnyPermission(['approve_reimbursements', 'reject_reimbursements'])
-                && ! $user->hasAnyRole(['finance', 'head', 'hr', 'direktur', 'superadmin'])
+                && ! $user->hasAnyRole(['finance', 'head', 'hr', 'direktur'])
             ) {
                 return JsonResponseFormatter::error('Anda tidak memiliki akses untuk mengubah status', 403);
             }
@@ -245,11 +247,13 @@ final class ReimbursementController extends Controller
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
             }
 
-            if ($reimbursement->user_id !== $user->id) {
+            $isSuperAdmin = $user->hasRole(UserRole::Superadmin->value);
+
+            if (! $isSuperAdmin && $reimbursement->user_id !== $user->id) {
                 return JsonResponseFormatter::error('Hanya pembuat pengajuan yang dapat mengirim ulang revisi.', 403);
             }
 
-            if ($reimbursement->status->value !== 'revision' && $reimbursement->status->value !== 'draft') {
+            if (! $isSuperAdmin && $reimbursement->status->value !== 'revision' && $reimbursement->status->value !== 'draft') {
                 return JsonResponseFormatter::error('Pengajuan tidak dalam status revisi atau draft.', 422);
             }
 
@@ -553,6 +557,10 @@ final class ReimbursementController extends Controller
 
             if (! $item) {
                 return JsonResponseFormatter::notFound('Item reimbursement tidak ditemukan');
+            }
+
+            if (! $user->hasRole(UserRole::Superadmin->value) && $reimbursement->user_id !== $user->id && ! $user->hasAnyRole(['finance', 'head'])) {
+                return JsonResponseFormatter::error('Unauthorized', 403);
             }
 
             $request->validate([

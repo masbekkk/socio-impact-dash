@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Resources\V1\Reimbursement\ReimbursementResource;
 use App\Models\Project;
 use App\Models\Reimbursement;
@@ -314,13 +315,14 @@ final readonly class ReimbursementController
     {
         $reimbursement = Reimbursement::with(['items.budgetDetail', 'project.division', 'project.pic', 'project.head', 'atrBudgetSelecteds.budgetDetail', 'approvals', 'documents', 'user'])->findOrFail($id);
         $user = $request->user();
+        $isSuperAdmin = $user && $user->hasRole(UserRole::Superadmin->value);
 
-        // Security: only owner can edit draft
-        if ($reimbursement->user_id !== $user->id) {
+        // Security: only owner or superadmin can edit
+        if (! $isSuperAdmin && $reimbursement->user_id !== $user?->id) {
             abort(403, 'Unauthorized');
         }
 
-        if ($reimbursement->status->value !== 'draft') {
+        if (! $isSuperAdmin && $reimbursement->status->value !== 'draft') {
             return Inertia::render('Reimbursements/Show', [
                 'id' => $id,
                 // Add any other props needed by Show.tsx if it's rendered directly
@@ -508,13 +510,13 @@ final readonly class ReimbursementController
 
     public function bulkApprove(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $ids = $request->input('ids', []);
+        $ids = (array) $request->input('ids', []);
         $role = $request->input('role');
         $user = $request->user();
         if ($user && ! empty($ids)) {
-            $role = $role ?? $user->getRoleNames()->first();
+            $role = $role ?? ($user->hasRole(UserRole::Superadmin->value) ? 'superadmin' : $user->getRoleNames()->first());
             $bulkAction = new \App\Actions\BulkApproveReimbursements(new \App\Actions\UpdateReimbursementStatus());
-            $bulkAction->handle($ids, $user->id, $role);
+            $bulkAction->handle($ids, $user->id, (string) $role);
         }
 
         return back()->with('success', 'Berhasil menyetujui pengajuan terpilih.');
@@ -522,13 +524,13 @@ final readonly class ReimbursementController
 
     public function bulkRequestFund(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $ids = $request->input('ids', []);
+        $ids = (array) $request->input('ids', []);
         $role = $request->input('role');
         $user = $request->user();
         if ($user && ! empty($ids)) {
-            $role = $role ?? $user->getRoleNames()->first();
+            $role = $role ?? ($user->hasRole(UserRole::Superadmin->value) ? 'superadmin' : $user->getRoleNames()->first());
             $bulkAction = new \App\Actions\BulkRequestFundReimbursements(new \App\Actions\UpdateReimbursementStatus());
-            $bulkAction->handle($ids, $user->id, $role);
+            $bulkAction->handle($ids, $user->id, (string) $role);
         }
 
         return back()->with('success', 'Berhasil melakukan request fund untuk pengajuan terpilih.');
@@ -536,14 +538,14 @@ final readonly class ReimbursementController
 
     public function bulkReject(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $ids = $request->input('ids', []);
-        $notes = $request->input('notes', []);
+        $ids = (array) $request->input('ids', []);
+        $notes = (array) $request->input('notes', []);
         $role = $request->input('role');
         $user = $request->user();
         if ($user && ! empty($ids)) {
-            $role = $role ?? $user->getRoleNames()->first();
+            $role = $role ?? ($user->hasRole(UserRole::Superadmin->value) ? 'superadmin' : $user->getRoleNames()->first());
             $bulkAction = new \App\Actions\BulkRejectReimbursements(new \App\Actions\UpdateReimbursementStatus());
-            $bulkAction->handle($ids, $notes, $user->id, $role);
+            $bulkAction->handle($ids, $notes, $user->id, (string) $role);
         }
 
         return back()->with('success', 'Berhasil menolak pengajuan terpilih.');
@@ -551,28 +553,50 @@ final readonly class ReimbursementController
 
     public function bulkRevision(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $ids = $request->input('ids', []);
-        $notes = $request->input('notes', []);
+        $ids = (array) $request->input('ids', []);
+        $notes = (array) $request->input('notes', []);
         $role = $request->input('role');
         $user = $request->user();
         if ($user && ! empty($ids)) {
-            $role = $role ?? $user->getRoleNames()->first();
+            $role = $role ?? ($user->hasRole(UserRole::Superadmin->value) ? 'superadmin' : $user->getRoleNames()->first());
             $bulkAction = new \App\Actions\BulkRevisionReimbursements(new \App\Actions\UpdateReimbursementStatus());
-            $bulkAction->handle($ids, $notes, $user->id, $role);
+            $bulkAction->handle($ids, $notes, $user->id, (string) $role);
         }
 
         return back()->with('success', 'Berhasil meminta revisi pengajuan terpilih.');
     }
 
-    public function approve(): \Illuminate\Http\RedirectResponse
+    public function approve(int|string $id, Request $request): \Illuminate\Http\RedirectResponse
     {
-        // Logic to approve
-        return back();
+        $user = $request->user();
+        if ($user) {
+            $reimbursement = Reimbursement::query()->findOrFail($id);
+            $role = $request->input('role') ?? ($user->hasRole(UserRole::Superadmin->value) ? 'superadmin' : $user->getRoleNames()->first());
+            $action = new \App\Actions\UpdateReimbursementStatus();
+            $action->handle($reimbursement, [
+                'action' => 'approved',
+                'role' => $role,
+                'notes' => $request->input('notes'),
+            ], $user->id);
+        }
+
+        return back()->with('success', 'Berhasil menyetujui pengajuan.');
     }
 
-    public function reject(): \Illuminate\Http\RedirectResponse
+    public function reject(int|string $id, Request $request): \Illuminate\Http\RedirectResponse
     {
-        // Logic to reject
-        return back();
+        $user = $request->user();
+        if ($user) {
+            $reimbursement = Reimbursement::query()->findOrFail($id);
+            $role = $request->input('role') ?? ($user->hasRole(UserRole::Superadmin->value) ? 'superadmin' : $user->getRoleNames()->first());
+            $action = new \App\Actions\UpdateReimbursementStatus();
+            $action->handle($reimbursement, [
+                'action' => 'rejected',
+                'role' => $role,
+                'notes' => $request->input('notes') ?? $request->input('rejection_reason'),
+            ], $user->id);
+        }
+
+        return back()->with('success', 'Berhasil menolak pengajuan.');
     }
 }

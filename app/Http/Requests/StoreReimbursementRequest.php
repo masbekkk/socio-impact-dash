@@ -17,6 +17,8 @@ final class StoreReimbursementRequest extends FormRequest
 
     public function rules(): array
     {
+        $isSuperAdmin = $this->user()?->hasRole('superadmin') ?? false;
+
         return [
             'code' => ['nullable', 'string', 'max:50', 'unique:reimbursements,code'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
@@ -26,7 +28,7 @@ final class StoreReimbursementRequest extends FormRequest
             'status' => ['nullable', 'string', new Enum(\App\Enums\ReimbursementStatus::class)],
             'eer_type' => ['nullable', 'string', 'in:refund,reimbursement,balance'],
             'amount' => ['required_unless:status,draft', 'numeric', 'min:1'],
-            'approver_head_id' => ['required', 'integer', 'exists:users,id'],
+            'approver_head_id' => [$isSuperAdmin ? 'nullable' : 'required', 'integer', 'exists:users,id'],
             'approver_finance_id' => ['nullable', 'integer', 'exists:users,id'],
             'approver_direktur_id' => ['nullable', 'integer', 'exists:users,id'],
             'approver_hr_id' => ['nullable', 'integer', 'exists:users,id'],
@@ -84,6 +86,10 @@ final class StoreReimbursementRequest extends FormRequest
     public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
         $validator->after(function ($validator) {
+            if ($this->user()?->hasRole('superadmin')) {
+                return;
+            }
+
             $type = $this->input('type');
             $status = $this->input('status');
             $amount = (float) $this->input('amount', 0);

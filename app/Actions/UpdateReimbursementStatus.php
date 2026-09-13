@@ -20,8 +20,10 @@ final readonly class UpdateReimbursementStatus
             $notes = $data['notes'] ?? null;
             $role = $data['role'] ?? null;
 
+            $user = \App\Models\User::find($approverId);
+            $isSuperAdmin = $user?->hasRole(\App\Enums\UserRole::Superadmin->value) ?? false;
+
             if ($role === null) {
-                $user = \App\Models\User::find($approverId);
                 if ($user) {
                     $roles = $user->getRoleNames();
                     if ($roles->contains('head')) {
@@ -34,9 +36,13 @@ final readonly class UpdateReimbursementStatus
 
                         if ($isHead) {
                             $role = 'head';
+                        } elseif ($isSuperAdmin) {
+                            $role = 'superadmin';
                         } else {
                             $role = $roles->first();
                         }
+                    } elseif ($isSuperAdmin) {
+                        $role = 'superadmin';
                     } else {
                         $role = $roles->first();
                     }
@@ -83,14 +89,26 @@ final readonly class UpdateReimbursementStatus
                 return $reimbursement->fresh(['user', 'project', 'documents', 'approvals.approver', 'comments.user']);
             }
 
-            if ($role === 'direktur') {
-                // Direktur override: update ALL approval records for this reimbursement
-                ReimbursementApproval::query()->where('reimbursement_id', $reimbursement->id)
+            if ($role === 'direktur' || $role === 'superadmin' || ($isSuperAdmin && (! $role || $role === 'superadmin'))) {
+                // Direktur or Superadmin override: update ALL approval records for this reimbursement
+                $affected = ReimbursementApproval::query()->where('reimbursement_id', $reimbursement->id)
                     ->update([
                         'status' => $action === 'request_fund' ? ApprovalStatus::Approved->value : $action,
                         'approved_at' => in_array($action, [ApprovalStatus::Approved->value, 'request_fund']) ? now() : null,
                         'updated_by' => $approverId, // Track who actually took the action
                     ]);
+
+                if ($affected === 0) {
+                    ReimbursementApproval::query()->create([
+                        'reimbursement_id' => $reimbursement->id,
+                        'role' => $role ?? ($isSuperAdmin ? 'superadmin' : 'direktur'),
+                        'approver_id' => $approverId,
+                        'status' => $action === 'request_fund' ? ApprovalStatus::Approved->value : $action,
+                        'notes' => $notes,
+                        'approved_at' => in_array($action, [ApprovalStatus::Approved->value, 'request_fund']) ? now() : null,
+                        'updated_by' => $approverId,
+                    ]);
+                }
             } else {
                 // Dual Role Logic for ATR/EER: If Finance/HR is also Head, clear both.
                 if (in_array($reimbursement->type, [\App\Enums\ReimbursementType::ATR, \App\Enums\ReimbursementType::EER]) &&
@@ -180,6 +198,8 @@ final readonly class UpdateReimbursementStatus
                         } else {
                             $updateData['status'] = $roleStatusMap[$role];
                         }
+                    } elseif ($isSuperAdmin) {
+                        $updateData['status'] = ReimbursementStatus::Approved;
                     }
                 }
 

@@ -18,16 +18,22 @@ final class UpdateReimbursementStatusRequest extends FormRequest
 
     public function rules(): array
     {
+        $isSuperAdmin = $this->user()?->hasRole('superadmin') ?? false;
+
         return [
             'action' => ['required', 'string', new Enum(ReimbursementStatus::class)],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'role' => ['nullable', 'string', 'in:head,finance,hr,direktur'],
+            'role' => ['nullable', 'string', 'in:head,finance,hr,direktur,superadmin'],
             'transfer_proof' => [
                 'nullable',
                 'file',
                 'mimes:jpg,jpeg,png,pdf',
                 'max:5120',
-                Rule::requiredIf(function () {
+                Rule::requiredIf(function () use ($isSuperAdmin) {
+                    if ($isSuperAdmin) {
+                        return false;
+                    }
+
                     if ($this->input('action') !== 'transferred') {
                         return false;
                     }
