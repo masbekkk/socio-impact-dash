@@ -10,6 +10,8 @@ use App\Models\DivisionCode;
 use App\Models\LetterCode;
 use App\Models\LetterDivision;
 use App\Models\LetterRequest;
+use App\Models\LetterRequestLog;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -66,7 +68,15 @@ final class LetterRequestController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $letterRequest = LetterRequest::with(['project', 'requester', 'pic', 'letterCode', 'letterDivision', 'division'])->find($id);
+        $letterRequest = LetterRequest::with([
+            'project',
+            'requester',
+            'pic',
+            'letterCode',
+            'letterDivision',
+            'division',
+            'logs.user',
+        ])->find($id);
 
         if (! $letterRequest) {
             return JsonResponseFormatter::notFound('Letter Request tidak ditemukan.');
@@ -107,7 +117,18 @@ final class LetterRequestController extends Controller
             'pic_id' => $request->user()->id,
             'approval_status' => 'pending',
             'letter_number' => $letterNumber,
-            'status' => 'used',
+            'status' => $validated['status'] ?? 'used',
+        ]);
+
+        LetterRequestLog::query()->create([
+            'letter_request_id' => $letterRequest->id,
+            'user_id' => $request->user()->id,
+            'action' => 'created',
+            'changes' => [
+                'letter_number' => ['old' => null, 'new' => $letterNumber],
+                'letter_date' => ['old' => null, 'new' => $letterDate->format('Y-m-d')],
+            ],
+            'note' => "Nomor surat dibuat: {$letterNumber}",
         ]);
 
         return JsonResponseFormatter::created(
@@ -140,8 +161,11 @@ final class LetterRequestController extends Controller
             'letter_code_id' => ['required', 'exists:letter_codes,id'],
             'letter_division_id' => ['required', 'exists:letter_divisions,id'],
             'keterangan' => ['nullable', 'string'],
-            // 'status' => ['required', 'in:used,unused'],
+            'reason' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $reason = $validated['reason'] ?? null;
+        unset($validated['reason']);
 
         // If letter date, code, or division changed, technically the letter number should change too.
         // However, standard practice is to retain the number once generated, or regenerate it.
@@ -188,7 +212,108 @@ final class LetterRequestController extends Controller
             $validated['letter_number'] = $this->generateLetterNumber($newDate, $perusahaan, $kode, $divisi, (int) $id);
         }
 
+        // Build change diffs
+        $changes = [];
+        $notes = [];
+
+        if ($oldDate->toDateString() !== $newDate->toDateString()) {
+            $changes['letter_date'] = [
+                'old' => $oldDate->format('Y-m-d'),
+                'new' => $newDate->format('Y-m-d'),
+            ];
+            $dateMsg = 'Tanggal surat diubah dari '.$oldDate->format('d/m/Y').' ke '.$newDate->format('d/m/Y');
+            if ($needsNewNumber) {
+                $dateMsg .= " (Nomor surat diperbarui: {$validated['letter_number']})";
+            } else {
+                $dateMsg .= " (Nomor surat lama dipertahankan: {$letterRequest->letter_number})";
+            }
+            $notes[] = $dateMsg;
+        }
+
+        if (isset($validated['letter_number']) && $validated['letter_number'] !== $letterRequest->letter_number) {
+            $changes['letter_number'] = [
+                'old' => $letterRequest->letter_number,
+                'new' => $validated['letter_number'],
+            ];
+            $notes[] = "Nomor surat diubah menjadi {$validated['letter_number']}";
+        }
+
+        if ($letterRequest->subject !== $validated['subject']) {
+            $changes['subject'] = [
+                'old' => $letterRequest->subject,
+                'new' => $validated['subject'],
+            ];
+            $notes[] = "Perihal diubah dari '{$letterRequest->subject}' ke '{$validated['subject']}'";
+        }
+
+        if ($letterRequest->recipient !== $validated['recipient']) {
+            $changes['recipient'] = [
+                'old' => $letterRequest->recipient,
+                'new' => $validated['recipient'],
+            ];
+            $notes[] = "Penerima/Tujuan diubah dari '{$letterRequest->recipient}' ke '{$validated['recipient']}'";
+        }
+
+        if ((int) $letterRequest->project_id !== (int) $validated['project_id']) {
+            $oldProject = Project::query()->find($letterRequest->project_id)?->name ?? (string) $letterRequest->project_id;
+            $newProject = Project::query()->find($validated['project_id'])?->name ?? (string) $validated['project_id'];
+            $changes['project_id'] = [
+                'old' => $oldProject,
+                'new' => $newProject,
+            ];
+            $notes[] = "Proyek diubah dari '{$oldProject}' ke '{$newProject}'";
+        }
+
+        if ((int) $letterRequest->division_id !== (int) $validated['division_id']) {
+            $oldDiv = DivisionCode::query()->find($letterRequest->division_id)?->code ?? (string) $letterRequest->division_id;
+            $newDiv = DivisionCode::query()->find($validated['division_id'])?->code ?? (string) $validated['division_id'];
+            $changes['division_id'] = [
+                'old' => $oldDiv,
+                'new' => $newDiv,
+            ];
+            $notes[] = "Perusahaan diubah dari '{$oldDiv}' ke '{$newDiv}'";
+        }
+
+        if ((int) $letterRequest->letter_code_id !== (int) $validated['letter_code_id']) {
+            $oldCode = LetterCode::query()->find($letterRequest->letter_code_id)?->code ?? (string) $letterRequest->letter_code_id;
+            $newCode = LetterCode::query()->find($validated['letter_code_id'])?->code ?? (string) $validated['letter_code_id'];
+            $changes['letter_code_id'] = [
+                'old' => $oldCode,
+                'new' => $newCode,
+            ];
+            $notes[] = "Kode jenis surat diubah dari '{$oldCode}' ke '{$newCode}'";
+        }
+
+        if ((int) $letterRequest->letter_division_id !== (int) $validated['letter_division_id']) {
+            $oldLDiv = LetterDivision::query()->find($letterRequest->letter_division_id)?->code ?? (string) $letterRequest->letter_division_id;
+            $newLDiv = LetterDivision::query()->find($validated['letter_division_id'])?->code ?? (string) $validated['letter_division_id'];
+            $changes['letter_division_id'] = [
+                'old' => $oldLDiv,
+                'new' => $newLDiv,
+            ];
+            $notes[] = "Divisi surat diubah dari '{$oldLDiv}' ke '{$newLDiv}'";
+        }
+
+        if ($letterRequest->keterangan !== ($validated['keterangan'] ?? null)) {
+            $changes['keterangan'] = [
+                'old' => $letterRequest->keterangan,
+                'new' => $validated['keterangan'] ?? null,
+            ];
+            $notes[] = 'Keterangan diperbarui';
+        }
+
         $letterRequest->update($validated);
+
+        if (! empty($changes) || ! empty($reason)) {
+            LetterRequestLog::query()->create([
+                'letter_request_id' => $letterRequest->id,
+                'user_id' => $user->id,
+                'action' => 'updated',
+                'changes' => $changes,
+                'reason' => $reason,
+                'note' => ! empty($notes) ? implode('; ', $notes) : 'Data nomor surat diperbarui',
+            ]);
+        }
 
         return JsonResponseFormatter::success(
             $letterRequest,
@@ -267,7 +392,24 @@ final class LetterRequestController extends Controller
             'status' => ['required', 'in:used,unused'],
         ]);
 
-        $letterRequest->update(['status' => $validated['status']]);
+        $oldStatus = $letterRequest->status;
+        $newStatus = $validated['status'];
+
+        $letterRequest->update(['status' => $newStatus]);
+
+        if ($oldStatus !== $newStatus) {
+            $oldLabel = $oldStatus === 'used' ? 'Terpakai' : 'Tidak Terpakai';
+            $newLabel = $newStatus === 'used' ? 'Terpakai' : 'Tidak Terpakai';
+            LetterRequestLog::query()->create([
+                'letter_request_id' => $letterRequest->id,
+                'user_id' => $user->id,
+                'action' => 'status_changed',
+                'changes' => [
+                    'status' => ['old' => $oldStatus, 'new' => $newStatus],
+                ],
+                'note' => "Status diubah dari '{$oldLabel}' menjadi '{$newLabel}'",
+            ]);
+        }
 
         return JsonResponseFormatter::success(
             $letterRequest,

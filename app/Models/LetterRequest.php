@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 final class LetterRequest extends Model
@@ -61,5 +62,10 @@ final class LetterRequest extends Model
     public function division(): BelongsTo
     {
         return $this->belongsTo(DivisionCode::class, 'division_id');
+    }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(LetterRequestLog::class)->orderBy('created_at', 'desc');
     }
 }

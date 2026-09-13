@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, User as UserIcon, FileText, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Save, User as UserIcon, FileText, Loader2, History, MessageSquare, Clock } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -17,9 +18,24 @@ import {
 import { SearchableSelect } from '@/components/SearchableSelect';
 import DatePicker from '@/components/DatePicker';
 import { format } from "date-fns";
+import { id } from "date-fns/locale";
 import axios from 'axios';
 import { SharedData } from '@/types';
 import { usePermission } from '@/hooks/use-permission';
+
+interface LetterRequestLog {
+    id: number;
+    user_id: number | null;
+    action: string;
+    changes: Record<string, { old: unknown; new: unknown }> | null;
+    reason: string | null;
+    note: string | null;
+    created_at: string;
+    user?: {
+        id: number;
+        name: string;
+    } | null;
+}
 
 interface Project {
     id: number;
@@ -66,8 +82,10 @@ export default function Edit({ projects, letterRequestId }: Props) {
         division_id: '',
         keterangan: '',
         status: '',
+        reason: '',
     });
 
+    const [logs, setLogs] = useState<LetterRequestLog[]>([]);
     const [letterCodes, setLetterCodes] = useState<MasterData[]>([]);
     const [letterDivisions, setLetterDivisions] = useState<MasterData[]>([]);
     const [divisions, setDivisions] = useState<DivisionItem[]>([]);
@@ -118,6 +136,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
                 setDivisions(mainDivRes.data.data.data);
 
                 const reqData = requestRes.data.data;
+                setLogs(reqData.logs || []);
                 setData({
                     project_id: reqData.project_id?.toString() || '',
                     letter_date: reqData.letter_date ? format(new Date(reqData.letter_date), 'yyyy-MM-dd') : '',
@@ -129,6 +148,7 @@ export default function Edit({ projects, letterRequestId }: Props) {
                     division_id: reqData.division_id?.toString() || '',
                     keterangan: reqData.keterangan || '',
                     status: reqData.status || 'unused',
+                    reason: '',
                 });
 
             } catch (error) {
@@ -308,6 +328,24 @@ export default function Edit({ projects, letterRequestId }: Props) {
                                         />
                                         {errors.keterangan && <p className="text-sm text-destructive font-medium">{errors.keterangan}</p>}
                                     </div>
+
+                                    <div className="space-y-2 md:col-span-2 pt-2 border-t">
+                                        <Label htmlFor="reason" className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+                                            <MessageSquare className="h-4 w-4 text-amber-600" />
+                                            Alasan Perubahan (Opsional)
+                                        </Label>
+                                        <Textarea
+                                            id="reason"
+                                            placeholder="Jelaskan alasan pengeditan data ini (misal: Tanggal pelaksanaan acara diundur, revisi tujuan surat, dsb.)..."
+                                            className="min-h-[80px] w-full"
+                                            value={data.reason}
+                                            onChange={(e) => setData({ ...data, reason: e.target.value })}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Catatan ini akan tersimpan pada riwayat audit perubahan nomor surat.
+                                        </p>
+                                        {errors.reason && <p className="text-sm text-destructive font-medium">{errors.reason}</p>}
+                                    </div>
                                 </div>
                             </CardContent>
                         )}
@@ -321,6 +359,96 @@ export default function Edit({ projects, letterRequestId }: Props) {
                             </Button>
                         </CardFooter>
                     </form>
+                </Card>
+
+                {/* Riwayat Perubahan */}
+                <Card className="border-none shadow-sm rounded-xl overflow-hidden">
+                    <CardHeader className="bg-white border-b">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <History className="h-4 w-4 text-muted-foreground" />
+                                    Riwayat Perubahan
+                                </CardTitle>
+                                <CardDescription className="text-xs">Catatan audit log setiap kali nomor surat ini diubah.</CardDescription>
+                            </div>
+                            {logs.length > 0 && (
+                                <Badge variant="secondary" className="text-xs font-normal">
+                                    {logs.length} catatan
+                                </Badge>
+                            )}
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        {loadingData ? (
+                            <div className="flex justify-center items-center py-6 text-muted-foreground gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Memuat riwayat...
+                            </div>
+                        ) : logs.length > 0 ? (
+                            <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-muted">
+                                {logs.map((log) => {
+                                    const isCreated = log.action === 'created';
+                                    const isStatus = log.action === 'status_changed';
+                                    const dotColor = isCreated
+                                        ? 'bg-emerald-500'
+                                        : isStatus
+                                            ? 'bg-blue-500'
+                                            : 'bg-amber-500';
+                                    const actionBadge = isCreated
+                                        ? 'Dibuat'
+                                        : isStatus
+                                            ? 'Status Diubah'
+                                            : 'Diedit';
+
+                                    return (
+                                        <div key={log.id} className="relative text-xs">
+                                            <div className={`absolute -left-6 top-1.5 h-2.5 w-2.5 rounded-full ${dotColor} ring-4 ring-white`} />
+                                            <div className="bg-white border rounded-lg p-3.5 space-y-2 shadow-xs">
+                                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold text-gray-900 flex items-center gap-1">
+                                                            <UserIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                                            {log.user?.name || 'Sistem'}
+                                                        </span>
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                                            {actionBadge}
+                                                        </Badge>
+                                                    </div>
+                                                    <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+                                                        <Clock className="h-3 w-3" />
+                                                        {format(new Date(log.created_at), 'dd MMM yyyy, HH:mm', { locale: id })} WIB
+                                                    </span>
+                                                </div>
+
+                                                {log.reason && (
+                                                    <div className="bg-amber-50/70 border border-amber-200/70 rounded p-2 text-amber-900 flex items-start gap-2">
+                                                        <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-amber-600 shrink-0" />
+                                                        <div>
+                                                            <span className="font-semibold text-[11px] block text-amber-800">Alasan Perubahan:</span>
+                                                            <p className="italic text-xs mt-0.5">{log.reason}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {log.note && (
+                                                    <p className="text-gray-700 leading-relaxed font-medium bg-gray-50/70 p-2 rounded border border-gray-100">
+                                                        {log.note}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6 text-muted-foreground border border-dashed rounded-lg bg-gray-50/50 space-y-1">
+                                <History className="h-5 w-5 mx-auto text-muted-foreground opacity-50" />
+                                <p className="text-xs font-medium">Belum ada riwayat perubahan tercatat.</p>
+                                <p className="text-[11px] text-muted-foreground">Perubahan pada nomor surat ini akan otomatis terekam di sini.</p>
+                            </div>
+                        )}
+                    </CardContent>
                 </Card>
             </div>
         </AppSidebarLayout>
