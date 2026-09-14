@@ -117,7 +117,7 @@ final class LetterRequestController extends Controller
             'pic_id' => $request->user()->id,
             'approval_status' => 'pending',
             'letter_number' => $letterNumber,
-            'status' => $validated['status'] ?? 'used',
+            'status' => 'used',
         ]);
 
         LetterRequestLog::query()->create([
