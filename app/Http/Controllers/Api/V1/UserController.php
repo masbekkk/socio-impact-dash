@@ -143,17 +143,17 @@ final class UserController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(User $user): JsonResponse
-    {
-        if ($user->id === auth()->id()) {
-            return JsonResponseFormatter::error(null, 'Cannot delete your own account.', 400);
-        }
+    // public function destroy(User $user): JsonResponse
+    // {
+    //     if ($user->id === auth()->id()) {
+    //         return JsonResponseFormatter::error(null, 'Cannot delete your own account.', 400);
+    //     }
 
-        $user->delete();
+    //     $user->delete();
 
-        return JsonResponseFormatter::success(
-            null,
-            'User deleted successfully'
-        );
-    }
+    //     return JsonResponseFormatter::success(
+    //         null,
+    //         'User deleted successfully'
+    //     );
+    // }
 }

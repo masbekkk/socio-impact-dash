@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\CreateReimbursement;
 use App\Enums\UserRole;
+use App\Http\Requests\StoreReimbursementRequest;
 use App\Http\Resources\V1\Reimbursement\ReimbursementResource;
 use App\Models\Project;
 use App\Models\Reimbursement;
 use App\Services\ReimbursementService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -262,9 +265,16 @@ final readonly class ReimbursementController
     /**
      * Store a newly created resource in storage.
      */
-    public function store(): void
+    public function store(StoreReimbursementRequest $request, CreateReimbursement $createReimbursement): RedirectResponse
     {
-        //
+        $user = $request->user();
+
+        $createReimbursement->handle(
+            $request->all(),
+            $user ? $user->id : 0
+        );
+
+        return redirect()->route('reimbursements.index')->with('success', 'Reimbursement berhasil dibuat');
     }
 
     /**
@@ -508,7 +518,7 @@ final readonly class ReimbursementController
         //
     }
 
-    public function bulkApprove(Request $request): \Illuminate\Http\RedirectResponse
+    public function bulkApprove(Request $request): RedirectResponse
     {
         $ids = (array) $request->input('ids', []);
         $role = $request->input('role');
@@ -522,7 +532,7 @@ final readonly class ReimbursementController
         return back()->with('success', 'Berhasil menyetujui pengajuan terpilih.');
     }
 
-    public function bulkRequestFund(Request $request): \Illuminate\Http\RedirectResponse
+    public function bulkRequestFund(Request $request): RedirectResponse
     {
         $ids = (array) $request->input('ids', []);
         $role = $request->input('role');
@@ -536,7 +546,7 @@ final readonly class ReimbursementController
         return back()->with('success', 'Berhasil melakukan request fund untuk pengajuan terpilih.');
     }
 
-    public function bulkReject(Request $request): \Illuminate\Http\RedirectResponse
+    public function bulkReject(Request $request): RedirectResponse
     {
         $ids = (array) $request->input('ids', []);
         $notes = (array) $request->input('notes', []);
@@ -551,7 +561,7 @@ final readonly class ReimbursementController
         return back()->with('success', 'Berhasil menolak pengajuan terpilih.');
     }
 
-    public function bulkRevision(Request $request): \Illuminate\Http\RedirectResponse
+    public function bulkRevision(Request $request): RedirectResponse
     {
         $ids = (array) $request->input('ids', []);
         $notes = (array) $request->input('notes', []);
@@ -566,7 +576,7 @@ final readonly class ReimbursementController
         return back()->with('success', 'Berhasil meminta revisi pengajuan terpilih.');
     }
 
-    public function approve(int|string $id, Request $request): \Illuminate\Http\RedirectResponse
+    public function approve(int|string $id, Request $request): RedirectResponse
     {
         $user = $request->user();
         if ($user) {
@@ -583,7 +593,7 @@ final readonly class ReimbursementController
         return back()->with('success', 'Berhasil menyetujui pengajuan.');
     }
 
-    public function reject(int|string $id, Request $request): \Illuminate\Http\RedirectResponse
+    public function reject(int|string $id, Request $request): RedirectResponse
     {
         $user = $request->user();
         if ($user) {

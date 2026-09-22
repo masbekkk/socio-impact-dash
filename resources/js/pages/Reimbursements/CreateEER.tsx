@@ -343,6 +343,12 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
 
   const handleSubmit = async (status: 'submitted' | 'draft' = 'submitted') => {
     if (status === 'submitted') {
+      if (!formData.code || !formData.code.trim()) {
+        setErrors(prev => ({ ...prev, code: ['Nomor EER wajib diisi saat melakukan pengajuan.'] }));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
       const firstItem = items[0];
       if (!firstItem || firstItem.amount <= 0) {
         setErrors({ _general: ['Nominal pengeluaran wajib diisi dan harus lebih besar dari 0.'] });
@@ -439,15 +445,18 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="md:col-span-3 space-y-2">
-                  <Label htmlFor="code">Nomor EER</Label>
+                  <Label htmlFor="code">
+                    Nomor EER <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="code"
                     name="code"
-                    placeholder="Masukkan Nomor EER (opsional)"
+                    placeholder="Masukkan Nomor EER"
                     className={cn("h-10", errors.code ? "border-red-500" : "")}
                     value={formData.code}
                     onChange={handleChange}
                   />
+                  <p className="text-xs text-muted-foreground">Wajib diisi saat submit pengajuan (opsional jika disimpan sebagai draft).</p>
                   {errors.code && <p className="text-xs text-red-500 font-medium">{errors.code[0]}</p>}
                 </div>
                 {hasRole(['finance', 'superadmin']) && (

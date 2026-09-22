@@ -18,6 +18,7 @@ use App\Services\ReimbursementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 final class ReimbursementController extends Controller
@@ -257,7 +258,17 @@ final class ReimbursementController extends Controller
                 return JsonResponseFormatter::error('Pengajuan tidak dalam status revisi atau draft.', 422);
             }
 
+            $isEer = $reimbursement->type === \App\Enums\ReimbursementType::EER || $request->input('type') === 'eer';
+            $isDraft = $request->input('status') === 'draft' || $request->input('status') === \App\Enums\ReimbursementStatus::Draft->value;
+            $isCodeRequired = $isEer && ! $isDraft;
+
             $validated = $request->validate([
+                'code' => [
+                    $isCodeRequired ? 'required' : 'nullable',
+                    'string',
+                    'max:50',
+                    'unique:reimbursements,code,'.$reimbursement->id,
+                ],
                 'status' => ['nullable', 'string', 'in:draft,submitted'],
                 'usage_plan' => ['nullable', 'string'],
                 'amount' => ['nullable', 'numeric', 'min:0'],
@@ -279,6 +290,9 @@ final class ReimbursementController extends Controller
                 'documents.*.id' => ['nullable', 'integer'],
                 'documents.*.file' => ['nullable', 'file', 'max:10240'],
                 'documents.*.type' => ['nullable', 'string', 'max:50'],
+            ], [
+                'code.required' => 'Nomor EER wajib diisi saat melakukan pengajuan.',
+                'code.unique' => $isEer ? 'Nomor EER sudah digunakan.' : 'Kode reimbursement sudah digunakan.',
             ]);
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request): void {
@@ -298,6 +312,10 @@ final class ReimbursementController extends Controller
                 }
 
                 $updateData = ['status' => $newStatus];
+
+                if (array_key_exists('code', $validated)) {
+                    $updateData['code'] = $validated['code'];
+                }
 
                 if (isset($validated['usage_plan'])) {
                     $updateData['usage_plan'] = $validated['usage_plan'];
@@ -483,6 +501,8 @@ final class ReimbursementController extends Controller
                 new ReimbursementResource($data),
                 'Pengajuan berhasil diperbarui'
             );
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }

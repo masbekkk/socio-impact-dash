@@ -18,9 +18,17 @@ final class StoreReimbursementRequest extends FormRequest
     public function rules(): array
     {
         $isSuperAdmin = $this->user()?->hasRole('superadmin') ?? false;
+        $isEer = $this->input('type') === ReimbursementType::EER->value || $this->input('type') === 'eer';
+        $isDraft = $this->input('status') === \App\Enums\ReimbursementStatus::Draft->value || $this->input('status') === 'draft';
+        $isCodeRequired = $isEer && ! $isDraft;
 
         return [
-            'code' => ['nullable', 'string', 'max:50', 'unique:reimbursements,code'],
+            'code' => [
+                $isCodeRequired ? 'required' : 'nullable',
+                'string',
+                'max:50',
+                'unique:reimbursements,code',
+            ],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'atr_id' => ['nullable', 'integer', 'exists:reimbursements,id'],
@@ -73,7 +81,11 @@ final class StoreReimbursementRequest extends FormRequest
 
     public function messages(): array
     {
+        $isEer = $this->input('type') === ReimbursementType::EER->value || $this->input('type') === 'eer';
+
         return [
+            'code.required' => 'Nomor EER wajib diisi saat melakukan pengajuan.',
+            'code.unique' => $isEer ? 'Nomor EER sudah digunakan.' : 'Kode reimbursement sudah digunakan.',
             'type.required' => 'Jenis reimbursement wajib diisi.',
             'amount.required' => 'Jumlah nominal wajib diisi.',
             'amount.min' => 'Jumlah nominal minimal 1.',

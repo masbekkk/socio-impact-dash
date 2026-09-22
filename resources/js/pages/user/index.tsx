@@ -116,16 +116,16 @@ export default function Index() {
         fetchUsers();
     }, [searchQuery, roleFilter, positionFilter, employeeTypeFilter, joinedFrom, joinedTo, contractFrom, contractTo, page, perPage]);
 
-    const handleDelete = async (id: number) => {
-        if (!confirm('Apakah anda yakin ingin menghapus user ini?')) return;
-        try {
-            await axios.delete(`/api/v1/users/${id}`);
-            toast.success('User berhasil dihapus.');
-            fetchUsers();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Gagal menghapus user.');
-        }
-    };
+    // const handleDelete = async (id: number) => {
+    //     if (!confirm('Apakah anda yakin ingin menghapus user ini?')) return;
+    //     try {
+    //         await axios.delete(`/api/v1/users/${id}`);
+    //         toast.success('User berhasil dihapus.');
+    //         fetchUsers();
+    //     } catch (error: any) {
+    //         toast.error(error.response?.data?.message || 'Gagal menghapus user.');
+    //     }
+    // };
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -363,12 +363,12 @@ export default function Index() {
                                                                 </Link>
                                                             </DropdownMenuItem>
                                                         )}
-                                                        <DropdownMenuItem
+                                                        {/* <DropdownMenuItem
                                                             className="text-destructive focus:text-destructive cursor-pointer"
                                                             onClick={() => handleDelete(user.id)}
                                                         >
                                                             Delete
-                                                        </DropdownMenuItem>
+                                                        </DropdownMenuItem> */}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
