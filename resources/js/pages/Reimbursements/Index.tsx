@@ -529,7 +529,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                           <ListFilter className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="w-56 max-h-72 overflow-y-auto">
                         <DropdownMenuLabel>Filter Status</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuCheckboxItem

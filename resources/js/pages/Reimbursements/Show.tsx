@@ -964,6 +964,7 @@ export default function Show() {
       const resubmitData = {
         action: 'revision',
         type: data.type,
+        ...(data.code ? { code: data.code } : {}),
         ...(revisionForm.project_id && { project_id: revisionForm.project_id }),
         ...(revisionForm.replacement_pic_id && { replacement_pic_id: revisionForm.replacement_pic_id }),
         ...(revisionForm.approver_head_id && { approver_head_id: revisionForm.approver_head_id }),

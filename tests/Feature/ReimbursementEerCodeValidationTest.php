@@ -174,7 +174,7 @@ test('submitting Allowance without code succeeds because code is optional for Al
     $response->assertStatus(201);
 });
 
-test('resubmitting EER with status submitted without code fails validation with 422', function (): void {
+test('resubmitting EER in revision status that already has code succeeds without passing code', function (): void {
     $user = User::factory()->create();
     $user->assignRole(UserRole::Pegawai->value);
 
@@ -182,6 +182,55 @@ test('resubmitting EER with status submitted without code fails validation with 
         'user_id' => $user->id,
         'type' => ReimbursementType::EER,
         'status' => ReimbursementStatus::Revision,
+        'code' => 'EER-2026-REV-01',
+    ]);
+
+    $this->actingAs($user);
+
+    $response = $this->postJson("/api/v1/reimbursements/{$reimbursement->id}/resubmit", [
+        'usage_plan' => 'Updated revision usage plan',
+    ]);
+
+    $response->assertStatus(200);
+
+    $reimbursement->refresh();
+    expect($reimbursement->code)->toBe('EER-2026-REV-01')
+        ->and($reimbursement->status)->toBe(ReimbursementStatus::Revised);
+});
+
+test('resubmitting EER in revision status that already has code succeeds when passing the same code', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole(UserRole::Pegawai->value);
+
+    $reimbursement = Reimbursement::factory()->create([
+        'user_id' => $user->id,
+        'type' => ReimbursementType::EER,
+        'status' => ReimbursementStatus::Revision,
+        'code' => 'EER-2026-REV-02',
+    ]);
+
+    $this->actingAs($user);
+
+    $response = $this->postJson("/api/v1/reimbursements/{$reimbursement->id}/resubmit", [
+        'code' => 'EER-2026-REV-02',
+        'usage_plan' => 'Updated revision usage plan with code passed',
+    ]);
+
+    $response->assertStatus(200);
+
+    $reimbursement->refresh();
+    expect($reimbursement->code)->toBe('EER-2026-REV-02')
+        ->and($reimbursement->status)->toBe(ReimbursementStatus::Revised);
+});
+
+test('resubmitting EER without existing code fails validation if submitted without code', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole(UserRole::Pegawai->value);
+
+    $reimbursement = Reimbursement::factory()->create([
+        'user_id' => $user->id,
+        'type' => ReimbursementType::EER,
+        'status' => ReimbursementStatus::Draft,
         'code' => null,
     ]);
 

@@ -18,6 +18,7 @@ use App\Services\ReimbursementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -260,14 +261,14 @@ final class ReimbursementController extends Controller
 
             $isEer = $reimbursement->type === \App\Enums\ReimbursementType::EER || $request->input('type') === 'eer';
             $isDraft = $request->input('status') === 'draft' || $request->input('status') === \App\Enums\ReimbursementStatus::Draft->value;
-            $isCodeRequired = $isEer && ! $isDraft;
+            $isCodeRequired = $isEer && ! $isDraft && empty($reimbursement->code);
 
             $validated = $request->validate([
                 'code' => [
                     $isCodeRequired ? 'required' : 'nullable',
                     'string',
                     'max:50',
-                    'unique:reimbursements,code,'.$reimbursement->id,
+                    Rule::unique('reimbursements', 'code')->ignore($reimbursement->id),
                 ],
                 'status' => ['nullable', 'string', 'in:draft,submitted'],
                 'usage_plan' => ['nullable', 'string'],
@@ -313,7 +314,7 @@ final class ReimbursementController extends Controller
 
                 $updateData = ['status' => $newStatus];
 
-                if (array_key_exists('code', $validated)) {
+                if (array_key_exists('code', $validated) && ! empty($validated['code'])) {
                     $updateData['code'] = $validated['code'];
                 }
 

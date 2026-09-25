@@ -343,7 +343,7 @@ export default function CreateEER({ atrs = [], approvers = {}, users = [], expen
 
   const handleSubmit = async (status: 'submitted' | 'draft' = 'submitted') => {
     if (status === 'submitted') {
-      if (!formData.code || !formData.code.trim()) {
+      if ((!formData.code || !formData.code.trim()) && (!isEdit || !reimbursementData?.code)) {
         setErrors(prev => ({ ...prev, code: ['Nomor EER wajib diisi saat melakukan pengajuan.'] }));
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
