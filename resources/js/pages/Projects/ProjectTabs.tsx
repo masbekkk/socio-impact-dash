@@ -129,7 +129,10 @@ export default function ProjectTabs({
         setMgmtBudget(project.management_budget || 0);
         setAllowanceBudget(project.allowance_budget || 0);
         setLocalBudgetStatus(project.budget_partition_status || 'draft');
-    }, [project]);
+        if (!editDetailBudget && project.budget_details) {
+            setDetailBudgets(project.budget_details);
+        }
+    }, [project, editDetailBudget]);
 
     const handleSaveBudget = async () => {
         setSavingBudget(true);
@@ -170,7 +173,7 @@ export default function ProjectTabs({
 
     const handleSaveDetailBudget = async () => {
         setSavingDetailBudget(true);
-        const currentTotalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.used_eer) > 0 ? Number(item.used_eer) : (Number(item.amount_pelaksanaan) || 0)), 0);
+        const currentTotalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
         if (currentTotalPelaksanaan > opsBudget) {
             setSavingDetailBudget(false);
             if (onShowToast) onShowToast('Gagal menyimpan: Total amount pelaksanaan melebihi budget operasional. Sesuaikan RAB atau ajukan tambahan operasional.', 'error');
@@ -198,10 +201,14 @@ export default function ProjectTabs({
                 submitData.append(`delete_detail_budgets[${index}]`, id);
             });
 
-            await axios.post(`/api/v1/projects/${project.uuid}`, submitData, {
+            const response = await axios.post(`/api/v1/projects/${project.uuid}`, submitData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
+            if (response.data?.data?.budget_details) {
+                setDetailBudgets(response.data.data.budget_details);
+            }
+            setDeleteDetailBudgets([]);
             setEditDetailBudget(false);
             if (onShowToast) onShowToast('Rincian anggaran berhasil disimpan', 'success');
             if (refetchProject) refetchProject();
@@ -335,7 +342,7 @@ export default function ProjectTabs({
     };
 
 
-    const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.used_eer) > 0 ? Number(item.used_eer) : (Number(item.amount_pelaksanaan) || 0)), 0);
+    const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
     const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
     const totalUsedAtr = detailBudgets.reduce((sum, item) => sum + (Number(item.used_atr) || 0), 0);
     const totalUsedEer = detailBudgets.reduce((sum, item) => sum + (Number(item.used_eer) || 0), 0);
@@ -880,7 +887,7 @@ export default function ProjectTabs({
                                                 const proposal = Number(detail.amount_proposal) || 0;
                                                 const usedAtr = Number(detail.used_atr) || 0;
                                                 const usedEer = Number(detail.used_eer) || 0;
-                                                const pelaksanaan = usedEer > 0 ? usedEer : (Number(detail.amount_pelaksanaan) || 0);
+                                                const pelaksanaan = Number(detail.amount_pelaksanaan) || 0;
                                                 const eerDiff = usedAtr - usedEer;
 
                                                 return (
@@ -985,7 +992,7 @@ export default function ProjectTabs({
                                                         const proposal = Number(detail.amount_proposal) || 0;
                                                         const usedAtr = Number(detail.used_atr) || 0;
                                                         const usedEer = Number(detail.used_eer) || 0;
-                                                        const pelaksanaan = usedEer > 0 ? usedEer : (Number(detail.amount_pelaksanaan) || 0);
+                                                        const pelaksanaan = Number(detail.amount_pelaksanaan) || 0;
                                                         const eerDiff = usedAtr - usedEer;
                                                         
                                                         return (
