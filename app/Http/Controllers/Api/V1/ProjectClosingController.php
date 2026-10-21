@@ -15,6 +15,8 @@ final class ProjectClosingController extends Controller
 {
     public function close(Request $request, Project $project, CloseProject $closeProject): \Illuminate\Http\JsonResponse
     {
+        abort_if($request->user()->hasProjectReportingOnlyAccess(), 403);
+
         $validated = $request->validate([
             'actual_budget' => ['required', 'numeric', 'min:0'],
             'documents' => ['nullable', 'array'],

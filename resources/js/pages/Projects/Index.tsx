@@ -622,6 +622,11 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                       <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
                         <Eye className="h-3.5 w-3.5" /> Tap untuk detail
                       </span>
+                      {hasRole('finance') && (
+                        <Link href={`/projects/${p.uuid}/termins`} onClick={(event) => event.stopPropagation()} className="text-xs font-medium text-blue-700 hover:underline">
+                          Upload Termin
+                        </Link>
+                      )}
                       <Button variant="outline" size="sm" className="gap-1 text-xs">
                         Lihat Detail
                       </Button>
@@ -799,6 +804,13 @@ export default function ProjectsIndex({ filters, divisions }: { filters?: any, d
                                 <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Lihat Detail
                               </Link>
                             </DropdownMenuItem>
+                            {hasRole('finance') && (
+                              <DropdownMenuItem asChild>
+                                <Link href={`/projects/${p.uuid}/termins`} className="flex items-center cursor-pointer">
+                                  <FileText className="mr-2 h-4 w-4 text-muted-foreground" /> Upload Termin
+                                </Link>
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem asChild>
                               <Link href={`/projects/${p.uuid}/edit`} className="flex items-center cursor-pointer">
                                 <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Proyek

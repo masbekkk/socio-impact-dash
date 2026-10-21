@@ -35,7 +35,7 @@ final class ProjectVisibilityTest extends TestCase
         $otherUser->assignRole(UserRole::Pegawai->value);
 
         Project::factory()->create(['created_by' => $head->id, 'name' => 'Head Project']);
-        Project::factory()->create(['created_by' => $otherUser->id, 'name' => 'Other Project']);
+        Project::factory()->create(['created_by' => $otherUser->id, 'head_id' => $otherUser->id, 'account_manager_id' => $otherUser->id, 'pic_id' => $otherUser->id, 'name' => 'Other Project']);
 
         $response = $this->actingAs($head)->getJson('/api/v1/projects');
 
@@ -44,7 +44,7 @@ final class ProjectVisibilityTest extends TestCase
             ->assertJsonPath('data.data.0.name', 'Head Project');
     }
 
-    public function test_pegawai_can_only_see_their_own_projects(): void
+    public function test_pegawai_can_see_only_active_project_names(): void
     {
         $pegawai = User::factory()->create();
         $pegawai->assignRole(UserRole::Pegawai->value);
@@ -52,14 +52,18 @@ final class ProjectVisibilityTest extends TestCase
         $otherUser = User::factory()->create();
         $otherUser->assignRole(UserRole::Head->value);
 
-        Project::factory()->create(['created_by' => $pegawai->id, 'name' => 'Pegawai Project']);
-        Project::factory()->create(['created_by' => $otherUser->id, 'name' => 'Other Project']);
+        Project::factory()->create(['created_by' => $pegawai->id, 'name' => 'Pegawai Project', 'status' => 'active']);
+        Project::factory()->create(['created_by' => $otherUser->id, 'name' => 'Other Project', 'status' => 'active']);
+        Project::factory()->create(['created_by' => $otherUser->id, 'name' => 'Draft Project', 'status' => 'draft']);
 
         $response = $this->actingAs($pegawai)->getJson('/api/v1/projects');
 
         $response->assertStatus(200)
-            ->assertJsonCount(1, 'data.data')
-            ->assertJsonPath('data.data.0.name', 'Pegawai Project');
+            ->assertJsonCount(2, 'data.data')
+            ->assertJsonMissingPath('data.data.0.budget_total')
+            ->assertSee('Other Project')
+            ->assertSee('Pegawai Project')
+            ->assertDontSee('Draft Project');
     }
 
     public function test_direktur_can_see_all_projects(): void
@@ -84,7 +88,7 @@ final class ProjectVisibilityTest extends TestCase
 
         $user1 = User::factory()->create();
 
-        Project::factory()->create(['created_by' => $user1->id, 'name' => 'P1']);
+        Project::factory()->create(['created_by' => $user1->id, 'division_id' => $finance->division_id, 'name' => 'P1']);
 
         $response = $this->actingAs($finance)->getJson('/api/v1/projects');
 

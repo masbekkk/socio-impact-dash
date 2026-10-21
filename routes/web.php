@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('presences/checkout', [PresenceController::class, 'checkOut'])->name('presences.checkout');
 
     // Projects
+    Route::get('projects/{project}/termins', [ProjectController::class, 'termins'])->name('projects.termins');
     Route::resource('projects', ProjectController::class)->only(['index', 'create', 'show', 'edit']);
 
     // Reimbursements

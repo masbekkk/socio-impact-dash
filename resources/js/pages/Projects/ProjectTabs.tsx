@@ -90,6 +90,7 @@ export default function ProjectTabs({
             }
         }
     }, [activeTab]);
+
     // Use project.termin_payments from props if available
     const [localPaymentTerms, setLocalPaymentTerms] = useState<any[]>(project.termin_payments || []);
 
@@ -1365,7 +1366,7 @@ export default function ProjectTabs({
                                                                 {/* Dokumen Penagihan */}
                                                                 <div className="space-y-1.5">
                                                                     <Label className="text-xs font-medium text-muted-foreground">Dokumen Penagihan</Label>
-                                                                    {term.billing_document ? (
+                                                                    {term.billing_document && (
                                                                         <div className="flex items-center gap-2 p-2 bg-gray-50 border rounded-lg">
                                                                             <FileText className="h-4 w-4 text-gray-500 animate-pulse" />
                                                                             <span className="text-xs font-medium text-gray-700 flex-1 truncate">Dokumen Penagihan.pdf</span>
@@ -1373,25 +1374,23 @@ export default function ProjectTabs({
                                                                                 <Eye className="h-3.5 w-3.5" />
                                                                             </Button>
                                                                         </div>
-                                                                    ) : (
-                                                                        <label className="block">
-                                                                            <Input
-                                                                                type="file"
-                                                                                accept=".pdf,.jpg,.jpeg,.png"
-                                                                                className="text-xs h-9 cursor-pointer file:cursor-pointer file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 file:border-0 file:rounded-sm file:px-2 file:mr-2 hover:file:bg-gray-200"
-                                                                                onChange={(e) => {
-                                                                                    const file = e.target.files?.[0];
-                                                                                    if (file) handleTerminBillingUpload(term.id, file);
-                                                                                }}
-                                                                            />
-                                                                        </label>
                                                                     )}
+                                                                    <Input
+                                                                        type="file"
+                                                                        aria-label={term.billing_document ? 'Ganti dokumen penagihan' : 'Upload dokumen penagihan'}
+                                                                        accept=".pdf,.jpg,.jpeg,.png"
+                                                                        className="text-xs h-9 cursor-pointer file:cursor-pointer file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 file:border-0 file:rounded-sm file:px-2 file:mr-2 hover:file:bg-gray-200"
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            if (file) handleTerminBillingUpload(term.id, file);
+                                                                        }}
+                                                                    />
                                                                 </div>
 
                                                                 {/* Bukti Pembayaran */}
                                                                 <div className="space-y-1.5">
                                                                     <Label className="text-xs font-medium text-muted-foreground">Bukti Pembayaran</Label>
-                                                                    {term.proof_payment ? (
+                                                                    {term.proof_payment && (
                                                                         <div className="flex items-center gap-2 p-2 bg-gray-50 border rounded-lg">
                                                                             <FileText className="h-4 w-4 text-gray-500" />
                                                                             <span className="text-xs font-medium text-gray-700 flex-1 truncate">Bukti Pembayaran.pdf</span>
@@ -1399,19 +1398,17 @@ export default function ProjectTabs({
                                                                                 <Eye className="h-3.5 w-3.5" />
                                                                             </Button>
                                                                         </div>
-                                                                    ) : (
-                                                                        <label className="block">
-                                                                            <Input
-                                                                                type="file"
-                                                                                accept=".pdf,.jpg,.jpeg,.png"
-                                                                                className="text-xs h-9 cursor-pointer file:cursor-pointer file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 file:border-0 file:rounded-sm file:px-2 file:mr-2 hover:file:bg-gray-200"
-                                                                                onChange={(e) => {
-                                                                                    const file = e.target.files?.[0];
-                                                                                    if (file) handleTerminProofUpload(term.id, file);
-                                                                                }}
-                                                                            />
-                                                                        </label>
                                                                     )}
+                                                                    <Input
+                                                                        type="file"
+                                                                        aria-label={term.proof_payment ? 'Ganti bukti pembayaran' : 'Upload bukti pembayaran'}
+                                                                        accept=".pdf,.jpg,.jpeg,.png"
+                                                                        className="text-xs h-9 cursor-pointer file:cursor-pointer file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700 file:border-0 file:rounded-sm file:px-2 file:mr-2 hover:file:bg-gray-200"
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            if (file) handleTerminProofUpload(term.id, file);
+                                                                        }}
+                                                                    />
                                                                 </div>
                                                             </div>
                                                         </div>

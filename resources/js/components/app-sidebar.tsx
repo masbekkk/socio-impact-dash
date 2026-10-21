@@ -1,4 +1,3 @@
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -13,7 +12,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users, Settings, DollarSign, Calendar, CheckSquare, FileText, Target } from 'lucide-react';
+import { Folder, LayoutGrid, Users, Settings, DollarSign, Calendar, CheckSquare, FileText, Target } from 'lucide-react';
 import AppLogo from './app-logo';
 import { usePermission } from '@/hooks/use-permission';
 
@@ -27,7 +26,7 @@ const NAV_ITEMS: NavItem[] = [
         title: 'Proyek',
         href: '/projects',
         icon: Folder,
-        roles: ['head', 'direktur', 'superadmin', 'finance'],
+        roles: ['pegawai', 'head', 'direktur', 'superadmin', 'finance'],
     },
     {
         title: 'Keuangan',

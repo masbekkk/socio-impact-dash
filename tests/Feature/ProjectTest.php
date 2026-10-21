@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 final class ProjectTest extends TestCase
 {
-    public function test_pegawai_can_create_project(): void
+    public function test_pegawai_cannot_create_project(): void
     {
         $user = User::factory()->withRole(UserRole::Pegawai)->create();
         $division = Division::factory()->create();
@@ -32,8 +32,8 @@ final class ProjectTest extends TestCase
             'end_date' => now()->addDays(5)->format('Y-m-d'),
         ]);
 
-        $response->assertCreated();
-        $this->assertDatabaseHas('projects', ['name' => 'Test Project', 'client_name' => 'Test Client']);
+        $response->assertForbidden();
+        $this->assertDatabaseMissing('projects', ['name' => 'Test Project', 'client_name' => 'Test Client']);
     }
 
     public function test_finance_can_create_project(): void

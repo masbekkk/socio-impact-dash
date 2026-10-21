@@ -15,6 +15,8 @@ final class ProjectTerminPaymentController extends Controller
 {
     public function update(Request $request, Project $project, ProjectTerminPayment $termin, UpdateTerminPayment $updateTermin): \Illuminate\Http\JsonResponse
     {
+        abort_unless($request->user()->hasAnyRole(['finance', 'superadmin']), 403);
+
         // Ensure termin belongs to project
         abort_if($termin->project_id !== $project->id, 404);
 

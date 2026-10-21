@@ -16,6 +16,8 @@ final class ProjectApprovalController extends Controller
 {
     public function approve(Request $request, Project $project, ApproveProject $approveProject): \Illuminate\Http\JsonResponse
     {
+        abort_if($request->user()->hasProjectReportingOnlyAccess(), 403);
+
         $validated = $request->validate([
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -30,6 +32,8 @@ final class ProjectApprovalController extends Controller
 
     public function reject(Request $request, Project $project, RejectProject $rejectProject): \Illuminate\Http\JsonResponse
     {
+        abort_if($request->user()->hasProjectReportingOnlyAccess(), 403);
+
         $validated = $request->validate([
             'notes' => ['required', 'string', 'max:1000'],
         ]);

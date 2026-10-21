@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Projects\StoreProjectMonitoring;
+use App\Enums\ProjectStatus;
 use App\Formatters\JsonResponseFormatter;
 use App\Http\Resources\V1\Project\ProjectMonitoringResource;
 use App\Models\Project;
@@ -15,6 +16,10 @@ final class ProjectMonitoringController extends Controller
 {
     public function store(Request $request, Project $project, StoreProjectMonitoring $storeMonitoring): \Illuminate\Http\JsonResponse
     {
+        if ($request->user()->hasProjectReportingOnlyAccess()) {
+            abort_unless($project->status === ProjectStatus::Active, 404);
+        }
+
         $validated = $request->validate([
             'report_date' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:5000'],
@@ -34,8 +39,10 @@ final class ProjectMonitoringController extends Controller
         );
     }
 
-    public function destroy(Project $project, \App\Models\ProjectMonitoring $monitoring): \Illuminate\Http\JsonResponse
+    public function destroy(Request $request, Project $project, \App\Models\ProjectMonitoring $monitoring): \Illuminate\Http\JsonResponse
     {
+        abort_if($request->user()->hasProjectReportingOnlyAccess(), 403);
+
         // Check if monitoring belongs to project
         if ($monitoring->project_id !== $project->id) {
             return JsonResponseFormatter::error('Monitoring report not found for this project', 404);

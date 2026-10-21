@@ -7,11 +7,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Actions\Projects\CreateProject;
 use App\Actions\Projects\DeleteProject;
 use App\Actions\Projects\UpdateProject;
+use App\Enums\ProjectStatus;
 use App\Enums\UserRole;
 use App\Formatters\JsonResponseFormatter;
 use App\Http\Requests\Projects\StoreProjectRequest;
 use App\Http\Requests\Projects\UpdateProjectRequest;
 use App\Http\Resources\V1\Project\ProjectCollection;
+use App\Http\Resources\V1\Project\ProjectMonitoringResource;
 use App\Http\Resources\V1\Project\ProjectResource;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +25,23 @@ final class ProjectController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        if ($request->user()->hasProjectReportingOnlyAccess()) {
+            $projects = Project::query()
+                ->where('status', ProjectStatus::Active)
+                ->orderBy('code')
+                ->paginate($request->integer('per_page', 10));
+
+            return JsonResponseFormatter::success([
+                'data' => $projects->getCollection()->map(fn (Project $project): array => $project->only(['uuid', 'code', 'initial_project', 'name'])),
+                'current_page' => $projects->currentPage(),
+                'last_page' => $projects->lastPage(),
+                'per_page' => $projects->perPage(),
+                'total' => $projects->total(),
+                'from' => $projects->firstItem(),
+                'to' => $projects->lastItem(),
+            ], 'Projects retrieved successfully');
+        }
+
         $query = Project::with(['division.divisionCode', 'accountManager', 'head', 'pic', 'creator', 'yearClaims']);
 
         /** @var \App\Models\User $user */
@@ -123,6 +142,8 @@ final class ProjectController extends Controller
 
     public function store(StoreProjectRequest $request, CreateProject $createProject): JsonResponse
     {
+        abort_if($request->user()->hasProjectReportingOnlyAccess(), 403);
+
         try {
             $user = $request->user();
             $project = $createProject->handle($request->validated(), $user->id);
@@ -138,8 +159,18 @@ final class ProjectController extends Controller
 
     }
 
-    public function show(Project $project): JsonResponse
+    public function show(Request $request, Project $project): JsonResponse
     {
+        if ($request->user()->hasProjectReportingOnlyAccess()) {
+            abort_unless($project->status === ProjectStatus::Active, 404);
+            $project->load(['monitorings.documents', 'monitorings.creator']);
+
+            return JsonResponseFormatter::success([
+                ...$project->only(['uuid', 'code', 'initial_project', 'name']),
+                'monitoring_history' => ProjectMonitoringResource::collection($project->monitorings),
+            ], 'Project retrieved successfully');
+        }
+
         $project->load(['division.divisionCode', 'accountManager', 'head', 'pic', 'locations', 'terminPayments', 'documents', 'monitorings.documents', 'monitorings.creator', 'approvals.approvedBy', 'budgetDetails', 'yearClaims']);
 
         return JsonResponseFormatter::success(
@@ -150,6 +181,8 @@ final class ProjectController extends Controller
 
     public function update(UpdateProjectRequest $request, Project $project, UpdateProject $updateProject): JsonResponse
     {
+        abort_if($request->user()->hasProjectReportingOnlyAccess(), 403);
+
         /** @var \App\Models\User $user */
         $user = $request->user();
         $project = $updateProject->handle($project, $request->validated(), $user->id);
@@ -162,6 +195,8 @@ final class ProjectController extends Controller
 
     public function destroy(Project $project, DeleteProject $deleteProject): JsonResponse
     {
+        abort_if(request()->user()->hasProjectReportingOnlyAccess(), 403);
+
         $deleteProject->handle($project);
 
         return JsonResponseFormatter::success(
@@ -172,6 +207,8 @@ final class ProjectController extends Controller
 
     public function deal(Project $project, UpdateProject $updateProject): JsonResponse
     {
+        abort_if(request()->user()->hasProjectReportingOnlyAccess(), 403);
+
         /** @var int $userId */
         $userId = auth()->id();
         $project = $updateProject->handle($project, ['status' => 'active'], $userId);

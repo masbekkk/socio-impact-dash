@@ -92,6 +92,13 @@ final class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
+    public function hasProjectReportingOnlyAccess(): bool
+    {
+        $roles = $this->getRoleNames();
+
+        return $roles->count() === 1 && $roles->contains('pegawai');
+    }
+
     public function kpis(): HasMany
     {
         return $this->hasMany(UserKpi::class, 'user_id');
