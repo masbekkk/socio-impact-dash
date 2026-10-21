@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import DatePicker from '@/components/DatePicker'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { usePage } from '@inertiajs/react'
+import { Link, router, usePage } from '@inertiajs/react'
 import axios from 'axios'
 import Editor from '@/components/Editor';
 import { usePermission } from '@/hooks/use-permission';
@@ -42,6 +42,12 @@ interface ProjectTabsProps {
     isProjectDealed: boolean;
     setIsDealAlertOpen: (val: boolean) => void;
     setIsCloseAlertOpen: (val: boolean) => void;
+}
+
+interface UsageRecord {
+    id: number;
+    code: string;
+    amount: number;
 }
 
 export default function ProjectTabs({
@@ -114,6 +120,7 @@ export default function ProjectTabs({
 
     // Detail Budget State
     const [detailBudgets, setDetailBudgets] = useState<any[]>(project.budget_details || []);
+    const [selectedUsage, setSelectedUsage] = useState<{ type: 'ATR' | 'EER'; activity: string; records: UsageRecord[] } | null>(null);
     const [editDetailBudget, setEditDetailBudget] = useState(false);
     const [savingDetailBudget, setSavingDetailBudget] = useState(false);
     const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([]);
@@ -344,13 +351,43 @@ export default function ProjectTabs({
 
     const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
     const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
-    const totalUsedAtr = detailBudgets.reduce((sum, item) => sum + (Number(item.used_atr) || 0), 0);
+    const totalUsedAtr = detailBudgets.reduce((sum, item) => sum + (Number(item.pending_atr) || 0), 0);
     const totalUsedEer = detailBudgets.reduce((sum, item) => sum + (Number(item.used_eer) || 0), 0);
     const computedRemainingOperational = opsBudget
-        - (project.used_atr || 0)
-        - (project.used_eer_reimbursement || 0)
-        + (project.used_eer_refund || 0);
+        - (project.pending_atr || 0)
+        - (project.used_eer || 0);
     const estimasiProfit = (project.budget_total || 0) - totalPelaksanaan;
+    const formatRupiah = (amount: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    const mergeUsageRecords = (records: UsageRecord[]): UsageRecord[] => Array.from(
+        records.reduce((merged, record) => {
+            const existing = merged.get(record.id);
+            merged.set(record.id, { ...record, amount: (existing?.amount || 0) + Number(record.amount) });
+            return merged;
+        }, new Map<number, UsageRecord>()).values()
+    );
+    const usageAmount = (amount: number, records: UsageRecord[] = [], type: 'ATR' | 'EER', activity: string) => {
+        const value = formatRupiah(amount);
+        if (amount <= 0 || records.length === 0) return value;
+
+        return (
+            <button
+                type="button"
+                className="cursor-pointer rounded-sm underline underline-offset-2 hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+                aria-label={`Lihat ${records.length} ${type} untuk ${activity}: ${value}`}
+                onClick={() => {
+                    if (records.length === 1) {
+                        router.visit(`/reimbursements/${records[0].id}`);
+                    } else {
+                        setSelectedUsage({ type, activity, records });
+                    }
+                }}
+            >
+                {value}
+            </button>
+        );
+    };
+    const allAtrRecords = mergeUsageRecords(detailBudgets.flatMap(detail => detail.atr_records || []));
+    const allEerRecords = mergeUsageRecords(detailBudgets.flatMap(detail => detail.eer_records || []));
 
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -794,7 +831,7 @@ export default function ProjectTabs({
                                     <div className="mt-4 pt-4 border-t border-slate-50 space-y-2">
                                         <div className="flex justify-between items-center gap-2">
                                             <span className="text-[10px] text-muted-foreground shrink-0">Terpakai ATR</span>
-                                            <span className="text-[10px] font-semibold text-slate-700 truncate">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.used_atr || 0)}</span>
+                                            <span className="text-[10px] font-semibold text-slate-700 truncate">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(project.pending_atr || 0)}</span>
                                         </div>
                                         <div className="flex justify-between items-center gap-2">
                                             <span className="text-[10px] text-muted-foreground shrink-0">Terpakai EER</span>
@@ -885,10 +922,11 @@ export default function ProjectTabs({
                                         {detailBudgets.length > 0 ? (
                                             detailBudgets.map((detail, idx) => {
                                                 const proposal = Number(detail.amount_proposal) || 0;
-                                                const usedAtr = Number(detail.used_atr) || 0;
+                                                const grossAtr = Number(detail.used_atr) || 0;
+                                                const usedAtr = Number(detail.pending_atr) || 0;
                                                 const usedEer = Number(detail.used_eer) || 0;
                                                 const pelaksanaan = Number(detail.amount_pelaksanaan) || 0;
-                                                const eerDiff = usedAtr - usedEer;
+                                                const eerDiff = grossAtr - usedAtr - usedEer;
 
                                                 return (
                                                     <Card key={idx} className="p-4 space-y-3 border border-slate-200">
@@ -897,7 +935,7 @@ export default function ProjectTabs({
                                                                 <span className="text-[10px] font-bold text-muted-foreground uppercase">Kegiatan #{idx + 1}</span>
                                                                 <h5 className="font-semibold text-sm text-slate-900">{detail.item_name || '-'}</h5>
                                                             </div>
-                                                            {usedAtr > 0 || usedEer > 0 ? (
+                                                            {usedEer > 0 ? (
                                                                 <Badge variant="outline" className={`font-mono text-[10px] shrink-0 ${eerDiff > 0 ? 'text-green-600 border-green-200 bg-green-50' : (eerDiff < 0 ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-500 border-gray-200 bg-gray-50')}`}>
                                                                     {eerDiff > 0 ? 'Refund: ' : (eerDiff < 0 ? 'Reimb: ' : 'Balance: ')}
                                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs(eerDiff))}
@@ -907,13 +945,13 @@ export default function ProjectTabs({
 
                                                         <div className="grid grid-cols-2 gap-2 text-xs">
                                                             <div>
-                                                                <p className="text-[10px] text-muted-foreground">Proposal</p>
+                                                                <p className="text-[10px] text-muted-foreground">Nilai Proposal</p>
                                                                 <p className="font-mono font-medium text-slate-700">
                                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(proposal)}
                                                                 </p>
                                                             </div>
                                                             <div>
-                                                                <p className="text-[10px] text-muted-foreground">Pelaksanaan</p>
+                                                                <p className="text-[10px] text-muted-foreground">Pagu Pelaksanaan</p>
                                                                 <p className="font-mono font-bold text-emerald-700">
                                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(pelaksanaan)}
                                                                 </p>
@@ -921,13 +959,13 @@ export default function ProjectTabs({
                                                             <div>
                                                                 <p className="text-[10px] text-muted-foreground">Terpakai ATR</p>
                                                                 <p className="font-mono font-medium text-orange-600">
-                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedAtr)}
+                                                                    {usageAmount(usedAtr, detail.atr_records, 'ATR', detail.item_name || `Kegiatan #${idx + 1}`)}
                                                                 </p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-[10px] text-muted-foreground">Terpakai EER</p>
                                                                 <p className="font-mono font-medium text-blue-600">
-                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedEer)}
+                                                                    {usageAmount(usedEer, detail.eer_records, 'EER', detail.item_name || `Kegiatan #${idx + 1}`)}
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -950,16 +988,24 @@ export default function ProjectTabs({
                                         {detailBudgets.length > 0 && (
                                             <Card className="p-4 bg-slate-50 border border-slate-200 space-y-2">
                                                 <div className="flex justify-between items-center text-xs font-semibold">
-                                                    <span>Total Proposal ({project.budget_total > 0 ? ((totalProposal / project.budget_total) * 100).toFixed(1) : 0}%):</span>
+                                                    <span>Total Nilai Proposal ({project.budget_total > 0 ? ((totalProposal / project.budget_total) * 100).toFixed(1) : 0}%):</span>
                                                     <span className="font-mono text-primary">
                                                         {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between items-center text-xs font-semibold">
-                                                    <span>Total Pelaksanaan:</span>
+                                                    <span>Total Pagu Pelaksanaan:</span>
                                                     <span className="font-mono text-emerald-700">
                                                         {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalPelaksanaan)}
                                                     </span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs font-semibold">
+                                                    <span>Terpakai ATR:</span>
+                                                    <span className="font-mono text-orange-600">{usageAmount(totalUsedAtr, allAtrRecords, 'ATR', 'semua kegiatan')}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs font-semibold">
+                                                    <span>Terpakai EER:</span>
+                                                    <span className="font-mono text-blue-600">{usageAmount(totalUsedEer, allEerRecords, 'EER', 'semua kegiatan')}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center text-xs font-bold pt-2 border-t">
                                                     <span>Estimasi Profit:</span>
@@ -978,10 +1024,10 @@ export default function ProjectTabs({
                                                 <tr>
                                                     <th className="px-4 py-3 font-medium text-gray-500 w-12 text-center">No</th>
                                                     <th className="px-4 py-3 font-medium text-gray-500">Nama Kegiatan</th>
-                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Amount Proposal</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Nilai Proposal</th>
+                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Pagu Pelaksanaan</th>
                                                     <th className="px-4 py-3 font-medium text-gray-500 text-right">Terpakai ATR</th>
                                                     <th className="px-4 py-3 font-medium text-gray-500 text-right">Terpakai EER</th>
-                                                    <th className="px-4 py-3 font-medium text-gray-500 text-right">Pelaksanaan</th>
                                                     <th className="px-4 py-3 font-medium text-gray-500 text-right">Status EER</th>
                                                     <th className="px-4 py-3 font-medium text-gray-500">Catatan</th>
                                                 </tr>
@@ -990,10 +1036,11 @@ export default function ProjectTabs({
                                                 {detailBudgets.length > 0 ? (
                                                     detailBudgets.map((detail, idx) => {
                                                         const proposal = Number(detail.amount_proposal) || 0;
-                                                        const usedAtr = Number(detail.used_atr) || 0;
+                                                        const grossAtr = Number(detail.used_atr) || 0;
+                                                        const usedAtr = Number(detail.pending_atr) || 0;
                                                         const usedEer = Number(detail.used_eer) || 0;
                                                         const pelaksanaan = Number(detail.amount_pelaksanaan) || 0;
-                                                        const eerDiff = usedAtr - usedEer;
+                                                        const eerDiff = grossAtr - usedAtr - usedEer;
                                                         
                                                         return (
                                                             <tr key={idx} className="hover:bg-gray-50/50">
@@ -1002,17 +1049,17 @@ export default function ProjectTabs({
                                                                 <td className="px-4 py-3 text-right font-mono">
                                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(proposal)}
                                                                 </td>
-                                                                <td className="px-4 py-3 text-right font-mono text-orange-600">
-                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedAtr)}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-right font-mono text-blue-600">
-                                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(usedEer)}
-                                                                </td>
                                                                 <td className="px-4 py-3 text-right font-mono font-semibold">
                                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(pelaksanaan)}
                                                                 </td>
+                                                                <td className="px-4 py-3 text-right font-mono text-orange-600">
+                                                                    {usageAmount(usedAtr, detail.atr_records, 'ATR', detail.item_name || `Kegiatan #${idx + 1}`)}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-right font-mono text-blue-600">
+                                                                    {usageAmount(usedEer, detail.eer_records, 'EER', detail.item_name || `Kegiatan #${idx + 1}`)}
+                                                                </td>
                                                                 <td className="px-4 py-3 text-right">
-                                                                    {usedAtr > 0 || usedEer > 0 ? (
+                                                                    {usedEer > 0 ? (
                                                                         <Badge variant="outline" className={`font-mono text-[10px] ${eerDiff > 0 ? 'text-green-600 border-green-200 bg-green-50' : (eerDiff < 0 ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-500 border-gray-200 bg-gray-50')}`}>
                                                                             {eerDiff > 0 ? 'Refund: ' : (eerDiff < 0 ? 'Reimb: ' : 'Balance: ')}
                                                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs(eerDiff))}
@@ -1037,14 +1084,14 @@ export default function ProjectTabs({
                                                             <td className="px-4 py-3 text-right font-mono text-primary">
                                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalProposal)}
                                                             </td>
-                                                            <td className="px-4 py-3 text-right font-mono text-orange-600">
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalUsedAtr)}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-right font-mono text-blue-600">
-                                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalUsedEer)}
-                                                            </td>
                                                             <td className="px-4 py-3 text-right font-mono text-primary">
                                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalPelaksanaan)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right font-mono text-orange-600">
+                                                                {usageAmount(totalUsedAtr, allAtrRecords, 'ATR', 'semua kegiatan')}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right font-mono text-blue-600">
+                                                                {usageAmount(totalUsedEer, allEerRecords, 'EER', 'semua kegiatan')}
                                                             </td>
                                                             <td colSpan={2}></td>
                                                         </tr>
@@ -1769,6 +1816,27 @@ export default function ProjectTabs({
                     </CardContent>
                 </Card>
             </TabsContent>
+
+            <Dialog open={selectedUsage !== null} onOpenChange={(open) => { if (!open) setSelectedUsage(null); }}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>Terpakai {selectedUsage?.type} — {selectedUsage?.activity}</DialogTitle>
+                        <DialogDescription>Pilih dokumen untuk melihat rincian {selectedUsage?.type}.</DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-80 space-y-2 overflow-y-auto">
+                        {selectedUsage?.records.map(record => (
+                            <Link
+                                key={record.id}
+                                href={`/reimbursements/${record.id}`}
+                                className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            >
+                                <span className="font-medium text-slate-900">{record.code || `#${record.id}`}</span>
+                                <span className="font-mono text-slate-700">{formatRupiah(Number(record.amount))}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Request Additional Budget Modal */}
             <Dialog open={isRequestBudgetOpen} onOpenChange={setIsRequestBudgetOpen}>
