@@ -39,6 +39,8 @@ const RealTimeClockSimple = () => {
 
 import { ApprovalStatisticCard } from '@/components/dashboard/ApprovalStatisticCard';
 import { BulkApprovalModal } from '@/components/dashboard/BulkApprovalModal';
+import { ManagementBudgetOverview } from '@/components/dashboard/ManagementBudgetOverview';
+import type { ManagementBudgetOverview as ManagementBudgetOverviewData } from '@/types/dashboard';
 
 interface AccountManagerLeaderboardEntry {
   id: number;
@@ -100,6 +102,7 @@ interface YearlySummary {
 }
 
 interface DashboardProps extends SharedData {
+  managementBudgetOverview: ManagementBudgetOverviewData | null;
   totalUsers: number;
   totalDivisions: number;
   totalLetterRequests: number;
@@ -126,6 +129,7 @@ interface DashboardProps extends SharedData {
 }
 
 export default function Dashboard({
+  managementBudgetOverview,
   totalUsers,
   totalDivisions,
   totalLetterRequests,
@@ -678,6 +682,10 @@ export default function Dashboard({
                 </CardContent>
               </Card>
 
+              {isSuperadminFinanceDirektur && managementBudgetOverview && (
+                <ManagementBudgetOverview data={managementBudgetOverview} />
+              )}
+
               {/* By Division */}
               {/* <Card className="border shadow-sm rounded-3xl overflow-hidden bg-white">
                 <CardHeader className="p-5 pb-3 border-b border-gray-50">
@@ -733,30 +741,6 @@ export default function Dashboard({
             */}
             {/* Charts Area - Rearranged to Full Width */}
             <div className="space-y-8">
-              {/* Map - Full Width */}
-              <div className="relative rounded-3xl overflow-hidden shadow-sm border border-gray-100 h-[450px] z-0">
-                <div className="absolute inset-0 z-0">
-                  <MapContainer center={[-2.5, 118.0]} zoom={5} style={{ height: '100%', width: '100%', background: '#e5e7eb' }} zoomControl={true} scrollWheelZoom={true}>
-                    <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png" attribution='&copy; OpenStreetMap' />
-                    {locations?.map((loc: any) => (
-                      <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
-                        <Popup className="custom-popup" closeButton={false}>
-                          <div className="px-2 py-1 text-center">
-                            <span className="font-bold text-gray-800 block text-sm">{loc.project?.name || 'Project'}</span>
-                            <span className="text-xs text-muted-foreground mt-0.5">{loc.detail_address}</span>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    ))}
-                  </MapContainer>
-                </div>
-                <div className="absolute top-0 left-0 right-0 p-6 z-[400] flex justify-center items-start pointer-events-none">
-                  <h3 className="text-sm font-medium text-gray-800 tracking-tight flex items-center gap-2 drop-shadow-sm bg-white/80 backdrop-blur-[2px] px-3 py-1 rounded-full border border-gray-200">
-                    <span className="w-2 h-2 rounded-full bg-[var(--sidebar)] animate-pulse"></span>
-                    Persebaran Wilayah Proyek Aktif
-                  </h3>
-                </div>
-              </div>
               {/* Division Chart - Full Width */}
               <div className="grid grid-cols-1 gap-8">
                 <Card className="border shadow-sm p-0 h-[400px] flex flex-col rounded-3xl bg-white">
@@ -792,6 +776,31 @@ export default function Dashboard({
                     </ChartContainer>
                   </CardContent>
                 </Card>
+              </div>
+
+              {/* Map - Full Width */}
+              <div className="relative rounded-3xl overflow-hidden shadow-sm border border-gray-100 h-[450px] z-0">
+                <div className="absolute inset-0 z-0">
+                  <MapContainer center={[-2.5, 118.0]} zoom={5} style={{ height: '100%', width: '100%', background: '#e5e7eb' }} zoomControl={true} scrollWheelZoom={true}>
+                    <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png" attribution='&copy; OpenStreetMap' />
+                    {locations?.map((loc: any) => (
+                      <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
+                        <Popup className="custom-popup" closeButton={false}>
+                          <div className="px-2 py-1 text-center">
+                            <span className="font-bold text-gray-800 block text-sm">{loc.project?.name || 'Project'}</span>
+                            <span className="text-xs text-muted-foreground mt-0.5">{loc.detail_address}</span>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    ))}
+                  </MapContainer>
+                </div>
+                <div className="absolute top-0 left-0 right-0 p-6 z-[400] flex justify-center items-start pointer-events-none">
+                  <h3 className="text-sm font-medium text-gray-800 tracking-tight flex items-center gap-2 drop-shadow-sm bg-white/80 backdrop-blur-[2px] px-3 py-1 rounded-full border border-gray-200">
+                    <span className="w-2 h-2 rounded-full bg-[var(--sidebar)] animate-pulse"></span>
+                    Persebaran Wilayah Proyek Aktif
+                  </h3>
+                </div>
               </div>
 
             </div>

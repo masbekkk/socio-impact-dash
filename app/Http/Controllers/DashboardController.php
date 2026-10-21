@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\GetManagementBudgetOverview;
+use App\Enums\UserRole;
 use App\Models\Division;
 use App\Models\LetterRequest;
 use App\Models\Project;
@@ -19,7 +21,7 @@ use Inertia\Response;
 
 final class DashboardController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, GetManagementBudgetOverview $managementBudgetOverview): Response
     {
         $year = $request->integer('year');
 
@@ -147,6 +149,9 @@ final class DashboardController extends Controller
             'approvalItems' => $approvalItems,
             'availableYears' => $availableYears,
             'selectedYear' => $year ?: null,
+            'managementBudgetOverview' => $user?->hasAnyRole([UserRole::Superadmin, UserRole::Finance, UserRole::Direktur])
+                ? $managementBudgetOverview->handle()
+                : null,
             // 'totalBudget' => $totalBudget,
             // 'totalManagementBudget' => $totalManagementBudget,
         ]);
