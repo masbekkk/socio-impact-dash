@@ -47,7 +47,8 @@ final class ProjectPendingAtrTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.pending_atr', 40000000)
             ->assertJsonPath('data.budget_details.0.pending_atr', 40000000)
-            ->assertJsonCount(2, 'data.budget_details.0.atr_records');
+            ->assertJsonCount(2, 'data.budget_details.0.atr_records')
+            ->assertJsonCount(0, 'data.budget_details.0.converted_atr_records');
 
         $eer = Reimbursement::factory()->create([
             'project_id' => $project->id,
@@ -76,6 +77,8 @@ final class ProjectPendingAtrTest extends TestCase
             ->assertJsonCount(1, 'data.budget_details.0.atr_records')
             ->assertJsonPath('data.budget_details.0.atr_records.0.id', $atrB->id)
             ->assertJsonPath('data.budget_details.0.atr_records.0.amount', 20000000)
+            ->assertJsonPath('data.budget_details.0.converted_atr_records.0.id', $atrA->id)
+            ->assertJsonPath('data.budget_details.0.converted_atr_records.0.amount', 20000000)
             ->assertJsonPath('data.budget_details.0.eer_records.0.id', $eer->id)
             ->assertJsonPath('data.budget_details.0.eer_records.0.amount', 30000000);
 
@@ -85,6 +88,50 @@ final class ProjectPendingAtrTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.pending_atr', 40000000)
             ->assertJsonPath('data.used_eer', 0)
+            ->assertJsonCount(0, 'data.budget_details.0.converted_atr_records')
             ->assertJsonCount(0, 'data.budget_details.0.eer_records');
+    }
+
+    public function test_zero_pending_atr_still_exposes_its_source_when_an_eer_exists(): void
+    {
+        $user = User::factory()->withRole(UserRole::Finance)->create();
+        $project = Project::factory()->create();
+        $detail = $project->budgetDetails()->create([
+            'item_name' => 'FGD Renja',
+            'amount' => 2500000,
+            'created_by' => $user->id,
+        ]);
+        $atr = Reimbursement::factory()->create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'amount' => 2500000,
+        ]);
+        $atrItem = $atr->items()->create([
+            'project_budget_detail_id' => $detail->id,
+            'item_name' => 'FGD Renja',
+            'amount' => 2500000,
+        ]);
+        $eer = Reimbursement::factory()->create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'atr_id' => $atr->id,
+            'type' => 'eer',
+            'eer_type' => 'refund',
+            'amount' => 2111800,
+        ]);
+        $eer->items()->create([
+            'project_budget_detail_id' => $detail->id,
+            'parent_item_id' => $atrItem->id,
+            'item_name' => 'FGD Renja',
+            'amount' => 2111800,
+        ]);
+
+        $this->actingAs($user)->getJson("/api/v1/projects/{$project->uuid}")
+            ->assertOk()
+            ->assertJsonPath('data.budget_details.0.pending_atr', 0)
+            ->assertJsonCount(0, 'data.budget_details.0.atr_records')
+            ->assertJsonPath('data.budget_details.0.converted_atr_records.0.id', $atr->id)
+            ->assertJsonPath('data.budget_details.0.converted_atr_records.0.amount', 2500000)
+            ->assertJsonPath('data.budget_details.0.used_eer', 2111800);
     }
 }

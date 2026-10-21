@@ -121,7 +121,7 @@ export default function ProjectTabs({
 
     // Detail Budget State
     const [detailBudgets, setDetailBudgets] = useState<any[]>(project.budget_details || []);
-    const [selectedUsage, setSelectedUsage] = useState<{ type: 'ATR' | 'EER'; activity: string; records: UsageRecord[] } | null>(null);
+    const [selectedUsage, setSelectedUsage] = useState<{ type: 'ATR' | 'EER'; activity: string; records: UsageRecord[]; converted?: boolean } | null>(null);
     const [editDetailBudget, setEditDetailBudget] = useState(false);
     const [savingDetailBudget, setSavingDetailBudget] = useState(false);
     const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([]);
@@ -366,20 +366,23 @@ export default function ProjectTabs({
             return merged;
         }, new Map<number, UsageRecord>()).values()
     );
-    const usageAmount = (amount: number, records: UsageRecord[] = [], type: 'ATR' | 'EER', activity: string) => {
+    const usageAmount = (amount: number, records: UsageRecord[] = [], type: 'ATR' | 'EER', activity: string, convertedRecords: UsageRecord[] = []) => {
         const value = formatRupiah(amount);
-        if (amount <= 0 || records.length === 0) return value;
+        const converted = amount <= 0 && convertedRecords.length > 0;
+        const linkedRecords = converted ? convertedRecords : records;
+        if (linkedRecords.length === 0) return value;
 
         return (
             <button
                 type="button"
                 className="cursor-pointer rounded-sm underline underline-offset-2 hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
-                aria-label={`Lihat ${records.length} ${type} untuk ${activity}: ${value}`}
+                aria-label={converted ? `Lihat ${linkedRecords.length} ATR yang sudah masuk EER untuk ${activity}` : `Lihat ${linkedRecords.length} ${type} untuk ${activity}: ${value}`}
+                title={converted ? 'ATR sudah memiliki EER. Klik untuk melihat ATR asal.' : undefined}
                 onClick={() => {
-                    if (records.length === 1) {
-                        router.visit(`/reimbursements/${records[0].id}`);
+                    if (linkedRecords.length === 1) {
+                        router.visit(`/reimbursements/${linkedRecords[0].id}`);
                     } else {
-                        setSelectedUsage({ type, activity, records });
+                        setSelectedUsage({ type, activity, records: linkedRecords, converted });
                     }
                 }}
             >
@@ -388,6 +391,7 @@ export default function ProjectTabs({
         );
     };
     const allAtrRecords = mergeUsageRecords(detailBudgets.flatMap(detail => detail.atr_records || []));
+    const allConvertedAtrRecords = mergeUsageRecords(detailBudgets.flatMap(detail => detail.converted_atr_records || []));
     const allEerRecords = mergeUsageRecords(detailBudgets.flatMap(detail => detail.eer_records || []));
 
     return (
@@ -960,7 +964,8 @@ export default function ProjectTabs({
                                                             <div>
                                                                 <p className="text-[10px] text-muted-foreground">Terpakai ATR</p>
                                                                 <p className="font-mono font-medium text-orange-600">
-                                                                    {usageAmount(usedAtr, detail.atr_records, 'ATR', detail.item_name || `Kegiatan #${idx + 1}`)}
+                                                                    {usageAmount(usedAtr, detail.atr_records, 'ATR', detail.item_name || `Kegiatan #${idx + 1}`, detail.converted_atr_records)}
+                                                                    {usedAtr === 0 && detail.converted_atr_records?.length > 0 && <p className="text-[10px] text-muted-foreground">Sudah masuk EER</p>}
                                                                 </p>
                                                             </div>
                                                             <div>
@@ -1002,7 +1007,7 @@ export default function ProjectTabs({
                                                 </div>
                                                 <div className="flex justify-between items-center text-xs font-semibold">
                                                     <span>Terpakai ATR:</span>
-                                                    <span className="font-mono text-orange-600">{usageAmount(totalUsedAtr, allAtrRecords, 'ATR', 'semua kegiatan')}</span>
+                                                    <span className="font-mono text-orange-600">{usageAmount(totalUsedAtr, allAtrRecords, 'ATR', 'semua kegiatan', allConvertedAtrRecords)}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center text-xs font-semibold">
                                                     <span>Terpakai EER:</span>
@@ -1054,7 +1059,8 @@ export default function ProjectTabs({
                                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(pelaksanaan)}
                                                                 </td>
                                                                 <td className="px-4 py-3 text-right font-mono text-orange-600">
-                                                                    {usageAmount(usedAtr, detail.atr_records, 'ATR', detail.item_name || `Kegiatan #${idx + 1}`)}
+                                                                    {usageAmount(usedAtr, detail.atr_records, 'ATR', detail.item_name || `Kegiatan #${idx + 1}`, detail.converted_atr_records)}
+                                                                    {usedAtr === 0 && detail.converted_atr_records?.length > 0 && <p className="text-[10px] text-muted-foreground">Sudah masuk EER</p>}
                                                                 </td>
                                                                 <td className="px-4 py-3 text-right font-mono text-blue-600">
                                                                     {usageAmount(usedEer, detail.eer_records, 'EER', detail.item_name || `Kegiatan #${idx + 1}`)}
@@ -1089,7 +1095,7 @@ export default function ProjectTabs({
                                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalPelaksanaan)}
                                                             </td>
                                                             <td className="px-4 py-3 text-right font-mono text-orange-600">
-                                                                {usageAmount(totalUsedAtr, allAtrRecords, 'ATR', 'semua kegiatan')}
+                                                                {usageAmount(totalUsedAtr, allAtrRecords, 'ATR', 'semua kegiatan', allConvertedAtrRecords)}
                                                             </td>
                                                             <td className="px-4 py-3 text-right font-mono text-blue-600">
                                                                 {usageAmount(totalUsedEer, allEerRecords, 'EER', 'semua kegiatan')}
@@ -1817,8 +1823,8 @@ export default function ProjectTabs({
             <Dialog open={selectedUsage !== null} onOpenChange={(open) => { if (!open) setSelectedUsage(null); }}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>Terpakai {selectedUsage?.type} — {selectedUsage?.activity}</DialogTitle>
-                        <DialogDescription>Pilih dokumen untuk melihat rincian {selectedUsage?.type}.</DialogDescription>
+                        <DialogTitle>{selectedUsage?.converted ? 'ATR yang sudah masuk EER' : `Terpakai ${selectedUsage?.type}`} — {selectedUsage?.activity}</DialogTitle>
+                        <DialogDescription>{selectedUsage?.converted ? 'Nilai ATR tidak lagi dihitung sebagai terpakai ATR karena sudah memiliki EER. Pilih ATR untuk melihat dokumennya.' : `Pilih dokumen untuk melihat rincian ${selectedUsage?.type}.`}</DialogDescription>
                     </DialogHeader>
                     <div className="max-h-80 space-y-2 overflow-y-auto">
                         {selectedUsage?.records.map(record => (

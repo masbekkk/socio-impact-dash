@@ -108,6 +108,7 @@ final class ProjectResource extends JsonResource
                     }])
                     ->get();
                 $pendingAtrItems = $atrItems->filter(fn ($item) => $item->reimbursement?->eers->isEmpty());
+                $convertedAtrItems = $atrItems->filter(fn ($item) => $item->reimbursement?->eers->isNotEmpty());
                 $eerItems = $detail->reimbursementItems()
                     ->whereHas('reimbursement', function ($q) {
                         $q->where('type', 'eer')->whereNotIn('status', ['rejected', 'draft']);
@@ -133,6 +134,7 @@ final class ProjectResource extends JsonResource
                     'pending_atr' => (float) $pendingAtrItems->sum('amount'),
                     'used_eer' => (float) $eerItems->sum('amount'),
                     'atr_records' => $records($pendingAtrItems),
+                    'converted_atr_records' => $records($convertedAtrItems),
                     'eer_records' => $records($eerItems),
                 ];
             })),
