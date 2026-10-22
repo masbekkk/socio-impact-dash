@@ -176,7 +176,7 @@ export default function Dashboard({
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalData, setModalData] = useState<{ title: string; items: any[]; type: 'reimbursement' | 'leave', role: string, actionType?: 'approve' | 'request_fund' }>({
+  const [modalData, setModalData] = useState<{ title: string; items: any[]; type: 'reimbursement' | 'leave', role: string, actionType?: 'approve' | 'request_fund', reimbursementType?: 'eer' }>({
     title: '',
     items: [],
     type: 'reimbursement',
@@ -184,8 +184,8 @@ export default function Dashboard({
     actionType: 'approve'
   });
 
-  const openApprovalModal = (title: string, items: any[], type: 'reimbursement' | 'leave', role: string, actionType: 'approve' | 'request_fund' = 'approve') => {
-    setModalData({ title, items, type, role, actionType });
+  const openApprovalModal = (title: string, items: any[], type: 'reimbursement' | 'leave', role: string, actionType: 'approve' | 'request_fund' = 'approve', reimbursementType?: 'eer') => {
+    setModalData({ title, items, type, role, actionType, reimbursementType });
     setModalOpen(true);
   };
 
@@ -308,7 +308,7 @@ export default function Dashboard({
                     title="EER Menunggu Approval (Head)"
                     count={approvalItems.head_reimbursements.filter(i => i.type === 'eer').length}
                     color="emerald"
-                    onClick={() => openApprovalModal("EER Menunggu Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'eer'), 'reimbursement', 'head')}
+                    onClick={() => openApprovalModal("EER Menunggu Approval (Head)", approvalItems.head_reimbursements.filter(i => i.type === 'eer'), 'reimbursement', 'head', 'approve', 'eer')}
                     icon={<FileText className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
@@ -342,7 +342,7 @@ export default function Dashboard({
                     title="EER Menunggu Approval (Finance)"
                     count={approvalItems.finance_reimbursements.filter(i => i.type === 'eer').length}
                     color="blue"
-                    onClick={() => openApprovalModal("EER Menunggu Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'eer'), 'reimbursement', 'finance')}
+                    onClick={() => openApprovalModal("EER Menunggu Approval (Finance)", approvalItems.finance_reimbursements.filter(i => i.type === 'eer'), 'reimbursement', 'finance', 'approve', 'eer')}
                     icon={<FileText className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
@@ -376,7 +376,7 @@ export default function Dashboard({
                     title="EER Menunggu Approval (Direktur)"
                     count={approvalItems.direktur_reimbursements.filter(i => i.type === 'eer').length}
                     color="amber"
-                    onClick={() => openApprovalModal("EER Menunggu Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'eer'), 'reimbursement', 'direktur')}
+                    onClick={() => openApprovalModal("EER Menunggu Approval (Direktur)", approvalItems.direktur_reimbursements.filter(i => i.type === 'eer'), 'reimbursement', 'direktur', 'approve', 'eer')}
                     icon={<FileText className="h-4 w-4" />}
                   />
                   <ApprovalStatisticCard
@@ -817,6 +817,7 @@ export default function Dashboard({
         type={modalData.type}
         role={modalData.role}
         actionType={modalData.actionType}
+        reimbursementType={modalData.reimbursementType}
       />
     </AppSidebarLayout>
   );

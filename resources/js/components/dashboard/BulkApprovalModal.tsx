@@ -18,6 +18,11 @@ interface Item {
     code: string;
     type: string;
     amount?: string | number;
+    atr_id?: number | null;
+    atr_code?: string | null;
+    atr_amount?: number | null;
+    eer_type?: 'refund' | 'reimbursement' | 'balance' | null;
+    usage_plan?: string | null;
     user?: { id: number; name: string; email?: string };
     project?: { id: number; name: string; code?: string; initial_project?: string | null; division_name?: string };
     start_date?: string;
@@ -66,9 +71,10 @@ export interface BulkApprovalModalProps {
     type: 'reimbursement' | 'leave';
     role: string;
     actionType?: 'approve' | 'request_fund';
+    reimbursementType?: 'eer';
 }
 
-export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, role, actionType = 'approve' }: BulkApprovalModalProps) {
+export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, role, actionType = 'approve', reimbursementType }: BulkApprovalModalProps) {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [actionMode, setActionMode] = useState<'approve' | 'reject' | 'revision' | null>(null);
     const [notes, setNotes] = useState<Record<number, string>>({});
@@ -281,19 +287,33 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, ro
                                         />
                                     </TableHead>
                                     {type === 'reimbursement' ? (
-                                        <>
-                                            <TableHead className="font-bold">Tipe</TableHead>
-                                            <TableHead className="font-bold">Kode</TableHead>
-                                            <TableHead className="font-bold">Tgl</TableHead>
-                                            <TableHead className="font-bold">Pemohon</TableHead>
-                                            <TableHead className="font-bold">Kode Project</TableHead>
-                                            <TableHead className="font-bold">Initial Project</TableHead>
-                                            <TableHead className="font-bold min-w-[150px]">Detail Kegiatan</TableHead>
-                                            <TableHead className="font-bold">Nominal</TableHead>
-                                            <TableHead className="font-bold">Status Approval</TableHead>
-                                            <TableHead className="font-bold">Status</TableHead>
-                                            <TableHead className="font-bold text-right">Aksi</TableHead>
-                                        </>
+                                        reimbursementType === 'eer' ? (
+                                            <>
+                                                <TableHead className="font-bold min-w-[150px]">Kode EER / Kode ATR</TableHead>
+                                                <TableHead className="font-bold min-w-[130px]">Kode Proyek – Inisial Proyek</TableHead>
+                                                <TableHead className="font-bold">Tanggal</TableHead>
+                                                <TableHead className="font-bold">Pemohon</TableHead>
+                                                <TableHead className="font-bold min-w-[150px]">Detail Kegiatan</TableHead>
+                                                <TableHead className="font-bold">Nominal ATR</TableHead>
+                                                <TableHead className="font-bold">Nominal EER</TableHead>
+                                                <TableHead className="font-bold">Selisih</TableHead>
+                                                <TableHead className="font-bold">Jenis EER</TableHead>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <TableHead className="font-bold">Tipe</TableHead>
+                                                <TableHead className="font-bold">Kode</TableHead>
+                                                <TableHead className="font-bold">Tgl</TableHead>
+                                                <TableHead className="font-bold">Pemohon</TableHead>
+                                                <TableHead className="font-bold">Kode Project</TableHead>
+                                                <TableHead className="font-bold">Initial Project</TableHead>
+                                                <TableHead className="font-bold min-w-[150px]">Detail Kegiatan</TableHead>
+                                                <TableHead className="font-bold">Nominal</TableHead>
+                                                <TableHead className="font-bold">Status Approval</TableHead>
+                                                <TableHead className="font-bold">Status</TableHead>
+                                                <TableHead className="font-bold text-right">Aksi</TableHead>
+                                            </>
+                                        )
                                     ) : (
                                         <>
                                             <TableHead className="font-bold">Kode & Tanggal</TableHead>
@@ -321,6 +341,40 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, ro
                                                 />
                                             </TableCell>
                                             {type === 'reimbursement' ? (
+                                                reimbursementType === 'eer' ? (
+                                                    <>
+                                                        <TableCell className="font-mono text-[10px]">
+                                                            <div className="flex flex-col gap-1">
+                                                                <Link href={route('reimbursements.show', item.id)} target="_blank" className="font-semibold text-emerald-700 hover:underline">EER: {item.code}</Link>
+                                                                {item.atr_id && item.atr_code ? (
+                                                                    <Link href={route('reimbursements.show', item.atr_id)} target="_blank" className="text-blue-700 hover:underline">ATR: {item.atr_code}</Link>
+                                                                ) : <span className="text-muted-foreground">ATR: -</span>}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-[10px]">
+                                                            <span className="font-mono">{item.project?.code ?? '-'}</span>
+                                                            <span className="mx-1 text-muted-foreground">–</span>
+                                                            <span>{item.project?.initial_project ?? '-'}</span>
+                                                        </TableCell>
+                                                        <TableCell className="text-[10px] whitespace-nowrap">{formatDate(item.created_at)}</TableCell>
+                                                        <TableCell className="text-[10px]">{item.user?.name ?? '-'}</TableCell>
+                                                        <TableCell className="text-[10px] min-w-[150px] max-w-[250px] leading-relaxed">
+                                                            <span className="whitespace-normal break-words">{item.usage_plan ?? '-'}</span>
+                                                        </TableCell>
+                                                        <TableCell className="text-[10px] font-semibold whitespace-nowrap">
+                                                            {item.atr_amount == null ? '-' : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.atr_amount)}
+                                                        </TableCell>
+                                                        <TableCell className="text-[10px] font-semibold whitespace-nowrap">
+                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(item.amount ?? 0))}
+                                                        </TableCell>
+                                                        <TableCell className="text-[10px] font-semibold whitespace-nowrap">
+                                                            {item.atr_amount == null ? '-' : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Math.abs(item.atr_amount - Number(item.amount ?? 0)))}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {item.eer_type ? <Badge variant="outline" className="capitalize text-[10px]">{item.eer_type}</Badge> : '-'}
+                                                        </TableCell>
+                                                    </>
+                                                ) : (
                                                 <>
                                                     <TableCell>
                                                         <div className="flex flex-col gap-1">
@@ -388,6 +442,7 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, ro
                                                         </Link>
                                                     </TableCell>
                                                 </>
+                                                )
                                             ) : (
                                                 <>
                                                     <TableCell>
@@ -458,7 +513,7 @@ export function BulkApprovalModal({ isOpen, onOpenChange, title, items, type, ro
                                     );
                                 }) : (
                                     <TableRow>
-                                        <TableCell colSpan={type === 'reimbursement' ? 11 : 7} className="text-center py-12 text-muted-foreground text-xs">
+                                        <TableCell colSpan={type === 'reimbursement' ? (reimbursementType === 'eer' ? 10 : 11) : 7} className="text-center py-12 text-muted-foreground text-xs">
                                             Tidak ada data pengajuan.
                                         </TableCell>
                                     </TableRow>

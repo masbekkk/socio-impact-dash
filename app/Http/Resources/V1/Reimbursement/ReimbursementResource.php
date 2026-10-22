@@ -17,6 +17,8 @@ final class ReimbursementResource extends JsonResource
             'id' => $this->id,
             'code' => $this->code,
             'atr_id' => $this->atr_id,
+            'atr_code' => $this->whenLoaded('atr', fn (): ?string => $this->atr?->code),
+            'atr_amount' => $this->whenLoaded('atr', fn (): ?float => $this->atr ? (float) $this->atr->amount : null),
             'replacement_pic_id' => $this->replacement_pic_id,
             'user' => [
                 'id' => $this->user?->id,
@@ -242,7 +244,8 @@ final class ReimbursementResource extends JsonResource
         $statusValue = $this->status?->value;
 
         // Final statuses cannot be approved further
-        if (in_array($statusValue, ['transferred', 'rejected'])) {
+        if (in_array($statusValue, ['transferred', 'rejected'])
+            && ! ($statusValue === 'transferred' && $this->type === ReimbursementType::EER && $user->hasRole('direktur'))) {
             return false;
         }
 
@@ -326,7 +329,11 @@ final class ReimbursementResource extends JsonResource
 
         $financeApproved = $financeApproval && $financeApproval->status->value === 'approved';
 
-        // Direktur can always approve if finance is done and it's not final yet
+        // EER reaches the director after the transfer proof has been uploaded.
+        if ($this->type === ReimbursementType::EER) {
+            return $financeApproved && $statusValue === 'transferred' && $user->hasRole('direktur');
+        }
+
         return $financeApproved && $user->hasRole('direktur');
     }
 }

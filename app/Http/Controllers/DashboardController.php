@@ -68,7 +68,7 @@ final class DashboardController extends Controller
                             ->where('role', 'head');
                     })
                     ->whereIn('status', [\App\Enums\ReimbursementStatus::Submitted, \App\Enums\ReimbursementStatus::Revised])
-                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
+                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds', 'atr:id,code,amount'])
                     ->get()
             )->resolve();
 
@@ -90,7 +90,7 @@ final class DashboardController extends Controller
             $approvalItems['finance_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
                 \App\Models\Reimbursement::query()
                     ->where('status', \App\Enums\ReimbursementStatus::HeadApproved)
-                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
+                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds', 'atr:id,code,amount'])
                     ->get()
             )->resolve();
 
@@ -106,8 +106,16 @@ final class DashboardController extends Controller
         if (in_array('direktur', $roles)) {
             $approvalItems['direktur_reimbursements'] = \App\Http\Resources\V1\Reimbursement\ReimbursementResource::collection(
                 \App\Models\Reimbursement::query()
-                    ->whereIn('status', [\App\Enums\ReimbursementStatus::FinanceApproved, \App\Enums\ReimbursementStatus::HRApproved])
-                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds'])
+                    ->where(function ($query): void {
+                        $query->where(function ($query): void {
+                            $query->where('type', \App\Enums\ReimbursementType::EER)
+                                ->where('status', \App\Enums\ReimbursementStatus::Transferred);
+                        })->orWhere(function ($query): void {
+                            $query->where('type', '!=', \App\Enums\ReimbursementType::EER)
+                                ->whereIn('status', [\App\Enums\ReimbursementStatus::FinanceApproved, \App\Enums\ReimbursementStatus::HRApproved]);
+                        });
+                    })
+                    ->with(['user', 'project.division', 'approvals.approver', 'atrBudgetSelecteds', 'atr:id,code,amount'])
                     ->get()
             )->resolve();
 

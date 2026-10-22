@@ -193,7 +193,8 @@ final readonly class UpdateReimbursementStatus
                     ];
 
                     if (isset($roleStatusMap[$role])) {
-                        if ($role === 'direktur' && $reimbursement->type === \App\Enums\ReimbursementType::EER && $reimbursement->eer_type === 'balance') {
+                        if ($role === 'direktur' && $reimbursement->type === \App\Enums\ReimbursementType::EER
+                            && ($reimbursement->eer_type === 'balance' || $reimbursement->status === ReimbursementStatus::Transferred)) {
                             $updateData['status'] = ReimbursementStatus::Closed;
                         } else {
                             $updateData['status'] = $roleStatusMap[$role];
