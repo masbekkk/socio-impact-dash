@@ -38,6 +38,7 @@ Route::middleware(['auth:web,sanctum'])->prefix('v1')->group(function (): void {
         Route::get('/export-excel', [ReimbursementController::class, 'exportExcel'])->name('api.reimbursements.exportExcel');
         Route::get('/{reimbursement}', [ReimbursementController::class, 'show'])->name('api.reimbursements.show');
         Route::post('/{reimbursement}/status', [ReimbursementController::class, 'updateStatus'])->name('api.reimbursements.status');
+        Route::post('/{reimbursement}/refund-proof', [ReimbursementController::class, 'uploadRefundProof'])->name('api.reimbursements.refund-proof.store');
         Route::patch('/{reimbursement}/budgets', [ReimbursementController::class, 'updateBudgets'])->name('api.reimbursements.budgets.update');
         Route::patch('/{reimbursement}/code', [ReimbursementController::class, 'updateCode'])->name('api.reimbursements.code.update');
         Route::post('/{reimbursement}/resubmit', [ReimbursementController::class, 'resubmit'])->name('api.reimbursements.resubmit');

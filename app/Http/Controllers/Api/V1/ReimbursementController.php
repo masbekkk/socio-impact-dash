@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\CreateReimbursement;
 use App\Actions\UpdateReimbursementStatus;
+use App\Enums\ReimbursementStatus;
+use App\Enums\ReimbursementType;
 use App\Enums\UserRole;
 use App\Formatters\JsonResponseFormatter;
 use App\Http\Requests\StoreReimbursementRequest;
@@ -18,6 +20,7 @@ use App\Services\ReimbursementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -161,6 +164,19 @@ final class ReimbursementController extends Controller
 
             $user = $request->user();
 
+            if ($request->validated('action') === ReimbursementStatus::Transferred->value
+                && ! $user->hasAnyRole(['finance', UserRole::Superadmin->value])
+                && ! ($reimbursement->type === ReimbursementType::ALLOWANCE && $user->hasRole('hr'))) {
+                return JsonResponseFormatter::error('Anda tidak memiliki akses untuk menyelesaikan transfer', 403);
+            }
+
+            if ($request->validated('action') === ReimbursementStatus::Transferred->value
+                && $reimbursement->type === ReimbursementType::EER && $reimbursement->eer_type === 'refund'
+                && (! $reimbursement->transfer_proof_path
+                    || ! in_array($reimbursement->status, [ReimbursementStatus::FinanceApproved, ReimbursementStatus::Approved, ReimbursementStatus::Requested], true))) {
+                return JsonResponseFormatter::error('Bukti refund harus diunggah setelah persetujuan finance sebelum transfer diselesaikan.', 422);
+            }
+
             // Authorization: owner, approver, or privileged role
             if (
                 ! $user->hasRole(UserRole::Superadmin->value)
@@ -187,6 +203,58 @@ final class ReimbursementController extends Controller
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }
+    }
+
+    public function uploadRefundProof(int $reimbursement, Request $request): JsonResponse
+    {
+        $eer = Reimbursement::query()->find($reimbursement);
+
+        if (! $eer) {
+            return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
+        }
+
+        if ($eer->user_id !== $request->user()->id || ! $request->user()->hasRole(UserRole::Pegawai->value)) {
+            return JsonResponseFormatter::error('Hanya pengaju pegawai yang dapat mengunggah bukti refund.', 403);
+        }
+
+        if ($eer->type !== ReimbursementType::EER || $eer->eer_type !== 'refund'
+            || $eer->status !== ReimbursementStatus::FinanceApproved || $eer->transfer_proof_path) {
+            return JsonResponseFormatter::error('Bukti refund hanya dapat diunggah sekali setelah persetujuan finance.', 422);
+        }
+
+        $validated = $request->validate([
+            'transfer_proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+        ]);
+
+        $path = $validated['transfer_proof']->store('reimbursements/transfer-proofs', 'public');
+        if (! $path) {
+            return JsonResponseFormatter::error('Gagal menyimpan bukti refund.', 500);
+        }
+
+        try {
+            $updated = Reimbursement::query()->whereKey($eer->id)
+                ->where('status', ReimbursementStatus::FinanceApproved->value)
+                ->whereNull('transfer_proof_path')
+                ->update([
+                    'transfer_proof_path' => $path,
+                    'status' => ReimbursementStatus::Transferred->value,
+                    'transferred_at' => now(),
+                ]);
+
+            if ($updated === 0) {
+                Storage::disk('public')->delete($path);
+
+                return JsonResponseFormatter::error('Bukti refund sudah diunggah atau status telah berubah.', 422);
+            }
+        } catch (Throwable $exception) {
+            Storage::disk('public')->delete($path);
+            throw $exception;
+        }
+
+        return JsonResponseFormatter::success(
+            new ReimbursementResource($eer->fresh()),
+            'Bukti refund berhasil diunggah dan transfer ditandai selesai'
+        );
     }
 
     public function updateBudgets(int $id, Request $request): JsonResponse
@@ -259,8 +327,8 @@ final class ReimbursementController extends Controller
                 return JsonResponseFormatter::error('Pengajuan tidak dalam status revisi atau draft.', 422);
             }
 
-            $isEer = $reimbursement->type === \App\Enums\ReimbursementType::EER || $request->input('type') === 'eer';
-            $isDraft = $request->input('status') === 'draft' || $request->input('status') === \App\Enums\ReimbursementStatus::Draft->value;
+            $isEer = $reimbursement->type === ReimbursementType::EER || $request->input('type') === 'eer';
+            $isDraft = $request->input('status') === 'draft' || $request->input('status') === ReimbursementStatus::Draft->value;
             $isCodeRequired = $isEer && ! $isDraft && empty($reimbursement->code);
 
             $validated = $request->validate([
@@ -297,7 +365,7 @@ final class ReimbursementController extends Controller
             ]);
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request): void {
-                $isRevision = $reimbursement->status === \App\Enums\ReimbursementStatus::Revision;
+                $isRevision = $reimbursement->status === ReimbursementStatus::Revision;
 
                 // New Status logic: if explicitly draft, stay draft.
                 // Else if it was a revision, it becomes revised.
@@ -305,11 +373,11 @@ final class ReimbursementController extends Controller
                 $requestedStatus = $validated['status'] ?? 'submitted';
 
                 if ($requestedStatus === 'draft') {
-                    $newStatus = \App\Enums\ReimbursementStatus::Draft;
+                    $newStatus = ReimbursementStatus::Draft;
                 } else {
                     $newStatus = $isRevision
-                        ? \App\Enums\ReimbursementStatus::Revised
-                        : \App\Enums\ReimbursementStatus::Submitted;
+                        ? ReimbursementStatus::Revised
+                        : ReimbursementStatus::Submitted;
                 }
 
                 $updateData = ['status' => $newStatus];
@@ -478,7 +546,7 @@ final class ReimbursementController extends Controller
                 $reimbursement->update($updateData);
 
                 // Clear any existing approvals if it's NO LONGER a draft/revision
-                if ($newStatus !== \App\Enums\ReimbursementStatus::Draft) {
+                if ($newStatus !== ReimbursementStatus::Draft) {
                     $reimbursement->approvals()->delete();
 
                     // Call assignApprovers to handle the workflow
@@ -486,7 +554,7 @@ final class ReimbursementController extends Controller
                     $action->assignApprovers($reimbursement, $request->all());
 
                     // Add a system comment notifying approvers
-                    $isDraftOriginal = $reimbursement->getOriginal('status') === \App\Enums\ReimbursementStatus::Draft;
+                    $isDraftOriginal = $reimbursement->getOriginal('status') === ReimbursementStatus::Draft;
                     $prefix = $isDraftOriginal ? '[Draft Diajukan]' : '[Revisi Diajukan Ulang]';
                     $note = $validated['revision_note'] ?? ($isDraftOriginal ? 'Draft pengajuan telah diajukan' : 'Pengajuan telah direvisi dan diajukan kembali.');
                     $reimbursement->comments()->create([

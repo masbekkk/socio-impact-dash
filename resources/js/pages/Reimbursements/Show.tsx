@@ -302,6 +302,10 @@ export default function Show() {
   const [revisiReason, setRevisiReason] = useState('');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [transferProof, setTransferProof] = useState<File | null>(null);
+  const [refundProofDialogOpen, setRefundProofDialogOpen] = useState(false);
+  const [refundProof, setRefundProof] = useState<File | null>(null);
+  const [refundProofLoading, setRefundProofLoading] = useState(false);
+  const [refundProofError, setRefundProofError] = useState('');
   const [transferredAmount, setTransferredAmount] = useState<number>(0);
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
@@ -462,6 +466,32 @@ export default function Show() {
     setTransferDialogOpen(false);
     setTransferProof(null);
     setTransferredAmount(0);
+  };
+
+  const resetRefundProofDialog = () => {
+    setRefundProofDialogOpen(false);
+    setRefundProof(null);
+    setRefundProofError('');
+  };
+
+  const handleRefundProofUpload = async () => {
+    if (!data || !refundProof) return;
+
+    setRefundProofLoading(true);
+    setRefundProofError('');
+    try {
+      const formData = new FormData();
+      formData.append('transfer_proof', refundProof);
+      await axios.post(`/api/v1/reimbursements/${data.id}/refund-proof`, formData);
+      resetRefundProofDialog();
+      await fetchDetail();
+    } catch (error: unknown) {
+      setRefundProofError(axios.isAxiosError(error)
+        ? error.response?.data?.message || 'Gagal mengunggah bukti refund.'
+        : 'Gagal mengunggah bukti refund.');
+    } finally {
+      setRefundProofLoading(false);
+    }
   };
 
   const handleRequestFund = async () => {
@@ -2696,7 +2726,11 @@ export default function Show() {
                   </div>
                 )}
 
-                {(((data.approvals?.some(a => a.role === 'direktur' && ['approved', 'request_fund'].includes(a.status)) || (data.type === 'eer' && data.eer_type === 'refund' && !data.transfer_proof_path)) && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status) && isFinanceOrAdmin) || (data.type === 'allowance' && isHrOrAdmin && data.approvals?.some(a => a.role === 'direktur' && ['approved', 'request_fund'].includes(a.status)) && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && (
+                {(((data.type === 'eer' && data.eer_type === 'refund'
+                  ? Boolean(data.transfer_proof_path) && ['finance_approved', 'approved', 'request_fund'].includes(data.status)
+                  : data.approvals?.some(a => a.role === 'direktur' && ['approved', 'request_fund'].includes(a.status)))
+                  && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status) && isFinanceOrAdmin)
+                  || (data.type === 'allowance' && isHrOrAdmin && data.approvals?.some(a => a.role === 'direktur' && ['approved', 'request_fund'].includes(a.status)) && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && (
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <Button
                       onClick={() => setTransferDialogOpen(true)}
@@ -2744,6 +2778,12 @@ export default function Show() {
                 </div>
 
                 {/* Transfer / Refund Proof */}
+                {data.type === 'eer' && data.eer_type === 'refund' && data.status === 'finance_approved'
+                  && isPegawai && isCreator && !data.transfer_proof_path && (
+                    <Button variant="outline" className="gap-2" onClick={() => setRefundProofDialogOpen(true)}>
+                      <Upload className="h-4 w-4" /> Upload Bukti & Tandai Transferred
+                    </Button>
+                  )}
                 {data.transfer_proof_path && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -2766,7 +2806,8 @@ export default function Show() {
                               <Download className="h-3.5 w-3.5" /> Lihat Bukti
                             </Button>
                           </a>
-                          {(isFinanceOrAdmin || (data.type === 'allowance' && isHrOrAdmin)) && (
+                          {(isFinanceOrAdmin || (data.type === 'allowance' && isHrOrAdmin))
+                            && !['transferred', 'closed'].includes(data.status) && (
                             <Button size="sm" variant="outline" onClick={() => setTransferDialogOpen(true)} className="gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-100">
                               <Edit className="h-3.5 w-3.5" /> Edit
                             </Button>
@@ -3167,6 +3208,35 @@ export default function Show() {
       </Dialog >
 
       {/* Transfer Dialog */}
+      <Dialog open={refundProofDialogOpen} onOpenChange={(open) => {
+        if (!refundProofLoading) {
+          if (open) setRefundProofDialogOpen(true);
+          else resetRefundProofDialog();
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Bukti Transfer Refund</DialogTitle>
+            <DialogDescription>Unggah bukti pengembalian dana untuk menandai EER sebagai transferred.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="refund-proof">Bukti Transfer (JPG, PNG, atau PDF; maks. 5MB)</Label>
+            <Input id="refund-proof" type="file" accept=".jpg,.jpeg,.png,.pdf"
+              onChange={(event) => {
+                setRefundProof(event.target.files?.[0] ?? null);
+                setRefundProofError('');
+              }} />
+            {refundProofError && <p className="text-sm text-destructive" role="alert">{refundProofError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={refundProofLoading} onClick={resetRefundProofDialog}>Batal</Button>
+            <Button disabled={!refundProof || refundProofLoading} onClick={handleRefundProofUpload}>
+              {refundProofLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Upload & Tandai Transferred
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       < Dialog open={transferDialogOpen} onOpenChange={(open) => { if (!open) resetTransferDialog(); }}>
         <DialogContent>
           <DialogHeader>

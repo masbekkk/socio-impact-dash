@@ -47,6 +47,10 @@ final class UpdateReimbursementStatusRequest extends FormRequest
                         return false;
                     }
 
+                    if ($reimbursement?->transfer_proof_path) {
+                        return false;
+                    }
+
                     return true;
                 }),
             ],
