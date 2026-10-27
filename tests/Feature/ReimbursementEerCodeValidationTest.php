@@ -8,6 +8,7 @@ use App\Enums\ReimbursementStatus;
 use App\Enums\ReimbursementType;
 use App\Enums\UserRole;
 use App\Models\Division;
+use App\Models\Project;
 use App\Models\Reimbursement;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
@@ -146,6 +147,7 @@ test('submitting ATR without code succeeds because code is optional for ATR', fu
 
     $response = $this->postJson('/api/v1/reimbursements', [
         'type' => 'atr',
+        'project_id' => Project::factory()->create(['operational_budget' => 1000000])->id,
         'status' => 'submitted',
         'approver_head_id' => $head->id,
         'amount' => 300000,

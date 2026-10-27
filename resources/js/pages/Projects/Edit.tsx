@@ -83,7 +83,7 @@ export default function ProjectsEdit({ project_slug, divisions, employees, avail
     const [deleteYearClaims, setDeleteYearClaims] = useState<string[]>([])
 
     // State Detail Budgets
-    const [detailBudgets, setDetailBudgets] = useState<{ id: string, item_name: string, quantity: number | null, item_price: number, amount: number, amount_pelaksanaan: number, amount_proposal: number, notes: string, isNew?: boolean, used_atr?: number, used_eer?: number }[]>([])
+    const [detailBudgets, setDetailBudgets] = useState<{ id: string, item_name: string, quantity: number | null, item_price: number, amount: number, amount_pelaksanaan: number, amount_proposal: number, notes: string, isNew?: boolean, used_atr?: number | null, used_eer?: number, eer_balance?: number | null }[]>([])
     const [deleteDetailBudgets, setDeleteDetailBudgets] = useState<string[]>([])
 
     // Dynamic Docs State
@@ -191,7 +191,8 @@ export default function ProjectsEdit({ project_slug, divisions, employees, avail
                         amount: parseFloat(detail.amount) || 0,
                         amount_pelaksanaan: parseFloat(detail.amount_pelaksanaan) || 0,
                         amount_proposal: parseFloat(detail.amount_proposal) || 0,
-                        used_atr: parseFloat(detail.used_atr) || 0,
+                        used_atr: detail.used_atr === null ? null : parseFloat(detail.used_atr) || 0,
+                        eer_balance: detail.used_atr === null || detail.pending_atr === null ? null : (Number(detail.used_atr) || 0) - (Number(detail.pending_atr) || 0) - (Number(detail.used_eer) || 0),
                         used_eer: parseFloat(detail.used_eer) || 0,
                         notes: detail.notes || ''
                     })));
@@ -1026,14 +1027,18 @@ export default function ProjectsEdit({ project_slug, divisions, employees, avail
 
                                                     <div className="md:col-span-2 space-y-1">
                                                         <Label className="text-[10px] font-bold text-muted-foreground uppercase">Pelaksanaan</Label>
-                                                        {((detail.used_eer || 0) > 0 || (detail.used_atr || 0) > 0) && !detail.isNew ? (
+                                                        {(detail.used_atr === null || (detail.used_eer || 0) > 0 || (detail.used_atr || 0) > 0) && !detail.isNew ? (
                                                             <div className="bg-gray-50 border rounded-md p-1.5 h-8 flex flex-col justify-center">
                                                                 <div className="flex items-center justify-between">
                                                                     <span className="font-mono text-[10px] font-semibold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format((detail.used_eer || 0) > 0 ? (detail.used_eer || 0) : (detail.amount_pelaksanaan || 0))}</span>
-                                                                    <Badge variant="outline" className={`font-mono text-[8px] px-1 py-0 h-4 border-0 leading-tight ${((detail.used_atr || 0) - (detail.used_eer || 0)) > 0 ? 'text-green-600 bg-green-50' : (((detail.used_atr || 0) - (detail.used_eer || 0)) < 0 ? 'text-red-600 bg-red-50' : 'text-gray-500 bg-gray-50')}`}>
-                                                                        {((detail.used_atr || 0) - (detail.used_eer || 0)) > 0 ? 'Ref: ' : (((detail.used_atr || 0) - (detail.used_eer || 0)) < 0 ? 'Reimb: ' : 'Bal: ')}
-                                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs((detail.used_atr || 0) - (detail.used_eer || 0)))}
-                                                                    </Badge>
+                                                                    {detail.eer_balance === null ? (
+                                                                        <span className="text-[10px] text-amber-700">Alokasi ATR belum lengkap</span>
+                                                                    ) : (detail.used_eer || 0) > 0 && (
+                                                                        <Badge variant="outline" className={`font-mono text-[8px] px-1 py-0 h-4 border-0 leading-tight ${(detail.eer_balance || 0) > 0 ? 'text-green-600 bg-green-50' : ((detail.eer_balance || 0) < 0 ? 'text-red-600 bg-red-50' : 'text-gray-500 bg-gray-50')}`}>
+                                                                            {(detail.eer_balance || 0) > 0 ? 'Ref: ' : ((detail.eer_balance || 0) < 0 ? 'Reimb: ' : 'Bal: ')}
+                                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs(detail.eer_balance || 0))}
+                                                                        </Badge>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         ) : (

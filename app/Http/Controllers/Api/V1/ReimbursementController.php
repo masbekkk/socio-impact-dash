@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\CheckAtrOperationalBudget;
 use App\Actions\CreateReimbursement;
 use App\Actions\UpdateReimbursementStatus;
 use App\Enums\ReimbursementStatus;
@@ -91,7 +92,7 @@ final class ReimbursementController extends Controller
             $user = $request->user();
 
             $reimbursement = $createReimbursement->handle(
-                $request->all(),
+                $request->validated(),
                 $user->id
             );
 
@@ -99,6 +100,8 @@ final class ReimbursementController extends Controller
                 new ReimbursementResource($reimbursement),
                 'Reimbursement berhasil dibuat'
             );
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }
@@ -307,7 +310,7 @@ final class ReimbursementController extends Controller
         }
     }
 
-    public function resubmit(int $id, Request $request): JsonResponse
+    public function resubmit(int $id, Request $request, CheckAtrOperationalBudget $checkAtrOperationalBudget): JsonResponse
     {
         try {
             $user = $request->user();
@@ -364,7 +367,8 @@ final class ReimbursementController extends Controller
                 'code.unique' => $isEer ? 'Nomor EER sudah digunakan.' : 'Kode reimbursement sudah digunakan.',
             ]);
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request): void {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request, $checkAtrOperationalBudget): void {
+                $atrAmount = $checkAtrOperationalBudget->handle($validated, $reimbursement);
                 $isRevision = $reimbursement->status === ReimbursementStatus::Revision;
 
                 // New Status logic: if explicitly draft, stay draft.
@@ -381,6 +385,9 @@ final class ReimbursementController extends Controller
                 }
 
                 $updateData = ['status' => $newStatus];
+                if ($atrAmount !== null) {
+                    $updateData['amount'] = $atrAmount;
+                }
 
                 if (array_key_exists('code', $validated) && ! empty($validated['code'])) {
                     $updateData['code'] = $validated['code'];
@@ -533,7 +540,9 @@ final class ReimbursementController extends Controller
                 // Recalculate amount if items or budget details were synced
                 if (isset($validated['items']) || isset($validated['selected_budget_details'])) {
                     $newAmount = 0;
-                    if ($reimbursement->type->value === 'atr') {
+                    if ($atrAmount !== null) {
+                        $newAmount = $atrAmount;
+                    } elseif ($reimbursement->type->value === 'atr') {
                         $newAmount = $reimbursement->atrBudgetSelecteds()->sum('amount');
                     } else {
                         $newAmount = $reimbursement->items()->sum('amount');
@@ -550,7 +559,7 @@ final class ReimbursementController extends Controller
                     $reimbursement->approvals()->delete();
 
                     // Call assignApprovers to handle the workflow
-                    $action = new CreateReimbursement($fileUploadService);
+                    $action = app(CreateReimbursement::class);
                     $action->assignApprovers($reimbursement, $request->all());
 
                     // Add a system comment notifying approvers

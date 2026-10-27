@@ -13,11 +13,19 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class CreateReimbursement
 {
-    public function __construct(private FileUploadService $fileUploadService) {}
+    public function __construct(
+        private FileUploadService $fileUploadService,
+        private CheckAtrOperationalBudget $checkAtrOperationalBudget,
+    ) {}
 
     public function handle(array $data, int $userId): Reimbursement
     {
         return DB::transaction(function () use ($data, $userId) {
+            $atrAmount = $this->checkAtrOperationalBudget->handle($data);
+            if ($atrAmount !== null) {
+                $data['amount'] = $atrAmount;
+            }
+
             $reimbursement = $this->createReimbursementRecord($data, $userId);
 
             if (! empty($data['documents'])) {

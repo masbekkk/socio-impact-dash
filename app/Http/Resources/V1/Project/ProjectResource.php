@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\V1\Project;
 
+use App\Actions\GetProjectAtrUsage;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 final class ProjectResource extends JsonResource
@@ -15,13 +16,16 @@ final class ProjectResource extends JsonResource
      */
     public function toArray(\Illuminate\Http\Request $request): array
     {
-        $pendingAtr = (float) $this->reimbursements()
-            ->where('type', 'atr')
-            ->whereNotIn('status', ['rejected', 'draft'])
-            ->whereDoesntHave('eers', function ($q) {
-                $q->where('type', 'eer')->whereNotIn('status', ['rejected', 'draft']);
-            })
-            ->sum('amount');
+        $atrUsage = collect(app(GetProjectAtrUsage::class)->handle($this->resource));
+        $pendingAtrs = $atrUsage->where('converted', false);
+        $convertedAtrs = $atrUsage->where('converted', true);
+        $pendingAtr = (float) $pendingAtrs->sum('amount');
+        $projectAtrRecords = fn ($records) => $records->map(fn ($record): array => [
+            'id' => $record['id'],
+            'code' => $record['code'],
+            'amount' => $record['amount'],
+            'requested_amount' => $record['requested_amount'],
+        ])->values()->all();
         $usedEer = (float) $this->reimbursements()
             ->where('type', 'eer')
             ->whereNotIn('status', ['rejected', 'draft'])
@@ -97,18 +101,18 @@ final class ProjectResource extends JsonResource
                 'upload_status' => $doc->upload_status ?? 'completed',
             ])),
             'termin_payments' => $this->whenLoaded('terminPayments'),
-            'budget_details' => $this->whenLoaded('budgetDetails', fn () => $this->budgetDetails->map(function ($detail): array {
-                $atrItems = $detail->reimbursementItems()
-                    ->whereHas('reimbursement', function ($q) {
-                        $q->where('type', 'atr')->whereNotIn('status', ['rejected', 'draft']);
-                    })
-                    ->whereNull('parent_item_id')
-                    ->with(['reimbursement:id,code', 'reimbursement.eers' => function ($q) {
-                        $q->where('type', 'eer')->whereNotIn('status', ['rejected', 'draft']);
-                    }])
-                    ->get();
-                $pendingAtrItems = $atrItems->filter(fn ($item) => $item->reimbursement?->eers->isEmpty());
-                $convertedAtrItems = $atrItems->filter(fn ($item) => $item->reimbursement?->eers->isNotEmpty());
+            'budget_details' => $this->whenLoaded('budgetDetails', fn () => $this->budgetDetails->map(function ($detail) use ($atrUsage): array {
+                $activityAtrs = $atrUsage->filter(fn ($record): bool => array_key_exists($detail->id, $record['allocations']));
+                $pending = $activityAtrs->where('converted', false);
+                $converted = $activityAtrs->where('converted', true);
+                $atrTotal = fn ($records): ?float => $records->contains(fn ($record): bool => $record['allocations'][$detail->id] === null)
+                    ? null : (float) $records->sum(fn ($record) => $record['allocations'][$detail->id]);
+                $atrRecords = fn ($records) => $records->map(fn ($record): array => [
+                    'id' => $record['id'],
+                    'code' => $record['code'],
+                    'amount' => $record['allocations'][$detail->id],
+                    'requested_amount' => $record['requested_allocations'][$detail->id],
+                ])->values()->all();
                 $eerItems = $detail->reimbursementItems()
                     ->whereHas('reimbursement', function ($q) {
                         $q->where('type', 'eer')->whereNotIn('status', ['rejected', 'draft']);
@@ -130,11 +134,13 @@ final class ProjectResource extends JsonResource
                     'amount_pelaksanaan' => $detail->amount_pelaksanaan,
                     'amount_proposal' => $detail->amount_proposal,
                     'notes' => $detail->notes,
-                    'used_atr' => (float) $atrItems->sum('amount'),
-                    'pending_atr' => (float) $pendingAtrItems->sum('amount'),
+                    'used_atr' => $atrTotal($activityAtrs),
+                    'pending_atr' => $atrTotal($pending),
+                    'requested_pending_atr' => (float) $pending->sum(fn ($record) => $record['requested_allocations'][$detail->id]),
+                    'requested_atr' => (float) $activityAtrs->sum(fn ($record) => $record['requested_allocations'][$detail->id]),
                     'used_eer' => (float) $eerItems->sum('amount'),
-                    'atr_records' => $records($pendingAtrItems),
-                    'converted_atr_records' => $records($convertedAtrItems),
+                    'atr_records' => $atrRecords($pending),
+                    'converted_atr_records' => $atrRecords($converted),
                     'eer_records' => $records($eerItems),
                 ];
             })),
@@ -147,10 +153,10 @@ final class ProjectResource extends JsonResource
             'monitoring_history' => ProjectMonitoringResource::collection($this->whenLoaded('monitorings')),
             'approvals' => ProjectApprovalResource::collection($this->whenLoaded('approvals')),
             'events' => $this->whenLoaded('events'),
-            'used_atr' => (float) $this->reimbursements()
-                ->where('type', 'atr')
-                ->whereNotIn('status', ['rejected', 'draft'])
-                ->sum('amount'),
+            'used_atr' => (float) $atrUsage->sum('amount'),
+            'atr_records' => $projectAtrRecords($pendingAtrs),
+            'converted_atr_records' => $projectAtrRecords($convertedAtrs),
+            'atr_allocation_pending' => $atrUsage->contains('allocation_pending', true),
             'pending_atr' => $pendingAtr,
             'used_eer_refund' => (float) $this->reimbursements()
                 ->where('type', 'eer')

@@ -47,7 +47,8 @@ interface ProjectTabsProps {
 interface UsageRecord {
     id: number;
     code: string;
-    amount: number;
+    amount: number | null;
+    requested_amount?: number;
 }
 
 export default function ProjectTabs({
@@ -352,8 +353,8 @@ export default function ProjectTabs({
 
     const totalPelaksanaan = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_pelaksanaan) || 0), 0);
     const totalProposal = detailBudgets.reduce((sum, item) => sum + (Number(item.amount_proposal) || 0), 0);
-    const totalUsedAtr = detailBudgets.reduce((sum, item) => sum + (Number(item.pending_atr) || 0), 0);
-    const totalUsedEer = detailBudgets.reduce((sum, item) => sum + (Number(item.used_eer) || 0), 0);
+    const totalUsedAtr = Number(project.pending_atr) || 0;
+    const totalUsedEer = Number(project.used_eer) || 0;
     const computedRemainingOperational = opsBudget
         - (project.pending_atr || 0)
         - (project.used_eer || 0);
@@ -366,9 +367,9 @@ export default function ProjectTabs({
             return merged;
         }, new Map<number, UsageRecord>()).values()
     );
-    const usageAmount = (amount: number, records: UsageRecord[] = [], type: 'ATR' | 'EER', activity: string, convertedRecords: UsageRecord[] = []) => {
-        const value = formatRupiah(amount);
-        const converted = amount <= 0 && convertedRecords.length > 0;
+    const usageAmount = (amount: number | null, records: UsageRecord[] = [], type: 'ATR' | 'EER', activity: string, convertedRecords: UsageRecord[] = []) => {
+        const value = amount === null ? 'Belum dialokasikan' : formatRupiah(amount);
+        const converted = amount !== null && amount <= 0 && convertedRecords.length > 0;
         const linkedRecords = converted ? convertedRecords : records;
         if (linkedRecords.length === 0) return value;
 
@@ -390,8 +391,8 @@ export default function ProjectTabs({
             </button>
         );
     };
-    const allAtrRecords = mergeUsageRecords(detailBudgets.flatMap(detail => detail.atr_records || []));
-    const allConvertedAtrRecords = mergeUsageRecords(detailBudgets.flatMap(detail => detail.converted_atr_records || []));
+    const allAtrRecords: UsageRecord[] = project.atr_records || [];
+    const allConvertedAtrRecords: UsageRecord[] = project.converted_atr_records || [];
     const allEerRecords = mergeUsageRecords(detailBudgets.flatMap(detail => detail.eer_records || []));
 
     return (
@@ -922,16 +923,24 @@ export default function ProjectTabs({
 
                             {!editDetailBudget ? (
                                 <div className="space-y-4">
+                                    <p className="text-xs text-muted-foreground">Terpakai ATR mengikuti nominal transfer, atau nominal pengajuan jika belum ditransfer. ATR yang sudah memiliki EER diganti dengan pengeluaran EER.</p>
+                                    {project.atr_allocation_pending && (
+                                        <Alert>
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle>Alokasi ATR perlu diperiksa</AlertTitle>
+                                            <AlertDescription>Nominal ATR sudah dihitung dalam total proyek, tetapi pembagiannya ke kegiatan belum lengkap atau berbeda dari rincian pengajuan. Periksa dokumen ATR untuk melengkapi alokasinya.</AlertDescription>
+                                        </Alert>
+                                    )}
                                     {/* Mobile Cards View */}
                                     <div className="md:hidden space-y-3">
                                         {detailBudgets.length > 0 ? (
                                             detailBudgets.map((detail, idx) => {
                                                 const proposal = Number(detail.amount_proposal) || 0;
-                                                const grossAtr = Number(detail.used_atr) || 0;
-                                                const usedAtr = Number(detail.pending_atr) || 0;
+                                                const grossAtr = detail.used_atr === null ? null : Number(detail.used_atr) || 0;
+                                                const usedAtr = detail.pending_atr === null ? null : Number(detail.pending_atr) || 0;
                                                 const usedEer = Number(detail.used_eer) || 0;
                                                 const pelaksanaan = Number(detail.amount_pelaksanaan) || 0;
-                                                const eerDiff = grossAtr - usedAtr - usedEer;
+                                                const eerDiff = grossAtr === null || usedAtr === null ? null : grossAtr - usedAtr - usedEer;
 
                                                 return (
                                                     <Card key={idx} className="p-4 space-y-3 border border-slate-200">
@@ -940,7 +949,7 @@ export default function ProjectTabs({
                                                                 <span className="text-[10px] font-bold text-muted-foreground uppercase">Kegiatan #{idx + 1}</span>
                                                                 <h5 className="font-semibold text-sm text-slate-900">{detail.item_name || '-'}</h5>
                                                             </div>
-                                                            {usedEer > 0 ? (
+                                                            {usedEer > 0 && eerDiff !== null ? (
                                                                 <Badge variant="outline" className={`font-mono text-[10px] shrink-0 ${eerDiff > 0 ? 'text-green-600 border-green-200 bg-green-50' : (eerDiff < 0 ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-500 border-gray-200 bg-gray-50')}`}>
                                                                     {eerDiff > 0 ? 'Refund: ' : (eerDiff < 0 ? 'Reimb: ' : 'Balance: ')}
                                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs(eerDiff))}
@@ -965,6 +974,7 @@ export default function ProjectTabs({
                                                                 <p className="text-[10px] text-muted-foreground">Terpakai ATR</p>
                                                                 <p className="font-mono font-medium text-orange-600">
                                                                     {usageAmount(usedAtr, detail.atr_records, 'ATR', detail.item_name || `Kegiatan #${idx + 1}`, detail.converted_atr_records)}
+                                                                    {detail.requested_pending_atr !== undefined && detail.requested_pending_atr !== usedAtr && <span className="block text-[10px] text-muted-foreground">Pengajuan: {formatRupiah(Number(detail.requested_pending_atr))}</span>}
                                                                     {usedAtr === 0 && detail.converted_atr_records?.length > 0 && <p className="text-[10px] text-muted-foreground">Sudah masuk EER</p>}
                                                                 </p>
                                                             </div>
@@ -1042,11 +1052,11 @@ export default function ProjectTabs({
                                                 {detailBudgets.length > 0 ? (
                                                     detailBudgets.map((detail, idx) => {
                                                         const proposal = Number(detail.amount_proposal) || 0;
-                                                        const grossAtr = Number(detail.used_atr) || 0;
-                                                        const usedAtr = Number(detail.pending_atr) || 0;
+                                                        const grossAtr = detail.used_atr === null ? null : Number(detail.used_atr) || 0;
+                                                        const usedAtr = detail.pending_atr === null ? null : Number(detail.pending_atr) || 0;
                                                         const usedEer = Number(detail.used_eer) || 0;
                                                         const pelaksanaan = Number(detail.amount_pelaksanaan) || 0;
-                                                        const eerDiff = grossAtr - usedAtr - usedEer;
+                                                        const eerDiff = grossAtr === null || usedAtr === null ? null : grossAtr - usedAtr - usedEer;
                                                         
                                                         return (
                                                             <tr key={idx} className="hover:bg-gray-50/50">
@@ -1060,13 +1070,14 @@ export default function ProjectTabs({
                                                                 </td>
                                                                 <td className="px-4 py-3 text-right font-mono text-orange-600">
                                                                     {usageAmount(usedAtr, detail.atr_records, 'ATR', detail.item_name || `Kegiatan #${idx + 1}`, detail.converted_atr_records)}
+                                                                    {detail.requested_pending_atr !== undefined && detail.requested_pending_atr !== usedAtr && <span className="block text-[10px] text-muted-foreground">Pengajuan: {formatRupiah(Number(detail.requested_pending_atr))}</span>}
                                                                     {usedAtr === 0 && detail.converted_atr_records?.length > 0 && <p className="text-[10px] text-muted-foreground">Sudah masuk EER</p>}
                                                                 </td>
                                                                 <td className="px-4 py-3 text-right font-mono text-blue-600">
                                                                     {usageAmount(usedEer, detail.eer_records, 'EER', detail.item_name || `Kegiatan #${idx + 1}`)}
                                                                 </td>
                                                                 <td className="px-4 py-3 text-right">
-                                                                    {usedEer > 0 ? (
+                                                                    {usedEer > 0 && eerDiff !== null ? (
                                                                         <Badge variant="outline" className={`font-mono text-[10px] ${eerDiff > 0 ? 'text-green-600 border-green-200 bg-green-50' : (eerDiff < 0 ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-500 border-gray-200 bg-gray-50')}`}>
                                                                             {eerDiff > 0 ? 'Refund: ' : (eerDiff < 0 ? 'Reimb: ' : 'Balance: ')}
                                                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.abs(eerDiff))}
@@ -1834,7 +1845,7 @@ export default function ProjectTabs({
                                 className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                             >
                                 <span className="font-medium text-slate-900">{record.code || `#${record.id}`}</span>
-                                <span className="font-mono text-slate-700">{formatRupiah(Number(record.amount))}</span>
+                                <span className="font-mono text-slate-700">{record.amount === null ? 'Belum dialokasikan' : formatRupiah(record.amount)}{record.requested_amount !== undefined && record.requested_amount !== record.amount && <span className="block text-[10px] text-muted-foreground">Pengajuan: {formatRupiah(record.requested_amount)}</span>}</span>
                             </Link>
                         ))}
                     </div>

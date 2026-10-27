@@ -270,7 +270,7 @@ final readonly class ReimbursementController
         $user = $request->user();
 
         $createReimbursement->handle(
-            $request->all(),
+            $request->validated(),
             $user ? $user->id : 0
         );
 
