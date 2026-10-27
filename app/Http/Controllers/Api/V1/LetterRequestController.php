@@ -20,6 +20,12 @@ final class LetterRequestController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $filters = $request->validate([
+            'letter_number' => ['nullable', 'string', 'max:255'],
+            'letter_division_id' => ['nullable', 'integer', 'min:1'],
+            'letter_code_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+
         $user = $request->user();
         $query = LetterRequest::with(['project', 'requester', 'pic', 'letterCode', 'letterDivision', 'division']);
 
@@ -48,6 +54,16 @@ final class LetterRequestController extends Controller
                             ->orWhere('code', 'like', "%{$search}%");
                     });
             });
+        }
+
+        if (isset($filters['letter_number']) && $filters['letter_number'] !== '') {
+            $query->where('letter_number', 'like', '%'.$filters['letter_number'].'%');
+        }
+        if (! empty($filters['letter_division_id'])) {
+            $query->where('letter_division_id', $filters['letter_division_id']);
+        }
+        if (! empty($filters['letter_code_id'])) {
+            $query->where('letter_code_id', $filters['letter_code_id']);
         }
 
         // Date range filter

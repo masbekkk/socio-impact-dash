@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
@@ -120,6 +120,12 @@ interface PaginationState {
     to: number;
 }
 
+interface LetterFilterOption {
+    id: number;
+    code: string;
+    description: string | null;
+}
+
 interface Props {
     canAssign: boolean;
     canDelete: boolean;
@@ -127,30 +133,59 @@ interface Props {
 
 const STORAGE_KEY = 'letter_requests_filters';
 
+const defaultPagination: PaginationState = {
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    from: 0,
+    to: 0,
+};
+
 export default function LetterRequestsIndex({ canDelete }: Props) {
     const initialFilters = (() => {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) return JSON.parse(raw);
-        } catch (e) { }
-        return {
+        const defaults = {
             searchQuery: '',
+            letterNumber: '',
+            letterDivisionId: '',
+            letterCodeId: '',
             dateFrom: '',
             dateTo: '',
-            pagination: {
-                current_page: 1,
-                last_page: 1,
-                per_page: 10,
-                total: 0,
-                from: 0,
-                to: 0
-            }
+            pagination: defaultPagination,
         };
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                const saved = JSON.parse(raw);
+                return {
+                    searchQuery: typeof saved.searchQuery === 'string' ? saved.searchQuery : '',
+                    letterNumber: typeof saved.letterNumber === 'string' ? saved.letterNumber : '',
+                    letterDivisionId: typeof saved.letterDivisionId === 'string' ? saved.letterDivisionId : '',
+                    letterCodeId: typeof saved.letterCodeId === 'string' ? saved.letterCodeId : '',
+                    dateFrom: typeof saved.dateFrom === 'string' ? saved.dateFrom : '',
+                    dateTo: typeof saved.dateTo === 'string' ? saved.dateTo : '',
+                    pagination: {
+                        ...defaultPagination,
+                        current_page: Number.isInteger(saved.pagination?.current_page) && saved.pagination.current_page > 0 ? saved.pagination.current_page : 1,
+                        per_page: [10, 20, 30, 40, 50].includes(saved.pagination?.per_page) ? saved.pagination.per_page : 10,
+                    },
+                };
+            }
+        } catch {
+            return defaults;
+        }
+        return defaults;
     })();
 
     const [requests, setRequests] = useState<LetterRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery);
+    const [letterNumber, setLetterNumber] = useState(initialFilters.letterNumber);
+    const [letterDivisionId, setLetterDivisionId] = useState(initialFilters.letterDivisionId);
+    const [letterCodeId, setLetterCodeId] = useState(initialFilters.letterCodeId);
+    const [letterDivisions, setLetterDivisions] = useState<LetterFilterOption[]>([]);
+    const [letterCodes, setLetterCodes] = useState<LetterFilterOption[]>([]);
+    const activeListRequest = useRef<AbortController | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<LetterRequest | null>(null);
     const [processing, setProcessing] = useState(false);
@@ -186,18 +221,40 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
         { title: 'Nomor Surat', href: '/letter-requests' },
     ];
 
+    useEffect(() => {
+        const controller = new AbortController();
+        Promise.all([
+            axios.get('/api/v1/letter-divisions', { signal: controller.signal }),
+            axios.get('/api/v1/letter-codes', { signal: controller.signal }),
+        ]).then(([divisionsResponse, codesResponse]) => {
+            setLetterDivisions(divisionsResponse.data.data);
+            setLetterCodes(codesResponse.data.data);
+        }).catch((error) => {
+            if (!axios.isCancel(error)) console.error('Error fetching letter filters:', error);
+        });
+        return () => controller.abort();
+    }, []);
+
     const fetchRequests = useCallback(async () => {
+        activeListRequest.current?.abort();
+        const controller = new AbortController();
+        activeListRequest.current = controller;
         setLoading(true);
         try {
             const response = await axios.get('/api/v1/letter-requests', {
+                signal: controller.signal,
                 params: {
                     search: searchQuery,
+                    letter_number: letterNumber || undefined,
+                    letter_division_id: letterDivisionId || undefined,
+                    letter_code_id: letterCodeId || undefined,
                     page: pagination.current_page,
                     per_page: pagination.per_page,
                     date_from: dateFrom || undefined,
                     date_to: dateTo || undefined,
                 }
             });
+            if (controller.signal.aborted) return;
             setRequests(response.data.data.data);
             setPagination({
                 current_page: response.data.data.current_page,
@@ -208,26 +265,38 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
                 to: response.data.data.to,
             });
         } catch (error) {
-            console.error("Error fetching letter requests:", error);
+            if (!axios.isCancel(error)) console.error("Error fetching letter requests:", error);
         } finally {
-            setLoading(false);
+            if (!controller.signal.aborted) setLoading(false);
         }
-    }, [searchQuery, pagination.current_page, pagination.per_page, dateFrom, dateTo]);
+    }, [searchQuery, letterNumber, letterDivisionId, letterCodeId, pagination.current_page, pagination.per_page, dateFrom, dateTo]);
 
     useEffect(() => {
         const filtersToSave = {
             searchQuery,
+            letterNumber,
+            letterDivisionId,
+            letterCodeId,
             dateFrom,
             dateTo,
-            pagination: { ...pagination, total: 0, from: 0, to: 0, last_page: 1 } // save layout only
+            pagination: {
+                ...defaultPagination,
+                current_page: pagination.current_page,
+                per_page: pagination.per_page,
+            },
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filtersToSave));
+    }, [searchQuery, letterNumber, letterDivisionId, letterCodeId, dateFrom, dateTo, pagination.current_page, pagination.per_page]);
 
+    useEffect(() => {
         const timer = setTimeout(() => {
             fetchRequests();
         }, 500);
-        return () => clearTimeout(timer);
-    }, [fetchRequests, searchQuery, dateFrom, dateTo, pagination.current_page, pagination.per_page]);
+        return () => {
+            clearTimeout(timer);
+            activeListRequest.current?.abort();
+        };
+    }, [fetchRequests]);
 
     const handleDeleteClick = (req: LetterRequest) => {
         setSelectedRequest(req);
@@ -266,6 +335,21 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
         setDateTo('');
         setPagination(prev => ({ ...prev, current_page: 1 }));
     };
+
+    const resetAllFilters = () => {
+        setSearchQuery('');
+        setLetterNumber('');
+        setLetterDivisionId('');
+        setLetterCodeId('');
+        setDateFrom('');
+        setDateTo('');
+        setPagination(prev => ({ ...prev, current_page: 1 }));
+    };
+
+    const letterFilterOptions = (items: LetterFilterOption[]) => [
+        { value: '', label: 'Semua' },
+        ...items.map(item => ({ value: String(item.id), label: item.description ? `${item.code} — ${item.description}` : item.code })),
+    ];
 
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
@@ -342,6 +426,53 @@ export default function LetterRequestsIndex({ canDelete }: Props) {
                                 )}
                             </div>
                         </div>
+                        <div className="grid gap-3 border-t pt-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="letter-number-filter">Nomor Surat</Label>
+                                <Input
+                                    id="letter-number-filter"
+                                    type="search"
+                                    placeholder="Cari nomor surat..."
+                                    value={letterNumber}
+                                    onChange={(event) => {
+                                        setLetterNumber(event.target.value);
+                                        setPagination(prev => ({ ...prev, current_page: 1 }));
+                                    }}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label>Divisi Surat</Label>
+                                <SearchableSelect
+                                    options={letterFilterOptions(letterDivisions)}
+                                    value={letterDivisionId}
+                                    onValueChange={(value) => {
+                                        setLetterDivisionId(value);
+                                        setPagination(prev => ({ ...prev, current_page: 1 }));
+                                    }}
+                                    placeholder="Semua divisi surat"
+                                    searchPlaceholder="Cari divisi surat..."
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label>Kode Surat</Label>
+                                <SearchableSelect
+                                    options={letterFilterOptions(letterCodes)}
+                                    value={letterCodeId}
+                                    onValueChange={(value) => {
+                                        setLetterCodeId(value);
+                                        setPagination(prev => ({ ...prev, current_page: 1 }));
+                                    }}
+                                    placeholder="Semua kode surat"
+                                    searchPlaceholder="Cari kode surat..."
+                                />
+                            </div>
+                        </div>
+                        {(searchQuery || letterNumber || letterDivisionId || letterCodeId || dateFrom || dateTo) && (
+                            <Button variant="outline" size="sm" onClick={resetAllFilters} className="self-start">
+                                <XCircle className="mr-1 h-4 w-4" />
+                                Reset Semua Filter
+                            </Button>
+                        )}
                     </CardHeader>
                     <CardContent>
                         {/* ── MOBILE VIEW: Card List ────────────────── */}
