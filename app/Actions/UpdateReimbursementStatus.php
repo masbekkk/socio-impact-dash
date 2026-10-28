@@ -52,7 +52,7 @@ final readonly class UpdateReimbursementStatus
             if ($action === 'transferred') {
                 $statusToSet = ReimbursementStatus::Transferred;
 
-                if ($reimbursement->type === \App\Enums\ReimbursementType::EER && in_array($reimbursement->eer_type, ['refund', 'reimbursement'], true)) {
+                if ($reimbursement->type === \App\Enums\ReimbursementType::EER && in_array($reimbursement->eer_type, ['refund', 'reimbursement', 'balance'], true)) {
                     $statusToSet = ReimbursementStatus::Closed;
                 }
 

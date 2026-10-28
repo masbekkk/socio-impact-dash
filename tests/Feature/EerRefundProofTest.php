@@ -28,10 +28,10 @@ function refundEerFor(User $owner, ReimbursementStatus $status = ReimbursementSt
     ]);
 }
 
-test('pegawai owner uploads refund proof and marks EER transferred after finance approval', function (): void {
+test('pegawai owner uploads refund proof and marks EER transferred after finance approval', function (ReimbursementStatus $status): void {
     $owner = User::factory()->create();
     $owner->assignRole('pegawai');
-    $eer = refundEerFor($owner);
+    $eer = refundEerFor($owner, $status);
 
     $this->actingAs($owner)->post("/api/v1/reimbursements/{$eer->id}/refund-proof", [
         'transfer_proof' => UploadedFile::fake()->create('refund.pdf', 1, 'application/pdf'),
@@ -47,21 +47,21 @@ test('pegawai owner uploads refund proof and marks EER transferred after finance
         'transfer_proof' => UploadedFile::fake()->create('again.pdf', 1, 'application/pdf'),
     ])->assertStatus(422);
     expect($eer->fresh()->status)->toBe(ReimbursementStatus::Transferred);
-});
+})->with([ReimbursementStatus::FinanceApproved, ReimbursementStatus::Requested]);
 
-test('only the pegawai owner can upload refund proof', function (): void {
+test('only the pegawai owner can upload refund proof', function (ReimbursementStatus $status): void {
     $owner = User::factory()->create();
     $owner->assignRole('pegawai');
     $other = User::factory()->create();
     $other->assignRole('pegawai');
-    $eer = refundEerFor($owner);
+    $eer = refundEerFor($owner, $status);
 
     $this->actingAs($other)->post("/api/v1/reimbursements/{$eer->id}/refund-proof", [
         'transfer_proof' => UploadedFile::fake()->create('refund.pdf', 1, 'application/pdf'),
     ])->assertForbidden();
 
     expect($eer->fresh()->transfer_proof_path)->toBeNull();
-});
+})->with([ReimbursementStatus::FinanceApproved, ReimbursementStatus::Requested]);
 
 test('refund proof upload requires the right EER state and a valid file', function (): void {
     $owner = User::factory()->create();
@@ -113,17 +113,17 @@ test('finance verifies an existing employee refund proof without a second upload
         ->and($eer->fresh()->transfer_proof_path)->toBe('existing/refund.pdf');
 });
 
-test('finance cannot close refund EER before the employee uploads proof', function (): void {
+test('finance cannot close refund EER before the employee uploads proof', function (ReimbursementStatus $status): void {
     $owner = User::factory()->create();
     $owner->assignRole('pegawai');
     $finance = User::factory()->create();
     $finance->assignRole('finance');
-    $eer = refundEerFor($owner);
+    $eer = refundEerFor($owner, $status);
 
     $this->actingAs($finance)->postJson("/api/v1/reimbursements/{$eer->id}/status", [
         'action' => 'transferred',
         'transfer_proof' => UploadedFile::fake()->create('refund.pdf', 1, 'application/pdf'),
     ])->assertStatus(422);
 
-    expect($eer->fresh()->status)->toBe(ReimbursementStatus::FinanceApproved);
-});
+    expect($eer->fresh()->status)->toBe($status);
+})->with([ReimbursementStatus::FinanceApproved, ReimbursementStatus::Requested]);

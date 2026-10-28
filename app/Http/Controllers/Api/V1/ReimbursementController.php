@@ -221,7 +221,7 @@ final class ReimbursementController extends Controller
         }
 
         if ($eer->type !== ReimbursementType::EER || $eer->eer_type !== 'refund'
-            || $eer->status !== ReimbursementStatus::FinanceApproved || $eer->transfer_proof_path) {
+            || ! in_array($eer->status, [ReimbursementStatus::FinanceApproved, ReimbursementStatus::Requested], true) || $eer->transfer_proof_path) {
             return JsonResponseFormatter::error('Bukti refund hanya dapat diunggah sekali setelah persetujuan finance.', 422);
         }
 
@@ -236,7 +236,7 @@ final class ReimbursementController extends Controller
 
         try {
             $updated = Reimbursement::query()->whereKey($eer->id)
-                ->where('status', ReimbursementStatus::FinanceApproved->value)
+                ->where('status', $eer->status->value)
                 ->whereNull('transfer_proof_path')
                 ->update([
                     'transfer_proof_path' => $path,

@@ -47,6 +47,10 @@ final class UpdateReimbursementStatusRequest extends FormRequest
                         return false;
                     }
 
+                    if ($reimbursement && $reimbursement->type === \App\Enums\ReimbursementType::EER && $reimbursement->eer_type === 'balance') {
+                        return false;
+                    }
+
                     if ($reimbursement?->transfer_proof_path) {
                         return false;
                     }

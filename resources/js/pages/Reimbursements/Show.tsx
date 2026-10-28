@@ -258,6 +258,7 @@ export default function Show() {
   const userId = auth?.user?.id || 0;
 
   const [data, setData] = useState<ReimbursementDetail | null>(null);
+  const isBalanceEer = data?.type === 'eer' && data.eer_type === 'balance';
 
   const totalEerSpent = useMemo(() => {
     if (!data || data.type !== 'eer') return 0;
@@ -582,15 +583,15 @@ export default function Show() {
   };
 
   const handleTransfer = async () => {
-    if (!data || (!transferProof && !data?.transfer_proof_path && data?.type?.toLowerCase() !== 'allowance')) return;
+    if (!data || (!isBalanceEer && !transferProof && !data?.transfer_proof_path && data?.type?.toLowerCase() !== 'allowance')) return;
     setActionLoading(true);
     try {
       const formData = new FormData();
       formData.append('action', 'transferred');
-      if (transferProof) formData.append('transfer_proof', transferProof);
+      if (!isBalanceEer && transferProof) formData.append('transfer_proof', transferProof);
 
       const finalTransferredAmount = transferredAmount || (data?.amount ?? 0);
-      if (finalTransferredAmount > 0) formData.append('transferred_amount', finalTransferredAmount.toString());
+      if (!isBalanceEer && finalTransferredAmount > 0) formData.append('transferred_amount', finalTransferredAmount.toString());
 
       const role = getCurrentUserRole();
 
@@ -2736,7 +2737,8 @@ export default function Show() {
                       onClick={() => setTransferDialogOpen(true)}
                       className="bg-blue-600 hover:bg-blue-700"
                     >
-                      <Upload className="mr-2 h-4 w-4" /> Selesaikan & Transfer
+                      {isBalanceEer ? <CheckCircle className="mr-2 h-4 w-4" /> : <Upload className="mr-2 h-4 w-4" />}
+                      {isBalanceEer ? 'Selesaikan' : 'Selesaikan & Transfer'}
                     </Button>
                   </div>
                 )}
@@ -2778,7 +2780,7 @@ export default function Show() {
                 </div>
 
                 {/* Transfer / Refund Proof */}
-                {data.type === 'eer' && data.eer_type === 'refund' && data.status === 'finance_approved'
+                {data.type === 'eer' && data.eer_type === 'refund' && ['finance_approved', 'request_fund'].includes(data.status)
                   && isPegawai && isCreator && !data.transfer_proof_path && (
                     <Button variant="outline" className="gap-2" onClick={() => setRefundProofDialogOpen(true)}>
                       <Upload className="h-4 w-4" /> Upload Bukti & Tandai Transferred
@@ -3242,13 +3244,15 @@ export default function Show() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-700">
               <CheckCircle className="h-5 w-5" />
-              Selesaikan & Transfer
+              {isBalanceEer ? 'Selesaikan EER' : 'Selesaikan & Transfer'}
             </DialogTitle>
             <DialogDescription>
-              Unggah bukti transfer untuk menyelesaikan reimbursement <strong>{data?.type?.toUpperCase()}</strong> dengan kode <strong className="font-mono">{data?.code}</strong>.
+              {isBalanceEer
+                ? <>Selesaikan EER balance <strong className="font-mono">{data?.code}</strong> dan tandai sebagai Closed.</>
+                : <>Unggah bukti transfer untuk menyelesaikan reimbursement <strong>{data?.type?.toUpperCase()}</strong> dengan kode <strong className="font-mono">{data?.code}</strong>.</>}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          {!isBalanceEer && <div className="space-y-4 py-4">
             {data?.eer_type === 'refund' && data?.transfer_proof_path && (
               <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200 space-y-3">
                 <div className="flex items-center gap-2 text-emerald-800 font-medium text-sm">
@@ -3294,7 +3298,7 @@ export default function Show() {
                 * Masukkan nominal aktual yang ditransfer ke penerima.
               </p>
             </div>
-          </div>
+          </div>}
           <DialogFooter>
             <Button variant="outline" onClick={resetTransferDialog} disabled={actionLoading}>Batal</Button>
             <Button
@@ -3303,13 +3307,15 @@ export default function Show() {
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-blue-600 hover:bg-blue-700"
               )}
-              disabled={(!data?.transfer_proof_path && !transferProof && data?.type?.toLowerCase() !== 'allowance') || actionLoading || (transferredAmount <= 0 && !(data?.amount ?? 0))}
+              disabled={actionLoading || (!isBalanceEer && ((!data?.transfer_proof_path && !transferProof && data?.type?.toLowerCase() !== 'allowance') || (transferredAmount <= 0 && !(data?.amount ?? 0))))}
               onClick={handleTransfer}
             >
               {actionLoading ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
               ) : (
-                data?.eer_type === 'refund' && data?.transfer_proof_path
+                isBalanceEer
+                  ? <><CheckCircle className="mr-2 h-4 w-4" /> Selesaikan</>
+                  : data?.eer_type === 'refund' && data?.transfer_proof_path
                   ? <><CheckCircle className="mr-2 h-4 w-4" /> Verifikasi & Selesai</>
                   : <><Upload className="mr-2 h-4 w-4" /> Upload & Selesai</>
               )}
