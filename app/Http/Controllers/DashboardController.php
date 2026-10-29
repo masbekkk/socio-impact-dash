@@ -111,6 +111,10 @@ final class DashboardController extends Controller
                             $query->where('type', \App\Enums\ReimbursementType::EER)
                                 ->where('status', \App\Enums\ReimbursementStatus::Transferred);
                         })->orWhere(function ($query): void {
+                            $query->where('type', \App\Enums\ReimbursementType::EER)
+                                ->where('eer_type', 'balance')
+                                ->where('status', \App\Enums\ReimbursementStatus::FinanceApproved);
+                        })->orWhere(function ($query): void {
                             $query->where('type', '!=', \App\Enums\ReimbursementType::EER)
                                 ->whereIn('status', [\App\Enums\ReimbursementStatus::FinanceApproved, \App\Enums\ReimbursementStatus::HRApproved]);
                         });

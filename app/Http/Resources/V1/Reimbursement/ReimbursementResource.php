@@ -329,9 +329,12 @@ final class ReimbursementResource extends JsonResource
 
         $financeApproved = $financeApproval && $financeApproval->status->value === 'approved';
 
-        // EER reaches the director after the transfer proof has been uploaded.
+        // Balance EER goes directly to the director after finance approval.
         if ($this->type === ReimbursementType::EER) {
-            return $financeApproved && $statusValue === 'transferred' && $user->hasRole('direktur');
+            $readyForDirector = $statusValue === 'transferred'
+                || ($this->eer_type === 'balance' && $statusValue === 'finance_approved');
+
+            return $financeApproved && $readyForDirector && $user->hasRole('direktur');
         }
 
         return $financeApproved && $user->hasRole('direktur');

@@ -17,7 +17,7 @@ beforeEach(function (): void {
     $this->withoutVite();
 });
 
-test('director dashboard lists transferred EER but keeps other reimbursement stages', function (): void {
+test('director dashboard lists transferred EER but keeps other reimbursement stages', function (string $eerType): void {
     $director = User::factory()->create();
     $director->assignRole('direktur');
     $employee = User::factory()->create();
@@ -35,7 +35,7 @@ test('director dashboard lists transferred EER but keeps other reimbursement sta
         'atr_id' => $sourceAtr->id,
         'project_id' => $sourceAtr->project_id,
         'type' => ReimbursementType::EER,
-        'eer_type' => 'refund',
+        'eer_type' => $eerType,
         'status' => ReimbursementStatus::Transferred,
         'amount' => 300000,
     ]);
@@ -54,6 +54,7 @@ test('director dashboard lists transferred EER but keeps other reimbursement sta
         'user_id' => $employee->id,
         'type' => ReimbursementType::EER,
         'status' => ReimbursementStatus::FinanceApproved,
+        'eer_type' => $eerType,
     ]);
     Reimbursement::factory()->create([
         'user_id' => $employee->id,
@@ -102,4 +103,73 @@ test('director dashboard lists transferred EER but keeps other reimbursement sta
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->where('approvalItems.direktur_reimbursements', fn ($items): bool => ! collect($items)->pluck('id')->contains($transferredEer->id))
             ->etc());
-});
+})->with(['refund', 'reimbursement']);
+
+test('director closes balance EER directly after finance approval', function (bool $bulk): void {
+    $director = User::factory()->create();
+    $director->assignRole('direktur');
+    $finance = User::factory()->create();
+    $finance->assignRole('finance');
+    $eer = Reimbursement::factory()->create([
+        'type' => ReimbursementType::EER,
+        'eer_type' => 'balance',
+        'status' => ReimbursementStatus::HeadApproved,
+        'transfer_proof_path' => null,
+        'transferred_at' => null,
+    ]);
+    $eer->approvals()->create([
+        'approver_id' => $finance->id,
+        'role' => 'finance',
+        'status' => 'pending',
+    ]);
+    $eer->approvals()->create([
+        'approver_id' => $director->id,
+        'role' => 'direktur',
+        'status' => 'pending',
+    ]);
+
+    $this->actingAs($director)->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('approvalItems.direktur_reimbursements', fn ($items): bool => ! collect($items)->pluck('id')->contains($eer->id))
+            ->etc());
+
+    $this->actingAs($finance)->postJson("/api/v1/reimbursements/{$eer->id}/status", [
+        'action' => 'approved',
+        'role' => 'finance',
+    ])->assertOk();
+    expect($eer->fresh()->status)->toBe(ReimbursementStatus::FinanceApproved);
+
+    $this->actingAs($director)->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('approvalItems.direktur_reimbursements', function ($items) use ($eer): bool {
+                $item = collect($items)->firstWhere('id', $eer->id);
+
+                return $item !== null && $item['can_approve'] === true;
+            })
+            ->etc());
+
+    if ($bulk) {
+        $this->post(route('reimbursements.bulk-approve'), [
+            'ids' => [$eer->id],
+            'role' => 'direktur',
+        ])->assertRedirect();
+    } else {
+        $this->postJson("/api/v1/reimbursements/{$eer->id}/status", [
+            'action' => 'approved',
+            'role' => 'direktur',
+        ])->assertOk();
+    }
+
+    $eer->refresh();
+    expect($eer->status)->toBe(ReimbursementStatus::Closed)
+        ->and($eer->transfer_proof_path)->toBeNull()
+        ->and($eer->transferred_at)->toBeNull();
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('approvalItems.direktur_reimbursements', fn ($items): bool => ! collect($items)->pluck('id')->contains($eer->id))
+            ->etc());
+})->with([false, true]);
