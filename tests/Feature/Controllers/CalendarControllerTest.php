@@ -30,6 +30,25 @@ it('renders calendar index view', function (): void {
         ->assertInertia(fn ($page) => $page->component('Calendar/Index'));
 });
 
+it('lists active projects for the agenda form like the leave form', function (): void {
+    $activeProject = Project::factory()->create([
+        'code' => 'PRJ-ACTIVE',
+        'name' => 'Active Project',
+        'status' => 'active',
+    ]);
+    Project::factory()->create(['status' => 'draft']);
+
+    actingAs($this->pegawai)
+        ->get(route('calendar.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('projects', 1)
+            ->where('projects.0.id', $activeProject->id)
+            ->where('projects.0.code', 'PRJ-ACTIVE')
+            ->where('projects.0.name', 'Active Project')
+        );
+});
+
 it('fetches only own events for pegawai', function (): void {
     $ownProject = Project::factory()->create(['created_by' => $this->pegawai->id]);
     $ownEvent = ProjectEvent::factory()->create([

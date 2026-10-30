@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Actions\Calendar\CreateCalendarEvent;
 use App\Actions\Calendar\DeleteCalendarEvent;
 use App\Actions\Calendar\GetCalendarEvents;
+use App\Models\Project;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -18,12 +19,12 @@ final class CalendarController
         $user = auth()->user();
         $events = $getCalendarEvents->handle($user);
 
-        $user->hasRole([\App\Enums\UserRole::Superadmin->value, \App\Enums\UserRole::Direktur->value, \App\Enums\UserRole::Finance->value, \App\Enums\UserRole::HR->value]);
-        $user->hasRole(\App\Enums\UserRole::Head->value);
-
         return Inertia::render('Calendar/Index', [
             'events' => $events,
-            'projects' => [],
+            'projects' => Project::query()
+                ->where('status', 'active')
+                ->orderBy('name')
+                ->get(['id', 'code', 'name']),
             'users' => \App\Models\User::query()
                 ->where('id', '!=', $user->id)
                 ->select('id', 'name')

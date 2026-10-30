@@ -74,6 +74,7 @@ interface CalendarEvent {
 
 interface ProjectData {
     id: number;
+    code: string;
     name: string;
 }
 
@@ -326,7 +327,7 @@ export default function CalendarIndex({
                                             <SearchableSelect
                                                 options={[
                                                     { label: '-- Tidak ada Project (Umum) --', value: 'none' },
-                                                    ...projects.map(proj => ({ label: proj.name, value: proj.id.toString() }))
+                                                    ...projects.map(proj => ({ label: `${proj.code} - ${proj.name}`, value: proj.id.toString() }))
                                                 ]}
                                                 value={data.project_id}
                                                 onValueChange={(val) => setData('project_id', val)}
