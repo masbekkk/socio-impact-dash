@@ -307,6 +307,10 @@ export default function Show() {
   const [refundProof, setRefundProof] = useState<File | null>(null);
   const [refundProofLoading, setRefundProofLoading] = useState(false);
   const [refundProofError, setRefundProofError] = useState('');
+  const [editProofDialogOpen, setEditProofDialogOpen] = useState(false);
+  const [replacementProof, setReplacementProof] = useState<File | null>(null);
+  const [editProofLoading, setEditProofLoading] = useState(false);
+  const [editProofError, setEditProofError] = useState('');
   const [transferredAmount, setTransferredAmount] = useState<number>(0);
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
@@ -473,6 +477,32 @@ export default function Show() {
     setRefundProofDialogOpen(false);
     setRefundProof(null);
     setRefundProofError('');
+  };
+
+  const resetEditProofDialog = () => {
+    setEditProofDialogOpen(false);
+    setReplacementProof(null);
+    setEditProofError('');
+  };
+
+  const handleEditProof = async () => {
+    if (!data || !replacementProof) return;
+
+    setEditProofLoading(true);
+    setEditProofError('');
+    try {
+      const formData = new FormData();
+      formData.append('transfer_proof', replacementProof);
+      await axios.post(`/api/v1/reimbursements/${data.id}/transfer-proof`, formData);
+      resetEditProofDialog();
+      await fetchDetail();
+    } catch (error: unknown) {
+      setEditProofError(axios.isAxiosError(error)
+        ? error.response?.data?.message || 'Gagal mengubah bukti transfer.'
+        : 'Gagal mengubah bukti transfer.');
+    } finally {
+      setEditProofLoading(false);
+    }
   };
 
   const handleRefundProofUpload = async () => {
@@ -2790,10 +2820,10 @@ export default function Show() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-medium text-muted-foreground uppercase">
-                        {data.eer_type === 'refund' ? 'Bukti Refund (User)' : 'Bukti Transfer (Finance/HR)'}
+                        {data.eer_type === 'refund' ? 'Bukti Refund' : 'Bukti Transfer (Finance/HR)'}
                       </label>
                       <Badge variant="outline" className={cn("text-xs", data.eer_type === 'refund' ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-blue-50 text-blue-700 border-blue-200")}>
-                        {data.eer_type === 'refund' ? 'User' : 'Finance/HR'}
+                        {data.eer_type === 'refund' ? 'Tersimpan' : 'Finance/HR'}
                       </Badge>
                     </div>
                     <div className={cn("p-4 rounded-lg border space-y-3", data.eer_type === 'refund' ? "bg-emerald-50/50 border-emerald-200" : "bg-blue-50/50 border-blue-200")}>
@@ -2808,12 +2838,18 @@ export default function Show() {
                               <Download className="h-3.5 w-3.5" /> Lihat Bukti
                             </Button>
                           </a>
-                          {(isFinanceOrAdmin || (data.type === 'allowance' && isHrOrAdmin))
-                            && !['transferred', 'closed'].includes(data.status) && (
-                            <Button size="sm" variant="outline" onClick={() => setTransferDialogOpen(true)} className="gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-100">
-                              <Edit className="h-3.5 w-3.5" /> Edit
+                          {data.type === 'eer' && ['refund', 'reimbursement'].includes(data.eer_type ?? '')
+                            && ['finance_approved', 'approved', 'request_fund', 'transferred', 'closed'].includes(data.status)
+                            && isFinanceOrAdmin ? (
+                            <Button size="sm" variant="outline" onClick={() => setEditProofDialogOpen(true)} className="gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-100">
+                              <Edit className="h-3.5 w-3.5" /> Edit Bukti
                             </Button>
-                          )}
+                          ) : (isFinanceOrAdmin || (data.type === 'allowance' && isHrOrAdmin))
+                            && !['transferred', 'closed'].includes(data.status) && (
+                              <Button size="sm" variant="outline" onClick={() => setTransferDialogOpen(true)} className="gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-100">
+                                <Edit className="h-3.5 w-3.5" /> Edit
+                              </Button>
+                            )}
                         </div>
                       </div>
                       {data.transferred_at && (
@@ -3235,6 +3271,36 @@ export default function Show() {
             <Button disabled={!refundProof || refundProofLoading} onClick={handleRefundProofUpload}>
               {refundProofLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
               Upload & Tandai Transferred
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={editProofDialogOpen} onOpenChange={(open) => {
+        if (!editProofLoading) {
+          if (open) setEditProofDialogOpen(true);
+          else resetEditProofDialog();
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Bukti Transfer EER</DialogTitle>
+            <DialogDescription>
+              Pilih file pengganti untuk EER <strong className="font-mono">{data?.code}</strong>. Status pengajuan tidak berubah.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="replacement-proof">Bukti baru (JPG, PNG, atau PDF; maks. 5MB)</Label>
+            <Input id="replacement-proof" type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(event) => {
+              setReplacementProof(event.target.files?.[0] ?? null);
+              setEditProofError('');
+            }} />
+            {editProofError && <p className="text-sm text-destructive" role="alert">{editProofError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={editProofLoading} onClick={resetEditProofDialog}>Batal</Button>
+            <Button disabled={!replacementProof || editProofLoading} onClick={handleEditProof}>
+              {editProofLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Simpan Bukti
             </Button>
           </DialogFooter>
         </DialogContent>

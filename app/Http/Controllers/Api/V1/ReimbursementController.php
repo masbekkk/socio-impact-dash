@@ -260,6 +260,62 @@ final class ReimbursementController extends Controller
         );
     }
 
+    public function replaceEerTransferProof(int $reimbursement, Request $request): JsonResponse
+    {
+        $eer = Reimbursement::query()->find($reimbursement);
+
+        if (! $eer) {
+            return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
+        }
+
+        if (! $request->user()->hasAnyRole(['finance', UserRole::Superadmin->value])) {
+            return JsonResponseFormatter::error('Hanya finance atau superadmin yang dapat mengubah bukti transfer EER.', 403);
+        }
+
+        if ($eer->type !== ReimbursementType::EER
+            || ! in_array($eer->eer_type, ['refund', 'reimbursement'], true)
+            || ! $eer->transfer_proof_path
+            || ! in_array($eer->status, [ReimbursementStatus::FinanceApproved, ReimbursementStatus::Approved, ReimbursementStatus::Requested, ReimbursementStatus::Transferred, ReimbursementStatus::Closed], true)) {
+            return JsonResponseFormatter::error('Bukti transfer EER belum tersedia atau tidak dapat diubah pada status ini.', 422);
+        }
+
+        $validated = $request->validate([
+            'transfer_proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+        ]);
+
+        $oldPath = $eer->transfer_proof_path;
+        $newPath = $validated['transfer_proof']->store('reimbursements/transfer-proofs', 'public');
+
+        if (! $newPath) {
+            return JsonResponseFormatter::error('Gagal menyimpan bukti transfer.', 500);
+        }
+
+        try {
+            $updated = Reimbursement::query()->whereKey($eer->id)
+                ->where('type', ReimbursementType::EER->value)
+                ->whereIn('eer_type', ['refund', 'reimbursement'])
+                ->where('transfer_proof_path', $oldPath)
+                ->where('status', $eer->status->value)
+                ->update(['transfer_proof_path' => $newPath]);
+
+            if ($updated === 0) {
+                Storage::disk('public')->delete($newPath);
+
+                return JsonResponseFormatter::error('Bukti transfer atau status EER telah berubah.', 422);
+            }
+        } catch (Throwable $exception) {
+            Storage::disk('public')->delete($newPath);
+            throw $exception;
+        }
+
+        Storage::disk('public')->delete($oldPath);
+
+        return JsonResponseFormatter::success(
+            new ReimbursementResource($eer->fresh()),
+            'Bukti transfer EER berhasil diubah'
+        );
+    }
+
     public function updateBudgets(int $id, Request $request): JsonResponse
     {
         try {
