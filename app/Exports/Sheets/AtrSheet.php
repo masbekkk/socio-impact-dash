@@ -63,6 +63,7 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
             'Direktur Status ATR',
             'Direktur Catatan ATR',
             // Linked EER columns
+            'Kode EER',
             'Status EER',
             'Tipe EER',
             'Nominal Selisih EER',
@@ -87,127 +88,10 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
 
     public function collection(): Collection
     {
-        return $this->reimbursements->map(function (Reimbursement $r): array {
-            $headApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Head);
-            $financeApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Finance);
-            $direkturApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Direktur);
+        return $this->reimbursements->flatMap(function (Reimbursement $r): array {
+            $eers = $r->eers->isEmpty() ? [null] : $r->eers->all();
 
-            // Budget items summary (showing Detail Aktivitas from notes)
-            $budgetItems = $r->atrBudgetSelecteds->pluck('notes')->filter()->implode('; ');
-
-            // Linked EERs
-            $eer = $r->eers->first();
-
-            if ($eer) {
-                $eerItem = $eer->items->first();
-                $eerHead = $eer->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Head);
-                $eerFinance = $eer->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Finance);
-                $eerDirektur = $eer->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Direktur);
-
-                // Find EER excel document
-                $eerExcelDoc = $eer->documents->first(fn ($d): bool => $d->type === 'excel');
-                $eerExcelUrl = $eerExcelDoc ? asset('storage/'.$eerExcelDoc->path) : '-';
-
-                $eerStatus = $eer->status?->value ?? '-';
-                $eerType = $eer->eer_type ?? '-';
-                $eerDiff = abs((float) $eer->amount - (float) $r->amount);
-                $eerNominal = (float) $eer->amount;
-                $eerTransferred = (float) ($eer->transferred_amount ?? 0);
-                $eerProof = $eer->transfer_proof_path ? asset('storage/'.$eer->transfer_proof_path) : '-';
-
-                $eerItemNotes = $eerItem?->notes ?? $eer->usage_plan ?? '-';
-                $eerItemReceipt = $eerItem?->receipt_path ? asset('storage/'.$eerItem->receipt_path) : '-';
-
-                $eerHeadName = $eerHead?->approver?->name ?? '-';
-                $eerHeadStatus = $eerHead?->status?->value ?? '-';
-                $eerHeadNotes = $eerHead?->notes ?? '-';
-
-                $eerFinanceName = $eerFinance?->approver?->name ?? '-';
-                $eerFinanceStatus = $eerFinance?->status?->value ?? '-';
-                $eerFinanceNotes = $eerFinance?->notes ?? '-';
-
-                $eerDirekturName = $eerDirektur?->approver?->name ?? '-';
-                $eerDirekturStatus = $eerDirektur?->status?->value ?? '-';
-                $eerDirekturNotes = $eerDirektur?->notes ?? '-';
-            } else {
-                $eerStatus = '-';
-                $eerType = '-';
-                $eerDiff = '-';
-                $eerNominal = '-';
-                $eerTransferred = '-';
-                $eerExcelUrl = '-';
-                $eerItemNotes = '-';
-                $eerItemReceipt = '-';
-                $eerProof = '-';
-
-                $eerHeadName = '-';
-                $eerHeadStatus = '-';
-                $eerHeadNotes = '-';
-
-                $eerFinanceName = '-';
-                $eerFinanceStatus = '-';
-                $eerFinanceNotes = '-';
-
-                $eerDirekturName = '-';
-                $eerDirekturStatus = '-';
-                $eerDirekturNotes = '-';
-            }
-
-            return [
-                $r->code,
-                $r->user?->name ?? '-',
-                $r->user?->nip ?? '-',
-                $r->project?->code ?? '-',
-                $r->project?->initial_project ?? '-',
-                $r->project?->name ?? '-',
-                $r->project?->division?->name ?? '-',
-                $r->status?->value ?? '-',
-                $r->urgency ?? '-',
-                $r->created_at?->format('Y-m-d H:i') ?? '-',
-                $r->start_date?->format('Y-m-d') ?? '-',
-                $r->end_date?->format('Y-m-d') ?? '-',
-                (float) $r->amount,
-                (float) ($r->transferred_amount ?? 0),
-                $r->transfer_proof_path ? asset('storage/'.$r->transfer_proof_path) : '-',
-                $budgetItems ?: '-',
-                $r->usage_plan ?? '-',
-                $r->bank_name ?? '-',
-                $r->bank_account ?? '-',
-                $r->account_holder ?? '-',
-                $r->bank_branch ?? '-',
-                // Head
-                $headApproval?->approver?->name ?? '-',
-                $headApproval?->status?->value ?? '-',
-                $headApproval?->notes ?? '-',
-                // Finance
-                $financeApproval?->approver?->name ?? '-',
-                $financeApproval?->status?->value ?? '-',
-                $financeApproval?->notes ?? '-',
-                // Direktur
-                $direkturApproval?->approver?->name ?? '-',
-                $direkturApproval?->status?->value ?? '-',
-                $direkturApproval?->notes ?? '-',
-                // EER general info
-                $eerStatus,
-                $eerType,
-                $eerDiff,
-                $eerNominal,
-                $eerTransferred,
-                $eerItemNotes,
-                $eerExcelUrl,
-                $eerItemReceipt,
-                $eerProof,
-                // EER approvals
-                $eerHeadName,
-                $eerHeadStatus,
-                $eerHeadNotes,
-                $eerFinanceName,
-                $eerFinanceStatus,
-                $eerFinanceNotes,
-                $eerDirekturName,
-                $eerDirekturStatus,
-                $eerDirekturNotes,
-            ];
+            return array_map(fn (?Reimbursement $eer): array => $this->row($r, $eer), $eers);
         });
     }
 
@@ -215,6 +99,133 @@ final readonly class AtrSheet implements FromCollection, ShouldAutoSize, WithHea
     {
         return [
             1 => ['font' => ['bold' => true]],
+        ];
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function row(Reimbursement $r, ?Reimbursement $eer): array
+    {
+        $headApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Head);
+        $financeApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Finance);
+        $direkturApproval = $r->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Direktur);
+
+        // Budget items summary (showing Detail Aktivitas from notes)
+        $budgetItems = $r->atrBudgetSelecteds->pluck('notes')->filter()->implode('; ');
+
+        if ($eer) {
+            $eerCode = $eer->code;
+            $eerItem = $eer->items->first();
+            $eerHead = $eer->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Head);
+            $eerFinance = $eer->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Finance);
+            $eerDirektur = $eer->approvals->first(fn ($a): bool => $a->role === ApprovalRole::Direktur);
+
+            // Find EER excel document
+            $eerExcelDoc = $eer->documents->first(fn ($d): bool => $d->type === 'excel');
+            $eerExcelUrl = $eerExcelDoc ? asset('storage/'.$eerExcelDoc->path) : '-';
+
+            $eerStatus = $eer->status?->value ?? '-';
+            $eerType = $eer->eer_type ?? '-';
+            $eerDiff = abs((float) $eer->amount - (float) $r->amount);
+            $eerNominal = (float) $eer->amount;
+            $eerTransferred = (float) ($eer->transferred_amount ?? 0);
+            $eerProof = $eer->transfer_proof_path ? asset('storage/'.$eer->transfer_proof_path) : '-';
+
+            $eerItemNotes = $eerItem?->notes ?? $eer->usage_plan ?? '-';
+            $eerItemReceipt = $eerItem?->receipt_path ? asset('storage/'.$eerItem->receipt_path) : '-';
+
+            $eerHeadName = $eerHead?->approver?->name ?? '-';
+            $eerHeadStatus = $eerHead?->status?->value ?? '-';
+            $eerHeadNotes = $eerHead?->notes ?? '-';
+
+            $eerFinanceName = $eerFinance?->approver?->name ?? '-';
+            $eerFinanceStatus = $eerFinance?->status?->value ?? '-';
+            $eerFinanceNotes = $eerFinance?->notes ?? '-';
+
+            $eerDirekturName = $eerDirektur?->approver?->name ?? '-';
+            $eerDirekturStatus = $eerDirektur?->status?->value ?? '-';
+            $eerDirekturNotes = $eerDirektur?->notes ?? '-';
+        } else {
+            $eerCode = '-';
+            $eerStatus = '-';
+            $eerType = '-';
+            $eerDiff = '-';
+            $eerNominal = '-';
+            $eerTransferred = '-';
+            $eerExcelUrl = '-';
+            $eerItemNotes = '-';
+            $eerItemReceipt = '-';
+            $eerProof = '-';
+
+            $eerHeadName = '-';
+            $eerHeadStatus = '-';
+            $eerHeadNotes = '-';
+
+            $eerFinanceName = '-';
+            $eerFinanceStatus = '-';
+            $eerFinanceNotes = '-';
+
+            $eerDirekturName = '-';
+            $eerDirekturStatus = '-';
+            $eerDirekturNotes = '-';
+        }
+
+        return [
+            $r->code,
+            $r->user?->name ?? '-',
+            $r->user?->nip ?? '-',
+            $r->project?->code ?? '-',
+            $r->project?->initial_project ?? '-',
+            $r->project?->name ?? '-',
+            $r->project?->division?->name ?? '-',
+            $r->status?->value ?? '-',
+            $r->urgency ?? '-',
+            $r->created_at?->format('Y-m-d H:i') ?? '-',
+            $r->start_date?->format('Y-m-d') ?? '-',
+            $r->end_date?->format('Y-m-d') ?? '-',
+            (float) $r->amount,
+            (float) ($r->transferred_amount ?? 0),
+            $r->transfer_proof_path ? asset('storage/'.$r->transfer_proof_path) : '-',
+            $budgetItems ?: '-',
+            $r->usage_plan ?? '-',
+            $r->bank_name ?? '-',
+            $r->bank_account ?? '-',
+            $r->account_holder ?? '-',
+            $r->bank_branch ?? '-',
+            // Head
+            $headApproval?->approver?->name ?? '-',
+            $headApproval?->status?->value ?? '-',
+            $headApproval?->notes ?? '-',
+            // Finance
+            $financeApproval?->approver?->name ?? '-',
+            $financeApproval?->status?->value ?? '-',
+            $financeApproval?->notes ?? '-',
+            // Direktur
+            $direkturApproval?->approver?->name ?? '-',
+            $direkturApproval?->status?->value ?? '-',
+            $direkturApproval?->notes ?? '-',
+            // EER general info
+            $eerCode,
+            $eerStatus,
+            $eerType,
+            $eerDiff,
+            $eerNominal,
+            $eerTransferred,
+            $eerItemNotes,
+            $eerExcelUrl,
+            $eerItemReceipt,
+            $eerProof,
+            // EER approvals
+            $eerHeadName,
+            $eerHeadStatus,
+            $eerHeadNotes,
+            $eerFinanceName,
+            $eerFinanceStatus,
+            $eerFinanceNotes,
+            $eerDirekturName,
+            $eerDirekturStatus,
+            $eerDirekturNotes,
         ];
     }
 }

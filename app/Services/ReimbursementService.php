@@ -18,6 +18,15 @@ final class ReimbursementService
 {
     public function listReimbursements(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
+        return $this->queryReimbursements($user, $filters)->paginate($perPage);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Reimbursement>
+     */
+    public function queryReimbursements(User $user, array $filters = []): Builder
+    {
         $isAtrTab = ($filters['type'] ?? '') === 'atr';
         $isEerTab = ($filters['type'] ?? '') === 'eer';
         $eerFilterClosure = ($isAtrTab || $isEerTab) ? $this->buildEerFilterClosure($filters) : null;
@@ -78,7 +87,7 @@ final class ReimbursementService
             $query->latest();
         }
 
-        return $query->paginate($perPage);
+        return $query;
     }
 
     public function applyFilters(Builder $query, User $user, array $filters): void

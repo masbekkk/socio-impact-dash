@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Exports;
 
+use App\Enums\ReimbursementType;
+use App\Exports\Sheets\AllowanceSheet;
 use App\Exports\Sheets\AtrSheet;
-use App\Models\Reimbursement;
 use App\Models\User;
 use App\Services\ReimbursementService;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
@@ -21,30 +22,36 @@ final readonly class ReimbursementExport implements WithMultipleSheets
     ) {}
 
     /**
-     * @return array<int, AtrSheet|EerSheet>
+     * @return array<int, AtrSheet|AllowanceSheet>
      */
     public function sheets(): array
     {
         $eagerLoads = [
             'user', 'project.division', 'approvals.approver',
             'atrBudgetSelecteds.budgetDetail', 'items.budgetDetail',
-            'eers.approvals.approver', 'eers.items', 'eers.user', 'eers.project.division',
-            'eers.documents',
             'atr',
         ];
 
-        // Build the base query using the same role-based filtering as ReimbursementService
-        $query = Reimbursement::with($eagerLoads);
-
         $service = new ReimbursementService();
-        $service->applyFilters($query, $this->user, $this->filters);
+        $all = $service->queryReimbursements($this->user, $this->filters)
+            ->with($eagerLoads)
+            ->get();
+        $all->loadMissing([
+            'eers.approvals.approver', 'eers.items', 'eers.user',
+            'eers.project.division', 'eers.documents',
+        ]);
 
-        $all = $query->latest()->get();
+        $type = $this->filters['type'] ?? null;
+        $sheets = [];
 
-        $atrs = $all->where('type', \App\Enums\ReimbursementType::ATR)->values();
+        if ($type !== ReimbursementType::ALLOWANCE->value) {
+            $sheets[] = new AtrSheet($all->where('type', ReimbursementType::ATR)->values());
+        }
 
-        return [
-            new AtrSheet($atrs),
-        ];
+        if ($type === null || $type === '' || $type === ReimbursementType::ALLOWANCE->value) {
+            $sheets[] = new AllowanceSheet($all->where('type', ReimbursementType::ALLOWANCE)->values());
+        }
+
+        return $sheets;
     }
 }

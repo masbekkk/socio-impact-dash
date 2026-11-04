@@ -416,7 +416,7 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
               className="w-full sm:w-auto"
             >
               <Button variant="outline" className="gap-2 w-full hover:bg-slate-100">
-                <Download className="h-4 w-4" /> Export ATR & EER
+                <Download className="h-4 w-4" /> Export Keuangan
               </Button>
             </a>
 

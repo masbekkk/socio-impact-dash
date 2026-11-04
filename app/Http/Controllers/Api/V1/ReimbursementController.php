@@ -76,6 +76,9 @@ final class ReimbursementController extends Controller
             'start_date' => $request->get('start_date'),
             'end_date' => $request->get('end_date'),
             'division_id' => $request->get('division_id'),
+            'search' => $request->get('search'),
+            'sort_by' => $request->get('sort_by', 'created_at'),
+            'sort_dir' => $request->get('sort_dir', 'desc'),
         ];
 
         $filename = 'export-reimbursement-'.now()->format('Y-m-d').'.xlsx';
