@@ -243,6 +243,11 @@ final class ReimbursementResource extends JsonResource
 
         $statusValue = $this->status?->value;
 
+        if ($this->type === ReimbursementType::EER && $this->eer_type === 'reimbursement' && $user->hasRole('direktur')) {
+            return $statusValue === 'finance_approved'
+                && $this->approvals->contains(fn (\App\Models\ReimbursementApproval $approval): bool => $approval->role->value === 'finance' && $approval->status->value === 'approved');
+        }
+
         // Final statuses cannot be approved further
         if (in_array($statusValue, ['transferred', 'rejected'])
             && ! ($statusValue === 'transferred' && $this->type === ReimbursementType::EER && $user->hasRole('direktur'))) {

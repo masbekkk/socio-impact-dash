@@ -206,6 +206,8 @@ final class ReimbursementController extends Controller
                 new ReimbursementResource($result),
                 "Reimbursement berhasil {$actionLabel}"
             );
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
             return JsonResponseFormatter::error($e->getMessage(), 500);
         }
@@ -278,6 +280,10 @@ final class ReimbursementController extends Controller
         if ($eer->type !== ReimbursementType::EER
             || ! in_array($eer->eer_type, ['refund', 'reimbursement'], true)
             || ! $eer->transfer_proof_path
+            || ($eer->eer_type === 'reimbursement'
+                && ! in_array($eer->status, [ReimbursementStatus::Transferred, ReimbursementStatus::Closed], true)
+                && ($eer->status === ReimbursementStatus::FinanceApproved
+                    || ! $eer->approvals()->where('role', 'direktur')->where('status', 'approved')->exists()))
             || ! in_array($eer->status, [ReimbursementStatus::FinanceApproved, ReimbursementStatus::Approved, ReimbursementStatus::Requested, ReimbursementStatus::Transferred, ReimbursementStatus::Closed], true)) {
             return JsonResponseFormatter::error('Bukti transfer EER belum tersedia atau tidak dapat diubah pada status ini.', 422);
         }
@@ -416,7 +422,7 @@ final class ReimbursementController extends Controller
                 'replacement_pic_id' => ['nullable', 'integer', 'exists:users,id'],
                 'approver_head_id' => ['nullable', 'integer', 'exists:users,id'],
                 'urgency' => ['nullable', 'string', 'max:20'],
-                'transfer_proof' => ['nullable', 'file', 'max:10240'],
+                'transfer_proof' => [Rule::prohibitedIf($isEer && ($request->input('eer_type') ?? $reimbursement->eer_type) === 'reimbursement'), 'nullable', 'file', 'max:10240'],
                 'documents' => ['nullable', 'array'],
                 'documents.*.id' => ['nullable', 'integer'],
                 'documents.*.file' => ['nullable', 'file', 'max:10240'],

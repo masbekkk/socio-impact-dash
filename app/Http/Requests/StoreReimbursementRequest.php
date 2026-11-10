@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Enums\ReimbursementType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 final class StoreReimbursementRequest extends FormRequest
@@ -75,7 +76,7 @@ final class StoreReimbursementRequest extends FormRequest
             'items.*.expense_type' => ['nullable', 'string'],
             'items.*.receipt' => ['nullable', 'file', 'max:10240'],
             'items.*.notes' => ['nullable', 'string'],
-            'transfer_proof' => ['nullable', 'file', 'max:10240'],
+            'transfer_proof' => [Rule::prohibitedIf($isEer && $this->input('eer_type') === 'reimbursement'), 'nullable', 'file', 'max:10240'],
         ];
     }
 

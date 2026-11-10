@@ -10,6 +10,7 @@ use App\Models\Reimbursement;
 use App\Models\ReimbursementApproval;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 final readonly class UpdateReimbursementStatus
 {
@@ -45,6 +46,38 @@ final readonly class UpdateReimbursementStatus
                         $role = 'superadmin';
                     } else {
                         $role = $roles->first();
+                    }
+                }
+            }
+
+            if ($reimbursement->type === \App\Enums\ReimbursementType::EER && $reimbursement->eer_type === 'reimbursement' && ! $isSuperAdmin) {
+                $reimbursement = Reimbursement::query()->lockForUpdate()->findOrFail($reimbursement->id);
+
+                if ($transferProof instanceof UploadedFile || $action === 'transferred') {
+                    if (! $user?->hasRole('finance')
+                        || ! in_array($reimbursement->status, [ReimbursementStatus::Approved, ReimbursementStatus::Requested], true)
+                        || ! $reimbursement->approvals()->where('role', 'direktur')->where('status', ApprovalStatus::Approved->value)->exists()) {
+                        throw ValidationException::withMessages(['action' => 'Transfer dan bukti transfer EER reimburse hanya dapat diproses finance setelah persetujuan direktur.']);
+                    }
+                }
+
+                if (in_array($action, ['approved', 'request_fund'], true)) {
+                    if (! $role || ! $user?->hasRole($role)) {
+                        throw ValidationException::withMessages(['role' => 'Peran persetujuan tidak sesuai dengan pengguna.']);
+                    }
+
+                    $isFinanceRequestFund = $action === 'request_fund' && $role === 'finance'
+                        && $reimbursement->status === ReimbursementStatus::Approved
+                        && $reimbursement->approvals()->where('role', 'direktur')->where('status', ApprovalStatus::Approved->value)->exists();
+
+                    if (($role === 'direktur' || $action === 'request_fund') && ! $isFinanceRequestFund
+                        && ($role !== 'direktur' || $reimbursement->status !== ReimbursementStatus::FinanceApproved
+                            || ! $reimbursement->approvals()->where('role', 'finance')->where('status', ApprovalStatus::Approved->value)->exists())) {
+                        throw ValidationException::withMessages(['action' => 'Direktur hanya dapat menyetujui EER reimburse setelah persetujuan finance.']);
+                    }
+
+                    if (! $isFinanceRequestFund && in_array($reimbursement->status, [ReimbursementStatus::Approved, ReimbursementStatus::Requested, ReimbursementStatus::Transferred, ReimbursementStatus::Closed], true)) {
+                        throw ValidationException::withMessages(['action' => 'EER reimburse sudah disetujui atau diselesaikan.']);
                     }
                 }
             }
@@ -89,7 +122,15 @@ final readonly class UpdateReimbursementStatus
                 return $reimbursement->fresh(['user', 'project', 'documents', 'approvals.approver', 'comments.user']);
             }
 
-            if ($role === 'direktur' || $role === 'superadmin' || ($isSuperAdmin && (! $role || $role === 'superadmin'))) {
+            if ($role === 'direktur' && $reimbursement->type === \App\Enums\ReimbursementType::EER && $reimbursement->eer_type === 'reimbursement') {
+                $reimbursement->approvals()->updateOrCreate(['role' => 'direktur'], [
+                    'approver_id' => $approverId,
+                    'status' => $action === 'request_fund' ? ApprovalStatus::Approved->value : $action,
+                    'notes' => $notes,
+                    'approved_at' => in_array($action, ['approved', 'request_fund'], true) ? now() : null,
+                    'updated_by' => $approverId,
+                ]);
+            } elseif ($role === 'direktur' || $role === 'superadmin' || ($isSuperAdmin && (! $role || $role === 'superadmin'))) {
                 // Direktur or Superadmin override: update ALL approval records for this reimbursement
                 $affected = ReimbursementApproval::query()->where('reimbursement_id', $reimbursement->id)
                     ->update([

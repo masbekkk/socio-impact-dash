@@ -109,10 +109,11 @@ final class DashboardController extends Controller
                     ->where(function ($query): void {
                         $query->where(function ($query): void {
                             $query->where('type', \App\Enums\ReimbursementType::EER)
+                                ->where('eer_type', '!=', 'reimbursement')
                                 ->where('status', \App\Enums\ReimbursementStatus::Transferred);
                         })->orWhere(function ($query): void {
                             $query->where('type', \App\Enums\ReimbursementType::EER)
-                                ->where('eer_type', 'balance')
+                                ->whereIn('eer_type', ['balance', 'reimbursement'])
                                 ->where('status', \App\Enums\ReimbursementStatus::FinanceApproved);
                         })->orWhere(function ($query): void {
                             $query->where('type', '!=', \App\Enums\ReimbursementType::EER)

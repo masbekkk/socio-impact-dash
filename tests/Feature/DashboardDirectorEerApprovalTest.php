@@ -103,7 +103,7 @@ test('director dashboard lists transferred EER but keeps other reimbursement sta
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->where('approvalItems.direktur_reimbursements', fn ($items): bool => ! collect($items)->pluck('id')->contains($transferredEer->id))
             ->etc());
-})->with(['refund', 'reimbursement']);
+})->with(['refund']);
 
 test('director closes balance EER directly after finance approval', function (bool $bulk): void {
     $director = User::factory()->create();

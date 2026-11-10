@@ -259,6 +259,11 @@ export default function Show() {
 
   const [data, setData] = useState<ReimbursementDetail | null>(null);
   const isBalanceEer = data?.type === 'eer' && data.eer_type === 'balance';
+  const isReimbursementEer = data?.type === 'eer' && data.eer_type === 'reimbursement';
+  const reimbursementTransferReady = !isReimbursementEer || Boolean(data
+    && (['transferred', 'closed'].includes(data.status)
+      || (['approved', 'request_fund'].includes(data.status)
+        && data.approvals?.some(a => a.role === 'direktur' && a.status === 'approved'))));
 
   const totalEerSpent = useMemo(() => {
     if (!data || data.type !== 'eer') return 0;
@@ -1351,7 +1356,7 @@ export default function Show() {
             {/* Post-Approval Finance Actions */}
             {isFinanceOrAdmin && (
               <>
-                {data.status === 'approved' && (
+                {data.status === 'approved' && reimbursementTransferReady && (
                   <Button
                     className="bg-indigo-600 hover:bg-indigo-700 text-white"
                     onClick={handleRequestFund}
@@ -1361,7 +1366,7 @@ export default function Show() {
                     Request Fund
                   </Button>
                 )}
-                {data.status === 'request_fund' && (
+                {data.status === 'request_fund' && reimbursementTransferReady && (
                   <Button
                     className="bg-emerald-600 hover:bg-emerald-700 text-white"
                     onClick={() => setTransferDialogOpen(true)}
@@ -2760,7 +2765,7 @@ export default function Show() {
                 {(((data.type === 'eer' && data.eer_type === 'refund'
                   ? Boolean(data.transfer_proof_path) && ['finance_approved', 'approved', 'request_fund'].includes(data.status)
                   : data.approvals?.some(a => a.role === 'direktur' && ['approved', 'request_fund'].includes(a.status)))
-                  && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status) && isFinanceOrAdmin)
+                  && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status) && isFinanceOrAdmin && reimbursementTransferReady)
                   || (data.type === 'allowance' && isHrOrAdmin && data.approvals?.some(a => a.role === 'direktur' && ['approved', 'request_fund'].includes(a.status)) && !['draft', 'rejected', 'transferred', 'closed'].includes(data.status))) && (
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <Button
@@ -2840,11 +2845,13 @@ export default function Show() {
                           </a>
                           {data.type === 'eer' && ['refund', 'reimbursement'].includes(data.eer_type ?? '')
                             && ['finance_approved', 'approved', 'request_fund', 'transferred', 'closed'].includes(data.status)
+                            && reimbursementTransferReady
                             && isFinanceOrAdmin ? (
                             <Button size="sm" variant="outline" onClick={() => setEditProofDialogOpen(true)} className="gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-100">
                               <Edit className="h-3.5 w-3.5" /> Edit Bukti
                             </Button>
                           ) : (isFinanceOrAdmin || (data.type === 'allowance' && isHrOrAdmin))
+                            && reimbursementTransferReady
                             && !['transferred', 'closed'].includes(data.status) && (
                               <Button size="sm" variant="outline" onClick={() => setTransferDialogOpen(true)} className="gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-100">
                                 <Edit className="h-3.5 w-3.5" /> Edit
