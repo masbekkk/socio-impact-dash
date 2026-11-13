@@ -127,3 +127,27 @@ test('finance cannot close refund EER before the employee uploads proof', functi
 
     expect($eer->fresh()->status)->toBe($status);
 })->with([ReimbursementStatus::FinanceApproved, ReimbursementStatus::Requested]);
+
+test('dual role owner uploads director approved refund only with finance approval history', function (string $endpoint, bool $approved): void {
+    $owner = User::factory()->create();
+    $owner->assignRole(['pegawai', 'finance']);
+    $eer = refundEerFor($owner, ReimbursementStatus::Approved);
+    $eer->approvals()->create(['role' => 'finance', 'approver_id' => $owner->id, 'status' => $approved ? 'approved' : 'pending']);
+
+    $response = $this->actingAs($owner)->postJson("/api/v1/reimbursements/{$eer->id}/{$endpoint}", [
+        'action' => 'transferred',
+        'transfer_proof' => UploadedFile::fake()->create('refund.pdf', 1, 'application/pdf'),
+    ]);
+
+    if (! $approved) {
+        $response->assertUnprocessable();
+        expect($eer->fresh()->transfer_proof_path)->toBeNull();
+        expect($eer->fresh()->status)->toBe(ReimbursementStatus::Approved);
+
+        return;
+    }
+
+    $response->assertOk();
+    expect($eer->fresh()->status)->toBe(ReimbursementStatus::Transferred);
+    Storage::disk('public')->assertExists($eer->fresh()->transfer_proof_path);
+})->with(['refund-proof', 'status'])->with([true, false]);

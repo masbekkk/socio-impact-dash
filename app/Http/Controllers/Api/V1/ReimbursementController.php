@@ -178,6 +178,13 @@ final class ReimbursementController extends Controller
 
             if ($request->validated('action') === ReimbursementStatus::Transferred->value
                 && $reimbursement->type === ReimbursementType::EER && $reimbursement->eer_type === 'refund'
+                && ! $reimbursement->transfer_proof_path && $request->hasFile('transfer_proof')
+                && $reimbursement->user_id === $user->id && $user->hasRole(UserRole::Pegawai->value)) {
+                return $this->uploadRefundProof($id, $request);
+            }
+
+            if ($request->validated('action') === ReimbursementStatus::Transferred->value
+                && $reimbursement->type === ReimbursementType::EER && $reimbursement->eer_type === 'refund'
                 && (! $reimbursement->transfer_proof_path
                     || ! in_array($reimbursement->status, [ReimbursementStatus::FinanceApproved, ReimbursementStatus::Approved, ReimbursementStatus::Requested], true))) {
                 return JsonResponseFormatter::error('Bukti refund harus diunggah setelah persetujuan finance sebelum transfer diselesaikan.', 422);
@@ -226,7 +233,10 @@ final class ReimbursementController extends Controller
         }
 
         if ($eer->type !== ReimbursementType::EER || $eer->eer_type !== 'refund'
-            || ! in_array($eer->status, [ReimbursementStatus::FinanceApproved, ReimbursementStatus::Requested], true) || $eer->transfer_proof_path) {
+            || ! in_array($eer->status, [ReimbursementStatus::FinanceApproved, ReimbursementStatus::Approved, ReimbursementStatus::Requested], true)
+            || ($eer->status === ReimbursementStatus::Approved
+                && ! $eer->approvals()->where('role', 'finance')->where('status', 'approved')->exists())
+            || $eer->transfer_proof_path) {
             return JsonResponseFormatter::error('Bukti refund hanya dapat diunggah sekali setelah persetujuan finance.', 422);
         }
 
