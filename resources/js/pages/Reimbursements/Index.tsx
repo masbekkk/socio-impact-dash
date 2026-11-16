@@ -752,6 +752,111 @@ export default function ReimbursementsIndex({ reimbursements, filters, divisions
                               ))}
                             </div>
                           )}
+                          {item.type === 'atr' && (
+                            <section className="space-y-3 border-t pt-3 cursor-default" onClick={(event) => event.stopPropagation()}>
+                              <h3 className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                                <Receipt className="h-3.5 w-3.5 text-indigo-500" />
+                                EER ({item.eers?.length ?? 0})
+                              </h3>
+                              {item.eers && item.eers.length > 0 ? item.eers.map((eer) => {
+                                const eerStatusCfg = STATUS_CONFIG[eer.status] ?? {
+                                  label: eer.status, className: 'bg-gray-100 text-gray-600', icon: Clock,
+                                };
+                                const EerStatusIcon = eerStatusCfg.icon;
+
+                                return (
+                                  <article key={eer.id} className="min-w-0 rounded-lg border border-indigo-100 bg-slate-50/50 p-3 space-y-2.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <Link href={`/reimbursements/${eer.id}`} className="min-w-0 break-all py-2 font-mono text-sm font-semibold text-indigo-700 hover:underline">
+                                        {eer.code || 'EER'}
+                                      </Link>
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="size-10 shrink-0" aria-label={`Aksi EER ${eer.code || eer.id}`}>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem asChild>
+                                            <Link href={`/reimbursements/${eer.id}`}>
+                                              <Eye className="mr-2 h-4 w-4" /> Lihat Detail
+                                            </Link>
+                                          </DropdownMenuItem>
+                                          {eer.status === 'draft' && eer.user?.id === auth.user.id && (
+                                            <DropdownMenuItem asChild>
+                                              <Link href={`/reimbursements/${eer.id}/edit`}>
+                                                <FileText className="mr-2 h-4 w-4" /> Edit Draft
+                                              </Link>
+                                            </DropdownMenuItem>
+                                          )}
+                                          {(isSuperadmin || isFinance || eer.user?.id === auth.user.id) && (
+                                            <>
+                                              <DropdownMenuSeparator />
+                                              <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => handleDelete(eer.id)}>
+                                                <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                                              </DropdownMenuItem>
+                                            </>
+                                          )}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge variant="outline" className={cn(
+                                        'text-[10px] uppercase',
+                                        eer.eer_type === 'refund' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                                          eer.eer_type === 'reimbursement' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                            'bg-purple-50 text-purple-600 border-purple-200',
+                                      )}>
+                                        {eer.eer_type === 'refund' ? 'Refund' : eer.eer_type === 'reimbursement' ? 'Reimbursement' : 'Balance'}
+                                      </Badge>
+                                      <Badge className={cn('gap-1 text-[10px]', eerStatusCfg.className)}>
+                                        <EerStatusIcon className="h-3 w-3" /> {eerStatusCfg.label}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                      <span>{format(new Date(eer.created_at), 'dd MMM yyyy', { locale: localeId })}</span>
+                                      <span className="min-w-0 break-words">{eer.user?.name ?? '-'}</span>
+                                    </div>
+                                    <p className="break-words text-sm text-gray-700">{eer.usage_plan ?? '-'}</p>
+                                    <div>
+                                      <p className="text-[10px] font-semibold uppercase text-muted-foreground">Nominal EER</p>
+                                      <p className="break-words text-sm font-bold text-gray-900">
+                                        Rp {Math.abs(parseFloat(eer.amount) - parseFloat(item.amount)).toLocaleString('id-ID')}
+                                      </p>
+                                    </div>
+                                    {eer.approvals?.length > 0 && (
+                                      <div className="flex flex-wrap gap-2 border-t pt-2 text-[10px]">
+                                        {[...eer.approvals].sort((a, b) => {
+                                          const priority: Record<string, number> = { head: 1, hr: 2, finance: 3, direktur: 4 };
+                                          return (priority[a.role] ?? 99) - (priority[b.role] ?? 99);
+                                        }).map((approval) => (
+                                          <span key={approval.id} className={cn(
+                                            'rounded-md border px-2 py-1 font-medium',
+                                            approval.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                                              approval.status === 'revised' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                'bg-gray-50 text-gray-600 border-gray-200',
+                                          )}>
+                                            {approval.role.toUpperCase()}: {approval.status === 'approved' ? 'Disetujui' : approval.status === 'revised' ? 'Sudah Direvisi' : 'Menunggu'}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </article>
+                                );
+                              }) : (
+                                <div className="space-y-2 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+                                  <p>Belum ada Expense Event Reimbursement (EER) untuk ATR ini.</p>
+                                  {item.status === 'transferred' && (
+                                    <Button size="sm" variant="outline" className="min-h-10 gap-1" asChild>
+                                      <Link href={`/reimbursements/create/eer?atr_code=${item.code}`}>
+                                        <Plus className="h-3.5 w-3.5" /> Buat EER
+                                      </Link>
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </section>
+                          )}
                         </CardContent>
                       </Card>
                     );
