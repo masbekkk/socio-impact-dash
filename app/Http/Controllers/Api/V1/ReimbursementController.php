@@ -185,7 +185,9 @@ final class ReimbursementController extends Controller
 
             if ($request->validated('action') === ReimbursementStatus::Transferred->value
                 && $reimbursement->type === ReimbursementType::EER && $reimbursement->eer_type === 'refund'
-                && (! $reimbursement->transfer_proof_path
+                && ((! $reimbursement->transfer_proof_path && ! $request->hasFile('transfer_proof'))
+                    || (! $reimbursement->transfer_proof_path && $reimbursement->status === ReimbursementStatus::Approved
+                        && ! $reimbursement->approvals()->where('role', 'finance')->where('status', 'approved')->exists())
                     || ! in_array($reimbursement->status, [ReimbursementStatus::FinanceApproved, ReimbursementStatus::Approved, ReimbursementStatus::Requested], true))) {
                 return JsonResponseFormatter::error('Bukti refund harus diunggah setelah persetujuan finance sebelum transfer diselesaikan.', 422);
             }
@@ -228,8 +230,9 @@ final class ReimbursementController extends Controller
             return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
         }
 
-        if ($eer->user_id !== $request->user()->id || ! $request->user()->hasRole(UserRole::Pegawai->value)) {
-            return JsonResponseFormatter::error('Hanya pengaju pegawai yang dapat mengunggah bukti refund.', 403);
+        if (! $request->user()->hasAnyRole(['finance', UserRole::Superadmin->value])
+            && ($eer->user_id !== $request->user()->id || ! $request->user()->hasRole(UserRole::Pegawai->value))) {
+            return JsonResponseFormatter::error('Hanya pengaju pegawai atau finance yang dapat mengunggah bukti refund.', 403);
         }
 
         if ($eer->type !== ReimbursementType::EER || $eer->eer_type !== 'refund'

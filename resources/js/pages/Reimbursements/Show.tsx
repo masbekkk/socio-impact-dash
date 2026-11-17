@@ -2818,7 +2818,7 @@ export default function Show() {
                 {data.type === 'eer' && data.eer_type === 'refund'
                   && (['finance_approved', 'request_fund'].includes(data.status)
                     || (data.status === 'approved' && data.approvals?.some(a => a.role === 'finance' && a.status === 'approved')))
-                  && isPegawai && isCreator && !data.transfer_proof_path && (
+                  && ((isPegawai && isCreator) || isFinanceOrAdmin) && !data.transfer_proof_path && (
                     <Button variant="outline" className="gap-2" onClick={() => setRefundProofDialogOpen(true)}>
                       <Upload className="h-4 w-4" /> Upload Bukti & Tandai Transferred
                     </Button>

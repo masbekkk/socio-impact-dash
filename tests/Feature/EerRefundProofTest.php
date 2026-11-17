@@ -113,7 +113,7 @@ test('finance verifies an existing employee refund proof without a second upload
         ->and($eer->fresh()->transfer_proof_path)->toBe('existing/refund.pdf');
 });
 
-test('finance cannot close refund EER before the employee uploads proof', function (ReimbursementStatus $status): void {
+test('finance uploads refund proof and completes another submitters EER', function (ReimbursementStatus $status): void {
     $owner = User::factory()->create();
     $owner->assignRole('pegawai');
     $finance = User::factory()->create();
@@ -123,9 +123,10 @@ test('finance cannot close refund EER before the employee uploads proof', functi
     $this->actingAs($finance)->postJson("/api/v1/reimbursements/{$eer->id}/status", [
         'action' => 'transferred',
         'transfer_proof' => UploadedFile::fake()->create('refund.pdf', 1, 'application/pdf'),
-    ])->assertStatus(422);
+    ])->assertOk();
 
-    expect($eer->fresh()->status)->toBe($status);
+    expect($eer->fresh()->status)->toBe(ReimbursementStatus::Closed);
+    Storage::disk('public')->assertExists($eer->fresh()->transfer_proof_path);
 })->with([ReimbursementStatus::FinanceApproved, ReimbursementStatus::Requested]);
 
 test('dual role owner uploads director approved refund only with finance approval history', function (string $endpoint, bool $approved): void {
@@ -149,5 +150,30 @@ test('dual role owner uploads director approved refund only with finance approva
 
     $response->assertOk();
     expect($eer->fresh()->status)->toBe(ReimbursementStatus::Transferred);
+    Storage::disk('public')->assertExists($eer->fresh()->transfer_proof_path);
+})->with(['refund-proof', 'status'])->with([true, false]);
+
+test('finance can upload another submitters director approved refund with finance history', function (string $endpoint, bool $approved): void {
+    $owner = User::factory()->create();
+    $owner->assignRole('pegawai');
+    $finance = User::factory()->create();
+    $finance->assignRole('finance');
+    $eer = refundEerFor($owner, ReimbursementStatus::Approved);
+    $eer->approvals()->create(['role' => 'finance', 'approver_id' => $finance->id, 'status' => $approved ? 'approved' : 'pending']);
+
+    $response = $this->actingAs($finance)->postJson("/api/v1/reimbursements/{$eer->id}/{$endpoint}", [
+        'action' => 'transferred',
+        'transfer_proof' => UploadedFile::fake()->create('refund.pdf', 1, 'application/pdf'),
+    ]);
+
+    if (! $approved) {
+        $response->assertUnprocessable();
+        expect($eer->fresh()->transfer_proof_path)->toBeNull();
+
+        return;
+    }
+
+    $response->assertOk();
+    expect($eer->fresh()->status)->toBe($endpoint === 'status' ? ReimbursementStatus::Closed : ReimbursementStatus::Transferred);
     Storage::disk('public')->assertExists($eer->fresh()->transfer_proof_path);
 })->with(['refund-proof', 'status'])->with([true, false]);
