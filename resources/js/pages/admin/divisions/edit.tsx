@@ -14,9 +14,27 @@ interface Props {
     divisionId: string;
 }
 
+interface DivisionName {
+    id: number;
+    name: string;
+    description: string | null;
+}
+
+interface DivisionNameEntry {
+    id?: number;
+    name: string;
+    description: string;
+}
+
+interface DivisionFormData {
+    code: string;
+    name: string;
+    names: DivisionNameEntry[];
+}
+
 export default function Edit({ divisionId }: Props) {
     const [loading, setLoading] = useState(true);
-    const { data, setData, processing, errors, reset } = useForm({
+    const { data, setData, processing, errors } = useForm<DivisionFormData>({
         code: '',
         name: '',
         names: [{ name: '', description: '' }],
@@ -30,7 +48,8 @@ export default function Edit({ divisionId }: Props) {
                 setData({
                     code: division.code,
                     name: division.name,
-                    names: division.names && division.names.length > 0 ? division.names.map((n: any) => ({
+                    names: division.names && division.names.length > 0 ? division.names.map((n: DivisionName) => ({
+                        id: n.id,
                         name: n.name,
                         description: n.description || '',
                     })) : [{ name: '', description: '' }],
@@ -160,7 +179,7 @@ export default function Edit({ divisionId }: Props) {
                                 </div>
 
                                 {data.names.map((nameEntry, index) => (
-                                    <Card key={index} className="p-4 border border-border">
+                                    <Card key={nameEntry.id ?? `new-${index}`} className="p-4 border border-border">
                                         <div className="flex flex-col gap-4">
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="flex-1 space-y-2">

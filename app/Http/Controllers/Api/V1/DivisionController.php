@@ -8,16 +8,18 @@ use App\Formatters\JsonResponseFormatter;
 use App\Http\Requests\Divisions\StoreDivisionRequest;
 use App\Http\Requests\Divisions\UpdateDivisionRequest;
 use App\Http\Resources\V1\Division\DivisionResource;
+use App\Models\Division;
 use App\Models\DivisionCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 
 final class DivisionController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = \App\Models\Division::query()->with('divisionCode');
+        $query = Division::query()->with('divisionCode');
 
         if ($request->filled('search')) {
             $search = $request->get('search');
@@ -89,18 +91,63 @@ final class DivisionController extends Controller
     public function update(UpdateDivisionRequest $request, string $id): JsonResponse
     {
         $divisionCode = DivisionCode::query()->findOrFail($id);
+
+        /** @var array{code: string, name: string, names: array<int, array{id?: int|null, name: string, description?: string|null}>} $validated */
         $validated = $request->validated();
 
-        $divisionCode->update([
-            'code' => $validated['code'],
-            'name' => $validated['name'],
-        ]);
+        $keptIds = array_values(array_filter(array_map(
+            fn (array $nameData): ?int => isset($nameData['id']) ? (int) $nameData['id'] : null,
+            $validated['names']
+        )));
 
-        // Replace all names with the newly provided ones
-        $divisionCode->divisions()->delete();
-        foreach ($validated['names'] as $nameData) {
-            $divisionCode->divisions()->create($nameData);
+        $removedDivisions = $divisionCode->divisions()->whereNotIn('id', $keptIds)->get();
+
+        foreach ($removedDivisions as $division) {
+            if ($division->projects()->exists()) {
+                return JsonResponseFormatter::error(
+                    'Cannot remove division "'.$division->name.'" because it has associated projects.',
+                    400
+                );
+            }
+
+            if ($division->users()->exists()) {
+                return JsonResponseFormatter::error(
+                    'Cannot remove division "'.$division->name.'" because it has associated users.',
+                    400
+                );
+            }
         }
+
+        DB::transaction(function () use ($divisionCode, $validated, $removedDivisions): void {
+            $divisionCode->update([
+                'code' => $validated['code'],
+                'name' => $validated['name'],
+            ]);
+
+            foreach ($validated['names'] as $nameData) {
+                $attributes = [
+                    'name' => $nameData['name'],
+                    'description' => $nameData['description'] ?? null,
+                ];
+
+                // Existing names keep their row (and id); only new names are inserted.
+                if (isset($nameData['id'])) {
+                    /** @var Division $division */
+                    $division = $divisionCode->divisions()->findOrFail((int) $nameData['id']);
+                    $division->update($attributes);
+
+                    continue;
+                }
+
+                $divisionCode->divisions()->create($attributes);
+            }
+
+            foreach ($removedDivisions as $division) {
+                $division->delete();
+            }
+        });
+
+        $divisionCode->load('divisions');
 
         return JsonResponseFormatter::success(
             [
@@ -114,40 +161,6 @@ final class DivisionController extends Controller
                 ]),
             ],
             'Division updated successfully'
-        );
-    }
-
-    public function destroy(string $id): JsonResponse
-    {
-        $divisionCode = DivisionCode::with('divisions')->findOrFail($id);
-
-        // Check if any of its divisions have projects
-        foreach ($divisionCode->divisions as $division) {
-            if ($division->projects()->exists()) {
-                return JsonResponseFormatter::error(
-                    null,
-                    'Cannot delete division code because it has associated projects.',
-                    400
-                );
-            }
-        }
-
-        // Also check users
-        foreach ($divisionCode->divisions as $division) {
-            if ($division->users()->exists()) {
-                return JsonResponseFormatter::error(
-                    null,
-                    'Cannot delete division because it has associated users.',
-                    400
-                );
-            }
-        }
-
-        $divisionCode->delete();
-
-        return JsonResponseFormatter::success(
-            null,
-            'Division deleted successfully'
         );
     }
 }

@@ -63,7 +63,7 @@ Route::middleware(['auth:web,sanctum'])->prefix('v1')->group(function (): void {
     Route::apiResource('user-kpis', App\Http\Controllers\Api\V1\UserKpiController::class)->names('api.user-kpis');
 
     // Divisions
-    Route::apiResource('divisions', App\Http\Controllers\Api\V1\DivisionController::class)->names('api.divisions');
+    Route::apiResource('divisions', App\Http\Controllers\Api\V1\DivisionController::class)->except(['destroy'])->names('api.divisions');
 
     // Letter Master Data
     Route::apiResource('letter-codes', App\Http\Controllers\Api\V1\LetterCodeController::class)->names('api.letter-codes');

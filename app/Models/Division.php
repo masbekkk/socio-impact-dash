@@ -41,4 +41,12 @@ final class Division extends Model
     {
         return $this->hasMany(Project::class);
     }
+
+    /**
+     * @return HasMany<User, $this>
+     */
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
 }

@@ -62,17 +62,6 @@ export default function Index() {
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    const handleDelete = async (id: number) => {
-        if (!confirm('Apakah anda yakin ingin menghapus divisi ini?')) return;
-        try {
-            await axios.delete(`/api/v1/divisions/${id}`);
-            toast.success('Divisi berhasil dihapus.');
-            fetchDivisions();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Gagal menghapus divisi.');
-        }
-    };
-
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Divisions', href: '/admin/divisions' },
@@ -151,12 +140,6 @@ export default function Index() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem asChild>
                                                                 <Link href={`/admin/divisions/${division.division_code?.id}/edit`}>Edit</Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-destructive focus:text-destructive cursor-pointer"
-                                                                onClick={() => handleDelete(division.division_code?.id)}
-                                                            >
-                                                                Delete
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
@@ -241,12 +224,6 @@ export default function Index() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem asChild>
                                                                 <Link href={`/admin/divisions/${division.division_code?.id}/edit`}>Edit</Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-destructive focus:text-destructive cursor-pointer"
-                                                                onClick={() => handleDelete(division.division_code?.id)}
-                                                            >
-                                                                Delete
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
