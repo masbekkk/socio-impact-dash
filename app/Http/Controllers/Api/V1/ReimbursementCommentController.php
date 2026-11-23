@@ -51,7 +51,7 @@ final class ReimbursementCommentController extends Controller
                     title: 'Komentar Baru',
                     message: $request->user()->name.' menambahkan pesan baru pada pengajuan '.($reimbursement->code ?? 'Reimbursement').'.',
                     recipientUserIds: array_values($recipientIds),
-                    referenceType: Reimbursement::class,
+                    referenceType: 'reimbursement',
                     referenceId: $reimbursement->id,
                     createdBy: $request->user()->id,
                 );

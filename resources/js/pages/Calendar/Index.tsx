@@ -34,6 +34,7 @@ import {
     isSameDay,
     isSameMonth,
     isToday,
+    isValid,
     isWithinInterval,
     parseISO,
     startOfDay,
@@ -106,7 +107,19 @@ export default function CalendarIndex({
         { title: 'Kalender', href: '/calendar' },
     ];
 
-    const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentDate, setCurrentDate] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const dateParam = params.get('date');
+            if (dateParam) {
+                const parsed = parseISO(dateParam);
+                if (isValid(parsed)) {
+                    return parsed;
+                }
+            }
+        }
+        return new Date();
+    });
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(

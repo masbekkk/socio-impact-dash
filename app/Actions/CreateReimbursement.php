@@ -217,7 +217,7 @@ final readonly class CreateReimbursement
             title: 'Pengajuan Reimbursement Baru',
             message: 'Pengajuan '.mb_strtoupper($typeString)." ({$code}) untuk proyek '{$projectName}' senilai {$amount} telah dibuat dan membutuhkan persetujuan Anda.",
             recipientUserIds: $approverIds,
-            referenceType: Reimbursement::class,
+            referenceType: 'reimbursement',
             referenceId: $reimbursement->id,
             createdBy: $reimbursement->user_id,
         );

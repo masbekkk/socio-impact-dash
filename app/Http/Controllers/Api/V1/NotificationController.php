@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Formatters\JsonResponseFormatter;
 use App\Models\NotificationRecipient;
 use App\Models\Project;
+use App\Models\ProjectEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -94,17 +95,37 @@ final class NotificationController extends Controller
 
     private function resolveUrl(?string $referenceType, ?int $referenceId): ?string
     {
-        if ($referenceType === null || $referenceId === null) {
+        if ($referenceType === null) {
+            return null;
+        }
+
+        if (in_array($referenceType, ['project_event', 'calendar', 'calendar_event', ProjectEvent::class], true)) {
+            return $this->resolveCalendarUrl($referenceId);
+        }
+
+        if ($referenceId === null) {
             return null;
         }
 
         return match ($referenceType) {
-            'reimbursement' => "/reimbursements/{$referenceId}",
-            'project' => $this->resolveProjectUrl($referenceId),
-            'leave' => "/leaves/{$referenceId}",
-            'letter_request' => "/letter-requests/{$referenceId}",
+            'reimbursement', \App\Models\Reimbursement::class => "/reimbursements/{$referenceId}",
+            'project', Project::class => $this->resolveProjectUrl($referenceId),
+            'leave', \App\Models\Leave::class => "/leaves/{$referenceId}",
+            'letter_request', \App\Models\LetterRequest::class => "/letter-requests/{$referenceId}",
             default => null,
         };
+    }
+
+    private function resolveCalendarUrl(?int $eventId): string
+    {
+        if ($eventId !== null) {
+            $event = ProjectEvent::query()->find($eventId);
+            if ($event instanceof ProjectEvent) {
+                return '/calendar?date='.$event->start_date->format('Y-m-d');
+            }
+        }
+
+        return '/calendar';
     }
 
     private function resolveProjectUrl(int $projectId): ?string

@@ -55,6 +55,7 @@ export function AppSidebarHeader({
         if (type.startsWith('project')) return <Folder className="h-4 w-4 text-blue-500 shrink-0" />;
         if (type.startsWith('reimbursement')) return <DollarSign className="h-4 w-4 text-emerald-500 shrink-0" />;
         if (type.startsWith('leave')) return <CalendarDays className="h-4 w-4 text-amber-500 shrink-0" />;
+        if (type.startsWith('calendar')) return <CalendarDays className="h-4 w-4 text-indigo-500 shrink-0" />;
         if (type.startsWith('letter')) return <FileText className="h-4 w-4 text-purple-500 shrink-0" />;
         return <Bell className="h-4 w-4 text-gray-400 shrink-0" />;
     };
@@ -71,6 +72,9 @@ export function AppSidebarHeader({
         }
         if (type.includes('created')) {
             return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-700">Baru</span>;
+        }
+        if (type.includes('invited')) {
+            return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-indigo-100 text-indigo-700">Undangan</span>;
         }
         if (type.includes('transferred')) {
             return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-indigo-100 text-indigo-700">Ditransfer</span>;
