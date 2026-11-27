@@ -202,6 +202,18 @@ interface ReimbursementDetail {
   end_time: string | null;
   refund_reimburse_amount?: number;
   notes: string | null;
+  eers?: {
+    id: number;
+    code: string;
+    type: string;
+    eer_type: string | null;
+    status: string;
+    amount: number;
+    usage_plan?: string | null;
+    urgency?: string | null;
+    created_at?: string;
+    user?: { id: number; name: string } | null;
+  }[];
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -316,6 +328,7 @@ export default function Show() {
   const [replacementProof, setReplacementProof] = useState<File | null>(null);
   const [editProofLoading, setEditProofLoading] = useState(false);
   const [editProofError, setEditProofError] = useState('');
+  const [editTransferredAmount, setEditTransferredAmount] = useState<number>(0);
   const [transferredAmount, setTransferredAmount] = useState<number>(0);
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
@@ -484,27 +497,42 @@ export default function Show() {
     setRefundProofError('');
   };
 
+  const hasConnectedEer = Boolean(data?.eers && data.eers.length > 0);
+
   const resetEditProofDialog = () => {
     setEditProofDialogOpen(false);
     setReplacementProof(null);
     setEditProofError('');
+    setEditTransferredAmount(0);
+  };
+
+  const openEditProofDialog = () => {
+    setReplacementProof(null);
+    setEditProofError('');
+    setEditTransferredAmount(data?.transferred_amount ?? data?.amount ?? 0);
+    setEditProofDialogOpen(true);
   };
 
   const handleEditProof = async () => {
-    if (!data || !replacementProof) return;
+    if (!data) return;
 
     setEditProofLoading(true);
     setEditProofError('');
     try {
       const formData = new FormData();
-      formData.append('transfer_proof', replacementProof);
+      if (replacementProof) {
+        formData.append('transfer_proof', replacementProof);
+      }
+      if (data.type === 'atr' || data.type === 'allowance') {
+        formData.append('transferred_amount', editTransferredAmount.toString());
+      }
       await axios.post(`/api/v1/reimbursements/${data.id}/transfer-proof`, formData);
       resetEditProofDialog();
       await fetchDetail();
     } catch (error: unknown) {
       setEditProofError(axios.isAxiosError(error)
-        ? error.response?.data?.message || 'Gagal mengubah bukti transfer.'
-        : 'Gagal mengubah bukti transfer.');
+        ? error.response?.data?.message || 'Gagal mengubah data transfer.'
+        : 'Gagal mengubah data transfer.');
     } finally {
       setEditProofLoading(false);
     }
@@ -1688,6 +1716,16 @@ export default function Show() {
                           <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded text-blue-700">
                             <span className="text-[10px] font-bold uppercase tracking-tighter opacity-70">Ditransfer:</span>
                             <span className="text-xs font-mono font-bold">Rp {data.transferred_amount.toLocaleString('id-ID')}</span>
+                            {data.type === 'atr' && ['transferred', 'closed'].includes(data.status) && isFinanceOrAdmin && (
+                              <button
+                                type="button"
+                                onClick={openEditProofDialog}
+                                className="ml-1 text-blue-600 hover:text-blue-800 transition-colors p-0.5 rounded hover:bg-blue-100"
+                                title="Edit Bukti & Nominal Transfer"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2646,6 +2684,50 @@ export default function Show() {
                   </div>
                 )}
 
+                {/* Connected EERs Section for ATR */}
+                {data.type === 'atr' && data.eers && data.eers.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1.5">
+                        <Receipt className="h-3.5 w-3.5" /> Pengajuan EER Terhubung ({data.eers.length})
+                      </label>
+                      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                        Nominal Transfer Terkunci
+                      </Badge>
+                    </div>
+                    <div className="space-y-2">
+                      {data.eers.map((eer) => (
+                        <div key={eer.id} className="flex items-center justify-between p-3 border rounded-lg bg-slate-50/70 hover:bg-slate-100/70 transition-colors">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <Link href={`/reimbursements/${eer.id}`} className="font-mono text-sm font-semibold text-blue-600 hover:underline">
+                                {eer.code}
+                              </Link>
+                              <Badge variant="secondary" className="text-[10px]">
+                                {eer.eer_type ? eer.eer_type.toUpperCase() : 'EER'}
+                              </Badge>
+                              <Badge variant="outline" className="text-[10px]">
+                                {STATUS_CONFIG[eer.status]?.label ?? eer.status}
+                              </Badge>
+                            </div>
+                            {eer.user?.name && (
+                              <p className="text-xs text-muted-foreground">Oleh: {eer.user.name}</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-bold font-mono text-slate-800">
+                              Rp {eer.amount.toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      <p className="text-[11px] text-muted-foreground italic">
+                        * Nominal transfer ATR tidak dapat diubah selama masih memiliki pengajuan EER terhubung. Hapus pengajuan EER terlebih dahulu jika perlu mengubah nominal transfer.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Allowance Period info */}
                 {data.type === 'allowance' && (data.start_date || data.end_date) && (
                   <div className="bg-amber-50/50 p-6 rounded-xl border border-amber-200/60 shadow-sm space-y-4">
@@ -2845,12 +2927,14 @@ export default function Show() {
                               <Download className="h-3.5 w-3.5" /> Lihat Bukti
                             </Button>
                           </a>
-                          {data.type === 'eer' && ['refund', 'reimbursement'].includes(data.eer_type ?? '')
+                          {((data.type === 'eer' && ['refund', 'reimbursement'].includes(data.eer_type ?? '')
                             && ['finance_approved', 'approved', 'request_fund', 'transferred', 'closed'].includes(data.status)
                             && reimbursementTransferReady
-                            && isFinanceOrAdmin ? (
-                            <Button size="sm" variant="outline" onClick={() => setEditProofDialogOpen(true)} className="gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-100">
-                              <Edit className="h-3.5 w-3.5" /> Edit Bukti
+                            && isFinanceOrAdmin)
+                            || (data.type === 'atr' && ['transferred', 'closed'].includes(data.status) && isFinanceOrAdmin)
+                            || (data.type === 'allowance' && ['transferred', 'closed'].includes(data.status) && (isFinanceOrAdmin || isHrOrAdmin))) ? (
+                            <Button size="sm" variant="outline" onClick={openEditProofDialog} className="gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-100">
+                              <Edit className="h-3.5 w-3.5" /> {data.type === 'atr' ? 'Edit Bukti & Nominal' : 'Edit Bukti'}
                             </Button>
                           ) : (isFinanceOrAdmin || (data.type === 'allowance' && isHrOrAdmin))
                             && reimbursementTransferReady
@@ -2867,6 +2951,18 @@ export default function Show() {
                         </div>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {!data.transfer_proof_path && data.type === 'atr' && ['transferred', 'closed'].includes(data.status) && isFinanceOrAdmin && (
+                  <div className="p-4 rounded-lg border border-dashed border-blue-200 bg-blue-50/30 flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-blue-900">Bukti Transfer Belum Terlampir</p>
+                      <p className="text-xs text-muted-foreground">Anda dapat mengunggah bukti transfer atau menyesuaikan nominal transfer.</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={openEditProofDialog} className="gap-1.5 text-blue-700 border-blue-300 hover:bg-blue-100">
+                      <Upload className="h-3.5 w-3.5" /> Upload Bukti & Edit Nominal
+                    </Button>
                   </div>
                 )}
 
@@ -3286,30 +3382,108 @@ export default function Show() {
       </Dialog>
       <Dialog open={editProofDialogOpen} onOpenChange={(open) => {
         if (!editProofLoading) {
-          if (open) setEditProofDialogOpen(true);
+          if (open) openEditProofDialog();
           else resetEditProofDialog();
         }
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Bukti Transfer EER</DialogTitle>
+            <DialogTitle>
+              {data?.type === 'atr'
+                ? 'Edit Bukti & Nominal Transfer ATR'
+                : data?.type === 'allowance'
+                ? 'Edit Bukti & Nominal Transfer Allowance'
+                : 'Edit Bukti Transfer EER'}
+            </DialogTitle>
             <DialogDescription>
-              Pilih file pengganti untuk EER <strong className="font-mono">{data?.code}</strong>. Status pengajuan tidak berubah.
+              {data?.type === 'atr'
+                ? <>Perbarui bukti transfer atau nominal transfer untuk ATR <strong className="font-mono">{data?.code}</strong>. Status pengajuan tidak berubah.</>
+                : <>Pilih file pengganti untuk <strong className="font-mono">{data?.code}</strong>. Status pengajuan tidak berubah.</>}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="replacement-proof">Bukti baru (JPG, PNG, atau PDF; maks. 5MB)</Label>
-            <Input id="replacement-proof" type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(event) => {
-              setReplacementProof(event.target.files?.[0] ?? null);
-              setEditProofError('');
-            }} />
+
+          <div className="space-y-4 py-2">
+            {data?.type === 'atr' && hasConnectedEer && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 space-y-1">
+                <div className="font-semibold flex items-center gap-1.5 text-amber-900">
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  Nominal Transfer Terkunci
+                </div>
+                <p>
+                  ATR ini sudah memiliki {data.eers?.length} pengajuan EER terhubung ({data.eers?.map(e => e.code).join(', ')}).
+                  Untuk mengubah nominal transfer, hapus seluruh pengajuan EER terhubung terlebih dahulu.
+                </p>
+              </div>
+            )}
+
+            {(data?.type === 'atr' || data?.type === 'allowance') && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-nominal" className="text-xs font-bold text-slate-500 uppercase">
+                  Nominal Ditransfer <span className="text-red-500">*</span>
+                </Label>
+                <MoneyInput
+                  id="edit-nominal"
+                  value={editTransferredAmount}
+                  onValueChange={(val) => {
+                    if (!hasConnectedEer || data?.type !== 'atr') {
+                      setEditTransferredAmount(val.floatValue || 0);
+                      setEditProofError('');
+                    }
+                  }}
+                  disabled={Boolean(data?.type === 'atr' && hasConnectedEer) || editProofLoading}
+                  className={cn(
+                    "text-lg font-bold font-mono h-11",
+                    data?.type === 'atr' && hasConnectedEer ? "bg-slate-100 text-slate-500 cursor-not-allowed" : "text-blue-700"
+                  )}
+                />
+                {data?.type === 'atr' && hasConnectedEer ? (
+                  <p className="text-[11px] text-amber-600 italic">
+                    * Hapus pengajuan EER terhubung terlebih dahulu untuk mengubah nominal transfer.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground italic">
+                    * Masukkan nominal aktual yang ditransfer ke penerima.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="replacement-proof">
+                {data?.type === 'atr' && data?.transfer_proof_path
+                  ? 'Bukti Transfer Baru (Opsional jika hanya ubah nominal)'
+                  : 'Bukti baru (JPG, PNG, atau PDF; maks. 5MB)'}
+              </Label>
+              <Input
+                id="replacement-proof"
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                onChange={(event) => {
+                  setReplacementProof(event.target.files?.[0] ?? null);
+                  setEditProofError('');
+                }}
+              />
+              <p className="text-xs text-muted-foreground">Maksimal 5MB (JPG, JPEG, PNG, atau PDF).</p>
+            </div>
+
             {editProofError && <p className="text-sm text-destructive" role="alert">{editProofError}</p>}
           </div>
+
           <DialogFooter>
             <Button variant="outline" disabled={editProofLoading} onClick={resetEditProofDialog}>Batal</Button>
-            <Button disabled={!replacementProof || editProofLoading} onClick={handleEditProof}>
+            <Button
+              disabled={
+                editProofLoading
+                || (data?.type === 'eer' && !replacementProof)
+                || (data?.type === 'atr' && (
+                  (!replacementProof && (hasConnectedEer || !editTransferredAmount || editTransferredAmount <= 0 || editTransferredAmount === (data.transferred_amount ?? data.amount)))
+                  || (hasConnectedEer && !replacementProof)
+                ))
+              }
+              onClick={handleEditProof}
+            >
               {editProofLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-              Simpan Bukti
+              Simpan
             </Button>
           </DialogFooter>
         </DialogContent>

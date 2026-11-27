@@ -21,6 +21,7 @@ use App\Services\ReimbursementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -278,64 +279,138 @@ final class ReimbursementController extends Controller
         );
     }
 
-    public function replaceEerTransferProof(int $reimbursement, Request $request): JsonResponse
+    public function replaceTransferProof(int $reimbursement, Request $request): JsonResponse
     {
-        $eer = Reimbursement::query()->find($reimbursement);
+        $record = Reimbursement::query()->find($reimbursement);
 
-        if (! $eer) {
+        if (! $record) {
             return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
         }
 
-        if (! $request->user()->hasAnyRole(['finance', UserRole::Superadmin->value])) {
-            return JsonResponseFormatter::error('Hanya finance atau superadmin yang dapat mengubah bukti transfer EER.', 403);
-        }
+        $user = $request->user();
+        $isFinanceOrAdmin = $user->hasAnyRole(['finance', UserRole::Superadmin->value]);
+        $isHrOrAdmin = $user->hasAnyRole(['hr', UserRole::Superadmin->value]);
 
-        if ($eer->type !== ReimbursementType::EER
-            || ! in_array($eer->eer_type, ['refund', 'reimbursement'], true)
-            || ! $eer->transfer_proof_path
-            || ($eer->eer_type === 'reimbursement'
-                && ! in_array($eer->status, [ReimbursementStatus::Transferred, ReimbursementStatus::Closed], true)
-                && ($eer->status === ReimbursementStatus::FinanceApproved
-                    || ! $eer->approvals()->where('role', 'direktur')->where('status', 'approved')->exists()))
-            || ! in_array($eer->status, [ReimbursementStatus::FinanceApproved, ReimbursementStatus::Approved, ReimbursementStatus::Requested, ReimbursementStatus::Transferred, ReimbursementStatus::Closed], true)) {
-            return JsonResponseFormatter::error('Bukti transfer EER belum tersedia atau tidak dapat diubah pada status ini.', 422);
+        $roleMessage = match ($record->type) {
+            ReimbursementType::EER => 'Hanya finance atau superadmin yang dapat mengubah bukti transfer EER.',
+            ReimbursementType::ALLOWANCE => 'Hanya finance, HR, atau superadmin yang dapat mengubah bukti transfer Allowance.',
+            default => 'Hanya finance atau superadmin yang dapat mengubah bukti transfer.',
+        };
+
+        if ($record->type === ReimbursementType::ALLOWANCE) {
+            if (! $isFinanceOrAdmin && ! $isHrOrAdmin) {
+                return JsonResponseFormatter::error($roleMessage, 403);
+            }
+        } else {
+            if (! $isFinanceOrAdmin) {
+                return JsonResponseFormatter::error($roleMessage, 403);
+            }
         }
 
         $validated = $request->validate([
-            'transfer_proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'transfer_proof' => [
+                Rule::requiredIf(! $request->has('transferred_amount') || $request->input('transferred_amount') === null || $request->input('transferred_amount') === ''),
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:5120',
+            ],
+            'transferred_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $oldPath = $eer->transfer_proof_path;
-        $newPath = $validated['transfer_proof']->store('reimbursements/transfer-proofs', 'public');
+        if ($record->type === ReimbursementType::EER) {
+            if (! in_array($record->eer_type, ['refund', 'reimbursement'], true)
+                || ! $record->transfer_proof_path
+                || ($record->eer_type === 'reimbursement'
+                    && ! in_array($record->status, [ReimbursementStatus::Transferred, ReimbursementStatus::Closed], true)
+                    && ($record->status === ReimbursementStatus::FinanceApproved
+                        || ! $record->approvals()->where('role', 'direktur')->where('status', 'approved')->exists()))
+                || ! in_array($record->status, [ReimbursementStatus::FinanceApproved, ReimbursementStatus::Approved, ReimbursementStatus::Requested, ReimbursementStatus::Transferred, ReimbursementStatus::Closed], true)) {
+                return JsonResponseFormatter::error('Bukti transfer EER belum tersedia atau tidak dapat diubah pada status ini.', 422);
+            }
+        } elseif ($record->type === ReimbursementType::ATR) {
+            if (! in_array($record->status, [ReimbursementStatus::Transferred, ReimbursementStatus::Closed], true)) {
+                return JsonResponseFormatter::error('Bukti transfer atau nominal transfer ATR belum tersedia atau tidak dapat diubah pada status ini.', 422);
+            }
 
-        if (! $newPath) {
-            return JsonResponseFormatter::error('Gagal menyimpan bukti transfer.', 500);
+            $hasEer = $record->eers()->exists();
+            if ($request->has('transferred_amount') && $request->input('transferred_amount') !== null && $request->input('transferred_amount') !== '') {
+                $newAmount = (float) $request->input('transferred_amount');
+                $currentAmount = (float) ($record->transferred_amount ?? $record->amount);
+
+                if ($hasEer && abs($newAmount - $currentAmount) > 0.001) {
+                    return JsonResponseFormatter::error(
+                        'ATR sudah memiliki EER. Hapus EER terlebih dahulu untuk mengubah nominal transfer.',
+                        422
+                    );
+                }
+            }
+        } elseif ($record->type === ReimbursementType::ALLOWANCE) {
+            if (! in_array($record->status, [ReimbursementStatus::Transferred, ReimbursementStatus::Closed], true)) {
+                return JsonResponseFormatter::error('Bukti transfer atau nominal transfer Allowance belum tersedia atau tidak dapat diubah pada status ini.', 422);
+            }
+        } else {
+            return JsonResponseFormatter::error('Tipe reimbursement tidak mendukung perubahan data transfer.', 422);
+        }
+
+        $oldPath = $record->transfer_proof_path;
+        $newPath = null;
+
+        if ($request->hasFile('transfer_proof')) {
+            $newPath = $validated['transfer_proof']->store('reimbursements/transfer-proofs', 'public');
+            if (! $newPath) {
+                return JsonResponseFormatter::error('Gagal menyimpan bukti transfer.', 500);
+            }
         }
 
         try {
-            $updated = Reimbursement::query()->whereKey($eer->id)
-                ->where('type', ReimbursementType::EER->value)
-                ->whereIn('eer_type', ['refund', 'reimbursement'])
-                ->where('transfer_proof_path', $oldPath)
-                ->where('status', $eer->status->value)
-                ->update(['transfer_proof_path' => $newPath]);
+            DB::transaction(function () use ($record, $newPath, $request): void {
+                $updateData = [];
 
-            if ($updated === 0) {
-                Storage::disk('public')->delete($newPath);
+                if ($newPath !== null) {
+                    $updateData['transfer_proof_path'] = $newPath;
+                }
 
-                return JsonResponseFormatter::error('Bukti transfer atau status EER telah berubah.', 422);
-            }
+                if ($request->has('transferred_amount') && $request->input('transferred_amount') !== null && $request->input('transferred_amount') !== '') {
+                    $newAmount = (float) $request->input('transferred_amount');
+                    $updateData['transferred_amount'] = $newAmount;
+
+                    if ($record->type === ReimbursementType::ATR) {
+                        $updateData['amount'] = $newAmount;
+                    }
+                }
+
+                if (! empty($updateData)) {
+                    $record->update($updateData);
+                }
+            });
         } catch (Throwable $exception) {
-            Storage::disk('public')->delete($newPath);
+            if ($newPath !== null) {
+                Storage::disk('public')->delete($newPath);
+            }
+
             throw $exception;
         }
 
-        Storage::disk('public')->delete($oldPath);
+        if ($newPath !== null && $oldPath && $oldPath !== $newPath) {
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $message = match ($record->type) {
+            ReimbursementType::EER => 'Bukti transfer EER berhasil diubah',
+            ReimbursementType::ATR => 'Bukti dan nominal transfer ATR berhasil diubah',
+            default => 'Data transfer reimbursement berhasil diubah',
+        };
 
         return JsonResponseFormatter::success(
-            new ReimbursementResource($eer->fresh()),
-            'Bukti transfer EER berhasil diubah'
+            new ReimbursementResource($record->fresh(['user', 'project', 'documents', 'approvals.approver', 'comments.user', 'items', 'atrBudgetSelecteds', 'eers'])),
+            $message
         );
+    }
+
+    public function replaceEerTransferProof(int $reimbursement, Request $request): JsonResponse
+    {
+        return $this->replaceTransferProof($reimbursement, $request);
     }
 
     public function updateBudgets(int $id, Request $request): JsonResponse
@@ -358,7 +433,7 @@ final class ReimbursementController extends Controller
                 return JsonResponseFormatter::notFound('Reimbursement tidak ditemukan');
             }
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated): void {
+            DB::transaction(function () use ($reimbursement, $validated): void {
                 $totalAmount = 0;
                 foreach ($validated['budgets'] as $budgetData) {
                     $record = \App\Models\AtrBudgetSelected::query()->where('reimbursement_id', $reimbursement->id)
@@ -445,7 +520,7 @@ final class ReimbursementController extends Controller
                 'code.unique' => $isEer ? 'Nomor EER sudah digunakan.' : 'Kode reimbursement sudah digunakan.',
             ]);
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($reimbursement, $validated, $user, $request, $checkAtrOperationalBudget): void {
+            DB::transaction(function () use ($reimbursement, $validated, $user, $request, $checkAtrOperationalBudget): void {
                 $atrAmount = $checkAtrOperationalBudget->handle($validated, $reimbursement);
                 $isRevision = $reimbursement->status === ReimbursementStatus::Revision;
 

@@ -267,7 +267,7 @@ final class ReimbursementService
 
     public function getReimbursementDetail(int|string $identifier): ?Reimbursement
     {
-        $query = Reimbursement::with(['user', 'project.division', 'project.pic', 'project.head', 'documents', 'approvals.approver', 'atrBudgetSelecteds.budgetDetail', 'items.budgetDetail', 'items.children.reimbursement', 'comments.user']);
+        $query = Reimbursement::with(['user', 'project.division', 'project.pic', 'project.head', 'documents', 'approvals.approver', 'atrBudgetSelecteds.budgetDetail', 'items.budgetDetail', 'items.children.reimbursement', 'comments.user', 'eers']);
 
         if (is_numeric($identifier)) {
             $identifier = (int) $identifier;
